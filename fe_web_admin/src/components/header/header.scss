@@ -1,0 +1,33 @@
+header {
+  min-height: 5rem;
+  background-color: var(--blue-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-banner-iuh {
+  object-fit: contain;
+  width: auto;
+  height: 4.5rem;
+}
+
+@media only screen and (max-width: 767px) {
+  header {
+    min-height: 3.5rem;
+  }
+
+  .image-banner-iuh {
+    height: 2.9rem;
+  }
+}
+
+@media only screen and (min-width: 767px) and (max-width: 1223px) {
+  header {
+    min-height: 4rem;
+  }
+
+  .image-banner-iuh {
+    height: 3.9rem;
+  }
+}

@@ -1,0 +1,137 @@
+.div-account-nav {
+  width: 75rem;
+  height: 15rem;
+  display: flex;
+  flex-direction: row;
+  justify-content: start;
+  align-items: center;
+  border: solid 1px grey;
+}
+
+.card-text-account {
+  width: 27rem;
+  height: 15rem;
+  background-color: var(--blue-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  gap: 1rem;
+}
+
+.card-image {
+  width: calc(30rem - 16rem);
+  min-height: 12rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.div-card-account-image {
+  min-height: 100%;
+  width: 70%;
+  display: flex;
+}
+
+.nav-bar-items {
+  width: calc(75rem - 30rem);
+  min-height: 12rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.style-img-ava-student {
+  object-fit: contain;
+  width: auto;
+  height: auto;
+}
+
+.text-card {
+  color: white;
+  font-size: 17px;
+  font-weight: 540;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.btn-logout {
+  //color: white;
+  //background-color: var(--orange-log-out);
+  //font-size: 16px;
+  //border-radius: 4px;
+  //border: none;
+  height: 2.5rem;
+  //cursor: pointer;
+}
+
+//.btn-logout:hover {
+//  opacity: 0.8;
+//}
+
+ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style-type: none;
+}
+
+.text-nav {
+  font-size: 16px;
+  text-decoration: none;
+  color: var(--blue-text-nav);
+}
+
+.text-nav:hover {
+  text-decoration: underline;
+}
+
+//mobile
+@media only screen and (max-width: 767px) {
+  .div-account-nav {
+    flex-direction: column;
+    justify-content: center;
+    align-items: start;
+    width: 23.25rem;
+    height: 50rem;
+  }
+
+  .div-card-account-image {
+    flex-direction: column;
+    align-items: center;
+    width: 23.25rem;
+  }
+
+  //.section-page-information {
+  //  padding-bottom: 1rem;
+  //}
+
+  .card-text-account {
+    width: 23.25rem;
+  }
+}
+
+//tablet
+@media only screen and (min-width: 767px) and (max-width: 1223px) {
+  .div-account-nav {
+    flex-direction: column;
+    justify-content: center;
+    align-items: start;
+    width: 38.25rem;
+    height: 50rem;
+  }
+
+  .div-card-account-image {
+    flex-direction: column;
+    align-items: center;
+    width: 38.25rem;
+  }
+
+  //.section-page-information {
+  //  padding-bottom: 1rem;
+  //}
+
+  .card-text-account {
+    width: 38.25rem;
+  }
+}

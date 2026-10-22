@@ -1,0 +1,42 @@
+.section-page-404 {
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  height: 80vh;
+}
+
+.box-text-404-not-found {
+  height: 100%;
+  width: 50%;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  gap: 1.25rem;
+  flex-direction: column;
+}
+
+.style-btn-return-from-not-found {
+  width: 25%;
+  height: 8%;
+  font-size: 17px;
+}
+
+@media only screen and (max-width: 767px) {
+  .box-text-404-not-found {
+    width: 23.25rem;
+  }
+}
+
+@media only screen and (min-width: 767px) and (max-width: 1223px) {
+  .box-text-404-not-found {
+    width: 38.25rem;
+  }
+}
+
+/* Styles for larger screens */
+@media (min-width: 1224px) {}
+
+/*khi trinh duyet dark*/
+@media (prefers-color-scheme: dark) {}

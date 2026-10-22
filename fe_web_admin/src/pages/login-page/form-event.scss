@@ -1,0 +1,12 @@
+.event-form-login {
+  &.disabled {
+    opacity: 0.8;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  &.allow {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

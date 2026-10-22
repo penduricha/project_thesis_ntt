@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        function getDeviceInfo() {
+            // navigator.userAgent chứa toàn bộ chuỗi thông tin về trình duyệt và hệ điều hành
+            const userAgent = navigator.userAgent;
+
+            // Bạn có thể lấy thêm độ phân giải màn hình nếu muốn
+            const screenResolution = `${window.screen.width}x${window.screen.height}`;
+
+            // Gom nhóm lại thành một chuỗi mô tả thiết bị
+            return `OS/Browser: ${userAgent} | Screen: ${screenResolution}`;
+        }
+        console.log(getDeviceInfo());
+    </script>
+</body>
+</html>

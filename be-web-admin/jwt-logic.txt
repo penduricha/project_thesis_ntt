@@ -1,0 +1,72 @@
+//    @PostMapping("/auth/login/auto")
+//    public ResponseEntity<?> loginStudentAuto(
+//            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+//
+//        // 1. Kiểm tra sự tồn tại của Header Authorization
+//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+//            Map<String, Object> responseError = new HashMap<>();
+//            responseError.put("success", false);
+//            responseError.put("message", "Thiếu hoặc sai định dạng Header Authorization (Bearer <token>).");
+//            responseError.put("data", null);
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseError);
+//        }
+//
+//        // 2. Lấy Token ra khỏi chuỗi "Bearer "
+//        String jwtToken = authHeader.substring(7);
+//
+//        // 3. Verify Token bằng JwtTokenProvider
+//        if (!jwtTokenProvider.validateToken(jwtToken)) {
+//            Map<String, Object> responseInvalid = new HashMap<>();
+//            responseInvalid.put("success", false);
+//            responseInvalid.put("message", "Token không hợp lệ hoặc đã hết hạn.");
+//            responseInvalid.put("data", null);
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseInvalid);
+//        }
+//
+//        // 4. Trích xuất studentId từ Token hợp lệ
+//        Long studentId = jwtTokenProvider.getStudentIdFromToken(jwtToken);
+//
+//        // 5. Kiểm tra Refresh Token có tồn tại trong Cache / Database hay không
+//        boolean isTokenExist = StudentAccessTokenService.findStudentRefreshTokenByJwtToken(jwtToken);
+//        if (!isTokenExist) {
+//            Map<String, Object> responseNotFound = new HashMap<>();
+//            responseNotFound.put("success", false);
+//            responseNotFound.put("message", "Phiên đăng nhập không tồn tại hoặc đã bị đăng xuất.");
+//            responseNotFound.put("data", null);
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(responseNotFound);
+//        }
+//
+//        // 6. Xóa Refresh Token cũ trong DB/Cache (Cơ chế Token Rotation)
+//        StudentAccessTokenService.removeStudentRefreshToken(jwtToken);
+//
+//        // 7. Tạo cặp Token mới
+//        String newAccessToken = jwtTokenProvider.generateAccessToken(studentId);
+//        String newRefreshToken = jwtTokenProvider.generateRefreshToken(studentId);
+//
+//        LocalDateTime now = LocalDateTime.now();
+//
+//        // 8. Cập nhật Token mới vào DB / Cache
+//        StudentAccessToken studentAccessToken = new StudentAccessToken();
+//        studentAccessToken.setJwtToken(newAccessToken);
+//        studentAccessToken.setStudentId(studentId);
+//        studentAccessToken.setDateLogin(now);
+//        StudentAccessTokenService.addStudentAccessToken(studentAccessToken);
+//
+//        StudentRefreshToken studentRefreshToken = new StudentRefreshToken();
+//        studentRefreshToken.setJwtToken(newRefreshToken);
+//        studentRefreshToken.setStudentId(studentId);
+//        studentRefreshToken.setDateLogin(now);
+//        StudentAccessTokenService.addStudentRefreshToken(studentRefreshToken);
+//
+//        // 9. Trả về kết quả cho Client
+//        Map<String, Object> responseSuccessData = new HashMap<>();
+//        responseSuccessData.put("studentId", studentId);
+//        responseSuccessData.put("accessToken", newAccessToken);
+//        responseSuccessData.put("refreshToken", newRefreshToken);
+//
+//        Map<String, Object> responseSuccess = new HashMap<>();
+//        responseSuccess.put("success", true);
+//        responseSuccess.put("message", "Tự động đăng nhập / Gia hạn Token thành công.");
+//        responseSuccess.put("data", responseSuccessData);
+//
+//        return ResponseEntity.ok(responseSuccess);

@@ -1,0 +1,42 @@
+.button-red {
+  border-radius: 0;
+  color: white;
+  background-color: var(--red-button);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.button-red:hover {
+  opacity: 0.8;
+}
+
+//.border-color-button-choose {
+//  &.border-choose {
+//    border: solid #FE0000;
+//  }
+//
+//  &.border-no-choose {
+//    border: none;
+//  }
+//}
+
+.button-blue-opacity-disabled {
+  &.opacity-disabled {
+    opacity: 0.8;
+    //pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  &.opacity-allow {
+    opacity: 1;
+    //pointer-events: auto;
+    cursor: pointer;
+  }
+
+  &.opacity-allow:hover {
+    opacity: 0.8;
+  }
+}

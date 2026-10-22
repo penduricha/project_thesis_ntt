@@ -1,0 +1,47 @@
+Course
+
+POST:
+{
+    "courseId" : 8480201,
+    "trainingSystem" : "Master",
+    "branch" : "An Phu Dong ward, Ho Chi Minh city.",
+    "industry" : "CNTT",
+    "faculty" : "Khoa CNTT",
+    "major" : "AI/ML",
+    "typeOfTraining" : "Research"
+}
+
+POST:
+{
+    "studentId" : 2500021775,
+    "password" : "$2a$12$FMP1aYy2CF1mxy5vY1SCTOmhac3BWH9odgC0gY1TcHgIc6pyi3mk.",
+    "studentName" : "Từ Quang Nhật",
+    "gender" : true,
+    "clazzName" : "25MTH1B",
+    "dateOfBirthStudentDay" : 25,
+    "dateOfBirthStudentMonth" : 12,
+    "dateOfBirthStudentYear" : 2003,
+    "courseId" : 8480201
+}
+
+{
+    "studentId" : 2500021773,
+    "password" : "$2a$12$kzkGQECR4/3miEBvmAnoa.ffuBZYNdaX9vtzMw3.ucVDi2S1vfLoO",
+    "studentName" : "Lương Lưu Thanh Tú",
+    "gender" : true,
+    "clazzName" : "25MTH1B",
+    "dateOfBirthStudentDay" : 8,
+    "dateOfBirthStudentMonth" : 9,
+    "dateOfBirthStudentYear" : 2003,
+    "courseId" : 8480201
+}
+
+//Response Login
+{
+    "data": {
+        "studentId": 2500021775,
+        "jwtToken": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyNTAwMDIxNzc1IiwiaWF0IjoxNzg2ODcyODM3LCJleHAiOjE3ODY5NTkyMzd9.tuAPC0DMCvy24pm7D-Ez5wawVbXwYlBEw5oVV4b504PLigGjX5WCEl0z6jB5WYGr"
+    },
+    "success": true,
+    "massage": "Login successfully."
+}

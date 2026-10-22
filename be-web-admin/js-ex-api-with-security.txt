@@ -1,0 +1,85 @@
+async function postStudentWithAuth() {
+    const studentData = {
+        studentId: 2500021771,
+        password: "$2a$12$FMP1aYy2CF1mxy5vY1SCTOmhac3BWH9odgC0gY1TchGic6pyi3mk.",
+        studentName: "Chu Quang Nhật",
+        gender: true,
+        clazzName: "25MTH1B",
+        dateOfBirthStudentDay: 15,
+        dateOfBirthStudentMonth: 12,
+        dateOfBirthStudentYear: 2003,
+        courseId: 8480201
+    };
+
+    // Thông tin tài khoản (username mặc định của Spring là "user")
+    const username = "user";
+    const password = "Mật_khẩu_ngẫu_nhiên_vừa_copy_ở_console"; // Thay bằng key/password thực tế
+
+    // Mã hóa sang chuẩn Basic Auth Base64
+    const credentials = btoa(username + ":" + password);
+
+    try {
+        const response = await fetch('http://localhost:8080/api/v1/students', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Basic ' + credentials // Truyền header xác thực ở đây
+            },
+            body: JSON.stringify(studentData)
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log("Thành công:", result);
+        } else {
+            console.error("Lỗi xác thực (401):", response.status);
+        }
+    } catch (error) {
+        console.error("Lỗi kết nối:", error);
+    }
+}
+
+//fetch with JWT.
+async function getStudentProfile() {
+    // 1. Lấy studentId và jwtToken từ localStorage
+    const studentId = localStorage.getItem('studentId');
+    const jwtToken = localStorage.getItem('jwtToken');
+
+    // Kiểm tra xem token có tồn tại không trước khi gọi API
+    if (!jwtToken) {
+        console.error("Không tìm thấy token, vui lòng đăng nhập lại!");
+        window.location.href = '/login.html'; // Điều hướng về trang đăng nhập
+        return;
+    }
+
+    try {
+        // 2. Thực hiện gọi fetch với Header Authorization
+        const response = await fetch(`http://localhost:8080/api/v1/students/${studentId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + jwtToken // Đính kèm JWT token vào đây
+            }
+        });
+
+        // 3. Xử lý kết quả trả về từ Server
+        if (response.ok) {
+            const studentData = await response.json();
+            console.log("Lấy thông tin sinh viên thành công:", studentData);
+            // Hiển thị dữ liệu lên giao diện HTML tại đây
+        } else if (response.status === 401) {
+            // Trường hợp Token hết hạn hoặc không hợp lệ
+            console.warn("Token đã hết hạn hoặc không hợp lệ (401). Đang chuyển hướng...");
+            localStorage.clear(); // Xóa sạch dữ liệu cũ
+            window.location.href = '/login.html';
+        } else {
+            console.error("Lỗi khi gọi API, mã lỗi:", response.status);
+        }
+
+    } catch (error) {
+        console.error("Lỗi kết nối mạng:", error);
+    }
+}
+
+// Gọi hàm khi cần lấy thông tin
+getStudentProfile();

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Login Test with Refresh Token</title>
+</head>
+<body>
+
+<button id="btnLoginAuto">Tự động đăng nhập</button>
+
+<!-- Nơi hiển thị kết quả trả về từ Server -->
+<div id="result" style="margin-top: 15px; font-weight: bold;"></div>
+
+<script>
+    const API_BASE_URL = 'http://localhost:8080/api/student/auth/login/auto';
+
+    let accessToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyNTAwMDIxNzc1IiwiaWF0IjoxNzg5MjA1NDg1LCJleHAiOjE3ODkyMDU3ODUsInRva2VuX3R5cGUiOiJBQ0NFU1MifQ.-u4qjrfIi1VcgEnsIW_nb0Lu-QB4lBSj3cHjbbPXXzc";
+    let refreshToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyNTAwMDIxNzc1IiwiaWF0IjoxNzg5MjA1NDg2LCJleHAiOjE3OTE3OTc0ODYsInRva2VuX3R5cGUiOiJSRUZSRVNIIn0.u-0K_HheybYeite6HTuIUeshYlwlxFHI0RMhRrpcxrI";
+
+    // 1. Kiểm tra và đọc Token từ LocalStorage
+    // Nếu chưa có trong LocalStorage, tự động khởi tạo giá trị mặc định để test
+    if (!localStorage.getItem('accessToken')) {
+        localStorage.setItem('accessToken', accessToken)
+    }
+    if (!localStorage.getItem('refreshToken')) {
+        localStorage.setItem('refreshToken', refreshToken);
+    }
+
+    // 2. Khai báo hàm lấy token trực tiếp từ LocalStorage
+    const getAccessToken = () => localStorage.getItem('accessToken');
+    const getRefreshToken = () => localStorage.getItem('refreshToken');
+
+    // Hàm cập nhật Token mới vào LocalStorage
+    function saveTokens(newAccessToken, newRefreshToken) {
+        if (newAccessToken) localStorage.setItem('accessToken', newAccessToken);
+        if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
+    }
+
+    // 3. Hàm gọi API Refresh Token
+    async function handleRefreshToken() {
+        return await fetch(`${API_BASE_URL}/refresh-token`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${getRefreshToken()}`,
+                'Content-Type': 'application/json'
+            }
+        });
+    }
+
+    // 4. Hàm Wrapper Fetch tự động Refresh Token
+    async function fetchWithAuth(url, options = {}) {
+        options.headers = {
+            ...options.headers,
+            'Authorization': `Bearer ${getAccessToken()}`,
+            'Content-Type': 'application/json'
+        };
+
+        let response = await fetch(url, options);
+
+        // Nếu Access Token hết hạn (401) -> Thử refresh token
+        if (response.status === 401) {
+            console.warn('Access Token hết hạn hoặc không hợp lệ. Đang tiến hành làm mới token...');
+
+            const refreshResponse = await handleRefreshToken();
+
+            if (refreshResponse.ok) {
+                const refreshData = await refreshResponse.json();
+                console.log('Refresh token thành công:', refreshData);
+
+                // Lưu token mới vào LocalStorage
+                saveTokens(refreshData.data?.accessToken, refreshData.data?.refreshToken);
+
+                // Gửi lại request ban đầu với Access Token mới từ LocalStorage
+                options.headers['Authorization'] = `Bearer ${getAccessToken()}`;
+                response = await fetch(url, options);
+            } else {
+                // Refresh token thất bại -> Xóa sạch LocalStorage và báo lỗi
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                throw new Error('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!');
+            }
+        }
+
+        return response;
+    }
+
+    // 5. Sự kiện Click Button
+    document.getElementById('btnLoginAuto').addEventListener('click', async function() {
+        const resultDiv = document.getElementById('result');
+        resultDiv.style.color = 'black';
+        resultDiv.innerText = 'Đang xử lý...';
+
+        try {
+            const response = await fetchWithAuth(`${API_BASE_URL}/access-token`, { method: 'GET' });
+            const data = await response.json();
+
+            if (response.ok) {
+                resultDiv.style.color = 'green';
+                const studentId = data.data?.studentId || 'N/A';
+                resultDiv.innerText = `Đăng nhập thành công! Student ID: ${studentId}`;
+                console.log('Dữ liệu trả về:', data.data);
+            } else {
+                resultDiv.style.color = 'red';
+                resultDiv.innerText = `Lỗi (${response.status}): ${data.message || 'Không xác định'}`;
+            }
+
+        } catch (error) {
+            console.error('Lỗi xử lý:', error);
+            resultDiv.style.color = 'red';
+            resultDiv.innerText = error.message;
+        }
+    });
+</script>
+</body>
+</html>

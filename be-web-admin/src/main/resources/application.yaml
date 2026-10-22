@@ -1,0 +1,159 @@
+#server:
+#  port: 8080
+#  servlet:
+#    encoding:
+#      enabled: true
+#      charset: UTF-8
+#      force: true
+#    context-path: /api
+#  tomcat:
+#    threads:
+#      max: 20
+#      min-spare: 5
+#    max-connections: 1000
+#    accept-count: 20
+#
+#gg:
+#  jte:
+#    developmentMode: false
+#
+#spring:
+#  application:
+#    name: be-web-students
+#
+#  # Cấu hình Redis sử dụng biến từ .env
+#  data:
+#    redis:
+#      url: redis://default:1234@localhost:6379/1
+#      connect-timeout: 2000ms
+#      timeout: 1000ms
+#
+#  # Cấu hình Database sử dụng biến từ .env
+#  datasource:
+#    url: jdbc:mariadb://localhost:3306/university_ntt?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&usePingMethod=true
+#    username: root
+#    password: 1234
+#    driver-class-name: org.mariadb.jdbc.Driver
+#    hikari:
+#      connection-timeout: 5000
+#      idle-timeout: 300000
+#      max-lifetime: 900000
+#      minimum-idle: 5
+#      maximum-pool-size: 10
+#      pool-name: HikariPool-Fast
+#      auto-commit: true
+#
+#  jpa:
+#    open-in-view: false
+#    hibernate:
+#      ddl-auto: update
+#    properties:
+#      hibernate:
+#        # --- CẤU HÌNH HIBERNATE SECOND-LEVEL CACHE VỚI REDIS ---
+#        cache:
+#          use_second_level_cache: true
+#          use_query_cache: true
+#          region:
+#            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+#          javax:
+#            cache:
+#              provider: org.ehcache.jsr107.EhcacheCachingProvider
+#              # Hoặc nếu bạn dùng Redisson làm provider trực tiếp cho Hibernate L2 Cache:
+#              # provider: org.redisson.jcache.RedissonCachingProvider
+#
+#        format_sql: false
+#        jdbc:
+#          batch_size: 50
+#        order_inserts: true
+#        order_updates: true
+#    show-sql: true
+#
+#  docker:
+#    compose:
+#      enabled: false
+#
+#logging:
+#  level:
+#    root: INFO
+#    com.zaxxer.hikari: WARN
+#    org.hibernate.SQL: DEBUG
+#    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+server:
+  port: 8080
+  servlet:
+    encoding:
+      enabled: true
+      charset: UTF-8
+      force: true
+    context-path: /api
+  tomcat:
+    threads:
+      max: 20
+      min-spare: 5
+    max-connections: 1000
+    accept-count: 20
+
+gg:
+  jte:
+    developmentMode: false
+
+spring:
+  application:
+    name: be-web-students
+
+  # Cấu hình Redis sử dụng biến từ .env
+  data:
+    redis:
+      url: redis://${REDIS_USERNAME}:${REDIS_PASSWORD}@${IP_ADDRESS}:${REDIS_PORT}/${REDIS_DBS}
+      connect-timeout: 2000ms
+      timeout: 1000ms
+
+  # Cấu hình Database sử dụng biến từ .env
+  datasource:
+    url: jdbc:mariadb://${IP_ADDRESS}:${MARIADB_PORT}/${MARIADB_DBS}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&usePingMethod=true
+    username: ${MARIADB_USERNAME}
+    password: ${MARIADB_PASSWORD}
+    driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      connection-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 900000
+      minimum-idle: 5
+      maximum-pool-size: 10
+      pool-name: HikariPool-Fast
+      auto-commit: true
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        # --- CẤU HÌNH HIBERNATE SECOND-LEVEL CACHE VỚI REDIS ---
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+          javax:
+            cache:
+              provider: org.ehcache.jsr107.EhcacheCachingProvider
+
+        format_sql: false
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+    show-sql: true
+
+  docker:
+    compose:
+      enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.zaxxer.hikari: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

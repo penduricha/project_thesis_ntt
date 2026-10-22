@@ -1,0 +1,23 @@
+flutter pub get
+
+fuser -k 33000/tcp && flutter run -d web-server --web-port 33000 --web-hostname localhost
+
+Dừng: fuser -k 33000/tcp
+
+Linux:
+sudo apt update
+sudo apt install cmake build-essential -y
+sudo apt install ninja-build clang libgtk-3-dev -y
+
+flutter run -d linux
+
+Iphone 15:
+YAML
+dependencies:
+  flutter:
+    sdk: flutter
+  window_manager: ^0.3.9
+
+Máy ảo: adb connect 127.0.0.1:5555
+
+flutter run -d 127.0.0.1:6562

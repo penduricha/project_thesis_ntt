@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Fetch Basic Auth Demo</title>
+    <style>
+        .form-group { margin-bottom: 15px; }
+        label { display: inline-block; width: 100px; }
+        input { padding: 6px; width: 200px; }
+        button { padding: 8px 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<h2>Spring Security Fetch API Demo</h2>
+
+<form id="loginForm">
+    <div class="form-group">
+        <label for="studentId">Student ID:</label>
+        <input type="number" id="studentId" name="studentId" value="2500021775" required>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" value="1234" required>
+    </div>
+
+    <button type="submit">Gửi Request</button>
+</form>
+
+<h3>Kết quả / Logs:</h3>
+<pre id="logOutput" style="background: #f4f4f4; padding: 10px; border: 1px solid #ccc;"></pre>
+
+<script>
+    // Thông tin dùng cho Basic Auth Header
+    const authUsername = "user";
+    const authPassword = "61d58f6f-e2a8-4e5c-8a43-059cd762c2c1";
+    const apiUrl = "http://localhost:8080/api/student/auth/login";
+
+    const logOutput = document.getElementById("logOutput");
+    const loginForm = document.getElementById("loginForm");
+
+    function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        logOutput.innerText += `[${timestamp}] ${message}\n`;
+        console.log(`[${timestamp}] ${message}`);
+    }
+
+    loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault(); // Ngăn form reload lại trang
+
+        logOutput.innerText = ""; // Clear log cũ
+        log("Đang chuẩn bị gửi request...");
+
+        // 1. Lấy dữ liệu từ thẻ input
+        const studentIdVal = document.getElementById("studentId").value;
+        const passwordVal = document.getElementById("password").value;
+
+        // 2. Đóng gói dữ liệu Body JSON theo đúng định dạng yêu cầu
+        const requestBody = {
+            studentId: Number(studentIdVal),
+            password: String(passwordVal)
+        };
+
+        // 3. Mã hóa thông tin đăng nhập Basic Auth Header (Base64)
+        const credentials = btoa(`${authUsername}:${authPassword}`);
+
+        try {
+            log(`Gửi request tới: ${apiUrl}`);
+            log(`Body dữ liệu: ${JSON.stringify(requestBody)}`);
+
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Basic ${credentials}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(requestBody) // Gửi body dạng JSON string
+            });
+
+            log(`Trạng thái phản hồi (Status Code): ${response.status} ${response.statusText}`);
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error("401 Unauthorized: Sai thông tin Basic Auth hoặc chưa cấu hình CORS.");
+                }
+                throw new Error(`Lỗi HTTP: ${response.status}`);
+            }
+
+            // Xử lý dữ liệu trả về từ server
+            const data = await response.json();
+            log("Dữ liệu nhận được thành công:");
+            log(JSON.stringify(data, null, 2));
+
+        } catch (error) {
+            log(`LỖI: ${error.message}`);
+        }
+    });
+</script>
+</body>
+</html>

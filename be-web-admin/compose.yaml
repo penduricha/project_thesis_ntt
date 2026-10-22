@@ -1,0 +1,14 @@
+services:
+#  mariadb:
+#    image: 'mariadb:latest'
+#    environment:
+#      - 'MARIADB_DATABASE=university_ntt'
+#      - 'MARIADB_PASSWORD=1234'
+#      - 'MARIADB_ROOT_PASSWORD=1234'
+#      - 'MARIADB_USER=root'
+#    ports:
+#      - '3306'
+#  redis:
+#    image: 'redis:latest'
+#    ports:
+#      - '6379'

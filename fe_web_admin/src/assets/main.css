@@ -1,0 +1,47 @@
+@import './base.css';
+
+#app {
+  width: 100%;
+  font-weight: normal;
+  margin: 0 auto;
+  height: auto;
+  font-family: "Arial", sans-serif;
+  overflow: auto;
+}
+/*style chung cho ca web fe*/
+:root {
+  --green-page: #29C48D;
+  --green-footer: #34A37C;
+  --white-text: #ffffff;
+  --black-text: #000000;
+  --grey-text: #C4C4C4;
+  --width-page: 78rem;
+  --grey-nav-items: #707787;
+  --grey-border-item-product: #867272;
+  /*  cac ma mau va style khac*/
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* responsive screen and table and mobile*/
+/* Styles for mobile devices */
+@media only screen and (max-width: 767px) {
+
+}
+
+/* Styles for tablets */
+@media only screen and (min-width: 767px) and (max-width: 1023px) {
+
+}
+
+/* Styles for larger screens */
+@media (min-width: 1024px) {
+
+}
+
+/*khi trinh duyet dark*/
+@media (prefers-color-scheme: dark) {
+
+}
