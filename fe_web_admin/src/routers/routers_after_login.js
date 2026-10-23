@@ -11,7 +11,7 @@ const routers = [
     { path: '/', component: InformationPage, allow: true, props: (route) => ({})},
     { path: '/login', component: LoginPage, allow: true, props: (route) => ({})},
     // { path: '/register-courses', component: RegisterCourses, allow: true},
-    { path: '/information-student', component: InformationPage, allow: true, props: (route) => ({})},
+    { path: '/information-admin', component: InformationPage, allow: true, props: (route) => ({})},
     // { path: '/list-courses', component: ListCourses, allow: true},
     { path: '/404-not-found', component: PageNotFound, allow: true, props: (route) => ({})},
     // { path: '/university-schedule', component: UniversitySchedule, allow: true},

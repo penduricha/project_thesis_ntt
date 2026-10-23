@@ -1,13 +1,13 @@
 import {TokenLogin} from "@/model/TokenLogin.js";
 
-import {StudentService} from "@/services/spring/StudentService.js";
+import {AdminService} from "@/services/spring/AdminService.js";
 
 export class LoginService {
     async getStatusAutoLogin() {
         // Dk login thanh cong
         const tokenLogin = new TokenLogin();
 
-        const studentService = new StudentService();
+        const studentService = new AdminService();
 
         // Flag login auto
         let statusLoginAuto = false;

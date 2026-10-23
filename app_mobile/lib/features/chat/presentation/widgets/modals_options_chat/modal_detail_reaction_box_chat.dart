@@ -155,7 +155,9 @@ class _ModalDetailReactionBoxChatState
                         children: [
                           CircleAvatar(
                             radius: 20,
-                            backgroundImage: NetworkImage(item.avatarUrl),
+                            backgroundImage: item.avatarUrl.startsWith('http')
+                                ? NetworkImage(item.avatarUrl) as ImageProvider
+                                : AssetImage(item.avatarUrl),
                             backgroundColor: Colors.grey[300],
                           ),
                           Positioned(

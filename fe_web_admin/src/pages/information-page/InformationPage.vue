@@ -7,7 +7,7 @@ import Footer from "../../components/footer/Footer.vue";
 import './card-account-nav/card-account-nav.scss';
 import '../../assets/main-scss/theme-color.scss';
 import CardAccountNav from "@/pages/information-page/card-account-nav/CardAccountNav.vue";
-import StudentRepository from "@/repository/StudentRepository.js";
+import AdminRepository from "@/repository/AdminRepository.js";
 
 export default {
   name: "InformationPage",
@@ -23,9 +23,9 @@ export default {
       /*
               {
             "data": {
-                "studentId": 2500021775,
+                "adminId": 2500021775,
                 "gender": true,
-                "studentName": "Từ Quang Nhật",
+                "adminName": "Từ Quang Nhật",
                 "course": {
                     "courseId": 8480201,
                     "trainingSystem": "Master",
@@ -38,14 +38,14 @@ export default {
                 },
                 "clazzName": "25MTH1B"
             },
-            "message": "Student found successfully.",
+            "message": "Admin found successfully.",
             "status": 200
         }
        */
 
-      //Student Info
-      studentId: null,
-      studentName: null,
+      //Admin Info
+      adminId: null,
+      adminName: null,
       gender: true,
       trainingSystem: null,
       clazzName: null,
@@ -68,7 +68,6 @@ export default {
 
   async mounted() {
     this.setTitlePage();
-    await this.fetchCourseInformation();
   },
 
   beforeDestroy() {
@@ -77,7 +76,7 @@ export default {
 
   methods: {
     setTitlePage() {
-      document.title = 'Thông tin sinh viên';
+      document.title = 'Thông tin quản trị';
     },
 
     getRoute() {
@@ -89,22 +88,6 @@ export default {
       const routerManagement = new RouterManagement();
       routerManagement.savePathToSessionStorage(route);
     },
-
-    async fetchCourseInformation() {
-      const studentRepository = new StudentRepository();
-      let studentFetched = await studentRepository.getStudentInformationByStudentId();
-      console.log("Student from API: ", studentFetched);
-      let courseStudent = studentFetched.course
-      if(courseStudent) {
-        this.yearOpening = courseStudent.yearOpening;
-        this.trainingSystem = courseStudent.trainingSystem;
-        this.industry = courseStudent.industry;
-        this.faculty = courseStudent.faculty;
-        this.typeOfTraining = courseStudent.typeOfTraining;
-        this.major = courseStudent.major;
-        this.branch = courseStudent.branch;
-      }
-    }
   },
 
   computed: {
@@ -118,19 +101,18 @@ export default {
   <section class="section-page-information">
     <CardAccountNav/>
     <div class="div-account-nav div-detail-information" style="flex-direction: column">
-      <h3 class="text-title-information">THÔNG TIN SINH VIÊN</h3>
+      <h3 class="text-title-information">THÔNG TIN QUẢN TRỊ VIÊN</h3>
       <div class="div-background-text-detail">
-        <div class="div-text-detail-information">
-<!--          <span class="text-detail-information">Năm: <b>{{yearOpening}}</b></span>-->
-          <span class="text-detail-information">Hệ đào tạo: <b>{{trainingSystem}}</b></span>
-          <span class="text-detail-information">Ngành: <b>{{industry}}</b></span>
-          <span class="text-detail-information">Khoa: <b>{{faculty}}</b></span>
-        </div>
-        <div class="div-text-detail-information div-text-detail-information-flex-responsive">
-          <span class="text-detail-information">Loại hình đào tạo: <b>{{typeOfTraining}}</b></span>
-          <span class="text-detail-information">Chuyên ngành: <b>{{major}}</b></span>
-          <span class="text-detail-information">Cơ sở: <b>{{branch}}</b></span>
-        </div>
+<!--        <div class="div-text-detail-information">-->
+<!--          <span class="text-detail-information">Hệ đào tạo: <b>{{trainingSystem}}</b></span>-->
+<!--          <span class="text-detail-information">Ngành: <b>{{industry}}</b></span>-->
+<!--          <span class="text-detail-information">Khoa: <b>{{faculty}}</b></span>-->
+<!--        </div>-->
+<!--        <div class="div-text-detail-information div-text-detail-information-flex-responsive">-->
+<!--          <span class="text-detail-information">Loại hình đào tạo: <b>{{typeOfTraining}}</b></span>-->
+<!--          <span class="text-detail-information">Chuyên ngành: <b>{{major}}</b></span>-->
+<!--          <span class="text-detail-information">Cơ sở: <b>{{branch}}</b></span>-->
+<!--        </div>-->
       </div>
     </div>
   </section>

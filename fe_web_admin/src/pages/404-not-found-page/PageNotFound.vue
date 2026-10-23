@@ -4,7 +4,7 @@ import Header from "@/components/header/Header.vue";
 import './page-not-found.scss';
 import RouterManagement from "@/routers/RouterManagement.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
-import StudentLocalStorage from "@/local_storage/StudentLocalStorage.js";
+import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
 
 export default {
   name: "PageNotFound",
@@ -60,7 +60,7 @@ export default {
       //     });
       //Cach 2
       const routerManagement = new RouterManagement();
-      const studentLocalStorage = new StudentLocalStorage();
+      const studentLocalStorage = new AdminLocalStorage();
       const checkPath_And_ID =
           routerManagement.getPathFromLocalStorage() &&
           studentLocalStorage.getStudentID_From_LocalStorage_StudentID();

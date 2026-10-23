@@ -1,26 +1,26 @@
-import StudentLocalStorage from "@/local_storage/StudentLocalStorage.js";
-import {StudentAccount} from "@/model/StudentAccount.js";
-import {StudentService} from "@/services/spring/StudentService.js";
+import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
+import {AdminAccount} from "@/model/AdminAccount.js";
+import {AdminService} from "@/services/spring/AdminService.js";
 
 import {TokenLogin} from "@/model/TokenLogin.js";
 import RouterManagement from "@/routers/RouterManagement.js";
 import {LoginService} from "@/services/spring/LoginService.js";
 
-const studentLocalStorage = new StudentLocalStorage();
+const adminLocalStorage = new AdminLocalStorage();
 
-const studentService = new StudentService();
+const adminService = new AdminService();
 
 const loginService = new LoginService();
 
-export default class StudentRepository {
+export default class AdminRepository {
     accessToken;
     refreshToken;
 
-    async getResponseFromLoginRequest(studentId, password) {
+    async getResponseFromLoginRequest(adminId, password) {
         let statusLogin = "";
-        const studentAccount = new StudentAccount(studentId, password);
+        const adminAccount = new AdminAccount(adminId, password);
         try{
-            let dataReturn = await studentService.postDataToLoginRequest(studentAccount);
+            let dataReturn = await adminService.postDataToLoginRequest(adminAccount);
             console.log(dataReturn);
             console.log("Data:", dataReturn.data);
 
@@ -36,9 +36,9 @@ export default class StudentRepository {
                 tokenLogin.setRefreshTokenToStorage();
                 const routerManagement = new RouterManagement();
 
-                const firstPathAfterLogin = "/information-student";
+                const firstPathAfterLogin = "/information-admin";
                 routerManagement.savePathToLocalStorage(firstPathAfterLogin);
-                studentLocalStorage.setStudentIdToLocalStorage(studentAccount.getStudentId());
+                adminLocalStorage.setAdminIdToLocalStorage(adminAccount.getAdminId());
 
                 statusLogin = "OK";
             } else {
@@ -48,7 +48,7 @@ export default class StudentRepository {
             statusLogin = "Exception system:";
             console.error(statusLogin);
             console.error(e);
-            alert(e);
+            //alert(e);
 
         }
         return statusLogin;
@@ -60,10 +60,10 @@ export default class StudentRepository {
 
         try {
             const tokenLogin = new TokenLogin();
-            let dataReturn = await studentService.postDataToLogoutRequest(tokenLogin);
+            let dataReturn = await adminService.postDataToLogoutRequest(tokenLogin);
 
             if(dataReturn.data.status === 200) {
-                studentLocalStorage.removeStudentIdFromLocalStorage();
+                adminLocalStorage.removeAdminIdFromLocalStorage();
                 tokenLogin.removeAccessTokenAndRefreshTokenFromStorage();
 
                 const routerManagement = new RouterManagement();
@@ -78,38 +78,38 @@ export default class StudentRepository {
             statusLogout = "Exception system:";
             console.error(statusLogout);
             console.error(e);
-            alert(e);
+            //alert(e);
         }
         return statusLogout;
     }
 
-    async getStudentInformationByStudentId() {
+    async getAdminInformationByAdminId() {
         // Flag login auto
-        let studentInfo = {};
+        let adminInfo = {};
 
         let statusLoginAuto = await loginService.getStatusAutoLogin();
 
-        let studentId = studentLocalStorage.getStudentIdToLocalStorage();
-        if(studentId && statusLoginAuto) {
-            studentInfo = await studentService.getStudentInformationRequestByStudentId(studentId);
-            if(studentInfo.data.status === 200) {
-                console.log("Data fetched student information:", JSON.stringify(studentInfo.data.data));
+        let adminId = adminLocalStorage.getAdminIdToLocalStorage();
+        if(adminId && statusLoginAuto) {
+            adminInfo = await adminService.getAdminInformationRequestByAdminId(adminId);
+            if(adminInfo.data.status === 200) {
+                console.log("Data fetched admin information:", JSON.stringify(adminInfo.data.data));
             }
         }
-        return studentInfo.data.data;
+        return adminInfo.data.data;
     }
 
-    // async getStudentInformationByStudentId_Student() {
-    //     let studentInfo_Student = {};
-    //     let studentInfo = await this.getStudentInformationByStudentId();
-    //     if(studentInfo) {
+    // async getAdminInformationByAdminId_Admin() {
+    //     let adminInfo_Admin = {};
+    //     let adminInfo = await this.getAdminInformationByAdminId();
+    //     if(adminInfo) {
     //         // const data = {
-    //         //     "studentId": studentAccount.getStudentId(),
-    //         //     "password": studentAccount.getPassword(),
+    //         //     "adminId": adminAccount.getAdminId(),
+    //         //     "password": adminAccount.getPassword(),
     //         // };
-    //         let { course, ...studentInfo } = studentInfo;
-    //         studentInfo_Student = studentInfo;
+    //         let { course, ...adminInfo } = adminInfo;
+    //         adminInfo_Admin = adminInfo;
     //     }
-    //     return studentInfo_Student;
+    //     return adminInfo_Admin;
     // }
 }

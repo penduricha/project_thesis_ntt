@@ -1,6 +1,6 @@
-export class StudentAccount {
+export class AdminAccount {
     /** @type {number} */
-    #studentId;
+    #adminId;
 
     /** @type {string} */
     #password;
@@ -8,15 +8,15 @@ export class StudentAccount {
     /**
      * @returns {number}
      */
-    getStudentId(){
-        return this.#studentId;
+    getAdminId(){
+        return this.#adminId;
     }
 
     /**
      * @returns {void}
      */
-    setStudentId(studentId) {
-        this.#studentId = Number(studentId);
+    setAdminId(adminId) {
+        this.#adminId = Number(adminId);
     }
 
     /**
@@ -35,15 +35,15 @@ export class StudentAccount {
 
     /**
      * Khởi tạo đối tượng TokenLogin.
-     * @param {number} [studentId] - Mã access token.
+     * @param {number} [adminId] - Mã access token.
      * @param {string} [password] - Mã refresh token.
      */
-    constructor(studentId, password) {
-        this.setStudentId(studentId);
+    constructor(adminId, password) {
+        this.setAdminId(adminId);
         this.setPassword(password);
     }
 
     toString() {
-        return `Student account:[studentId: ${this.#studentId}, password: ${this.#password}]`;
+        return `Admin account:[adminId: ${this.#adminId}, password: ${this.#password}]`;
     }
 }

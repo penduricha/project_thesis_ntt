@@ -1,14 +1,14 @@
-import {StudentAccount} from "@/model/StudentAccount.js";
+import {AdminAccount} from "@/model/AdminAccount.js";
 import SpringConfigHeader from "@/services/spring/SpringConfigHeader.js";
 import {TokenLogin} from "@/model/TokenLogin.js";
-import StudentLocalStorage from "@/local_storage/StudentLocalStorage.js";
+import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
 
 const springConfigHeader = new SpringConfigHeader();
 
-const studentLocalStorage = new StudentLocalStorage();
+const adminLocalStorage = new AdminLocalStorage();
 
 // async function getDataToAutoLoginRefreshToken(refreshToken) {
-//     const path = "/student/auth/login/auto/refresh-token";
+//     const path = "/admin/auth/login/auto/refresh-token";
 //     return await springConfigHeader
 //         .getAPIClientWithHeadersIsAccessToken(refreshToken).get(path, {
 //             ...springConfigHeader.getAuthorization(), // Tạo { auth: { username, password } }
@@ -17,18 +17,18 @@ const studentLocalStorage = new StudentLocalStorage();
 //             }});
 // }
 
-export class StudentService {
-    async postDataToLoginRequest(studentAccount) {
-        if (!(studentAccount instanceof StudentAccount)) {
-            throw new Error("Invalid StudentAccount instance");
+export class AdminService {
+    async postDataToLoginRequest(adminAccount) {
+        if (!(adminAccount instanceof AdminAccount)) {
+            throw new Error("Invalid AdminAccount instance");
         }
 
         const data = {
-            "studentId": studentAccount.getStudentId(),
-            "password": studentAccount.getPassword(),
+            "adminId": adminAccount.getAdminId(),
+            "password": adminAccount.getPassword(),
         };
 
-        const path = '/student/auth/login';
+        const path = '/admin/auth/login';
         return springConfigHeader.getAPIClientNoHeaders().post(path, data, springConfigHeader.getAuthorization());
     }
 
@@ -43,19 +43,19 @@ export class StudentService {
             "refreshToken": tokenLogin.getRefreshTokenFromStorage(),
         };
 
-        const path = '/student/auth/logout';
+        const path = '/admin/auth/logout';
         return springConfigHeader.getAPIClientNoHeaders().post(path, data, springConfigHeader.getAuthorization());
     }
 
-    async getStudentInformationRequestByStudentId(studentId) {
+    async getAdminInformationRequestByAdminId(adminId) {
         let dataResponse = null;
         try {
-            const path = `/student/information?studentId=${studentId}`;
+            const path = `/admin/information?adminId=${adminId}`;
             dataResponse = await springConfigHeader.getAPIClientNoHeaders().get(path, springConfigHeader.getAuthorization());
             console.log(dataResponse);
         } catch(e) {
             console.error(e);
-            alert(e);
+            //alert(e);
         }
         return dataResponse;
     }
@@ -68,8 +68,8 @@ export class StudentService {
             throw new Error("Invalid TokenLogin instance");
         }
 
-        const pathAccessToken = "/student/auth/login/auto/access-token";
-        const pathRefreshToken = "/student/auth/login/auto/refresh-token";
+        const pathAccessToken = "/admin/auth/login/auto/access-token";
+        const pathRefreshToken = "/admin/auth/login/auto/refresh-token";
 
         try {
             // 1. Thử gọi API bằng Access Token hiện tại
@@ -80,8 +80,8 @@ export class StudentService {
                 .get(pathAccessToken);
 
             if (dataResponse.status === 200) {
-                let studentId = dataResponse.data.data.studentId;
-                studentLocalStorage.setStudentIdToLocalStorage(Number(studentId));
+                let adminId = dataResponse.data.data.adminId;
+                adminLocalStorage.setAdminIdToLocalStorage(Number(adminId));
                 return true;
             }
         } catch (error) {
@@ -118,23 +118,23 @@ export class StudentService {
 
                         if (retryResponse.status === 200) {
                             //set lai ID moi
-                            let studentId = retryResponse.data.data.studentId;
-                            studentLocalStorage.setStudentIdToLocalStorage(Number(studentId));
+                            let adminId = retryResponse.data.data.adminId;
+                            adminLocalStorage.setAdminIdToLocalStorage(Number(adminId));
                             statusAutoLogin = true;
                         }
                     } else {
                         tokenLogin.removeAccessTokenAndRefreshTokenFromStorage();
-                        studentLocalStorage.removeStudentIdFromLocalStorage();
+                        adminLocalStorage.removeAdminIdFromLocalStorage();
                     }
                 } catch (refreshError) {
                     console.error('Refresh token failed:', refreshError);
                     tokenLogin.removeAccessTokenAndRefreshTokenFromStorage();
-                    studentLocalStorage.removeStudentIdFromLocalStorage();
+                    adminLocalStorage.removeAdminIdFromLocalStorage();
                 }
             } else {
                 console.error('Auto login error:', error);
                 tokenLogin.removeAccessTokenAndRefreshTokenFromStorage();
-                studentLocalStorage.removeStudentIdFromLocalStorage();
+                adminLocalStorage.removeAdminIdFromLocalStorage();
             }
         }
         return statusAutoLogin;

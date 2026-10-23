@@ -14,14 +14,14 @@ import 'vuetify/dist/vuetify-labs.min.css'
 
 // Plugins & Local Storage / Routers
 import CanvasJSChart from '@canvasjs/vue-charts'
-import StudentLocalStorage from "@/local_storage/StudentLocalStorage.js"
+import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js"
 import RouterManagement from "@/routers/RouterManagement.js"
 import routersBeforeLogin from "@/routers/routers_before_login.js"
 import routersAfterLogin from "@/routers/routers_after_login.js"
-import {StudentService} from "@/services/spring/StudentService.js";
+import {AdminService} from "@/services/spring/AdminService.js";
 import {TokenLogin} from "@/model/TokenLogin.js";
 
-const studentService = new StudentService();
+const adminService = new AdminService();
 
 const tokenLogin = new TokenLogin();
 
@@ -44,10 +44,10 @@ function initApp(routes, targetPath) {
 }
 
 async function execute() {
-    //const studentLocalStorage = new StudentLocalStorage()
+    //const adminLocalStorage = new AdminLocalStorage()
     // const isLoggedIn = Boolean(
     //     routerManagement.getPath_From_LocalStorage() &&
-    //     studentLocalStorage.getStudentId_From_LocalStorage() &&
+    //     adminLocalStorage.getAdminId_From_LocalStorage() &&
     //     tokenLogin.getRefreshTokenFromStorage()
     // )
 
@@ -64,7 +64,7 @@ async function execute() {
     tokenLogin.setRefreshToken(refreshToken);
 
     if(refreshToken) {
-        statusLoginAuto = await studentService.getDataToAutoLoginAccessToken(tokenLogin);
+        statusLoginAuto = await adminService.getDataToAutoLoginAccessToken(tokenLogin);
     }
 
     console.log("Status login auto:", statusLoginAuto);

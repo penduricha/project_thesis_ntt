@@ -73,7 +73,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ReactionUser(
             userId: currentUserId,
             userName: 'Tôi',
-            avatarUrl: 'https://i.pravatar.cc/150?img=5',
+            avatarUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7va_1LkI6WgHBaCHixrXsAbCZndHfZTdaXhhkSM_G3g&s=10',
             emoji: '❤️',
           ),
         ],

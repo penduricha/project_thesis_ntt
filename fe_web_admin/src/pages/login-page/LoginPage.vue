@@ -6,9 +6,9 @@ import RouterManagement from "@/routers/RouterManagement.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 import TextInvalid from "@/components/span/TextInvalid.vue";
 
-import StudentLocalStorage from "@/local_storage/StudentLocalStorage.js";
-import {StudentAccount} from "@/model/StudentAccount.js";
-import StudentRepository from "@/repository/StudentRepository.js";
+import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
+import {AdminAccount} from "@/model/AdminAccount.js";
+import AdminRepository from "@/repository/AdminRepository.js";
 import Footer from "@/components/footer/Footer.vue";
 import Header from "@/components/header/Header.vue";
 // import '../../components/button/button_blue/button_blue.scss';
@@ -38,7 +38,7 @@ export default {
 
   data() {
     return {
-      studentId: null,
+      adminId: null,
       password: "",
       validateLogin: "",
       rememberMe: false,
@@ -82,12 +82,12 @@ export default {
     //   }
     // },
 
-    setInputStudentId(event) {
+    setInputAdminId(event) {
       // Chỉ cho phép các ký tự số
-      // Gán lại giá trị cho biến studentId
-      this.studentId = event.target.value.replace(/[^0-9]/g, '');
+      // Gán lại giá trị cho biến adminId
+      this.adminId = event.target.value.replace(/[^0-9]/g, '');
 
-      if (!this.studentId) {
+      if (!this.adminId) {
         this.validateLogin = "";
       } else {
         this.validateLogin = "";
@@ -104,12 +104,12 @@ export default {
 
     //Call api
 
-    navigateToRegisterCoursesPage() {
+    navigateToMainPage() {
       //save path to local storage
       const routerManagement = new RouterManagement();
 
       //save path
-      const routerPathToSave = '/information-student';
+      const routerPathToSave = '/information-admin';
       routerManagement.savePathToLocalStorage(routerPathToSave);
 
       this.$router.push({
@@ -143,46 +143,47 @@ export default {
     },
 
     async handleLoginEvent() {
-      const nullFieldInput = !this.studentId || !this.password;
-      if (nullFieldInput) {
-        this.validateLogin = 'Vui lòng nhập đầy đủ thông tin.';
-      } else {
-        this.loadButtonLogin();
-        //call api
-        //Call logic Login
-        const studentCache = new StudentRepository();
-        let statusLogin = await studentCache.getResponseFromLoginRequest(Number(this.studentId), String(this.password));
-
-        if (statusLogin === "Failed") {
-          this.validateLogin = 'Mã số sinh viên hoặc mật khẩu không đúng.';
-          this.stopLoadButtonLogin();
-        } else if (statusLogin === "OK") {
-          //save remember me
-          this.validateLogin = "";
-          if (this.rememberMe === true) {
-            this.saveDataInputToLocalStorage();
-          } else {
-            this.removeDataInputFromLocalStorage();
-          }
-          //save student id to local storage
-          console.log('Login successfully');
-          //dang nhap thanh cong, dieu huong qua
-          this.navigateToRegisterCoursesPage();
-        }
-        this.stopLoadButtonLogin();
-      }
+      this.navigateToMainPage();
+      // const nullFieldInput = !this.adminId || !this.password;
+      // if (nullFieldInput) {
+      //   this.validateLogin = 'Vui lòng nhập đầy đủ thông tin.';
+      // } else {
+      //   this.loadButtonLogin();
+      //   //call api
+      //   //Call logic Login
+      //   const adminCache = new AdminRepository();
+      //   let statusLogin = await adminCache.getResponseFromLoginRequest(Number(this.adminId), String(this.password));
+      //
+      //   if (statusLogin === "Failed") {
+      //     this.validateLogin = 'Mã số sinh viên hoặc mật khẩu không đúng.';
+      //     this.stopLoadButtonLogin();
+      //   } else if (statusLogin === "OK") {
+      //     //save remember me
+      //     this.validateLogin = "";
+      //     if (this.rememberMe === true) {
+      //       this.saveDataInputToLocalStorage();
+      //     } else {
+      //       this.removeDataInputFromLocalStorage();
+      //     }
+      //     //save admin id to local storage
+      //     console.log('Login successfully');
+      //     //dang nhap thanh cong, dieu huong qua
+      //     this.navigateToRegisterCoursesPage();
+      //   }
+      //   this.stopLoadButtonLogin();
+      // }
     },
 
     removeDataInputFromLocalStorage() {
-      const studentLocalStorage = new StudentLocalStorage();
-      studentLocalStorage.removeLocalStorageRememberMe();
+      const adminLocalStorage = new AdminLocalStorage();
+      adminLocalStorage.removeLocalStorageRememberMe();
     },
 
     saveDataInputToLocalStorage() {
-      if (this.studentId && this.password) {
-        const studentLocalStorage = new StudentLocalStorage();
-        studentLocalStorage.saveLocalStorageRememberMe(
-          this.studentId,
+      if (this.adminId && this.password) {
+        const adminLocalStorage = new AdminLocalStorage();
+        adminLocalStorage.saveLocalStorageRememberMe(
+          this.adminId,
           this.password.trim());
       }
     },
@@ -190,28 +191,28 @@ export default {
     getStatusCheckBoxRememberMe() {
       /* neu local storage có save thì true ngược lại thì false */
       /* neu tru thi set input*/
-      const studentLocalStorage = new StudentLocalStorage();
-      let studentFetched = studentLocalStorage
+      const adminLocalStorage = new AdminLocalStorage();
+      let adminFetched = adminLocalStorage
         .getLocalStorageRememberMe();
-      console.log('Student fetched from local storage remember me:', studentFetched);
-      if (!studentFetched || (
-        typeof studentFetched === 'object'
-        && Object.keys(studentFetched).length === 0)) {
+      console.log('Admin fetched from local storage remember me:', adminFetched);
+      if (!adminFetched || (
+        typeof adminFetched === 'object'
+        && Object.keys(adminFetched).length === 0)) {
         this.rememberMe = false;
       } else {
         this.rememberMe = true;
-        this.setDataInputFromLocalStorage(studentFetched);
+        this.setDataInputFromLocalStorage(adminFetched);
       }
     },
 
-    setDataInputFromLocalStorage(studentFetched) {
-      if (studentFetched) {
-        let studentId = studentFetched.studentId;
-        let password = studentFetched.password;
-        const studentAccount = new StudentAccount(studentId, password);
-        console.log(studentAccount.toString());
-        this.studentId = studentAccount.getStudentId();
-        this.password = studentAccount.getPassword();
+    setDataInputFromLocalStorage(adminFetched) {
+      if (adminFetched) {
+        let adminId = adminFetched.adminId;
+        let password = adminFetched.password;
+        const adminAccount = new AdminAccount(adminId, password);
+        console.log(adminAccount.toString());
+        this.adminId = adminAccount.getAdminId();
+        this.password = adminAccount.getPassword();
       }
     }
   },
@@ -239,11 +240,11 @@ export default {
         <h4 class="title-login">ĐĂNG NHẬP</h4>
         <div class="form-floating mb-3 style-input-login">
           <input type="text" class="form-control border-radius-zero"
-            id="floatingInputStudentId" 
+            id="floatingInputAdminId" 
             placeholder="Mã sinh viên (nhập số)"
-            @input="setInputStudentId"
-            v-model="studentId" maxlength="10">
-          <label for="floatingInputStudentId">Mã sinh viên (nhập số)</label>
+            @input="setInputAdminId"
+            v-model="adminId" maxlength="10">
+          <label for="floatingInputAdminId">Mã quản trị viên (nhập số)</label>
         </div>
         <div class="form-floating mb-3 style-input-login">
           <input type="password" class="form-control border-radius-zero" id="floatingInputPassword" placeholder="Mật khẩu"

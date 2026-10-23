@@ -11,7 +11,7 @@ const routers = [
     { path: '/', component: LoginPage, allow: true},
     { path: '/login', component: LoginPage, allow: true},
     // { path: '/register-courses', component: RegisterCourses, allow: false },
-    { path: '/information-student', component: InformationPage, allow: false},
+    { path: '/information-admin', component: InformationPage, allow: false},
     // { path: '/list-courses', component: ListCourses, allow: false},
     { path: '/404-not-found', component: PageNotFound, allow: true},
     // { path: '/university-schedule', component: UniversitySchedule, allow: false},
