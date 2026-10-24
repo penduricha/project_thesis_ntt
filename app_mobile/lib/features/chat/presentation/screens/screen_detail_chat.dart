@@ -10,6 +10,8 @@ class ChatMessage {
   final bool isMe;
   final DateTime timestamp;
   List<ReactionUser> reactions;
+  final ChatMessage? replyTo;
+  // Thêm trường lưu tin nhắn đang được trích dẫn phản hồi
 
   ChatMessage({
     required this.id,
@@ -17,6 +19,7 @@ class ChatMessage {
     required this.isMe,
     required this.timestamp,
     List<ReactionUser>? reactions,
+    this.replyTo,
   }) : reactions = reactions ?? [];
 }
 
@@ -37,6 +40,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   // Biến quản lý trạng thái hiển thị nút cuộn xuống
   bool _showScrollToBottom = false;
+
+  // Biến quản lý tin nhắn đang được chọn để trả lời (Reply)
+  ChatMessage? _replyingMessage;
 
   static DateTime _getHanoiNow() {
     return DateTime.now().toUtc().add(const Duration(hours: 7));
@@ -59,7 +65,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ReactionUser(
             userId: '2',
             userName: widget.senderName,
-            avatarUrl: 'https://i.pravatar.cc/150?img=1',
             emoji: '👍',
           ),
         ],
@@ -73,7 +78,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ReactionUser(
             userId: currentUserId,
             userName: 'Tôi',
-            avatarUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7va_1LkI6WgHBaCHixrXsAbCZndHfZTdaXhhkSM_G3g&s=10',
             emoji: '❤️',
           ),
         ],
@@ -95,11 +99,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void _scrollListener() {
     if (!_scrollController.hasClients) return;
 
-    // Tính khoảng cách từ vị trí hiện tại đến đáy danh sách
     final double distanceToBottom =
         _scrollController.position.maxScrollExtent - _scrollController.offset;
-
-    // Ngưỡng 300px tương đương khoảng 3 lần cuộn ngón tay lên
     const double scrollThreshold = 500.0;
 
     if (distanceToBottom > scrollThreshold) {
@@ -232,6 +233,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     String trimmedText = _trimLeadingTrailing(rawText);
 
+    // Lưu lại thông tin tin nhắn đang reply trước khi reset
+    final currentReply = _replyingMessage;
+
     double screenHeight = MediaQuery.of(context).size.height;
     double maxHeightThreshold = screenHeight * 0.66;
     double maxBubbleWidth = MediaQuery.of(context).size.width * 0.75;
@@ -241,7 +245,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         trimmedText, maxContentWidth, maxHeightThreshold);
 
     _messageController.clear();
-    setState(() {});
+    setState(() {
+      _replyingMessage = null; // Đóng khung preview reply sau khi gửi
+    });
 
     final now = _getHanoiNow();
 
@@ -252,6 +258,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           text: parts[i],
           isMe: true,
           timestamp: now,
+          replyTo: i == 0 ? currentReply : null, // Gắn tin nhắn reply vào phần đầu tiên nếu chuỗi dài bị tách
         );
 
         _messages.add(newMessage);
@@ -371,7 +378,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             ReactionUser(
                               userId: currentUserId,
                               userName: 'Tôi',
-                              avatarUrl: 'https://i.pravatar.cc/150?img=5',
                               emoji: selectedReaction.value,
                             ),
                           );
@@ -383,7 +389,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
                     // Modal Options
                     ModalIconOptionsChat(
-                      onReply: () => Navigator.pop(context),
+                      onReply: () {
+                        Navigator.pop(context);
+                        setState(() {
+                          _replyingMessage = message; // Kích hoạt trạng thái trả lời
+                        });
+                      },
                       onForward: () => Navigator.pop(context),
                       onCopy: () => Navigator.pop(context),
                       onDelete: () {
@@ -600,6 +611,48 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Nếu tin nhắn này có trả lời tin nhắn khác, hiển thị khối trích dẫn nhỏ bên trong bubble
+                        if (message.replyTo != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            margin: const EdgeInsets.only(bottom: 6),
+                            decoration: BoxDecoration(
+                              color: message.isMe
+                                  ? Colors.white.withOpacity(0.2)
+                                  : Colors.black.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border(
+                                left: BorderSide(
+                                  color: message.isMe ? Colors.white : const Color(0xFF007AFF),
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  message.replyTo!.isMe ? 'Tôi' : widget.senderName,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: message.isMe ? Colors.white : const Color(0xFF007AFF),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  message.replyTo!.text,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: message.isMe ? Colors.white70 : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         Text(
                           message.text,
                           style: TextStyle(
@@ -684,64 +737,149 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  Widget _buildInputArea() {
+  // Widget hiển thị thanh preview trả lời tin nhắn nằm phía trên ô nhập liệu (giống WhatsApp)
+  Widget _buildReplyPreview() {
+    if (_replyingMessage == null) return const SizedBox.shrink();
+
+    final replySender = _replyingMessage!.isMe ? 'Tôi' : widget.senderName;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      color: Colors.white,
-      child: SafeArea(
-        child: Row(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFEFEFF0),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F7F8),
+        border: Border(
+          top: BorderSide(color: Color(0xFFE5E5EA), width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF007AFF),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  replySender,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Color(0xFF007AFF),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _replyingMessage!.text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _replyingMessage = null;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
                 shape: BoxShape.circle,
               ),
-              child: IconButton(
-                icon: const Icon(Icons.add, color: Color(0xFF007AFF)),
-                onPressed: () {},
+              child: const Icon(
+                Icons.close,
+                size: 16,
+                color: Colors.black54,
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFEFF0),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFD1D1D6)),
-                ),
-                child: TextField(
-                  controller: _messageController,
-                  onChanged: (_) => setState(() {}),
-                  onSubmitted: (_) => _handleSendMessage(),
-                  decoration: const InputDecoration(
-                    hintText: 'iMessage',
-                    border: InputBorder.none,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _messageController,
-              builder: (context, value, child) {
-                final hasText = value.text.trim().isNotEmpty;
-                return Container(
-                  decoration: BoxDecoration(
-                    color:
-                    hasText ? const Color(0xFF007AFF) : Colors.grey[300],
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.arrow_upward,
-                      color: Colors.white,
-                      size: 22,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Container(
+      color: Colors.white,
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Hiển thị thanh preview trả lời nếu có tin nhắn đang reply
+            _buildReplyPreview(),
+            // Khu vực nhập liệu chính
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEFEFF0),
+                      shape: BoxShape.circle,
                     ),
-                    onPressed: hasText ? _handleSendMessage : null,
+                    child: IconButton(
+                      icon: const Icon(Icons.add, color: Color(0xFF007AFF)),
+                      onPressed: () {},
+                    ),
                   ),
-                );
-              },
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFEFF0),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFD1D1D6)),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        onChanged: (_) => setState(() {}),
+                        onSubmitted: (_) => _handleSendMessage(),
+                        decoration: const InputDecoration(
+                          hintText: 'iMessage',
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _messageController,
+                    builder: (context, value, child) {
+                      final hasText = value.text.trim().isNotEmpty;
+                      return Container(
+                        decoration: BoxDecoration(
+                          color:
+                          hasText ? const Color(0xFF007AFF) : Colors.grey[300],
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_upward,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          onPressed: hasText ? _handleSendMessage : null,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),

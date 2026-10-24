@@ -34,10 +34,7 @@ export default class AdminRepository {
 
                 tokenLogin.setAccessTokenToStorage();
                 tokenLogin.setRefreshTokenToStorage();
-                const routerManagement = new RouterManagement();
 
-                const firstPathAfterLogin = "/information-admin";
-                routerManagement.savePathToLocalStorage(firstPathAfterLogin);
                 adminLocalStorage.setAdminIdToLocalStorage(adminAccount.getAdminId());
 
                 statusLogin = "OK";

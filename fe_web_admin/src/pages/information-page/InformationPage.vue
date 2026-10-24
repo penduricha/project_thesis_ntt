@@ -61,9 +61,7 @@ export default {
   },
 
   created() {
-    this.saveRouterPath(
-        this.getRoute()
-    );
+    this.saveRouterPath();
   },
 
   async mounted() {
@@ -79,14 +77,10 @@ export default {
       document.title = 'Thông tin quản trị';
     },
 
-    getRoute() {
-      //ở đây có props thì phải thêm path của props
-      return this.$route.path;
-    },
-
-    saveRouterPath(route) {
+    saveRouterPath() {
+      const routePath = this.$route.path;
       const routerManagement = new RouterManagement();
-      routerManagement.savePathToSessionStorage(route);
+      routerManagement.savePathToSessionStorage(routePath);
     },
   },
 

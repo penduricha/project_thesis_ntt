@@ -46,17 +46,17 @@
 //        LocalDateTime now = LocalDateTime.now();
 //
 //        // 8. Cập nhật Token mới vào DB / Cache
-//        StudentAccessToken studentAccessToken = new StudentAccessToken();
-//        studentAccessToken.setJwtToken(newAccessToken);
-//        studentAccessToken.setStudentId(studentId);
-//        studentAccessToken.setDateLogin(now);
-//        StudentAccessTokenService.addStudentAccessToken(studentAccessToken);
+//        StudentAccessToken adminAccessToken = new StudentAccessToken();
+//        adminAccessToken.setJwtToken(newAccessToken);
+//        adminAccessToken.setStudentId(studentId);
+//        adminAccessToken.setDateLogin(now);
+//        StudentAccessTokenService.addStudentAccessToken(adminAccessToken);
 //
-//        StudentRefreshToken studentRefreshToken = new StudentRefreshToken();
-//        studentRefreshToken.setJwtToken(newRefreshToken);
-//        studentRefreshToken.setStudentId(studentId);
-//        studentRefreshToken.setDateLogin(now);
-//        StudentAccessTokenService.addStudentRefreshToken(studentRefreshToken);
+//        StudentRefreshToken adminRefreshToken = new StudentRefreshToken();
+//        adminRefreshToken.setJwtToken(newRefreshToken);
+//        adminRefreshToken.setStudentId(studentId);
+//        adminRefreshToken.setDateLogin(now);
+//        StudentAccessTokenService.addStudentRefreshToken(adminRefreshToken);
 //
 //        // 9. Trả về kết quả cho Client
 //        Map<String, Object> responseSuccessData = new HashMap<>();

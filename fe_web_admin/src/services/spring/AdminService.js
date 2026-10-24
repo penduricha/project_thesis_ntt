@@ -7,16 +7,6 @@ const springConfigHeader = new SpringConfigHeader();
 
 const adminLocalStorage = new AdminLocalStorage();
 
-// async function getDataToAutoLoginRefreshToken(refreshToken) {
-//     const path = "/admin/auth/login/auto/refresh-token";
-//     return await springConfigHeader
-//         .getAPIClientWithHeadersIsAccessToken(refreshToken).get(path, {
-//             ...springConfigHeader.getAuthorization(), // Tạo { auth: { username, password } }
-//             headers: {
-//                 Authorization: `Bearer ${refreshToken}`
-//             }});
-// }
-
 export class AdminService {
     async postDataToLoginRequest(adminAccount) {
         if (!(adminAccount instanceof AdminAccount)) {

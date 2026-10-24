@@ -28,12 +28,13 @@ export default {
   },
 
   created() {
-    this.saveRouterPath(this.getRoute());
+    this.setTitlePage();
+    this.saveRouterPath();
     this.getStatusCheckBoxRememberMe();
   },
 
   mounted() {
-    this.setTitlePage();
+
   },
 
   data() {
@@ -54,19 +55,14 @@ export default {
   },
 
   methods: {
-
     setTitlePage() {
       document.title = 'Đăng nhập';
     },
 
-    getRoute() {
-      //ở đây có props thì phải thêm path của props
-      return this.$route.path;
-    },
-
     saveRouterPath(route) {
+      const routePath = this.$route.path;
       const routerManagement = new RouterManagement();
-      routerManagement.savePathToSessionStorage(route);
+      routerManagement.savePathToSessionStorage(routePath);
     },
 
     //lock paste
@@ -108,20 +104,15 @@ export default {
       //save path to local storage
       const routerManagement = new RouterManagement();
 
-      //save path
-      const routerPathToSave = '/information-admin';
-      routerManagement.savePathToLocalStorage(routerPathToSave);
+      const firstPathAfterLogin = "/information-admin";
+      routerManagement.savePathToLocalStorage(firstPathAfterLogin);
 
       this.$router.push({
-        path: routerPathToSave,
+        path: firstPathAfterLogin,
         // query: {
         // }
       }).then(() => {
-        // Delay the reload to ensure the navigation is completed
-        // Adjust the timeout as needed
-        // setTimeout(() => {
-        //    window.location.reload();
-        // }, 50);
+
       }).catch((error) => {
         console.error('Error navigating :', error);
         alert(error);
@@ -143,35 +134,34 @@ export default {
     },
 
     async handleLoginEvent() {
-      this.navigateToMainPage();
-      // const nullFieldInput = !this.adminId || !this.password;
-      // if (nullFieldInput) {
-      //   this.validateLogin = 'Vui lòng nhập đầy đủ thông tin.';
-      // } else {
-      //   this.loadButtonLogin();
-      //   //call api
-      //   //Call logic Login
-      //   const adminCache = new AdminRepository();
-      //   let statusLogin = await adminCache.getResponseFromLoginRequest(Number(this.adminId), String(this.password));
-      //
-      //   if (statusLogin === "Failed") {
-      //     this.validateLogin = 'Mã số sinh viên hoặc mật khẩu không đúng.';
-      //     this.stopLoadButtonLogin();
-      //   } else if (statusLogin === "OK") {
-      //     //save remember me
-      //     this.validateLogin = "";
-      //     if (this.rememberMe === true) {
-      //       this.saveDataInputToLocalStorage();
-      //     } else {
-      //       this.removeDataInputFromLocalStorage();
-      //     }
-      //     //save admin id to local storage
-      //     console.log('Login successfully');
-      //     //dang nhap thanh cong, dieu huong qua
-      //     this.navigateToRegisterCoursesPage();
-      //   }
-      //   this.stopLoadButtonLogin();
-      // }
+      const nullFieldInput = !this.adminId || !this.password;
+      if (nullFieldInput) {
+        this.validateLogin = 'Vui lòng nhập đầy đủ thông tin.';
+      } else {
+        this.loadButtonLogin();
+        //call api
+        //Call logic Login
+        const adminCache = new AdminRepository();
+        let statusLogin = await adminCache.getResponseFromLoginRequest(Number(this.adminId), String(this.password));
+
+        if (statusLogin === "Failed") {
+          this.validateLogin = 'Mã số sinh viên hoặc mật khẩu không đúng.';
+          this.stopLoadButtonLogin();
+        } else if (statusLogin === "OK") {
+          //save remember me
+          this.validateLogin = "";
+          if (this.rememberMe === true) {
+            this.saveDataInputToLocalStorage();
+          } else {
+            this.removeDataInputFromLocalStorage();
+          }
+          //save admin id to local storage
+          console.log('Login successfully');
+          //dang nhap thanh cong, dieu huong qua
+          this.navigateToMainPage();
+        }
+        this.stopLoadButtonLogin();
+      }
     },
 
     removeDataInputFromLocalStorage() {

@@ -38,10 +38,10 @@ class MenuBarChatListScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        'user@example.com',
-                        style: TextStyle(fontSize: 13, color: Colors.grey),
-                      ),
+                      // Text(
+                      //   'user@example.com',
+                      //   style: TextStyle(fontSize: 13, color: Colors.grey),
+                      // ),
                     ],
                   ),
                 ],
@@ -62,6 +62,21 @@ class MenuBarChatListScreen extends StatelessWidget {
                 Navigator.pop(context);
                 // Đóng drawer
                 // TODO: Chuyển sang màn hình Tài khoản
+              },
+            ),
+
+            // Item: Tài khoản
+            ListTile(
+              leading: const Icon(Icons.security_outlined, color: Colors.black87),
+              title: const Text(
+                'Xác thực 6 số',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+              onTap: () {
+                Navigator.pop(context);
+                // Đóng drawer
+                // TODO: Chuyển sang màn hình xac thuc 6 so
               },
             ),
 

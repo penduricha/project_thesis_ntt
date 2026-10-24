@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 class ReactionUser {
   final String userId;
   final String userName;
-  final String avatarUrl;
   final String emoji;
 
   ReactionUser({
     required this.userId,
     required this.userName,
-    required this.avatarUrl,
     required this.emoji,
   });
 }
@@ -62,6 +60,13 @@ class _ModalDetailReactionBoxChatState
       _localReactions.removeWhere((r) => r.userId == widget.currentUserId);
     });
     widget.onRemoveReaction();
+  }
+
+  String _getLetterFirstUserName(String? username) {
+    if (username == null || username.trim().isEmpty) {
+      return '';
+    }
+    return username.trim()[0].toUpperCase();
   }
 
   @override
@@ -144,7 +149,7 @@ class _ModalDetailReactionBoxChatState
 
                 return Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                      horizontal: 16, vertical: 12),
                   color: isMe
                       ? const Color(0xFFF0F6FF)
                       : Colors.transparent,
@@ -155,10 +160,18 @@ class _ModalDetailReactionBoxChatState
                         children: [
                           CircleAvatar(
                             radius: 20,
-                            backgroundImage: item.avatarUrl.startsWith('http')
-                                ? NetworkImage(item.avatarUrl) as ImageProvider
-                                : AssetImage(item.avatarUrl),
-                            backgroundColor: Colors.grey[300],
+                            // backgroundImage: item.avatarUrl.startsWith('http')
+                            //     ? NetworkImage(item.avatarUrl) as ImageProvider
+                            //     : AssetImage(item.avatarUrl),
+                            // backgroundColor: Colors.grey[300],
+                            // Thay thế là kí tự đầu của tên người dùng.
+                            child: Text(
+                              _getLetterFirstUserName(item.userName),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                           Positioned(
                             right: 0,
@@ -197,19 +210,20 @@ class _ModalDetailReactionBoxChatState
                           style: TextButton.styleFrom(
                             backgroundColor: Colors.grey[200],
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 6),
+                              horizontal: 16,
+                              vertical: 6, // Tăng từ 6 lên 12 (hoặc giá trị bạn muốn)
+                            ),
                             minimumSize: Size.zero,
-                            tapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                           child: const Text(
                             'Gỡ',
                             style: TextStyle(
                               color: Colors.black87,
-                              fontSize: 13,
+                              fontSize: 14,
                             ),
                           ),
                         ),

@@ -1,1 +1,1 @@
-rootProject.name = "be-web-students"
+rootProject.name = "be-web-admin"

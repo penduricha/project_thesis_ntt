@@ -20,7 +20,6 @@ export class LoginService {
         if(refreshToken) {
             statusLoginAuto = await studentService.getDataToAutoLoginAccessToken(tokenLogin);
         }
-
         return statusLoginAuto;
     }
 }

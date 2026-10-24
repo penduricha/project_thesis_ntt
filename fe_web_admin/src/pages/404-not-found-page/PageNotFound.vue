@@ -60,12 +60,12 @@ export default {
       //     });
       //Cach 2
       const routerManagement = new RouterManagement();
-      const studentLocalStorage = new AdminLocalStorage();
+      const adminLocalStorage = new AdminLocalStorage();
       const checkPath_And_ID =
           routerManagement.getPathFromLocalStorage() &&
-          studentLocalStorage.getStudentID_From_LocalStorage_StudentID();
+          adminLocalStorage.getAdminIdToLocalStorage();
       if(checkPath_And_ID) {
-        const pathReturn = '/information-student';
+        const pathReturn = '/information-admin';
         this.$router.replace({path: pathReturn}).then(() => {
 
               })

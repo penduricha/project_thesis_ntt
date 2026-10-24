@@ -104,20 +104,15 @@ export default {
       this.loadButtonLogout();
       const pathLogin = '/login';
 
-      // const adminRepository = new AdminRepository();
-      // let status = await adminRepository.getResponseFromLogoutRequest();
-      //
-      // if (status === "OK") {
-      //   this.$router.replace({ path: pathLogin }).catch((error) => {
-      //     console.error('Error navigating:', error);
-      //     alert(error);
-      //   });
-      // }
-      this.$router.replace({ path: pathLogin }).catch((error) => {
-                console.error('Error navigating:', error);
-                // alert(error);
-              });
+      const adminRepository = new AdminRepository();
+      let status = await adminRepository.getResponseFromLogoutRequest();
 
+      if (status === "OK") {
+        this.$router.replace({ path: pathLogin }).catch((error) => {
+          console.error('Error navigating:', error);
+          alert(error);
+        });
+      }
       this.stopLoadButtonLogout();
     },
 
