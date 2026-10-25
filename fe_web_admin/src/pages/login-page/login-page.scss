@@ -1,95 +1,212 @@
-/* style chung */
+/* =========================================================
+   FORM ĐĂNG NHẬP - Mobile first
+   Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
+   ========================================================= */
+
+/* ---------- Style chung (áp dụng cho mobile trước) ---------- */
+
+/* Trang chiếm trọn chiều cao màn hình -> Footer luôn nằm dưới cùng */
 .container-page-login {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  min-height: 100vh;
+  min-height: 100dvh; /* tránh bị thanh địa chỉ trên trình duyệt mobile che */
 }
 
+/* Vùng chứa form: tự co giãn phần không gian còn lại giữa Header và Footer */
 .container-form-login-page {
+  flex: 1;
   width: 100%;
-  min-height: 90vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: var(--white-web);
+  padding: 1.5rem 1rem;
+  background-color: var(--white-web, #f4f7fb);
 }
 
+/* Khung form */
 .form-login {
-  border: solid 2px var(--blue-color);
-  width: 35%;
-  height: 100%;
-  border-radius: 5px;
+  width: 100%;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem;
-  gap: 1rem;
-  background-color: white;
+  gap: 0.5rem;
+  padding: 1.5rem 1.25rem;
+  background-color: #fff;
+  border: 1px solid #dbe4f0;
+  border-top: 4px solid var(--blue-color, #13529d);
+  //border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(19, 82, 157, 0.12);
 }
 
 .title-login {
+  width: 100%;
+  margin: 0 0 0.75rem;
   text-align: center;
   color: #13529d;
   font-weight: bold;
+  font-size: clamp(1.25rem, 1.05rem + 1vw, 1.625rem);
+  letter-spacing: 0.04em;
 }
 
-.btn-login {
-  width: 100%;
-  height: 3rem;
-  font-size: 17px;
-}
-
-.btn-login:hover {
-  opacity: 0.8;
-}
-
+/* Ô nhập liệu */
 .style-input-login {
   width: 100%;
 }
 
+.form-login .form-control {
+  font-size: 1rem; /* >= 16px để iOS không tự zoom khi focus */
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-login .form-control.border-radius-zero {
+  //border-radius: 6px;
+}
+
+.form-login .form-control:focus {
+  border-color: var(--blue-color, #13529d);
+  box-shadow: 0 0 0 0.2rem rgba(19, 82, 157, 0.18);
+}
+
+.form-login .form-floating > .form-control:focus ~ label,
+.form-login .form-floating > .form-control:not(:placeholder-shown) ~ label {
+  color: var(--blue-color, #13529d);
+}
+
+/* Ghi nhớ đăng nhập */
 .box-remember-me {
   width: 100%;
-  padding-left: 0.5rem;
   display: flex;
-  gap: 0.75rem;
   align-items: center;
+  gap: 0.625rem;
+  padding-left: 0.25rem;
+  font-size: 0.9375rem;
+  color: #3d4a5c;
+}
+
+.box-remember-me span {
+  cursor: pointer;
+  user-select: none;
 }
 
 .style-checkbox {
-  accent-color: var(--blue-color);
-  width: 1rem;
-  height: 1rem;
+  flex-shrink: 0;
+  accent-color: var(--blue-color, #13529d);
+  width: 1.125rem;
+  height: 1.125rem;
   cursor: pointer;
 }
 
-/* responsive screen and table and mobile*/
-/* Styles for mobile devices */
-/* iphone 11 tro len */
-@media only screen and (max-width: 767px) {
+.style-checkbox:focus-visible,
+.btn-login:focus-visible {
+  outline: 2px solid var(--blue-color, #13529d);
+  outline-offset: 2px;
+}
+
+/* Nút đăng nhập (vùng bấm tối thiểu ~48px cho cảm ứng) */
+.btn-login {
+  width: 100%;
+  height: 3rem;
+  margin-top: 0.5rem;
+  font-size: 16px;
+  transition: opacity 0.2s ease;
+}
+
+.btn-login:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ---------- Mobile nhỏ (iPhone SE, Android màn nhỏ) ---------- */
+@media only screen and (max-width: 360px) {
+  .container-form-login-page {
+    padding: 1rem 0.75rem;
+  }
+
   .form-login {
-    width: 50%;
+    padding: 1.25rem 1rem;
+  }
+}
+
+/* ---------- Điện thoại xoay ngang (chiều cao thấp) ---------- */
+@media only screen and (max-height: 500px) and (orientation: landscape) {
+  .container-form-login-page {
+    align-items: flex-start;
+    padding: 0.75rem 1rem;
+  }
+
+  .form-login {
+    gap: 0.25rem;
+    padding: 1rem 1.25rem;
+  }
+
+  .title-login {
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* ---------- Tablet / iPad (768px - 1023px) ---------- */
+@media only screen and (min-width: 768px) and (max-width: 1023px) {
+  .container-form-login-page {
+    padding: 3rem 2rem;
+  }
+
+  .form-login {
+    max-width: 480px;
+    gap: 0.75rem;
+    padding: 2rem;
+    //border-radius: 10px;
+  }
+
+  .title-login {
+    margin-bottom: 1rem;
   }
 
   .btn-login {
-    height: 2.5rem;
-    font-size: 16px;
+    height: 3rem;
+    font-size: 17px;
   }
 }
 
-/* Styles for tablets */
-@media only screen and (min-width: 767px) and (max-width: 1023px) {
-  .form-login {
-    width: 50%;
-  }
-}
-
-/* Styles for larger screens */
+/* ---------- Desktop (Laptop / PC) ---------- */
 @media (min-width: 1024px) {
+  .container-form-login-page {
+    padding: 3rem 2rem;
+  }
 
+  .form-login {
+    max-width: 460px; /* không cho form phình to trên màn hình lớn */
+    gap: 0.75rem;
+    padding: 2.25rem 2.5rem;
+    //border-radius: 10px;
+  }
+
+  .title-login {
+    margin-bottom: 1rem;
+  }
+
+  .btn-login {
+    height: 3rem;
+    font-size: 17px;
+  }
 }
 
-/*khi trinh duyet dark*/
+/* ---------- Người dùng tắt hiệu ứng chuyển động ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .form-login .form-control,
+  .btn-login {
+    transition: none;
+  }
+}
+
+/* ---------- Khi trình duyệt ở chế độ dark ---------- */
+/* Để trống có chủ đích: Header/Footer của trang đang là giao diện sáng,
+   bật dark riêng cho form sẽ bị lệch tông. Bổ sung khi cả trang hỗ trợ dark. */
 @media (prefers-color-scheme: dark) {
 
 }
-

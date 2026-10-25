@@ -1,112 +1,101 @@
 import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
-import {AdminAccount} from "@/model/AdminAccount.js";
-import {AdminService} from "@/services/spring/AdminService.js";
-
-import {TokenLogin} from "@/model/TokenLogin.js";
 import RouterManagement from "@/routers/RouterManagement.js";
+import {AdminAccount} from "@/model/AdminAccount.js";
+import {TokenLogin} from "@/model/TokenLogin.js";
+import {AdminService} from "@/services/spring/AdminService.js";
 import {LoginService} from "@/services/spring/LoginService.js";
 
-const adminLocalStorage = new AdminLocalStorage();
+// Giữ nguyên giá trị chuỗi cũ vì nơi gọi có thể đang so sánh với chúng
+export const REQUEST_STATUS = Object.freeze({
+    OK: "OK",
+    FAILED: "Failed",
+    EXCEPTION: "Exception system:",
+});
 
-const adminService = new AdminService();
-
-const loginService = new LoginService();
+const HTTP_OK = 200;
 
 export default class AdminRepository {
-    accessToken;
-    refreshToken;
+    constructor(
+        adminService = new AdminService(),
+        loginService = new LoginService(),
+        adminLocalStorage = new AdminLocalStorage(),
+    ) {
+        this.adminService = adminService;
+        this.loginService = loginService;
+        this.adminLocalStorage = adminLocalStorage;
+    }
+
+    // ---------- Public API ----------
 
     async getResponseFromLoginRequest(adminId, password) {
-        let statusLogin = "";
         const adminAccount = new AdminAccount(adminId, password);
-        try{
-            let dataReturn = await adminService.postDataToLoginRequest(adminAccount);
-            console.log(dataReturn);
-            console.log("Data:", dataReturn.data);
 
-            if(dataReturn.data.success) {
-                //save localstorage
-                let accessToken = String(dataReturn.data.data.accessToken);
-                let refreshToken = String(dataReturn.data.data.refreshToken);
-                const tokenLogin = new TokenLogin(accessToken, refreshToken);
+        try {
+            const response = await this.adminService.postDataToLoginRequest(adminAccount);
+            const {success, data} = response.data;
 
-                console.log(tokenLogin.toString());
-
-                tokenLogin.setAccessTokenToStorage();
-                tokenLogin.setRefreshTokenToStorage();
-
-                adminLocalStorage.setAdminIdToLocalStorage(adminAccount.getAdminId());
-
-                statusLogin = "OK";
-            } else {
-                statusLogin = "Failed";
+            if (!success) {
+                return REQUEST_STATUS.FAILED;
             }
-        } catch (e) {
-            statusLogin = "Exception system:";
-            console.error(statusLogin);
-            console.error(e);
-            //alert(e);
 
+            this.#saveLoginSession(adminAccount, data);
+            return REQUEST_STATUS.OK;
+        } catch (error) {
+            console.error(REQUEST_STATUS.EXCEPTION, error.message);
+            return REQUEST_STATUS.EXCEPTION;
         }
-        return statusLogin;
-        //save localstorage
     }
 
     async getResponseFromLogoutRequest() {
-        let statusLogout = "";
-
         try {
             const tokenLogin = new TokenLogin();
-            let dataReturn = await adminService.postDataToLogoutRequest(tokenLogin);
+            const response = await this.adminService.postDataToLogoutRequest(tokenLogin);
 
-            if(dataReturn.data.status === 200) {
-                adminLocalStorage.removeAdminIdFromLocalStorage();
-                tokenLogin.removeAccessTokenAndRefreshTokenFromStorage();
-
-                const routerManagement = new RouterManagement();
-                routerManagement.removePathFromLocalStorage();
-                routerManagement.removePathFromSessionStorage();
-
-                statusLogout = "OK";
-            } else {
-                statusLogout = "Failed"
+            if (response.data.status !== HTTP_OK) {
+                return REQUEST_STATUS.FAILED;
             }
-        } catch (e) {
-            statusLogout = "Exception system:";
-            console.error(statusLogout);
-            console.error(e);
-            //alert(e);
+
+            this.#clearLoginSession(tokenLogin);
+            return REQUEST_STATUS.OK;
+        } catch (error) {
+            console.error(REQUEST_STATUS.EXCEPTION, error.message);
+            return REQUEST_STATUS.EXCEPTION;
         }
-        return statusLogout;
     }
 
+    /**
+     * @returns {Promise<Object|null>} thông tin admin, hoặc null nếu chưa đăng nhập / không lấy được
+     */
     async getAdminInformationByAdminId() {
-        // Flag login auto
-        let adminInfo = {};
+        // Auto login PHẢI chạy trước: nó có thể ghi adminId mới vào localStorage
+        const isAutoLoggedIn = await this.loginService.getStatusAutoLogin();
+        const adminId = this.adminLocalStorage.getAdminIdToLocalStorage();
 
-        let statusLoginAuto = await loginService.getStatusAutoLogin();
-
-        let adminId = adminLocalStorage.getAdminIdToLocalStorage();
-        if(adminId && statusLoginAuto) {
-            adminInfo = await adminService.getAdminInformationRequestByAdminId(adminId);
-            if(adminInfo.data.status === 200) {
-                console.log("Data fetched admin information:", JSON.stringify(adminInfo.data.data));
-            }
+        if (!isAutoLoggedIn || !adminId) {
+            return null;
         }
-        return adminInfo.data.data;
+
+        const response = await this.adminService.getAdminInformationRequestByAdminId(adminId);
+        return response?.data?.data ?? null;
     }
 
-    // async getAdminInformationByAdminId_Admin() {
-    //     let adminInfo_Admin = {};
-    //     let adminInfo = await this.getAdminInformationByAdminId();
-    //     if(adminInfo) {
-    //         // const data = {
-    //         //     "adminId": adminAccount.getAdminId(),
-    //         //     "password": adminAccount.getPassword(),
-    //         // };
-    //         let { course, ...adminInfo } = adminInfo;
-    //         adminInfo_Admin = adminInfo;
-    //     }
-    //     return adminInfo_Admin;
-    // }
+    // ---------- Private helpers ----------
+
+    #saveLoginSession(adminAccount, {accessToken, refreshToken}) {
+        const tokenLogin = new TokenLogin(String(accessToken), String(refreshToken));
+        tokenLogin.setAccessTokenToStorage();
+        tokenLogin.setRefreshTokenToStorage();
+
+        this.adminLocalStorage.setAdminIdToLocalStorage(adminAccount.getAdminId());
+    }
+
+    #clearLoginSession(tokenLogin) {
+        this.adminLocalStorage.removeAdminIdFromLocalStorage();
+        tokenLogin.removeAccessTokenAndRefreshTokenFromStorage();
+
+        // Tạo lazy như bản cũ, vì constructor của RouterManagement có thể phụ thuộc trạng thái router
+        const routerManagement = new RouterManagement();
+        routerManagement.removePathFromLocalStorage();
+        routerManagement.removePathFromSessionStorage();
+    }
 }

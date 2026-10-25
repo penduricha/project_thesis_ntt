@@ -9,7 +9,7 @@
 
 .box-text-404-not-found {
   height: 100%;
-  width: 50%;
+  width: 50rem;
   justify-content: center;
   align-items: center;
   display: flex;
@@ -18,20 +18,21 @@
 }
 
 .style-btn-return-from-not-found {
-  width: 25%;
-  height: 8%;
-  font-size: 17px;
+  width: 40%;
+  height: 3rem;
+  font-size: 16px;
+  border-radius: 2px;
 }
 
 @media only screen and (max-width: 767px) {
   .box-text-404-not-found {
-    width: 23.25rem;
+    //width: 15%;
   }
 }
 
 @media only screen and (min-width: 767px) and (max-width: 1223px) {
   .box-text-404-not-found {
-    width: 38.25rem;
+    //width: 20%;
   }
 }
 

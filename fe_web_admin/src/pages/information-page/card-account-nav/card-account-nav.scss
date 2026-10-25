@@ -1,39 +1,233 @@
+/* =========================================================
+   CARD TÀI KHOẢN (CardAccountNav)
+   Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
+   ========================================================= */
+
+/* .div-account-nav đang được dùng chung với khung "THÔNG TIN QUẢN TRỊ VIÊN"
+   nên ở đây chỉ giữ phần trung tính (chiều rộng). Giao diện của card
+   được áp dụng trên .div-card-account-image. */
 .div-account-nav {
-  width: 75rem;
-  height: 15rem;
-  display: flex;
-  flex-direction: row;
-  justify-content: start;
-  align-items: center;
-  border: solid 1px grey;
+  width: 100%;
+  max-width: 75rem;
+  box-sizing: border-box;
 }
 
+/* ---------- Khung card (mặc định = mobile) ---------- */
+.div-card-account-image {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  padding: 1.25rem 1rem;
+  background-color: var(--blue-color, #0b4c8a);
+  //border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(19, 82, 157, 0.18);
+}
+
+/* Ảnh đại diện: nằm đầu card dù trong HTML nó đứng sau phần chữ */
+.card-image {
+  order: -1;
+  flex-shrink: 0;
+  align-self: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 5rem;
+  height: 5rem;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.12);
+  /* Biểu tượng người dùng mặc định khi chưa có ảnh.
+     Không muốn hiển thị thì xóa 4 dòng background-* bên dưới. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 55%;
+}
+
+/* Khi có ảnh thật thì phủ kín khung tròn */
+.style-img-ava-student {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------- Phần chữ ---------- */
 .card-text-account {
-  width: 27rem;
-  height: 15rem;
-  background-color: var(--blue-color);
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  gap: 1rem;
 }
 
-.card-image {
-  width: calc(30rem - 16rem);
-  min-height: 12rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.text-card {
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: break-word;
 }
 
-.div-card-account-image {
-  min-height: 100%;
-  width: 70%;
-  display: flex;
+/* Dòng đầu tiên (Họ và tên) nổi bật hơn */
+.text-card:nth-child(1) {
+  font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  font-weight: 700;
 }
 
+/* ---------- Nút đăng xuất ---------- */
+.btn-logout {
+  height: 2.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.btn-logout:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+.btn-logout:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ---------- Mobile (< 768px) ---------- */
+@media only screen and (max-width: 767px) {
+  /* Mỗi dòng thông tin cách nhau bằng đường kẻ mảnh */
+  .card-text-account .text-card {
+    padding: 0.625rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .card-text-account .text-card:nth-child(1) {
+    padding-top: 0;
+    border-top: 0;
+    text-align: center;
+  }
+
+  .card-text-account .btn-logout {
+    width: 100%;
+    height: 2.75rem;
+    margin-top: 0.75rem;
+  }
+}
+
+/* ---------- Mobile nhỏ (iPhone SE, Android màn nhỏ) ---------- */
+@media only screen and (max-width: 360px) {
+  .div-card-account-image {
+    padding: 1rem 0.875rem;
+  }
+
+  .card-image {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+}
+
+/* ---------- Tablet và Desktop (>= 768px): ảnh bên trái, chữ bên phải ---------- */
+@media only screen and (min-width: 768px) {
+  .div-card-account-image {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .card-text-account {
+    flex: 1;
+    display: grid;
+    align-items: center;
+  }
+
+  .card-text-account .text-card:nth-child(1) {
+    grid-area: name;
+  }
+
+  .card-text-account .text-card:nth-child(2) {
+    grid-area: id;
+  }
+
+  .card-text-account .text-card:nth-child(3) {
+    grid-area: gender;
+  }
+
+  .card-text-account .text-card:nth-child(4) {
+    grid-area: dob;
+  }
+
+  .card-text-account .btn-logout {
+    grid-area: logout;
+    justify-self: end;
+    height: 2.75rem;
+  }
+}
+
+/* ---------- Tablet / iPad (768px - 1023px) ---------- */
+@media only screen and (min-width: 768px) and (max-width: 1023px) {
+  .div-card-account-image {
+    gap: 1.75rem;
+    padding: 1.5rem 2rem;
+    //border-radius: 10px;
+  }
+
+  .card-image {
+    width: 6rem;
+    height: 6rem;
+  }
+
+  .card-text-account {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "name name"
+      "id gender"
+      "dob logout";
+    gap: 0.75rem 1.5rem;
+  }
+
+  .card-text-account .btn-logout {
+    width: 100%;
+    max-width: 12rem;
+  }
+}
+
+/* ---------- Desktop (Laptop / PC) ---------- */
+@media (min-width: 1024px) {
+  .div-card-account-image {
+    gap: 2.5rem;
+    padding: 1.75rem 2.5rem;
+    //border-radius: 10px;
+  }
+
+  .card-image {
+    width: 6.5rem;
+    height: 6.5rem;
+  }
+
+  /* 3 cột thông tin + 1 cột nút đăng xuất nằm sát bên phải */
+  .card-text-account {
+    grid-template-columns: repeat(3, auto) auto;
+    grid-template-areas:
+      "name name name logout"
+      "id gender dob logout";
+    justify-content: space-between;
+    gap: 0.75rem 2rem;
+  }
+
+  .card-text-account .btn-logout {
+    width: 11rem;
+    align-self: center;
+  }
+}
+
+/* ---------- Người dùng tắt hiệu ứng chuyển động ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .btn-logout {
+    transition: none;
+  }
+}
+
+/* ---------- Giữ nguyên (template card này không dùng) ---------- */
 .nav-bar-items {
   width: calc(75rem - 30rem);
   min-height: 12rem;
@@ -41,33 +235,6 @@
   flex-direction: column;
   justify-content: center;
 }
-
-.style-img-ava-student {
-  object-fit: contain;
-  width: auto;
-  height: auto;
-}
-
-.text-card {
-  color: white;
-  font-size: 17px;
-  font-weight: 540;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-.btn-logout {
-  //color: white;
-  //background-color: var(--orange-log-out);
-  //font-size: 16px;
-  //border-radius: 4px;
-  //border: none;
-  height: 2.5rem;
-  //cursor: pointer;
-}
-
-//.btn-logout:hover {
-//  opacity: 0.8;
-//}
 
 ul {
   display: flex;
@@ -84,54 +251,4 @@ ul {
 
 .text-nav:hover {
   text-decoration: underline;
-}
-
-//mobile
-@media only screen and (max-width: 767px) {
-  .div-account-nav {
-    flex-direction: column;
-    justify-content: center;
-    align-items: start;
-    width: 23.25rem;
-    height: 50rem;
-  }
-
-  .div-card-account-image {
-    flex-direction: column;
-    align-items: center;
-    width: 23.25rem;
-  }
-
-  //.section-page-information {
-  //  padding-bottom: 1rem;
-  //}
-
-  .card-text-account {
-    width: 23.25rem;
-  }
-}
-
-//tablet
-@media only screen and (min-width: 767px) and (max-width: 1223px) {
-  .div-account-nav {
-    flex-direction: column;
-    justify-content: center;
-    align-items: start;
-    width: 38.25rem;
-    height: 50rem;
-  }
-
-  .div-card-account-image {
-    flex-direction: column;
-    align-items: center;
-    width: 38.25rem;
-  }
-
-  //.section-page-information {
-  //  padding-bottom: 1rem;
-  //}
-
-  .card-text-account {
-    width: 38.25rem;
-  }
 }

@@ -1,88 +1,168 @@
+/* =========================================================
+   TRANG THÔNG TIN QUẢN TRỊ VIÊN - Mobile first
+   Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
+   ========================================================= */
+
+/* ---------- Style chung (áp dụng cho mobile trước) ---------- */
+
 .section-page-information {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
+  min-height: 100dvh; /* tránh bị thanh địa chỉ trên trình duyệt mobile che */
+  box-sizing: border-box;
   display: flex;
-  justify-content: start;
-  align-items: center;
-  padding-top: 5rem;
   flex-direction: column;
-  background-color: var(--white-web);
+  justify-content: flex-start;
+  align-items: center;
   gap: 1rem;
+  padding: 5rem 1rem 2rem; /* 5rem phía trên chừa chỗ cho Header */
+  background-color: var(--white-web, #f4f7fb);
 }
 
-.div-detail-information {
-  border-left: solid 4px var(--blue-card);
+/* Khung chi tiết thông tin.
+   Viết kèm .section-page-information để thắng độ ưu tiên của class
+   .div-account-nav (dùng chung với CardAccountNav). */
+.section-page-information .div-detail-information {
+  width: 100%;
+  max-width: 75rem;
+  height: auto;
+  box-sizing: border-box;
+  display: flex;
   flex-direction: column;
-  padding-top: 1rem;
-  gap: 1rem;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem 1rem;
+  background-color: #fff;
+  border-left: 4px solid var(--blue-card, #1e6fd9);
+  //border-radius: 0 8px 8px 0;
+  box-shadow: 0 8px 24px rgba(19, 82, 157, 0.1);
 }
 
 .text-title-information {
-  color: var(--blue-text-title);
-  font-size: 20px;
+  margin: 0;
+  padding-bottom: 0.75rem;
+  color: var(--blue-text-title, #13529d);
+  font-size: clamp(1.0625rem, 0.95rem + 0.6vw, 1.25rem); /* 17px -> 20px */
   font-weight: bold;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #e3ebf5;
 }
 
+/* Vùng chứa các dòng thông tin: mobile & tablet xếp 1 cột */
 .div-background-text-detail {
-  width: calc(75rem - 1*4rem);
-  height: 7.5rem;
+  width: 100%;
   display: flex;
+  flex-direction: column;
 }
 
 .div-text-detail-information {
-  flex: 1;
-  height: 100%;
+  flex: 1 1 0;
+  min-width: 0; /* cho phép chữ dài xuống dòng thay vì làm tràn khung */
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 0.5rem;
+  justify-content: flex-start;
 }
 
-//@media only screen and (max-width: 767px) {
-//  .div-detail-information {
-//    justify-content: start;
-//    align-items: center;
-//  }
-//
-//  .div-background-text-detail {
-//    display: flex;
-//    flex-direction: column;
-//    width: 20rem;
-//    height: 15rem;
-//    gap: 0.5rem;
-//  }
-//
-//  .div-text-detail-information {
-//    flex: 1;
-//    justify-content: end;
-//  }
-//
-//  .div-text-detail-information-flex-responsive {
-//    justify-content: start;
-//  }
-//}
-//
-//@media only screen and (min-width: 767px) and (max-width: 1223px) {
-//  .div-detail-information {
-//    justify-content: start;
-//    align-items: center;
-//  }
-//
-//  .div-background-text-detail {
-//    display: flex;
-//    flex-direction: column;
-//    /* Thay đổi từ row thành column */
-//    width: 35rem;
-//    height: 15rem;
-//    gap: 0.5rem;
-//  }
-//
-//  .div-text-detail-information {
-//    flex: 1;
-//    justify-content: end;
-//  }
-//
-//  .div-text-detail-information-flex-responsive {
-//    justify-content: start;
-//  }
-//}
+/* Từng dòng "Nhãn: <b>Giá trị</b>" */
+.text-detail-information {
+  display: block;
+  padding: 0.75rem 0;
+  color: #5b6778;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #e8eef6;
+}
+
+.text-detail-information b {
+  margin-left: 0.25rem;
+  color: #1b2a41;
+  font-weight: 600;
+}
+
+/* Bỏ đường kẻ ở dòng cuối cùng của khung */
+.div-text-detail-information:last-child .text-detail-information:last-child {
+  border-bottom: 0;
+}
+
+/* ---------- Mobile nhỏ (iPhone SE, Android màn nhỏ) ---------- */
+@media only screen and (max-width: 360px) {
+  .section-page-information {
+    padding: 5rem 0.75rem 1.5rem;
+  }
+
+  .section-page-information .div-detail-information {
+    padding: 1rem 0.875rem 0.75rem;
+  }
+
+  .text-detail-information {
+    font-size: 0.875rem;
+  }
+}
+
+/* ---------- Điện thoại xoay ngang (chiều cao thấp) ---------- */
+@media only screen and (max-height: 500px) and (orientation: landscape) {
+  .section-page-information {
+    padding-bottom: 1rem;
+  }
+
+  .text-detail-information {
+    padding: 0.5rem 0;
+  }
+}
+
+/* ---------- Tablet / iPad (768px - 1023px) ---------- */
+@media only screen and (min-width: 768px) and (max-width: 1023px) {
+  .section-page-information {
+    gap: 1.25rem;
+    padding: 6rem 2rem 3rem;
+  }
+
+  .section-page-information .div-detail-information {
+    gap: 1rem;
+    padding: 1.5rem 2rem 1.25rem;
+    //border-radius: 0 10px 10px 0;
+  }
+
+  .text-detail-information {
+    padding: 0.875rem 0;
+    font-size: 1rem;
+  }
+}
+
+/* ---------- Desktop (Laptop / PC) ---------- */
+@media (min-width: 1024px) {
+  .section-page-information {
+    gap: 1.5rem;
+    padding: 6rem 2rem 3rem;
+  }
+
+  .section-page-information .div-detail-information {
+    gap: 1rem;
+    padding: 1.75rem 2.5rem 1.5rem;
+    //border-radius: 0 10px 10px 0;
+  }
+
+  /* Hai cột cạnh nhau, có đường kẻ dọc ngăn cách */
+  .div-background-text-detail {
+    flex-direction: row;
+    gap: 3rem;
+  }
+
+  .div-text-detail-information-flex-responsive {
+    padding-left: 3rem;
+    border-left: 1px solid #e8eef6;
+  }
+
+  .text-detail-information {
+    padding: 0.875rem 0;
+    font-size: 1rem;
+  }
+
+  /* Hai cột: dòng cuối của mỗi cột đều không cần đường kẻ */
+  .div-text-detail-information .text-detail-information:last-child {
+    border-bottom: 0;
+  }
+}

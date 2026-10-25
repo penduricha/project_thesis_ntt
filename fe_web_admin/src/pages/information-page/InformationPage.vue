@@ -97,16 +97,16 @@ export default {
     <div class="div-account-nav div-detail-information" style="flex-direction: column">
       <h3 class="text-title-information">THÔNG TIN QUẢN TRỊ VIÊN</h3>
       <div class="div-background-text-detail">
-<!--        <div class="div-text-detail-information">-->
-<!--          <span class="text-detail-information">Hệ đào tạo: <b>{{trainingSystem}}</b></span>-->
-<!--          <span class="text-detail-information">Ngành: <b>{{industry}}</b></span>-->
-<!--          <span class="text-detail-information">Khoa: <b>{{faculty}}</b></span>-->
-<!--        </div>-->
-<!--        <div class="div-text-detail-information div-text-detail-information-flex-responsive">-->
-<!--          <span class="text-detail-information">Loại hình đào tạo: <b>{{typeOfTraining}}</b></span>-->
-<!--          <span class="text-detail-information">Chuyên ngành: <b>{{major}}</b></span>-->
-<!--          <span class="text-detail-information">Cơ sở: <b>{{branch}}</b></span>-->
-<!--        </div>-->
+        <div class="div-text-detail-information">
+          <span class="text-detail-information">Hệ đào tạo: <b>{{trainingSystem}}</b></span>
+          <span class="text-detail-information">Ngành: <b>{{industry}}</b></span>
+          <span class="text-detail-information">Khoa: <b>{{faculty}}</b></span>
+        </div>
+        <div class="div-text-detail-information div-text-detail-information-flex-responsive">
+          <span class="text-detail-information">Loại hình đào tạo: <b>{{typeOfTraining}}</b></span>
+          <span class="text-detail-information">Chuyên ngành: <b>{{major}}</b></span>
+          <span class="text-detail-information">Cơ sở: <b>{{branch}}</b></span>
+        </div>
       </div>
     </div>
   </section>

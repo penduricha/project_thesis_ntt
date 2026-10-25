@@ -1,69 +1,80 @@
+// Giữ nguyên giá trị key cũ, nếu đổi thì dữ liệu đã lưu trong trình duyệt người dùng sẽ bị bỏ rơi
+const STORAGE_KEYS = Object.freeze({
+    SESSION: 'routerPathSessionStorage',
+    LOCAL: 'routerPathLocalStorage',
+});
+
+/**
+ * Lưu, đọc, xóa một chuỗi path trong một Storage (localStorage hoặc sessionStorage).
+ */
+class PathStorage {
+    #storage;
+    #key;
+
+    constructor(storage, key) {
+        this.#storage = storage;
+        this.#key = key;
+    }
+
+    save(path) {
+        if (path) {
+            this.#storage.setItem(this.#key, path);
+        }
+    }
+
+    get() {
+        return this.#storage.getItem(this.#key) || null;
+    }
+
+    remove() {
+        this.#storage.removeItem(this.#key);
+    }
+}
+
 export default class RouterManagement {
-    _variableRouterPathSession;
-    _variableRouterPathLocalStorage;
+    #session;
+    #local;
 
-    getVariableRouterPathSession() {
-        return this._variableRouterPathSession;
+    constructor(
+        sessionStorageArea = globalThis.sessionStorage,
+        localStorageArea = globalThis.localStorage,
+    ) {
+        this.#session = new PathStorage(sessionStorageArea, STORAGE_KEYS.SESSION);
+        this.#local = new PathStorage(localStorageArea, STORAGE_KEYS.LOCAL);
     }
 
-    setVariableRouterPathSession(value) {
-        this._variableRouterPathSession = value;
+    // ---------- Session storage ----------
+
+    savePathToSessionStorage(routerPath) {
+        this.#session.save(routerPath);
     }
 
-    getVariableRouterPathLocalStorage() {
-        return this._variableRouterPathLocalStorage;
+    getPathFromSessionStorage() {
+        return this.#session.get();
     }
 
-    setVariableRouterPathLocalStorage(value) {
-        this._variableRouterPathLocalStorage = value;
+    removePathFromSessionStorage() {
+        this.#session.remove();
     }
 
-    constructor(){
-        this.setVariableRouterPathSession('routerPathSessionStorage');
-        this.setVariableRouterPathLocalStorage('routerPathLocalStorage');
+    // ---------- Local storage ----------
+
+    savePathToLocalStorage(routerPath) {
+        this.#local.save(routerPath);
     }
 
-    savePathToSessionStorage(routerPath){
-        //Khi chuyển trang khác, path được save vào session.
-        if(routerPath){
-            sessionStorage.setItem(this.getVariableRouterPathSession(), routerPath);
-        }
+    getPathFromLocalStorage() {
+        return this.#local.get();
     }
 
-    getPathFromSessionStorage(){
-        const routerPath = sessionStorage.getItem(this.getVariableRouterPathSession());
-        return routerPath || null;
+    removePathFromLocalStorage() {
+        this.#local.remove();
     }
 
-    //other functions local_storage,
-    //session storages
-    //save path to local_storage
-    removePathFromLocalStorage(){
-        //Khi chuyển trang khác, path được save vào session.
-        if(this.getPathFromLocalStorage()) {
-            localStorage.removeItem(this.getVariableRouterPathLocalStorage());
-        } else {
-            console.error('Local storage not found.');
-        }
-    }
+    // ---------- Both ----------
 
-    removePathFromSessionStorage(){
-        //Khi chuyển trang khác, path được save vào session.
-        if(this.getPathFromSessionStorage()) {
-            sessionStorage.removeItem(this.getVariableRouterPathSession());
-        } else {
-            console.error('Session storage not found.');
-        }
-    }
-
-    savePathToLocalStorage(routerPath){
-        //Khi chuyển trang khác, path được save vào session.
-        localStorage.setItem(this.getVariableRouterPathLocalStorage(), routerPath);
-    }
-
-    getPathFromLocalStorage(){
-        const routerPath = localStorage
-            .getItem(this.getVariableRouterPathLocalStorage());
-        return routerPath || null;
+    removeAllPaths() {
+        this.#session.remove();
+        this.#local.remove();
     }
 }
