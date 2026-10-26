@@ -1,0 +1,27 @@
+chmod +x set_up_moodle_503.sh && ./set_up_moodle_503.sh
+
+
+php -S localhost:8000 -t public router.php
+
+php -S localhost:8000 -t public
+
+Chạy thêm cron: php admin/cli/cron.php hoặc sudo -u www-data php admin/cli/cron.php
+Chạy thêm 
+export usr="/media/Lenovo/D/php/moodle-latest-502/moodle"
+echo 'export usr="/media/Lenovo/D/php/moodle-latest-502/moodle"' >> ~/.bashrc
+source ~/.bashrc
+
+TK:
+21107601 Iuh@1234
+21107602 Iuh@1234
+
+public/question/format/xml
+
+// Must run
+php admin/cli/cron.php
+
+Note: Sửa file drawers.php 
+
+public/theme/boost/layout/drawers.php
+
+Save: php admin/cli/purge_caches.php

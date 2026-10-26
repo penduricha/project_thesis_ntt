@@ -250,7 +250,7 @@ export default {
           <span>Ghi nhớ đăng nhập</span>
         </div>
 
-        <ButtonRed class="btn-login" 
+        <ButtonRed class="btn-login btn-login-border-radius"
           @click="handleLoginEvent()" 
           :text-button="textButtonLogin"
           :loading-button="loadingButtonLogin" 
@@ -271,5 +271,9 @@ export default {
 
 .border-radius-zero {
   border-radius: 0;
+}
+
+.btn-login-border-radius {
+  border-radius: 4px;
 }
 </style>

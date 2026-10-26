@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
 
+import '../../data/model/ChatMessage.dart';
+import '../../data/model/ReactionUser.dart';
 import '../widgets/modals_options_chat/modal_detail_reaction_box_chat.dart';
 import '../widgets/modals_options_chat/modal_options_box_chat.dart';
 import '../widgets/modals_options_chat/modal_icons_reaction.dart';
 
-class ChatMessage {
-  final String id;
-  final String text;
-  final bool isMe;
-  final DateTime timestamp;
-  List<ReactionUser> reactions;
-  final ChatMessage? replyTo;
-  // Thêm trường lưu tin nhắn đang được trích dẫn phản hồi
 
-  ChatMessage({
-    required this.id,
-    required this.text,
-    required this.isMe,
-    required this.timestamp,
-    List<ReactionUser>? reactions,
-    this.replyTo,
-  }) : reactions = reactions ?? [];
-}
+// class ChatMessage {
+//   final String id;
+//   final String text;
+//   final bool isMe;
+//   final DateTime timestamp;
+//   List<ReactionUser> reactions;
+//   final ChatMessage? replyTo;
+//   // Thêm trường lưu tin nhắn đang được trích dẫn phản hồi
+//
+//   ChatMessage({
+//     required this.id,
+//     required this.text,
+//     required this.isMe,
+//     required this.timestamp,
+//     List<ReactionUser>? reactions,
+//     this.replyTo,
+//   }) : reactions = reactions ?? [];
+// }
 
 class ChatDetailScreen extends StatefulWidget {
   final String senderName;

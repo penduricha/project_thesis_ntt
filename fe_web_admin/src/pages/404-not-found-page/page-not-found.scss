@@ -1,43 +1,83 @@
-.section-page-404 {
-  display: flex;
-  justify-content: start;
-  align-items: center;
-  flex-direction: column;
-  width: 100%;
-  height: 80vh;
+// =========================================================
+//  TRANG 404 - Mobile first
+//  Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
+//  (cùng mốc breakpoint với information-page.scss)
+// =========================================================
+
+$bp-tablet: 768px;
+$bp-desktop: 1024px;
+
+@mixin breakpoint-up($width) {
+  @media only screen and (min-width: $width) {
+    @content;
+  }
 }
 
-.box-text-404-not-found {
-  height: 100%;
-  width: 50rem;
+// ---------- Trang ----------
+.section-page-404 {
+  width: 100%;
+  min-height: 80vh; // min-height thay cho height: nội dung dài thì trang tự giãn, không bị tràn
+  min-height: 80dvh; // tránh bị thanh địa chỉ trên trình duyệt mobile che
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  display: flex;
-  gap: 1.25rem;
-  flex-direction: column;
-}
+  padding: 2rem 1rem;
 
-.style-btn-return-from-not-found {
-  width: 40%;
-  height: 3rem;
-  font-size: 16px;
-  border-radius: 2px;
-}
+  // Mobile nhỏ (iPhone SE, Android màn nhỏ)
+  @media only screen and (max-width: 360px) {
+    padding: 1.5rem 0.75rem;
+  }
 
-@media only screen and (max-width: 767px) {
+  @include breakpoint-up($bp-tablet) {
+    padding: 3rem 2rem;
+  }
+
+  // Điện thoại xoay ngang (chiều cao thấp) - đặt cuối để không bị breakpoint trên đè
+  @media only screen and (max-height: 500px) and (orientation: landscape) {
+    padding-block: 1.5rem;
+  }
+
+  // ---------- Khối nội dung ----------
+  // Dùng max-width thay cho width: 50rem cố định
+  // (width cố định 50rem = 800px sẽ tràn ngang trên điện thoại).
   .box-text-404-not-found {
-    //width: 15%;
+    width: 100%;
+    max-width: 50rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+
+    @include breakpoint-up($bp-tablet) {
+      gap: 1.25rem;
+    }
+
+    @include breakpoint-up($bp-desktop) {
+      gap: 1.5rem;
+    }
+
+    h4 {
+      margin: 0;
+      font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem); // 20px -> 28px
+      line-height: 1.4;
+      text-wrap: balance; // chia đều chữ giữa các dòng, tránh dòng cuối chỉ còn 1 từ
+      overflow-wrap: anywhere;
+    }
+  }
+
+  // ---------- Nút "Quay lại trang chủ" ----------
+  // Viết lồng trong .section-page-404 để thắng style riêng của ButtonRed.
+  // Trước đây width: 40% => trên điện thoại chỉ còn ~130px, chữ bị bóp.
+  .style-btn-return-from-not-found {
+    width: 100%;
+    max-width: 20rem; // = 40% của 50rem ở desktop, nên giao diện desktop giữ nguyên
+    height: 3rem; // đủ lớn để bấm bằng ngón tay (>= 44px)
+    font-size: 1rem;
+    border-radius: 2px;
   }
 }
-
-@media only screen and (min-width: 767px) and (max-width: 1223px) {
-  .box-text-404-not-found {
-    //width: 20%;
-  }
-}
-
-/* Styles for larger screens */
-@media (min-width: 1224px) {}
-
-/*khi trinh duyet dark*/
-@media (prefers-color-scheme: dark) {}

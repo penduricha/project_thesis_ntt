@@ -1,168 +1,183 @@
-/* =========================================================
-   TRANG THÔNG TIN QUẢN TRỊ VIÊN - Mobile first
-   Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
-   ========================================================= */
+// =========================================================
+//  TRANG THÔNG TIN QUẢN TRỊ VIÊN - Mobile first
+//  Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
+//
+//  LƯU Ý: file này thay thế HOÀN TOÀN CSS cũ của trang.
+//  Hãy xoá khối cũ (.div-detail-information { border-left... }
+//  và 2 media query 767px / 1223px), nếu để lại 2 bộ breakpoint
+//  sẽ đè lên nhau gây lỗi vạch dọc + cắt chiều cao như ảnh.
+// =========================================================
 
-/* ---------- Style chung (áp dụng cho mobile trước) ---------- */
+$bp-tablet: 768px;
+$bp-desktop: 1024px;
 
+// Từ mốc này trở lên, thông tin chia 2 cột và MỚI hiện vạch dọc ở giữa.
+// Vạch dọc và lưới 2 cột dùng chung 1 mốc nên không thể lệch nhau.
+// Muốn tablet vẫn xếp 1 cột thì đổi thành: $bp-two-columns: $bp-desktop;
+$bp-two-columns: $bp-tablet;
+
+$color-line: #e8eef6;
+
+@mixin breakpoint-up($width) {
+  @media only screen and (min-width: $width) {
+    @content;
+  }
+}
+
+// ---------- Trang ----------
 .section-page-information {
   width: 100%;
+  height: auto; // huỷ height: 120vh của CSS cũ
   min-height: 100vh;
-  min-height: 100dvh; /* tránh bị thanh địa chỉ trên trình duyệt mobile che */
+  min-height: 100dvh; // tránh bị thanh địa chỉ trên trình duyệt mobile che
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
   gap: 1rem;
-  padding: 5rem 1rem 2rem; /* 5rem phía trên chừa chỗ cho Header */
+  padding: 5rem 1rem 2rem; // 5rem phía trên chừa chỗ cho Header
   background-color: var(--white-web, #f4f7fb);
-}
 
-/* Khung chi tiết thông tin.
-   Viết kèm .section-page-information để thắng độ ưu tiên của class
-   .div-account-nav (dùng chung với CardAccountNav). */
-.section-page-information .div-detail-information {
-  width: 100%;
-  max-width: 75rem;
-  height: auto;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: stretch;
-  gap: 0.75rem;
-  padding: 1.25rem 1rem 1rem;
-  background-color: #fff;
-  border-left: 4px solid var(--blue-card, #1e6fd9);
-  //border-radius: 0 8px 8px 0;
-  box-shadow: 0 8px 24px rgba(19, 82, 157, 0.1);
-}
-
-.text-title-information {
-  margin: 0;
-  padding-bottom: 0.75rem;
-  color: var(--blue-text-title, #13529d);
-  font-size: clamp(1.0625rem, 0.95rem + 0.6vw, 1.25rem); /* 17px -> 20px */
-  font-weight: bold;
-  line-height: 1.4;
-  letter-spacing: 0.03em;
-  border-bottom: 1px solid #e3ebf5;
-}
-
-/* Vùng chứa các dòng thông tin: mobile & tablet xếp 1 cột */
-.div-background-text-detail {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.div-text-detail-information {
-  flex: 1 1 0;
-  min-width: 0; /* cho phép chữ dài xuống dòng thay vì làm tràn khung */
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-}
-
-/* Từng dòng "Nhãn: <b>Giá trị</b>" */
-.text-detail-information {
-  display: block;
-  padding: 0.75rem 0;
-  color: #5b6778;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  border-bottom: 1px solid #e8eef6;
-}
-
-.text-detail-information b {
-  margin-left: 0.25rem;
-  color: #1b2a41;
-  font-weight: 600;
-}
-
-/* Bỏ đường kẻ ở dòng cuối cùng của khung */
-.div-text-detail-information:last-child .text-detail-information:last-child {
-  border-bottom: 0;
-}
-
-/* ---------- Mobile nhỏ (iPhone SE, Android màn nhỏ) ---------- */
-@media only screen and (max-width: 360px) {
-  .section-page-information {
+  // Mobile nhỏ (iPhone SE, Android màn nhỏ)
+  @media only screen and (max-width: 360px) {
     padding: 5rem 0.75rem 1.5rem;
   }
 
-  .section-page-information .div-detail-information {
-    padding: 1rem 0.875rem 0.75rem;
-  }
-
-  .text-detail-information {
-    font-size: 0.875rem;
-  }
-}
-
-/* ---------- Điện thoại xoay ngang (chiều cao thấp) ---------- */
-@media only screen and (max-height: 500px) and (orientation: landscape) {
-  .section-page-information {
-    padding-bottom: 1rem;
-  }
-
-  .text-detail-information {
-    padding: 0.5rem 0;
-  }
-}
-
-/* ---------- Tablet / iPad (768px - 1023px) ---------- */
-@media only screen and (min-width: 768px) and (max-width: 1023px) {
-  .section-page-information {
+  @include breakpoint-up($bp-tablet) {
     gap: 1.25rem;
     padding: 6rem 2rem 3rem;
   }
 
-  .section-page-information .div-detail-information {
-    gap: 1rem;
-    padding: 1.5rem 2rem 1.25rem;
-    //border-radius: 0 10px 10px 0;
-  }
-
-  .text-detail-information {
-    padding: 0.875rem 0;
-    font-size: 1rem;
-  }
-}
-
-/* ---------- Desktop (Laptop / PC) ---------- */
-@media (min-width: 1024px) {
-  .section-page-information {
+  @include breakpoint-up($bp-desktop) {
     gap: 1.5rem;
-    padding: 6rem 2rem 3rem;
   }
 
-  .section-page-information .div-detail-information {
-    gap: 1rem;
-    padding: 1.75rem 2.5rem 1.5rem;
-    //border-radius: 0 10px 10px 0;
+  // Điện thoại xoay ngang (chiều cao thấp) - đặt cuối để không bị breakpoint trên đè
+  @media only screen and (max-height: 500px) and (orientation: landscape) {
+    padding-bottom: 1rem;
   }
 
-  /* Hai cột cạnh nhau, có đường kẻ dọc ngăn cách */
+  // ---------- Khung chi tiết ----------
+  // Viết lồng trong .section-page-information để thắng độ ưu tiên của
+  // .div-account-nav (class dùng chung với CardAccountNav) và CSS cũ.
+  .div-detail-information {
+    width: 100%;
+    max-width: 75rem;
+    height: auto; // cao theo nội dung, không cố định nữa
+    min-height: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch; // tiêu đề + đường kẻ luôn full chiều ngang khung
+    gap: 0.75rem;
+    padding: 1.25rem 1rem 1rem;
+    background-color: #fff;
+    border-left: 4px solid var(--blue-color);
+    box-shadow: 0 8px 24px rgba(19, 82, 157, 0.1);
+
+    @media only screen and (max-width: 360px) {
+      padding: 1rem 0.875rem 0.75rem;
+    }
+
+    @include breakpoint-up($bp-tablet) {
+      gap: 1rem;
+      padding: 1.5rem 2rem 1.25rem;
+    }
+
+    @include breakpoint-up($bp-desktop) {
+      padding: 1.75rem 2.5rem 1.5rem;
+    }
+  }
+
+  // ---------- Tiêu đề ----------
+  .text-title-information {
+    width: 100%;
+    margin: 0;
+    padding-bottom: 0.75rem;
+    box-sizing: border-box;
+    color: var(--blue-text-title, #13529d);
+    font-size: clamp(1.0625rem, 0.95rem + 0.6vw, 1.25rem); // 17px -> 20px
+    font-weight: bold;
+    line-height: 1.4;
+    letter-spacing: 0.03em;
+    text-align: left;
+    border-bottom: 1px solid #e3ebf5;
+  }
+
+  // ---------- Vùng chứa 2 nhóm thông tin ----------
+  // Mobile: 1 cột | từ $bp-two-columns: 2 cột bằng nhau
   .div-background-text-detail {
-    flex-direction: row;
-    gap: 3rem;
+    --col-gap: 1.5rem; // khoảng cách 2 bên vạch dọc (tablet)
+
+    width: 100%;
+    height: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr); // minmax(0, ..) để chữ dài xuống dòng, không làm tràn khung
+
+    @include breakpoint-up($bp-two-columns) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--col-gap);
+    }
+
+    @include breakpoint-up($bp-desktop) {
+      --col-gap: 3rem;
+    }
   }
 
+  .div-text-detail-information {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  // Vạch dọc: chỉ tồn tại khi đang chia 2 cột
   .div-text-detail-information-flex-responsive {
-    padding-left: 3rem;
-    border-left: 1px solid #e8eef6;
+    @include breakpoint-up($bp-two-columns) {
+      padding-left: var(--col-gap);
+      border-left: 1px solid $color-line;
+    }
   }
 
+  // ---------- Từng dòng "Nhãn: Giá trị" ----------
+  // Nhãn và giá trị nằm chung 1 dòng, cùng font / cỡ chữ / màu / độ đậm.
+  // Giá trị dài thì tự xuống dòng bên trong chính dòng đó.
   .text-detail-information {
+    display: block;
     padding: 0.875rem 0;
+    color: #1b2a41;
     font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    border-bottom: 1px solid $color-line;
+
+    @media only screen and (max-width: 360px) {
+      font-size: 0.9375rem;
+    }
+
+    @include breakpoint-up($bp-tablet) {
+      padding: 1rem 0;
+      font-size: 1.125rem;
+    }
+
+    // Điện thoại xoay ngang: thu gọn khoảng cách dòng (đặt cuối để thắng breakpoint trên)
+    @media only screen and (max-height: 500px) and (orientation: landscape) {
+      padding: 0.5rem 0;
+    }
   }
 
-  /* Hai cột: dòng cuối của mỗi cột đều không cần đường kẻ */
-  .div-text-detail-information .text-detail-information:last-child {
+  // Dòng cuối của khung không cần đường kẻ dưới
+  .div-text-detail-information:last-child .text-detail-information:last-child {
     border-bottom: 0;
+  }
+
+  // 2 cột: dòng cuối của MỖI cột đều không cần đường kẻ
+  @include breakpoint-up($bp-two-columns) {
+    .div-text-detail-information .text-detail-information:last-child {
+      border-bottom: 0;
+    }
   }
 }

@@ -158,7 +158,7 @@ export default {
         <ButtonRed :disable-button="disableButtonLogout"
                    :loading-button="loadingButtonLogout"
                    :text-button="textBtnLogout"
-                   class="btn-logout"
+                   class="btn-logout btn-logout-border-radius"
                    @click="handleLogout"
         />
       </div>
@@ -168,4 +168,7 @@ export default {
 </template>
 
 <style scoped lang="scss">
+.btn-logout-border-radius {
+  border-radius: 4px;
+}
 </style>

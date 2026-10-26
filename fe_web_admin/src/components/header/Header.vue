@@ -10,9 +10,9 @@ export default {
 
 <template>
   <header>
-    <img src="../../assets/images/banner-nttu.jpg"
-         alt="banner iuh"
-         class="image-banner-iuh"
+    <img src="../../assets/images/banner-ntt.jpg"
+         alt="banner ntt"
+         class="image-banner-ntt"
     >
   </header>
 </template>

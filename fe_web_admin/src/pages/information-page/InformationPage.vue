@@ -98,14 +98,14 @@ export default {
       <h3 class="text-title-information">THÔNG TIN QUẢN TRỊ VIÊN</h3>
       <div class="div-background-text-detail">
         <div class="div-text-detail-information">
-          <span class="text-detail-information">Hệ đào tạo: <b>{{trainingSystem}}</b></span>
-          <span class="text-detail-information">Ngành: <b>{{industry}}</b></span>
-          <span class="text-detail-information">Khoa: <b>{{faculty}}</b></span>
+          <span class="text-detail-information">Hệ đào tạo: {{trainingSystem}}</span>
+          <span class="text-detail-information">Ngành: {{industry}}</span>
+          <span class="text-detail-information">Khoa: {{faculty}}</span>
         </div>
         <div class="div-text-detail-information div-text-detail-information-flex-responsive">
-          <span class="text-detail-information">Loại hình đào tạo: <b>{{typeOfTraining}}</b></span>
-          <span class="text-detail-information">Chuyên ngành: <b>{{major}}</b></span>
-          <span class="text-detail-information">Cơ sở: <b>{{branch}}</b></span>
+          <span class="text-detail-information">Loại hình đào tạo: {{typeOfTraining}}</span>
+          <span class="text-detail-information">Chuyên ngành: {{major}}</span>
+          <span class="text-detail-information">Cơ sở: {{branch}}</span>
         </div>
       </div>
     </div>
@@ -114,78 +114,4 @@ export default {
 </template>
 
 <style scoped lang="scss">
-.div-detail-information {
-  border-left: solid 4px var(--blue-color);
-  flex-direction: column;
-  padding-top: 1rem;
-  gap: 1rem;
-}
-
-@media only screen and (max-width: 767px) {
-  .section-page-information {
-    padding-bottom: 1rem;
-  }
-
-  .div-detail-information {
-    justify-content: start;
-    align-items: center;
-    height: 50rem;
-  }
-
-  .div-background-text-detail {
-    display: flex;
-    flex-direction: column;
-    width: 20rem;
-    height: 15rem;
-    gap: 1rem;
-  }
-
-  .div-text-detail-information {
-    flex: 1;
-    justify-content: end;
-  }
-
-  .div-text-detail-information-flex-responsive {
-    justify-content: start;
-  }
-
-  .section-page-information {
-    height: 120vh;
-  }
-}
-
-@media only screen and (min-width: 767px) and (max-width: 1223px) {
-  .section-page-information {
-    padding-bottom: 1rem;
-  }
-
-  .section-page-information {
-    height: 120vh;
-  }
-
-  .div-detail-information {
-    justify-content: start;
-    align-items: center;
-    height: 24.5rem;
-  }
-
-  .div-background-text-detail {
-    display: flex;
-    flex-direction: column;
-    /* Thay đổi từ row thành column */
-    width: 35rem;
-    height: 15rem;
-    gap: 1rem;
-  }
-
-  .div-text-detail-information {
-    flex: 1;
-    justify-content: end;
-  }
-
-  .div-text-detail-information-flex-responsive {
-    justify-content: start;
-  }
-}
-
 </style>

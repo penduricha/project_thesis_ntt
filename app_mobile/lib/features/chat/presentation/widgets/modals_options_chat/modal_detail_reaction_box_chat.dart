@@ -1,16 +1,6 @@
 import 'package:flutter/material.dart';
 
-class ReactionUser {
-  final String userId;
-  final String userName;
-  final String emoji;
-
-  ReactionUser({
-    required this.userId,
-    required this.userName,
-    required this.emoji,
-  });
-}
+import '../../../data/model/ReactionUser.dart';
 
 class ModalDetailReactionBoxChat extends StatefulWidget {
   final List<ReactionUser> reactions;

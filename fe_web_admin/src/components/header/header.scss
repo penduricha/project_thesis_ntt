@@ -1,33 +1,64 @@
+// =========================================================
+//  HEADER - Mobile first
+//  Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
+//  (cùng mốc breakpoint với information-page / not-found-page / footer)
+//
+//  LƯU Ý: file này thay thế HOÀN TOÀN CSS cũ của header.
+// =========================================================
+
+$bp-tablet: 768px;
+$bp-desktop: 1024px;
+
+// Chỉ cần chỉnh chiều cao logo theo thiết bị ở đây.
+// Chiều cao header tự tính = logo + 2 * khoảng thở trên/dưới.
+$header-pad-y: 0.5rem;
+$logo-h-mobile: 2.75rem; // 44px -> header 3.75rem
+$logo-h-tablet: 3.5rem; //  56px -> header 4.5rem
+$logo-h-desktop: 4.5rem; //  72px -> header 5.5rem
+
+@mixin breakpoint-up($width) {
+  @media only screen and (min-width: $width) {
+    @content;
+  }
+}
+
 header {
-  min-height: 5rem;
-  background-color: var(--blue-color);
+  width: 100%;
+  min-height: $logo-h-mobile + 2 * $header-pad-y;
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: $header-pad-y 1rem; // lề ngang để logo không dính mép màn hình
+  background-color: var(--blue-color, #0b4d8a);
+
+  // Mobile nhỏ (iPhone SE, Android màn nhỏ)
+  @media only screen and (max-width: 360px) {
+    padding-inline: 0.75rem;
+  }
+
+  @include breakpoint-up($bp-tablet) {
+    min-height: $logo-h-tablet + 2 * $header-pad-y;
+    padding-inline: 2rem;
+  }
+
+  @include breakpoint-up($bp-desktop) {
+    min-height: $logo-h-desktop + 2 * $header-pad-y;
+  }
 }
 
-.image-banner-iuh {
-  object-fit: contain;
+.image-banner-ntt {
+  display: block; // bỏ khe hở nhỏ dưới ảnh do ảnh mặc định là inline
   width: auto;
-  height: 4.5rem;
-}
+  max-width: 100%; // màn hình quá hẹp thì ảnh co lại, không tràn ngang
+  height: $logo-h-mobile;
+  object-fit: contain;
 
-@media only screen and (max-width: 767px) {
-  header {
-    min-height: 3.5rem;
+  @include breakpoint-up($bp-tablet) {
+    height: $logo-h-tablet;
   }
 
-  .image-banner-iuh {
-    height: 2.9rem;
-  }
-}
-
-@media only screen and (min-width: 767px) and (max-width: 1223px) {
-  header {
-    min-height: 4rem;
-  }
-
-  .image-banner-iuh {
-    height: 3.9rem;
+  @include breakpoint-up($bp-desktop) {
+    height: $logo-h-desktop;
   }
 }

@@ -1,59 +1,135 @@
-.footer-iuh {
-  min-height: 10rem;
-  background-color: var(--blue-color);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
+// =========================================================
+//  FOOTER - Mobile first
+//  Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
+//  (cùng mốc breakpoint và lề ngang với information-page.scss
+//   và not-found-page.scss nên chữ footer thẳng hàng với nội dung trang)
+//
+//  LƯU Ý: file này thay thế HOÀN TOÀN CSS cũ của footer.
+// =========================================================
+
+$bp-tablet: 768px;
+$bp-desktop: 1024px;
+
+$footer-line: rgba(255, 255, 255, 0.22);
+
+@mixin breakpoint-up($width) {
+  @media only screen and (min-width: $width) {
+    @content;
+  }
 }
 
+// ---------- Khối thông tin liên hệ ----------
+.footer-container {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem 1.75rem;
+  background-color: var(--blue-color, #0b4d8a);
+
+  // Mobile nhỏ (iPhone SE, Android màn nhỏ)
+  @media only screen and (max-width: 360px) {
+    padding-inline: 0.75rem;
+  }
+
+  @include breakpoint-up($bp-tablet) {
+    padding: 2.5rem 2rem 2.25rem;
+  }
+
+  // Mobile & tablet: 1 cột. Desktop: tên trường bên trái | thông tin liên hệ bên phải.
+  // Dùng width: 100% + max-width thay cho các width cố định cũ (75rem / 38.25rem / 23.25rem).
+  .div-text-footer {
+    width: 100%;
+    max-width: 75rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr); // minmax(0, ..) để chữ dài xuống dòng, không làm tràn khung
+    row-gap: 0.375rem;
+
+    @include breakpoint-up($bp-desktop) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+      row-gap: 0.5rem;
+    }
+
+    // Các dòng thông tin: địa chỉ, điện thoại, email
+    .text-footer {
+      display: block;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+
+      @include breakpoint-up($bp-tablet) {
+        font-size: 1rem;
+      }
+
+      @include breakpoint-up($bp-desktop) {
+        grid-column: 2;
+        padding-left: 2.5rem;
+      }
+    }
+
+    // Dòng đầu tiên = tên trường: điểm nhấn duy nhất của footer
+    .text-footer:first-child {
+      padding-bottom: 0.75rem;
+      margin-bottom: 0.25rem;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.4;
+      letter-spacing: 0.03em;
+      border-bottom: 1px solid $footer-line;
+
+      @include breakpoint-up($bp-tablet) {
+        font-size: 1.125rem;
+      }
+
+      // Desktop: tên trường nằm cột trái, vạch dọc ngăn cách cột phải
+      @include breakpoint-up($bp-desktop) {
+        grid-column: 1;
+        grid-row: 1 / span 4; // = số dòng thông tin ở cột phải; thêm/bớt dòng thì đổi số này
+        align-self: stretch; // kéo cao bằng cả cột phải để vạch dọc chạy suốt
+        display: flex;
+        align-items: center;
+        padding: 0 2.5rem 0 0;
+        margin: 0;
+        font-size: 1.25rem;
+        border-bottom: 0;
+        border-right: 1px solid $footer-line;
+      }
+    }
+  }
+}
+
+// ---------- Thanh bản quyền ----------
 .footer-copy-right {
+  width: 100%;
   min-height: 3rem;
-  background-color: #ffffff;
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-direction: column;
-}
+  padding: 0.875rem 1rem;
+  background-color: #073a6a; // dự phòng cho trình duyệt cũ
+  background-color: color-mix(in srgb, var(--blue-color, #0b4d8a) 78%, #000); // xanh đậm hơn footer 1 tầng
 
-.div-text-footer {
-  min-height: 10rem;
-  width: 75rem;
-  display: flex;
-  justify-content: center;
-  align-items: start;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.text-footer-all-rights {
-  color: #b3b0aa;
-  font-size: 16px;
-}
-
-.text-footer {
-  color: white;
-  font-size: 14.5px;
-}
-
-@media only screen and (max-width: 767px) {
-  .div-text-footer {
-    width: 23.25rem;
+  @media only screen and (max-width: 360px) {
+    padding-inline: 0.75rem;
   }
 
-  .footer-copy-right {
-    min-height: 4rem;
-    padding-left: 1rem;
-  }
-}
-
-@media only screen and (min-width: 767px) and (max-width: 1223px) {
-  .div-text-footer {
-    width: 38.25rem;
+  @include breakpoint-up($bp-tablet) {
+    padding: 1rem 2rem;
   }
 
-  .footer-copy-right {
-    min-height: 4rem;
-    padding-left: 1rem;
+  .text-footer-all-rights {
+    color: rgba(255, 255, 255, 0.72); // trước là #b3b0aa trên nền trắng, tương phản chỉ ~2:1 nên khó đọc
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    text-align: center;
+    overflow-wrap: anywhere;
+
+    @include breakpoint-up($bp-tablet) {
+      font-size: 0.875rem;
+    }
   }
 }

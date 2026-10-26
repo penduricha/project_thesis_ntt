@@ -8,7 +8,7 @@ export default {
 </script>
 
 <template>
-  <footer class="footer-iuh">
+  <footer class="footer-container">
     <div class="div-text-footer">
       <span class="text-footer">TRƯỜNG ĐẠI HỌC NGUYỄN TẤT THÀNH</span>
       <span class="text-footer">Địa chỉ : 300A – Nguyễn Tất Thành, Phường Xóm Chiếu, TP. Hồ Chí Minh, Việt Nam</span>

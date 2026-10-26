@@ -1,47 +1,180 @@
 @import './base.css';
 
-#app {
-  width: 100%;
-  font-weight: normal;
-  margin: 0 auto;
-  height: auto;
-  font-family: "Arial", sans-serif;
-  overflow: auto;
-}
-/*style chung cho ca web fe*/
+/* =========================================================
+   STYLE CHUNG CHO CẢ WEB FE
+   Font: Arial, sans-serif
+   Màu sắc + kích thước (pixel) khai báo thành biến ở :root,
+   các file SCSS/Vue chỉ dùng var(--ten-bien), không gõ số cứng.
+   ========================================================= */
+
 :root {
+  /* Web chỉ có giao diện sáng: báo cho trình duyệt đừng tự đổi
+     thanh cuộn / ô nhập liệu sang tối khi máy bật dark mode. */
+  color-scheme: light;
+
+  /* ---------------------------------------------------------
+     FONT
+     Arial chỉ có 2 độ đậm thật: 400 và 700.
+     (500 hiển thị như 400, 600 hiển thị như 700)
+     --------------------------------------------------------- */
+  --font-family-base: "Arial", sans-serif;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+
+  /* ---------------------------------------------------------
+     BẢNG MÀU
+     --------------------------------------------------------- */
+
+  /* Xanh chủ đạo (logo trường) */
+  --blue-color: #0b4d8a;       /* header, footer, thanh tài khoản */
+  --blue-dark: #073a6a;        /* thanh bản quyền, trạng thái hover/active */
+  --blue-card: #0b4d8a;        /* viền nhấn bên trái của card nội dung */
+  --blue-text-title: #1b6ec2;  /* tiêu đề trong phần nội dung */
+
+  /* Đỏ nhấn (nút hành động chính: Đăng xuất, Quay lại trang chủ) */
+  --red-color: #c41e1e;
+  --red-dark: #a51818;         /* hover/active của nút đỏ */
+
+  /* Nền */
+  --white-web: #f4f7fb;        /* nền toàn trang */
+  --white-card: #ffffff;       /* nền card, khung nội dung */
+  --white-text: #ffffff;       /* chữ trên nền xanh / nền đỏ */
+
+  /* Chữ */
+  --text-primary: #1b2a41;     /* nội dung chính */
+  --text-secondary: #5b6778;   /* nhãn, mô tả phụ */
+  --text-muted: #9aa6b8;       /* gợi ý, giá trị trống */
+  --text-on-blue: rgba(255, 255, 255, 0.88);  /* chữ phụ trên nền xanh */
+  --text-on-blue-muted: rgba(255, 255, 255, 0.72);
+
+  /* Đường kẻ / viền */
+  --border-color: #e8eef6;     /* đường kẻ giữa các dòng, vạch dọc */
+  --border-title: #e3ebf5;     /* đường kẻ dưới tiêu đề */
+  --border-on-blue: rgba(255, 255, 255, 0.22);  /* đường kẻ trên nền xanh */
+
+  /* Cũ (từ template trước) - xoá nếu không còn component nào dùng */
   --green-page: #29C48D;
   --green-footer: #34A37C;
-  --white-text: #ffffff;
   --black-text: #000000;
   --grey-text: #C4C4C4;
-  --width-page: 78rem;
   --grey-nav-items: #707787;
   --grey-border-item-product: #867272;
-  /*  cac ma mau va style khac*/
+  --width-page: 78rem;
+
+  /* ---------------------------------------------------------
+     BẢNG PIXEL (1rem = 16px)
+     Dùng rem để chữ và khoảng cách co giãn theo cỡ chữ người dùng.
+     --------------------------------------------------------- */
+
+  /* Cỡ chữ */
+  --font-size-xs: 0.75rem;     /* 12px */
+  --font-size-sm: 0.875rem;    /* 14px */
+  --font-size-base: 1rem;      /* 16px - chữ nội dung mobile */
+  --font-size-md: 1.125rem;    /* 18px - chữ nội dung tablet/desktop */
+  --font-size-lg: 1.25rem;     /* 20px */
+  --font-size-xl: 1.5rem;      /* 24px */
+  --font-size-2xl: 1.75rem;    /* 28px */
+
+  /* Chiều cao dòng */
+  --line-height-tight: 1.4;    /* tiêu đề */
+  --line-height-base: 1.5;     /* nội dung */
+  --line-height-relaxed: 1.6;  /* đoạn văn dài, footer */
+
+  /* Khoảng cách (bước 4px) */
+  --space-1: 0.25rem;          /* 4px */
+  --space-2: 0.5rem;           /* 8px */
+  --space-3: 0.75rem;          /* 12px */
+  --space-4: 1rem;             /* 16px */
+  --space-5: 1.25rem;          /* 20px */
+  --space-6: 1.5rem;           /* 24px */
+  --space-8: 2rem;             /* 32px */
+  --space-10: 2.5rem;          /* 40px */
+  --space-12: 3rem;            /* 48px */
+  --space-16: 4rem;            /* 64px */
+
+  /* Bo góc */
+  --radius-sm: 2px;            /* nút bấm */
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* Kích thước thành phần */
+  --content-max-width: 75rem;  /* 1200px - bề rộng tối đa của nội dung */
+  --button-height: 3rem;       /* 48px - nút chính */
+  --tap-target-min: 2.75rem;   /* 44px - vùng bấm tối thiểu trên điện thoại */
+
+  /* Đổ bóng */
+  --shadow-card: 0 8px 24px rgba(19, 82, 157, 0.1);
+
+  /* Lề ngang của trang (đổi theo thiết bị ở cuối file) */
+  --page-padding-x: 1rem;      /* 16px */
+}
+
+/* =========================================================
+   BẢNG BREAKPOINT (pixel)
+   @media không dùng được var() nên các mốc này ghi cố định:
+
+   Mobile nhỏ   <= 360px      iPhone SE, Android màn nhỏ
+   Mobile       <  768px      điện thoại
+   Tablet       768 - 1023px  iPad
+   Desktop      >= 1024px     laptop, PC
+
+   Viết theo hướng mobile-first: style gốc cho mobile,
+   dùng min-width: 768px và min-width: 1024px để nâng dần.
+   ========================================================= */
+
+/* ---------- Nền tảng ---------- */
+html {
+  -webkit-text-size-adjust: 100%; /* iPhone xoay ngang không tự phóng chữ */
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--text-primary);
+  background-color: var(--white-web);
+}
+
+#app {
+  width: 100%;
+  margin: 0 auto;
+  height: auto;
+  overflow: auto;
+  font-weight: var(--font-weight-normal);
+}
+
+/* Ô nhập, nút, select mặc định KHÔNG kế thừa font => ép dùng Arial */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* Viền focus khi dùng bàn phím (Tab), chuột bấm thì không hiện */
+:focus-visible {
+  outline: 2px solid var(--blue-card);
+  outline-offset: 2px;
 }
 
 .cursor-pointer {
   cursor: pointer;
 }
 
-/* responsive screen and table and mobile*/
-/* Styles for mobile devices */
-@media only screen and (max-width: 767px) {
-
+/* ---------- Biến thay đổi theo thiết bị ---------- */
+@media only screen and (max-width: 360px) {
+  :root {
+    --page-padding-x: 0.75rem; /* 12px */
+  }
 }
 
-/* Styles for tablets */
-@media only screen and (min-width: 767px) and (max-width: 1023px) {
-
-}
-
-/* Styles for larger screens */
-@media (min-width: 1024px) {
-
-}
-
-/*khi trinh duyet dark*/
-@media (prefers-color-scheme: dark) {
-
+@media only screen and (min-width: 768px) {
+  :root {
+    --page-padding-x: 2rem; /* 32px */
+  }
 }

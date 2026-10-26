@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+
+<!-- Câu hỏi 1 -->
+<question type="multichoice">
+    <name><text>TOEIC Part 5 - Cau 1</text></name>
+    <questiontext format="html">
+        <text><![CDATA[<p>All employees are required to submit their expense reports ------- the end of the month.</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+        <text><![CDATA[<p><b>Giải thích:</b> Giới từ "by" dùng để chỉ mốc thời gian hoàn thành một hành động (trước hoặc vào cuối tháng).</p>]]></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>during</p>]]></text>
+    </answer>
+    <answer fraction="100" format="html">
+        <text><![CDATA[<p>by</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>between</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>since</p>]]></text>
+    </answer>
+</question>
+
+<!-- Câu hỏi 2 -->
+<question type="multichoice">
+    <name><text>TOEIC Part 5 - Cau 2</text></name>
+    <questiontext format="html">
+        <text><![CDATA[<p>The marketing team presented a ------- strategy to increase sales in the third quarter.</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+        <text><![CDATA[<p><b>Giải thích:</b> Cần một tính từ đứng trước danh từ "strategy" để bổ nghĩa. "Innovative" (mang tính đổi mới, sáng tạo) là từ phù hợp nhất về ngữ nghĩa.</p>]]></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>innovation</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>innovate</p>]]></text>
+    </answer>
+    <answer fraction="100" format="html">
+        <text><![CDATA[<p>innovative</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>innovatively</p>]]></text>
+    </answer>
+</question>
+
+<!-- Câu hỏi 3 -->
+<question type="multichoice">
+    <name><text>TOEIC Part 5 - Cau 3</text></name>
+    <questiontext format="html">
+        <text><![CDATA[<p>Mr. Harrison will assume the role of Director ------- Ms. Vance retires next month.</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+        <text><![CDATA[<p><b>Giải thích:</b> Liên từ chỉ thời gian "when" dùng để nối hai mệnh đề diễn ra đồng thời hoặc theo trình tự.</p>]]></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answer fraction="100" format="html">
+        <text><![CDATA[<p>when</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>despite</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>because</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>unless</p>]]></text>
+    </answer>
+</question>
+
+<!-- Câu hỏi 4 -->
+<question type="multichoice">
+    <name><text>TOEIC Part 5 - Cau 4</text></name>
+    <questiontext format="html">
+        <text><![CDATA[<p>Please review the attached document carefully and sign ------- on the last page.</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+        <text><![CDATA[<p><b>Giải thích:</b> Đại từ phản thân "yourself" phù hợp với câu mệnh lệnh ẩn chủ ngữ "you" (hãy tự ký vào trang cuối).</p>]]></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>your</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>yours</p>]]></text>
+    </answer>
+    <answer fraction="100" format="html">
+        <text><![CDATA[<p>yourself</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>you</p>]]></text>
+    </answer>
+</question>
+
+<!-- Câu hỏi 5 -->
+<question type="multichoice">
+    <name><text>TOEIC Part 5 - Cau 5</text></name>
+    <questiontext format="html">
+        <text><![CDATA[<p>The company's new software update was received ------- by both critics and regular users.</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+        <text><![CDATA[<p><b>Giải thích:</b> Trạng từ "favorable" (được đón nhận tích cực) đứng sau động từ bị động để bổ nghĩa cho cách thức nhận được.</p>]]></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>favorable</p>]]></text>
+    </answer>
+    <answer fraction="100" format="html">
+        <text><![CDATA[<p>favorably</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+        <text><![CDATA[<p>favor</p>]]></text>
+    </answer>
+    <answer fraction="0"
