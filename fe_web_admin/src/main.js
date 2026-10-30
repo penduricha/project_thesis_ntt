@@ -15,7 +15,7 @@
 // // Plugins & Local Storage / Routers
 // import CanvasJSChart from '@canvasjs/vue-charts'
 // import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js"
-// import RouterManagement from "@/routers/RouterManagement.js"
+// import RouterMgmt from "@/routers/RouterMgmt.js"
 // import routersBeforeLogin from "@/routers/routers_before_login.js"
 // import routersAfterLogin from "@/routers/routers_after_login.js"
 // import {AdminService} from "@/services/spring/AdminService.js";
@@ -51,7 +51,7 @@
 //     //     tokenLogin.getRefreshTokenFromStorage()
 //     // )
 //
-//     const routerManagement = new RouterManagement();
+//     const routerManagement = new RouterMgmt();
 //
 //     const currentPath = window.location.pathname;
 //
@@ -121,7 +121,7 @@ import 'vuetify/styles'
 import 'vuetify/dist/vuetify-labs.min.css'
 
 // Routers / Services / Models
-import RouterManagement from '@/routers/RouterManagement.js'
+import RouterMgmt from '@/routers/RouterMgmt.js'
 import routersBeforeLogin from '@/routers/routers_before_login.js'
 import routersAfterLogin from '@/routers/routers_after_login.js'
 import { AdminService } from '@/services/spring/AdminService.js'
@@ -132,7 +132,7 @@ const NOT_FOUND_PATH = '/404-not-found'
 
 const adminService = new AdminService()
 const tokenLogin = new TokenLogin()
-const routerManagement = new RouterManagement()
+const routerManagement = new RouterMgmt()
 
 /**
  * Nạp token từ storage và thử auto-login bằng refresh token.

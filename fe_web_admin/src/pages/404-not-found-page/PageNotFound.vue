@@ -2,7 +2,7 @@
 import Footer from "@/components/footer/Footer.vue";
 import Header from "@/components/header/Header.vue";
 import './page-not-found.scss';
-import RouterManagement from "@/routers/RouterManagement.js";
+import RouterMgmt from "@/routers/RouterMgmt.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
 
@@ -40,7 +40,7 @@ export default {
     },
 
     saveRouterPath(route) {
-      const routerManagement = new RouterManagement();
+      const routerManagement = new RouterMgmt();
       routerManagement.savePathToSessionStorage(route);
     },
 
@@ -59,7 +59,7 @@ export default {
       //       alert(error);
       //     });
       //Cach 2
-      const routerManagement = new RouterManagement();
+      const routerManagement = new RouterMgmt();
       const adminLocalStorage = new AdminLocalStorage();
       const checkPath_And_ID =
           routerManagement.getPathFromLocalStorage() &&

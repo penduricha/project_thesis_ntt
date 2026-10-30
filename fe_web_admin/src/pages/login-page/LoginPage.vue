@@ -2,9 +2,9 @@
 import './login-page.scss';
 import './form-event.scss';
 import '@/assets/main-scss/theme-color.scss';
-import RouterManagement from "@/routers/RouterManagement.js";
+import RouterMgmt from "@/routers/RouterMgmt.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
-import TextInvalid from "@/components/span/TextInvalid.vue";
+import TextRed from "@/components/span/TextRed.vue";
 
 import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
 import {AdminAccount} from "@/model/AdminAccount.js";
@@ -17,7 +17,7 @@ export default {
   name: "LoginPage",
 
   components: {
-    TextInvalid,
+    TextRed: TextRed,
     ButtonRed,
     Header,
     Footer,
@@ -43,6 +43,7 @@ export default {
       password: "",
       validateLogin: "",
       rememberMe: false,
+      keyAuthenticator: null,
 
       //btn login
       loadingButtonLogin: false,
@@ -61,7 +62,7 @@ export default {
 
     saveRouterPath(route) {
       const routePath = this.$route.path;
-      const routerManagement = new RouterManagement();
+      const routerManagement = new RouterMgmt();
       routerManagement.savePathToSessionStorage(routePath);
     },
 
@@ -90,6 +91,18 @@ export default {
       }
     },
 
+    setInputKeyAuthenticator(event) {
+      // Chỉ cho phép các ký tự số
+      // Gán lại giá trị cho biến adminId
+      this.keyAuthenticator = event.target.value.replace(/[^0-9]/g, '');
+
+      if (!this.keyAuthenticator) {
+        this.validateLogin = "";
+      } else {
+        this.validateLogin = "";
+      }
+    },
+
     setInputPassword() {
       if (this.password) {
         this.validateLogin = "";
@@ -102,7 +115,7 @@ export default {
 
     navigateToMainPage() {
       //save path to local storage
-      const routerManagement = new RouterManagement();
+      const routerManagement = new RouterMgmt();
 
       const firstPathAfterLogin = "/information-admin";
       routerManagement.savePathToLocalStorage(firstPathAfterLogin);
@@ -145,7 +158,7 @@ export default {
         let statusLogin = await adminCache.getResponseFromLoginRequest(Number(this.adminId), String(this.password));
 
         if (statusLogin === "Failed") {
-          this.validateLogin = 'Mã số sinh viên hoặc mật khẩu không đúng.';
+          this.validateLogin = 'Mã quản trị viên hoặc mật khẩu không đúng.';
           this.stopLoadButtonLogin();
         } else if (statusLogin === "OK") {
           //save remember me
@@ -241,8 +254,15 @@ export default {
             @input="setInputPassword" v-model="password" @paste="preventPaste($event)" maxlength="20">
           <label for="floatingInputPassword">Mật khẩu</label>
         </div>
-
-        <TextInvalid :text-span="validateLogin"/>
+        <div class="form-floating mb-3 style-input-login">
+          <input type="text" class="form-control border-radius-zero"
+                 id="floatingInputKeyAuthenticator"
+                 placeholder="Khóa 6 số xác thực"
+                 @input="setInputKeyAuthenticator"
+                 v-model="keyAuthenticator" maxlength="6">
+          <label for="floatingInputKeyAuthenticator">Khóa 6 số xác thực</label>
+        </div>
+        <TextRed :text-span="validateLogin"/>
 
         <div class="box-remember-me">
           <input type="checkbox" id="rememberMe" v-model="rememberMe" @change="saveDataInputToLocalStorage()"

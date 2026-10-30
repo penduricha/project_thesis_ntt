@@ -148,19 +148,19 @@ $color-line: #e8eef6;
     display: block;
     padding: 0.875rem 0;
     color: #1b2a41;
-    font-size: 1rem;
+    //font-size: calc(1rem - 0.5px); // 16px -> 15.75px
     font-weight: 400;
     line-height: 1.5;
     overflow-wrap: anywhere;
     border-bottom: 1px solid $color-line;
 
     @media only screen and (max-width: 360px) {
-      font-size: 0.9375rem;
+      //font-size: calc(0.9375rem - 0.5px); // 15px -> 14.75px
     }
 
     @include breakpoint-up($bp-tablet) {
       padding: 1rem 0;
-      font-size: 1.125rem;
+      //font-size: calc(1.125rem - 0.5px); // 18px -> 17.75px
     }
 
     // Điện thoại xoay ngang: thu gọn khoảng cách dòng (đặt cuối để thắng breakpoint trên)
@@ -178,6 +178,105 @@ $color-line: #e8eef6;
   @include breakpoint-up($bp-two-columns) {
     .div-text-detail-information .text-detail-information:last-child {
       border-bottom: 0;
+    }
+  }
+}
+
+// Card 2FA
+$color-2fa-off: #c62828; // đỏ đậm, tương phản ~5.6:1 trên nền trắng (đạt WCAG AA)
+$color-2fa-on: #2e7d32;  // xanh đậm, tương phản ~5.1:1 trên nền trắng (đạt WCAG AA)
+
+.div-detail-2fa {
+  // Hàng chứa: [Trạng thái] [Nút]
+  .div-2fa-row {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column; // mobile: xếp dọc
+    align-items: stretch;   // nút giãn full chiều ngang
+    gap: 1rem;
+    padding: 0.5rem 0 0.25rem;
+
+    @include breakpoint-up($bp-tablet) {
+      flex-direction: row;
+      align-items: center; // nút và chữ cùng nằm giữa theo chiều dọc
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding: 0.75rem 0 0.25rem;
+    }
+
+    @include breakpoint-up($bp-desktop) {
+      max-width: 40rem; // card rộng 75rem: không để nút trôi tít bên phải
+    }
+
+    // Điện thoại xoay ngang (chiều cao thấp): thu gọn khoảng cách
+    @media only screen and (max-height: 500px) and (orientation: landscape) {
+      gap: 0.5rem;
+      padding-top: 0;
+    }
+  }
+
+  // "Trạng thái: <giá trị>" - cùng font / màu với các dòng ở card thông tin
+  .div-2fa-status {
+    min-width: 0; // cho phép co lại trong flex, không làm tràn khung
+    display: flex;
+    flex-wrap: wrap; // màn hình hẹp: giá trị tự xuống dòng
+    align-items: center;
+    column-gap: 0.375rem;
+    row-gap: 0.125rem;
+    color: #1b2a41;
+    font-weight: 400;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  // Giá trị trạng thái: chấm màu + chữ đậm.
+  // Ý nghĩa KHÔNG chỉ dựa vào màu: luôn có chữ "Đã / Chưa kích hoạt".
+  .text-2fa-status {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-weight: 700;
+
+    //&::before {
+    //  content: "";
+    //  flex: none;
+    //  width: 0.5rem;
+    //  height: 0.5rem;
+    //  margin-top: 0.5em; // canh chấm giữa dòng đầu tiên
+    //  border-radius: 50%;
+    //  background-color: currentColor;
+    //}
+  }
+
+  // Viết lồng trong .div-detail-2fa để thắng độ ưu tiên của class cũ
+  // (.text-2fa-unactivate / .text-2fa-activate định nghĩa ở nơi khác)
+
+
+  // Nút kích hoạt: chỉ chỉnh KÍCH THƯỚC, màu/hover/disabled do ButtonBlue quản lý
+  .style-btn-activate {
+    box-sizing: border-box;
+    flex: none;
+    width: 100%;        // mobile: full-width, dễ bấm bằng ngón cái
+    min-height: 3rem;   // 48px - chuẩn Material / đủ vùng chạm
+    border-radius: 4px;
+    font-weight: bold;
+
+    @include breakpoint-up($bp-tablet) {
+      width: auto;
+      min-width: 11rem;
+      min-height: 2.75rem; // 44px - chuẩn Apple HIG
+    }
+
+    @include breakpoint-up($bp-desktop) {
+      min-width: 12rem;
+    }
+
+    // Viền focus khi điều hướng bằng bàn phím (Tab)
+    &:focus-visible,
+    :focus-visible {
+      outline: 2px solid var(--blue-color, #13529d);
+      outline-offset: 2px;
     }
   }
 }

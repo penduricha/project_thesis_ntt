@@ -31,7 +31,7 @@ class PathStorage {
     }
 }
 
-export default class RouterManagement {
+export default class RouterMgmt {
     #session;
     #local;
 

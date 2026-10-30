@@ -36,6 +36,9 @@ public class Admin implements Serializable {
     @Column(nullable = false, columnDefinition = "nvarchar(100)", name = "admin_name")
     private String adminName;
 
+    @Column(nullable = false, columnDefinition = "nvarchar(12)", name = "id_card")
+    private String idCard;
+
     @Column(nullable = false)
     private Boolean gender;
 

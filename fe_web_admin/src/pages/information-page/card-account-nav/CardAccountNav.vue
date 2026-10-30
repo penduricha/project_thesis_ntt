@@ -3,7 +3,7 @@ import './card-account-nav.scss';
 import '../../../assets/main-scss/theme-color.scss';
 // import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
-// import RouterManagement from "@/routers/RouterManagement.js";
+// import RouterMgmt from "@/routers/RouterMgmt.js";
 import AdminRepository from "@/repository/AdminRepository.js";
 
 export default {

@@ -1,5 +1,5 @@
 import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
-import RouterManagement from "@/routers/RouterManagement.js";
+import RouterMgmt from "@/routers/RouterMgmt.js";
 import {AdminAccount} from "@/model/AdminAccount.js";
 import {TokenLogin} from "@/model/TokenLogin.js";
 import {AdminService} from "@/services/spring/AdminService.js";
@@ -93,8 +93,8 @@ export default class AdminRepository {
         this.adminLocalStorage.removeAdminIdFromLocalStorage();
         tokenLogin.removeAccessTokenAndRefreshTokenFromStorage();
 
-        // Tạo lazy như bản cũ, vì constructor của RouterManagement có thể phụ thuộc trạng thái router
-        const routerManagement = new RouterManagement();
+        // Tạo lazy như bản cũ, vì constructor của RouterMgmt có thể phụ thuộc trạng thái router
+        const routerManagement = new RouterMgmt();
         routerManagement.removePathFromLocalStorage();
         routerManagement.removePathFromSessionStorage();
     }

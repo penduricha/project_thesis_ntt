@@ -92,9 +92,17 @@ public class DataInitializer {
             admin2.setGender(true);
             admin2.setDateOfBirthAdmin(LocalDate.of(2003,9,8));
 
+            Admin admin3 = new Admin();
+            admin2.setAdminId(2500021775L);
+            admin2.setPassword(generateHash("1234",12));
+            admin2.setAdminName("Quang Tú");
+            admin2.setGender(true);
+            admin2.setDateOfBirthAdmin(LocalDate.of(2003,10,8));
+
 
             adminRepository.save(admin1);
             adminRepository.save(admin2);
+            adminRepository.save(admin3);
         }
     }
 }
