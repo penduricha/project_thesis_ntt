@@ -1,7 +1,9 @@
 <script>
 import './button-blue.scss';
+
 export default {
   name: "ButtonBlue",
+  components: { },
   props: {
     textButton: {
       required: true,

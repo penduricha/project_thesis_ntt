@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/AppColors.dart';
 import 'screen_login.dart';
 
 class CreateAccountScreen extends StatefulWidget {
@@ -28,7 +29,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1D61E7), // Màu chủ đạo giống Login
+              primary: AppColors.primaryBlue, // Màu chủ đạo giống Login
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -66,7 +67,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,
-                      color: Color(0xFF1D61E7),
+                      color: AppColors.primaryBlue,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -179,7 +180,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                             style: TextStyle(fontSize: 14),
                           ),
                           value: 'Female',
-                          activeColor: const Color(0xFF1D61E7),
+                          activeColor: AppColors.primaryBlue,
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -280,7 +281,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1D61E7),
+                      backgroundColor: AppColors.primaryBlue,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -313,7 +314,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     child: const Text(
                       'Already have an account? Login',
                       style: TextStyle(
-                        color: Color(0xFF1D61E7),
+                        color: AppColors.primaryBlue,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),

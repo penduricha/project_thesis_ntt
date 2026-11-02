@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+
+import '../../../../core/constants/AppColors.dart';
 import '../../data/model/ChatMessage.dart';
 import '../../data/model/ReactionUser.dart';
 import '../widgets/modals_options_chat/modal_detail_reaction_box_chat.dart';
@@ -333,7 +335,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: message.isMe
-                            ? const Color(0xFF007AFF)
+                            ? AppColors.primaryBlue
                             : const Color(0xFFE5E5EA),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -453,7 +455,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: Color(0xFF007AFF)),
+        iconTheme: const IconThemeData(color: AppColors.primaryBlue),
         title: Column(
           children: [
             const SizedBox(height: 2),
@@ -470,7 +472,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline, color: Colors.blue),
+            icon: const Icon(Icons.info_outline, color: AppColors.primaryBlue),
             onPressed: () {},
           ),
         ],
@@ -544,7 +546,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           ),
                           child: const Icon(
                             Icons.keyboard_arrow_down,
-                            color: Color(0xFF007AFF),
+                            color: AppColors.primaryBlue,
                             size: 26,
                           ),
                         ),
@@ -605,7 +607,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: message.isMe
-                        ? const Color(0xFF007AFF)
+                        ? AppColors.primaryBlue
                         : const Color(0xFFE5E5EA),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -626,7 +628,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                               borderRadius: BorderRadius.circular(4),
                               border: Border(
                                 left: BorderSide(
-                                  color: message.isMe ? Colors.white : const Color(0xFF007AFF),
+                                  color: message.isMe ? Colors.white : AppColors.primaryBlue,
                                   width: 3,
                                 ),
                               ),
@@ -639,7 +641,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: message.isMe ? Colors.white : const Color(0xFF007AFF),
+                                    color: message.isMe ? Colors.white : AppColors.primaryBlue,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -760,7 +762,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             width: 3,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF007AFF),
+              color: AppColors.primaryBlue,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -775,7 +777,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    color: Color(0xFF007AFF),
+                    color: AppColors.primaryBlue,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -835,7 +837,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.add, color: Color(0xFF007AFF)),
+                      icon: const Icon(Icons.add, color: AppColors.primaryBlue),
                       onPressed: () {},
                     ),
                   ),
@@ -867,14 +869,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       return Container(
                         decoration: BoxDecoration(
                           color:
-                          hasText ? const Color(0xFF007AFF) : Colors.grey[300],
+                          hasText ? AppColors.primaryBlue : Colors.grey[300],
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
                           icon: const Icon(
-                            Icons.arrow_upward,
+                            Icons.send,
                             color: Colors.white,
-                            size: 22,
+                            size: 20,
                           ),
                           onPressed: hasText ? _handleSendMessage : null,
                         ),

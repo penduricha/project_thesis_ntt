@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cài đặt 2FA - Quản trị viên</title>
+    <!-- Bootstrap 5.3.8 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome (dùng cho icon) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --blue-color: #0b4d8a;
+            --red-button: #c61f1f;
+            --green-color: #16A34A;
+        }
+
+        .bg-custom-blue {
+            background-color: var(--blue-color) !important;
+        }
+        .text-custom-blue {
+            color: var(--blue-color) !important;
+        }
+        .btn-custom-blue {
+            background-color: var(--blue-color);
+            border-color: var(--blue-color);
+            color: #fff;
+        }
+        .btn-custom-blue:hover {
+            background-color: #093b6a;
+            border-color: #093b6a;
+            color: #fff;
+        }
+        .btn-custom-success {
+            background-color: var(--green-color);
+            border-color: var(--green-color);
+            color: #fff;
+        }
+        .btn-custom-success:hover {
+            background-color: #13883d;
+            border-color: #13883d;
+            color: #fff;
+        }
+        .text-custom-danger {
+            color: var(--red-button) !important;
+        }
+
+        /* Nút Lưu & Kích hoạt 80% chiều ngang */
+        .btn-submit {
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-light p-5">
+
+<div class="container">
+    <!-- Khối hiển thị trong trang quản trị -->
+    <div class="card shadow-sm p-4 bg-white rounded-4" style="max-width: 800px; margin: 0 auto;">
+        <h5 class="text-custom-blue fw-bold mb-3">XÁC THỰC HAI YẾU TỐ (2FA)</h5>
+        <hr class="text-muted">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span class="text-muted">Trạng thái: </span>
+                <span class="text-custom-danger fw-bold">Chưa kích hoạt 2FA</span>
+            </div>
+            <!-- Nút bấm mở Modal -->
+            <button type="button" class="btn btn-custom-blue px-4 fw-semibold" data-bs-toggle="modal" data-bs-target="#setup2FaModal">
+                <i class="fa-solid fa-shield-halved me-2"></i> Kích hoạt 2FA
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL CÀI ĐẶT 2FA (ĐÃ TỐI ƯU CĂN CHỈNH) ================= -->
+<div class="modal fade" id="setup2FaModal" tabindex="-1" aria-labelledby="setup2FaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow">
+            <!-- Header Modal -->
+            <div class="modal-header bg-custom-blue text-white">
+                <h5 class="modal-title fw-bold" id="setup2FaModalLabel">
+                    <i class="fa-solid fa-key me-2"></i> Cài đặt Khóa Bí Mật 2FA
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body Modal -->
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-3">
+                    Sao chép chuỗi khóa bí mật dưới đây và dán vào ứng dụng <strong>Mobile Authenticator</strong> của bạn để bắt đầu sinh mã.
+                </p>
+
+                <!-- Khóa Bí Mật (Secret Key) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-secondary small">KHÓA BÍ MẬT (SECRET KEY):</label>
+                    <div class="input-group">
+                        <input type="text" id="secretKeyInput" class="form-control font-monospace bg-light text-dark fs-5" value="JBSWY3DPEHPK3PXP" readonly>
+                        <button class="btn btn-outline-primary border-primary text-custom-blue" type="button" onclick="copySecretKey()" title="Sao chép">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                    <div id="copyAlert" class="form-text text-success d-none"><i class="fa-solid fa-check"></i> Đã sao chép vào bộ nhớ tạm!</div>
+                </div>
+
+                <!-- Tùy chọn tần suất thời gian (Time Interval) -->
+                <div class="mb-2">
+                    <label class="form-label fw-bold text-secondary small">TẦN SUẤT ĐỔI MÃ (INTERVAL):</label>
+                    <select class="form-select" id="timeIntervalSelect">
+                        <option value="15">15 giây</option>
+                        <option value="30" selected>30 giây (Chuẩn)</option>
+                        <option value="45">45 giây</option>
+                        <option value="60">60 giây</option>
+                    </select>
+                    <div class="form-text text-muted">Lựa chọn thời gian đếm ngược đổi mã OTP trên App di động.</div>
+                </div>
+            </div>
+
+            <!-- Footer Modal: Bỏ border, bỏ nút đóng, đưa nút Lưu vào chính giữa rộng 80% -->
+            <div class="modal-footer border-0 bg-transparent justify-content-center pb-4 pt-1">
+                <button type="button" class="btn btn-custom-success py-2 fw-semibold btn-submit" onclick="enable2FA()">
+                    Kích hoạt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5.3.8 JS Bundle CDN -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    function copySecretKey() {
+        const inputElement = document.getElementById('secretKeyInput');
+        inputElement.select();
+        inputElement.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(inputElement.value);
+
+        const alertBox = document.getElementById('copyAlert');
+        alertBox.classList.remove('d-none');
+        setTimeout(() => {
+            alertBox.classList.add('d-none');
+        }, 2000);
+    }
+
+    function enable2FA() {
+        const secretKey = document.getElementById('secretKeyInput').value;
+        const interval = document.getElementById('timeIntervalSelect').value;
+
+        console.log("Lưu cấu hình:", { secretKey, interval });
+        alert("Đã lưu cấu hình 2FA thành công!");
+
+        const modalElement = document.getElementById('setup2FaModal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        modal.hide();
+    }
+</script>
+</body>
+</html>

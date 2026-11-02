@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/AppColors.dart';
+
 class MenuBarChatListScreen extends StatelessWidget {
   const MenuBarChatListScreen({super.key});
 
@@ -24,7 +26,7 @@ class MenuBarChatListScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: Color(0xFF007AFF),
+                    backgroundColor: AppColors.primaryBlue,
                     child: Icon(Icons.person, color: Colors.white, size: 28),
                   ),
                   SizedBox(width: 12),
@@ -102,13 +104,13 @@ class MenuBarChatListScreen extends StatelessWidget {
 
             // Item: Đăng xuất (Màu đỏ đặc trưng)
             ListTile(
-              leading: const Icon(Icons.logout_sharp, color: Colors.redAccent),
+              leading: const Icon(Icons.logout_sharp, color: AppColors.primaryRed),
               title: const Text(
                 'Đăng xuất',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.redAccent,
+                  color: AppColors.primaryRed,
                 ),
               ),
               onTap: () {

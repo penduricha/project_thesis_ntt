@@ -15,7 +15,7 @@ export default class SpringConfigHeader {
 
     getAPIClientNoHeaders(){
         return axios.create({
-            baseURL: axiosConfig.requestPathFromSpringBoot(),
+            baseURL: axiosConfig.requestSpringBoot(),
             headers: { 'Content-Type': 'application/json', }
         });
     }
@@ -57,7 +57,7 @@ export default class SpringConfigHeader {
         //const basicAuthBase64 = btoa(`${this.#authUsername}:${this.#authPassword}`);
 
         return axios.create({
-            baseURL: axiosConfig.requestPathFromSpringBoot(),
+            baseURL: axiosConfig.requestSpringBoot(),
             headers: {
                 'Authorization': `Bearer ${token}`,           // JWT Token
                 //'X-Client-Auth': `Basic ${basicAuthBase64}`,    // Basic Auth đẩy vào Header riêng (tránh đè Authorization)

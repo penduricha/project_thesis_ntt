@@ -1,7 +1,7 @@
 <script>
 import './login-page.scss';
 import './form-event.scss';
-import '@/assets/main-scss/theme-color.scss';
+import '@/assets/main_scss/theme-color.scss';
 import RouterMgmt from "@/routers/RouterMgmt.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 import TextRed from "@/components/span/TextRed.vue";
@@ -11,7 +11,6 @@ import {AdminAccount} from "@/model/AdminAccount.js";
 import AdminRepository from "@/repository/AdminRepository.js";
 import Footer from "@/components/footer/Footer.vue";
 import Header from "@/components/header/Header.vue";
-// import '../../components/button/button_blue/button_blue.scss';
 
 export default {
   name: "LoginPage",

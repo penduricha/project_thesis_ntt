@@ -1,10 +1,11 @@
 <script>
 import './card-account-nav.scss';
-import '../../../assets/main-scss/theme-color.scss';
+import '@/assets/main_scss/theme-color.scss';
 // import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 // import RouterMgmt from "@/routers/RouterMgmt.js";
 import AdminRepository from "@/repository/AdminRepository.js";
+import MgmtDateTime from "@/assets/manage-components/MgmtDateTime.js";
 
 export default {
   name: "CardAccountNav",
@@ -51,16 +52,8 @@ export default {
       adminName: null,
       gender: null,
       genderBool: true,
-      clazzName: null,
-
-      //University
-      industry: null,
-      faculty: null,
-      branch: null,
-      typeOfTraining: null,
-      major: null,
-      yearOpening: null,
-
+      dateOfBirthAdmin: null,
+      dateOfBirthAdminString: null,
 
     }
   },
@@ -92,12 +85,53 @@ export default {
   },
 
   async created() {
-    await this.fetchDataAdminInformation();
+    await this.fetchDataAdminInformationBasic();
   },
 
   methods: {
-    async fetchDataAdminInformation() {
-      
+    getFormatedDateByParamDate(dateGet) {
+      // 1. Chuẩn hóa input thành Date object
+      let dateReturn;
+
+      if (dateGet instanceof Date) {
+        dateReturn = dateGet;
+      } else if (typeof dateGet === 'string') {
+        // Parse "YYYY-MM-DD" theo local time (tránh lỗi timezone)
+        const parts = dateGet.split('-').map(Number);
+        if (parts.length === 3 && parts.every(n => !isNaN(n))) {
+          dateReturn = new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+      }
+
+      // 2. Kiểm tra hợp lệ
+      if (!dateReturn || isNaN(dateReturn.getTime())) {
+        console.warn('Invalid date input:', dateGet);
+        return '';
+      }
+
+      // 3. Format
+      const day   = dateReturn.getDate();
+      const month = dateReturn.getMonth() + 1;
+      const year  = dateReturn.getFullYear();
+
+      return `${day}/${month}/${year}`;
+    },
+
+    async fetchDataAdminInformationBasic() {
+      const adminRepository = new AdminRepository();
+      let adminInformationBasic = await adminRepository.getAdminInformationBasicByAdminId();
+      console.log(adminInformationBasic);
+      if(adminInformationBasic) {
+
+
+        this.adminId = adminInformationBasic.adminId;
+        this.adminName = adminInformationBasic.adminName;
+        this.genderBool = adminInformationBasic.gender;
+        this.gender = this.genderBool ? "Nam" : "Nữ";
+        this.dateOfBirthAdmin = adminInformationBasic.dateOfBirthAdmin;
+
+        this.dateOfBirthAdminString = this.getFormatedDateByParamDate(this.dateOfBirthAdmin);
+      }
     },
 
     async handleLogout() {
@@ -154,7 +188,7 @@ export default {
         <span class="text-card">Họ và tên: {{adminName}}</span>
         <span class="text-card">Mã quản trị viên: {{adminId}}</span>
         <span class="text-card">Giới tính: {{gender}}</span>
-        <span class="text-card">Ngày sinh: {{clazzName}}</span>
+        <span class="text-card">Ngày sinh: {{dateOfBirthAdminString}}</span>
         <ButtonRed :disable-button="disableButtonLogout"
                    :loading-button="loadingButtonLogout"
                    :text-button="textBtnLogout"

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 
 
+import '../../../../core/constants/AppColors.dart';
 import '../../../chat/presentation/screens/screen_list_chat.dart';
 import '../../data/model/UserLogin.dart';
 import 'screen_create_account.dart';
+
 
 
 class LoginScreen extends StatefulWidget {
@@ -44,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,
-                      color: Color(0xFF1D61E7),
+                      color: AppColors.primaryBlue,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -167,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
 
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1D61E7),
+                      backgroundColor: AppColors.primaryBlue,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -200,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text(
                       'Create account',
                       style: TextStyle(
-                        color: Color(0xFF1D61E7),
+                        color: AppColors.primaryBlue,
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                       ),

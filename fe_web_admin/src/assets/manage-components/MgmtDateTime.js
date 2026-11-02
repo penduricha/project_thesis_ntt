@@ -1,4 +1,4 @@
-export default class ManageDateTime {
+export default class MgmtDateTime {
     _date;
 
     getDate() {
@@ -13,6 +13,10 @@ export default class ManageDateTime {
         }
     }
 
+    // constructor() {
+    //
+    // }
+
     constructor(date) {
         this.setDate(date);
     }
@@ -24,6 +28,21 @@ export default class ManageDateTime {
         let year = dateGet.getFullYear();
     }
 
+    // getFormatedDateByParamDate() {
+    //     if (!this._date) return '';
+    //     let dateReturn;
+    //     if (typeof this._date === 'string') {
+    //         const [y, m, d] = this._date.split('-').map(Number);
+    //         this._date = new Date(y, m - 1, d);
+    //     } else {
+    //         dateReturn = this._date;
+    //     }
+    //     const day = dateReturn.getDate();
+    //     const month = dateReturn.getMonth() + 1;
+    //     const year = dateReturn.getFullYear();
+    //     return `${day}/${month}/${year}`;
+    // }
+
     getFormatedDateTime() {
         const dateGet = new Date(this.getDate());
         let day = dateGet.getDay();
@@ -34,6 +53,5 @@ export default class ManageDateTime {
         let second = dateGet.getSeconds();
         return `${day}/${month}/${year} (${hour}:${minute}:${second})`;
     }
-
 
 }

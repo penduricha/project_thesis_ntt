@@ -1,16 +1,18 @@
 <script>
 import './information-page.scss';
+import './event-text-2fa.scss';
 import RouterMgmt from "@/routers/RouterMgmt.js";
 import Header from "../../components/header/Header.vue";
 import Footer from "../../components/footer/Footer.vue";
 
 import './card-account-nav/card-account-nav.scss';
-import '../../assets/main-scss/theme-color.scss';
+import '@/assets/main_scss/theme-color.scss';
 import CardAccountNav from "@/pages/information-page/card-account-nav/CardAccountNav.vue";
 import AdminRepository from "@/repository/AdminRepository.js";
 import TextRed from "@/components/span/TextRed.vue";
 import TextGreen from "@/components/span/TextGreen.vue";
 import ButtonBlue from "@/components/button/button_blue/ButtonBlue.vue";
+import ModalActivate2FA from "@/pages/information-page/pop-up-activate-2fa/ModalActivate2FA.vue";
 
 export default {
   name: "InformationPage",
@@ -22,6 +24,7 @@ export default {
     CardAccountNav,
     Header,
     Footer,
+    ModalActivate2FA,
   },
 
   data() {
@@ -140,27 +143,20 @@ export default {
         <!-- Đã bật rồi thì ẩn nút kích hoạt (tránh bấm thừa) -->
         <ButtonBlue
             v-if="!is2faEnabled"
+            data-bs-toggle="modal"
+            data-bs-target="#setup2FaModal"
             class="style-btn-activate"
             :disable-button="false"
             :loading-button="false"
             text-button="Kích hoạt 2FA"
         />
       </div>
-    </div>  </section>
+    </div>
+  </section>
   <Footer/>
+  <ModalActivate2FA/>
 </template>
 
 <style scoped lang="scss">
-$color-2fa-off: #c62828; // đỏ đậm, tương phản ~5.6:1 trên nền trắng (đạt WCAG AA)
-$color-2fa-on: #2e7d32;  // xanh đậm, tương phản ~5.1:1 trên nền trắng (đạt WCAG AA)
 
-.text-2fa-status-color {
-  &.text-2fa-unactivated {
-    color: $color-2fa-off;
-  }
-
-  &.text-2fa-activate {
-    color: $color-2fa-on;
-  }
-}
 </style>

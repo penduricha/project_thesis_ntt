@@ -1,0 +1,145 @@
+package com.example.be_web_admin.security.private_key;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.security.spec.KeySpec;
+import java.util.Base64;
+
+public class EncryptionUtil {
+
+    private static final String ALGORITHM = "AES/GCM/NoPadding";
+    private static final int TAG_LENGTH_BIT = 128; // Độ dài Authentication Tag (128 bits)
+    private static final int IV_LENGTH_BYTE = 12;  // Độ dài chuẩn cho IV trong GCM (12 bytes)
+    private static final int SALT_LENGTH_BYTE = 16;// Độ dài Salt cho PBKDF2
+    private static final int ITERATION_COUNT = 65536; // Số vòng lặp băm PBKDF2
+    private static final int KEY_LENGTH = 256;     // Khóa AES-256
+
+    // Khóa mật khẩu gốc của hệ thống (Master Password/Secret dùng để sinh key mã hóa)
+    private static final String MASTER_SECRET = "HeThongBaoMat2FA_NTT_2026_TQN";
+
+    /**
+     * Hàm sinh khóa AES từ Master Password dựa trên PBKDF2
+     */
+    private static SecretKey getSecretKey(char[] password, byte[] salt) throws Exception {
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        KeySpec spec = new PBEKeySpec(password, salt, ITERATION_COUNT, KEY_LENGTH);
+        SecretKey tmp = factory.generateSecret(spec);
+        return new SecretKeySpec(tmp.getEncoded(), "AES");
+    }
+
+    /**
+     * Mã hóa Secret Key của người dùng
+     */
+    public static String encrypt(String plainText) {
+        try {
+            // 1. Tạo Salt và IV ngẫu nhiên
+            byte[] salt = new byte[SALT_LENGTH_BYTE];
+            new SecureRandom().nextBytes(salt);
+
+            byte[] iv = new byte[IV_LENGTH_BYTE];
+            new SecureRandom().nextBytes(iv);
+
+            // 2. Tạo khóa AES từ Master Secret và Salt
+            SecretKey secretKey = getSecretKey(MASTER_SECRET.toCharArray(), salt);
+
+            // 3. Khởi tạo Cipher với chuẩn AES/GCM/NoPadding
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            GCMParameterSpec parameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, iv);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
+
+            // 4. Thực hiện mã hóa dữ liệu
+            byte[] cipherText = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+
+            // 5. Gom Salt + IV + CipherText lại thành một mảng duy nhất để lưu trữ
+            ByteBuffer byteBuffer = ByteBuffer.allocate(salt.length + iv.length + cipherText.length);
+            byteBuffer.put(salt);
+            byteBuffer.put(iv);
+            byteBuffer.put(cipherText);
+
+            // 6. Trả về dưới dạng chuỗi Base64
+            return Base64.getEncoder().encodeToString(byteBuffer.array());
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi mã hóa dữ liệu: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Giải mã Secret Key khi cần đối soát TOTP
+     */
+    public static String decrypt(String encryptedStr) {
+        try {
+            // 1. Giải mã chuỗi Base64 thành mảng Byte
+            byte[] decoded = Base64.getDecoder().decode(encryptedStr);
+            ByteBuffer byteBuffer = ByteBuffer.wrap(decoded);
+
+            // 2. Tách Salt, IV và CipherText ra từ mảng byte đã lưu
+            byte[] salt = new byte[SALT_LENGTH_BYTE];
+            byteBuffer.get(salt);
+
+            byte[] iv = new byte[IV_LENGTH_BYTE];
+            byteBuffer.get(iv);
+
+            byte[] cipherText = new byte[byteBuffer.remaining()];
+            byteBuffer.get(cipherText);
+
+            // 3. Tái tạo lại khóa AES từ Master Secret và Salt cũ
+            SecretKey secretKey = getSecretKey(MASTER_SECRET.toCharArray(), salt);
+
+            // 4. Khởi tạo Cipher để giải mã
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            GCMParameterSpec parameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, iv);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
+
+            // 5. Trả về chuỗi văn bản gốc (Secret Key ban đầu)
+            byte[] plainText = cipher.doFinal(cipherText);
+            return new String(plainText, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi giải mã dữ liệu: " + e.getMessage(), e);
+        }
+    }
+
+    public static String generateSecretKey() {
+        SecureRandom secureRandom = new SecureRandom();
+
+        // Tạo mảng 20 bytes ngẫu nhiên an toàn (160 bits)
+        byte[] randomBytes = new byte[20];
+        secureRandom.nextBytes(randomBytes);
+
+        // Mã hóa sang Base64Url (bỏ các ký tự đặc biệt như '/' và '+' để an toàn khi truyền dữ liệu)
+
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    public static void main(String[] args) {
+        String secretKey = generateSecretKey();
+        System.out.println("Khóa bí mật 2FA (Base64): " + secretKey);
+
+        // Chuỗi khóa bí mật gốc sinh ra từ Spring Boot
+        String originalSecretKey = "JBSWY3DPEHPK3PXP";
+
+        System.out.println("=== KIỂM TRA MÃ HÓA & GIẢI MÃ 2FA ===");
+        System.out.println("1. Chuỗi gốc (Plain Text): " + originalSecretKey);
+
+        // 1. Thực hiện mã hóa trước khi lưu xuống MariaDB
+        String encryptedData = encrypt(originalSecretKey);
+        System.out.println("2. Chuỗi sau khi mã hóa (Lưu DB): " + encryptedData);
+
+        // 2. Thực hiện giải mã khi cần đối soát TOTP
+        String decryptedData = decrypt(encryptedData);
+        System.out.println("3. Chuỗi sau khi giải mã: " + decryptedData);
+
+        // Kiểm tra tính toàn vẹn
+        if (originalSecretKey.equals(decryptedData)) {
+            System.out.println("\n=> KẾT QUẢ: Thành công! Dữ liệu giải mã khớp hoàn toàn với bản gốc.");
+        } else {
+            System.out.println("\n=> KẾT QUẢ: Thất bại! Dữ liệu không khớp.");
+        }
+    }
+}

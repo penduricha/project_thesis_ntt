@@ -1,6 +1,7 @@
 package com.example.be_web_admin.model.jpa;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.redis.core.index.Indexed;
@@ -13,7 +14,7 @@ import java.util.Objects;
 @Entity
 @Setter
 @Getter
-@ToString
+//@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "ntt_admins", indexes = {
@@ -36,6 +37,9 @@ public class Admin implements Serializable {
     @Column(nullable = false, columnDefinition = "nvarchar(100)", name = "admin_name")
     private String adminName;
 
+    @Column(nullable = false, columnDefinition = "nvarchar(255)", name = "address")
+    private String address;
+
     @Column(nullable = false, columnDefinition = "nvarchar(12)", name = "id_card")
     private String idCard;
 
@@ -45,6 +49,11 @@ public class Admin implements Serializable {
     @Column(nullable = false, columnDefinition = "date", name = "date_of_birth_admin")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dateOfBirthAdmin;
+
+    @ManyToOne
+    @JoinColumn(name = "course_id")
+    @JsonIgnore
+    private Course course;
 
     @Override
     public boolean equals(Object o) {

@@ -4,7 +4,7 @@ export default class AxiosConfiguration {
     constructor() {}
 
     // Call api from spring boot
-    requestPathFromSpringBoot() {
+    requestSpringBoot() {
         const ip_address = 'localhost';
         const port = '8080';
         const protocol = 'http';

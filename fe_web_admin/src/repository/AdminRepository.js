@@ -66,7 +66,7 @@ export default class AdminRepository {
     /**
      * @returns {Promise<Object|null>} thông tin admin, hoặc null nếu chưa đăng nhập / không lấy được
      */
-    async getAdminInformationByAdminId() {
+    async getAdminInformationBasicByAdminId() {
         // Auto login PHẢI chạy trước: nó có thể ghi adminId mới vào localStorage
         const isAutoLoggedIn = await this.loginService.getStatusAutoLogin();
         const adminId = this.adminLocalStorage.getAdminIdToLocalStorage();
@@ -75,7 +75,7 @@ export default class AdminRepository {
             return null;
         }
 
-        const response = await this.adminService.getAdminInformationRequestByAdminId(adminId);
+        const response = await this.adminService.getAdminInformationBasicRequestByAdminId(adminId);
         return response?.data?.data ?? null;
     }
 

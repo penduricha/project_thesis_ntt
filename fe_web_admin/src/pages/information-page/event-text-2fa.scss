@@ -1,0 +1,12 @@
+$color-2fa-off: #c62828; // đỏ đậm, tương phản ~5.6:1 trên nền trắng (đạt WCAG AA)
+$color-2fa-on: #2e7d32;  // xanh đậm, tương phản ~5.1:1 trên nền trắng (đạt WCAG AA)
+
+.text-2fa-status-color {
+  &.text-2fa-unactivated {
+    color: $color-2fa-off;
+  }
+
+  &.text-2fa-activate {
+    color: $color-2fa-on;
+  }
+}

@@ -1,6 +1,6 @@
 <script>
 import './footer.scss';
-import '../../assets/main-scss/theme-color.scss';
+import '@/assets/main_scss/theme-color.scss';
 
 export default {
   name: "Footer.scss"

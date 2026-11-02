@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
+import '../../../../core/constants/AppColors.dart';
 import '../widgets/menu_bar_chat_list_screen.dart';
 import 'screen_detail_chat.dart';
 
@@ -74,7 +75,7 @@ class ChatListScreen extends StatelessWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.edit, color: Color(0xFF007AFF)),
+              icon: const Icon(Icons.edit, color: AppColors.primaryBlue),
               onPressed: () {},
             ),
           ],
@@ -164,7 +165,7 @@ class ChatListScreen extends StatelessWidget {
                                   width: 8,
                                   height: 8,
                                   decoration: const BoxDecoration(
-                                    color: Color(0xFF007AFF),
+                                    color: AppColors.primaryBlue,
                                     shape: BoxShape.circle,
                                   ),
                                 )
@@ -221,7 +222,7 @@ class ChatListScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: isUnread
-                                        ? const Color(0xFF007AFF)
+                                        ? AppColors.primaryBlue
                                         : Colors.grey,
                                   ),
                                 ),

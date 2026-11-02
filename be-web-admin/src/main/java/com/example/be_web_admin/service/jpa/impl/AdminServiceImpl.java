@@ -124,6 +124,7 @@ public class AdminServiceImpl implements I_AdminService {
             responseData.put("adminId", adminFound.getAdminId());
             responseData.put("adminName", adminFound.getAdminName());
             responseData.put("gender", adminFound.getGender());
+            responseData.put("dateOfBirthAdmin", adminFound.getDateOfBirthAdmin());
         }
         return responseData;
     }

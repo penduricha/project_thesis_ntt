@@ -6,7 +6,7 @@ import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
 const ENDPOINTS = Object.freeze({
     LOGIN: '/admin/auth/login',
     LOGOUT: '/admin/auth/logout',
-    INFORMATION: '/admin/information',
+    INFORMATION: '/admin/information/basic',
     AUTO_LOGIN_ACCESS_TOKEN: '/admin/auth/login/auto/access-token',
     AUTO_LOGIN_REFRESH_TOKEN: '/admin/auth/login/auto/refresh-token',
 });
@@ -49,7 +49,7 @@ export class AdminService {
         });
     }
 
-    async getAdminInformationRequestByAdminId(adminId) {
+    async getAdminInformationBasicRequestByAdminId(adminId) {
         try {
             const path = `${ENDPOINTS.INFORMATION}?adminId=${encodeURIComponent(adminId)}`;
             return await this.springConfigHeader

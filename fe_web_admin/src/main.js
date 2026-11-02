@@ -115,10 +115,11 @@ import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap/dist/js/bootstrap.js'
 
 // Vue Router & Vuetify
-import { createRouter, createWebHistory } from 'vue-router'
-import { createVuetify } from 'vuetify'
-import 'vuetify/styles'
-import 'vuetify/dist/vuetify-labs.min.css'
+import { createRouter, createWebHistory } from 'vue-router';
+import { createVuetify } from 'vuetify';
+import 'vuetify/styles';
+import 'vuetify/dist/vuetify-labs.min.css';
+
 
 // Routers / Services / Models
 import RouterMgmt from '@/routers/RouterMgmt.js'

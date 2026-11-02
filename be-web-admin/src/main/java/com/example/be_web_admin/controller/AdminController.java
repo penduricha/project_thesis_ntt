@@ -73,9 +73,9 @@ public class AdminController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
-    @GetMapping ("/information")
+    @GetMapping ("/information/basic")
     //@RequestHeader(value = "Authorization", required = false) String authHeader
-    public ResponseEntity<?> getAdminInformation(@RequestParam Long adminId) throws RuntimeException {
+    public ResponseEntity<?> getAdminInformationBasic(@RequestParam Long adminId) throws RuntimeException {
         Map<String, Object> responseHttp = new HashMap<>();
         Map<String, Object> responseData = adminServiceImpl.getAdminInfo(adminId);
 
@@ -89,4 +89,21 @@ public class AdminController {
         responseHttp.put("data", responseData);
         return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
     }
+
+//    @GetMapping ("/information/detail")
+//    //@RequestHeader(value = "Authorization", required = false) String authHeader
+//    public ResponseEntity<?> getAdminInformationDetail(@RequestParam Long adminId) throws RuntimeException {
+//        Map<String, Object> responseHttp = new HashMap<>();
+//        Map<String, Object> responseData = adminServiceImpl.getAdminInfo(adminId);
+//
+//        responseHttp.put("status", HttpStatus.OK.value());
+//
+//        if(responseData.isEmpty()) {
+//            responseHttp.put("message", "Admin not found.");
+//        } else {
+//            responseHttp.put("message", "Admin found successfully.");
+//        }
+//        responseHttp.put("data", responseData);
+//        return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
+//    }
 }

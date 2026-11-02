@@ -1,0 +1,264 @@
+/* ==========================================================================
+   1. Utility dùng chung (giữ nguyên)
+   ========================================================================== */
+.bg-custom-blue {
+  background-color: var(--blue-color) !important;
+}
+.text-custom-blue {
+  color: var(--blue-color) !important;
+}
+.btn-custom-blue {
+  background-color: var(--blue-color);
+  border-color: var(--blue-color);
+  color: #fff;
+}
+.btn-custom-blue:hover {
+  background-color: #093b6a;
+  border-color: #093b6a;
+  color: #fff;
+}
+.btn-custom-success {
+  background-color: var(--green-color);
+  border-color: var(--green-color);
+  color: #fff;
+}
+.btn-custom-success:hover {
+  background-color: #13883d;
+  border-color: #13883d;
+  color: #fff;
+}
+.text-custom-danger {
+  color: var(--red-button) !important;
+}
+.btn-submit {
+  width: 100%;
+}
+.color-text-label {
+  color: var(--blue-color);
+}
+.border-radius-zero {
+  border-radius: 0 !important;
+}
+
+/* ==========================================================================
+   2. Modal kích hoạt 2FA — responsive
+   Mobile-first: khai báo mặc định cho mobile, mỗi breakpoint chỉ đổi token.
+   Cần Bootstrap >= 5.2 (dùng --bs-modal-margin).
+   ========================================================================== */
+
+/* Dùng chiều cao viewport động để thanh địa chỉ trên mobile không che modal */
+.modal.modal-2fa {
+  @supports (height: 100dvh) {
+    height: 100dvh;
+  }
+}
+
+.modal-2fa {
+  /* ---------- Design tokens (mặc định = mobile) ---------- */
+  --m2fa-margin: 0.75rem;        // khoảng cách dialog tới mép màn hình
+  --m2fa-width: 30rem;           // chiều rộng tối đa của dialog
+  --m2fa-pad-x: 1rem;
+  --m2fa-pad-y: 1rem;
+  --m2fa-gap: 1rem;              // khoảng cách giữa các khối trong body
+  --m2fa-control-h: 2.75rem;     // 44px: vùng chạm tối thiểu cho ngón tay
+  --m2fa-title-size: 1.0625rem;
+  --bs-modal-margin: var(--m2fa-margin);
+
+  /* ---------- Dialog ---------- */
+  .modal-dialog {
+    width: calc(100% - 2 * var(--m2fa-margin));
+    max-width: var(--m2fa-width);
+    margin: var(--m2fa-margin) auto;
+  }
+
+  /* ---------- Header ---------- */
+  .modal-header {
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: var(--m2fa-pad-y) var(--m2fa-pad-x);
+  }
+  .modal-title {
+    font-size: var(--m2fa-title-size);
+    line-height: 1.35;
+  }
+  // Vùng chạm 44px cho nút đóng nhưng không làm header cao thêm
+  .modal-header .btn-close {
+    flex-shrink: 0;
+    padding: 0.875rem;
+    margin: -0.75rem -0.75rem -0.75rem auto;
+  }
+
+  /* ---------- Body: cuộn bên trong, header/footer luôn hiển thị ---------- */
+  .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--m2fa-gap);
+    padding: var(--m2fa-pad-y) var(--m2fa-pad-x);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  &__desc {
+    margin: 0;
+    line-height: 1.55;
+  }
+  &__field {
+    min-width: 0; // cho phép co lại trong flex/grid, tránh tràn ngang
+  }
+  .form-label {
+    margin-bottom: 0.375rem;
+  }
+  .form-text {
+    margin-top: 0.375rem;
+    line-height: 1.4;
+  }
+  // font-size >= 16px để iOS Safari không tự zoom khi chạm vào ô nhập
+  .form-control,
+  .form-select {
+    min-height: var(--m2fa-control-h);
+    font-size: 1rem;
+  }
+  &__secret {
+    letter-spacing: 0.04em;
+    user-select: all; // chạm 1 lần chọn toàn bộ khóa
+  }
+
+  /* ---------- Nút sao chép ---------- */
+  .btn-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--m2fa-control-h);
+    padding: 0 0.75rem;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    // Nhấn (cảm ứng): chữ trắng, tránh chữ xanh trên nền xanh
+    &:active {
+      background-color: color-mix(in srgb, var(--blue-color) 80%, white);
+      color: #fff !important;
+    }
+  }
+  // Hover chỉ áp dụng cho thiết bị có chuột, tránh "kẹt hover" trên cảm ứng
+  @media (hover: hover) and (pointer: fine) {
+    .btn-copy:hover {
+      background-color: color-mix(in srgb, var(--blue-color) 80%, white);
+      color: #fff !important;
+    }
+  }
+
+  /* ---------- Footer ---------- */
+  .modal-footer {
+    gap: 0.5rem;
+    padding: 0.25rem var(--m2fa-pad-x) var(--m2fa-pad-y);
+    > * {
+      margin: 0;
+    }
+  }
+  .btn-submit {
+    width: 100%; // mobile: full-width, dễ bấm bằng một tay
+    min-height: calc(var(--m2fa-control-h) + 0.25rem);
+  }
+
+  /* ---------- Focus bàn phím rõ ràng ---------- */
+  .btn:focus-visible {
+    outline: 2px solid var(--blue-color);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+  .btn-close:focus-visible {
+    outline: 2px solid #fff; // nằm trên nền header xanh
+    outline-offset: 0;
+    box-shadow: none;
+    opacity: 1;
+  }
+
+  /* ======================================================================
+     Breakpoints
+     ====================================================================== */
+
+  /* ---------- Mobile nhỏ (iPhone SE, Android màn nhỏ) ---------- */
+  @media only screen and (max-width: 360px) {
+    --m2fa-margin: 0.5rem;
+    --m2fa-pad-x: 0.875rem;
+    --m2fa-pad-y: 0.875rem;
+    --m2fa-gap: 0.875rem;
+    --m2fa-title-size: 1rem;
+
+    .modal-title > i {
+      display: none; // nhường chỗ cho tiêu đề
+    }
+    &__secret {
+      letter-spacing: 0;
+    }
+    .btn-copy {
+      padding: 0 0.625rem;
+    }
+  }
+
+  /* ---------- Điện thoại lớn / tablet dọc nhỏ (>= 576px) ---------- */
+  @media only screen and (min-width: 576px) {
+    --m2fa-width: 30rem;
+    --m2fa-margin: 1.5rem;
+    --m2fa-pad-x: 1.25rem;
+    --m2fa-pad-y: 1.25rem;
+    --m2fa-gap: 1.125rem;
+    --m2fa-title-size: 1.125rem;
+
+    .btn-submit {
+      width: 100%; // nút nằm giữa, rộng 80%
+    }
+  }
+
+  /* ---------- Tablet (>= 768px) ---------- */
+  @media only screen and (min-width: 768px) {
+    --m2fa-width: 32.5rem;
+    --m2fa-pad-x: 1.5rem;
+    --m2fa-pad-y: 1.5rem;
+    --m2fa-gap: 1.25rem;
+    --m2fa-title-size: 1.1875rem;
+  }
+
+  /* ---------- Desktop (Laptop / PC) ---------- */
+  @media (min-width: 1024px) {
+    --m2fa-width: 33.75rem;
+    --m2fa-margin: 1.75rem;
+    --m2fa-pad-x: 1.75rem;
+    --m2fa-pad-y: 1.75rem;
+    --m2fa-gap: 1.375rem;
+    --m2fa-control-h: 2.5rem; // 40px: đủ cho con trỏ chuột
+    --m2fa-title-size: 1.25rem;
+  }
+
+  /* ---------- Điện thoại xoay ngang (chiều cao thấp) ----------
+     Đặt cuối cùng để ghi đè các breakpoint theo chiều rộng. */
+  @media only screen and (max-height: 500px) and (orientation: landscape) {
+    --m2fa-width: 40rem;
+    --m2fa-margin: 0.5rem;
+    --m2fa-pad-x: 1rem;
+    --m2fa-pad-y: 0.625rem;
+    --m2fa-gap: 0.75rem;
+    --m2fa-control-h: 2.5rem;
+    --m2fa-title-size: 1rem;
+
+    // Tránh tai thỏ / notch (cần viewport-fit=cover trong thẻ meta viewport)
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+
+    // Tận dụng chiều ngang: 2 cột, mô tả chiếm trọn hàng đầu
+    .modal-body {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      column-gap: 1rem;
+    }
+    &__desc {
+      grid-column: 1 / -1;
+    }
+    .modal-footer {
+      padding-top: 0;
+    }
+    .btn-submit {
+      width: 100%;
+      min-height: var(--m2fa-control-h);
+    }
+  }
+}
