@@ -51,7 +51,7 @@ public class Admin implements Serializable {
     private LocalDate dateOfBirthAdmin;
 
     @ManyToOne
-    @JoinColumn(name = "course_id")
+    @JoinColumn(name = "course_id", foreignKey = @ForeignKey(name = "fk_course_admin"))
     @JsonIgnore
     private Course course;
 

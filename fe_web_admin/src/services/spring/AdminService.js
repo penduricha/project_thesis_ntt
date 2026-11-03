@@ -7,6 +7,7 @@ const ENDPOINTS = Object.freeze({
     LOGIN: '/admin/auth/login',
     LOGOUT: '/admin/auth/logout',
     INFORMATION: '/admin/information/basic',
+    INFORMATION_DETAIL: '/admin/information/detail',
     AUTO_LOGIN_ACCESS_TOKEN: '/admin/auth/login/auto/access-token',
     AUTO_LOGIN_REFRESH_TOKEN: '/admin/auth/login/auto/refresh-token',
 });
@@ -52,6 +53,18 @@ export class AdminService {
     async getAdminInformationBasicRequestByAdminId(adminId) {
         try {
             const path = `${ENDPOINTS.INFORMATION}?adminId=${encodeURIComponent(adminId)}`;
+            return await this.springConfigHeader
+                .getAPIClientNoHeaders()
+                .get(path, this.springConfigHeader.getAuthorization());
+        } catch (error) {
+            console.error(error);
+            return null;
+        }
+    }
+
+    async getAdminInformationDetailRequestByAdminId(adminId) {
+        try {
+            const path = `${ENDPOINTS.INFORMATION_DETAIL}?adminId=${encodeURIComponent(adminId)}`;
             return await this.springConfigHeader
                 .getAPIClientNoHeaders()
                 .get(path, this.springConfigHeader.getAuthorization());

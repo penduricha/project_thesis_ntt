@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/AppColors.dart';
 import '../../data/model/ChatMessage.dart';
-import '../../data/model/ReactionUser.dart';
+import '../../data/model/ReactionAdmin.dart';
 import '../widgets/modals_options_chat/modal_detail_reaction_box_chat.dart';
 import '../widgets/modals_options_chat/modal_options_box_chat.dart';
 import '../widgets/modals_options_chat/modal_icons_reaction.dart';
@@ -14,7 +14,7 @@ import '../widgets/modals_options_chat/modal_icons_reaction.dart';
 //   final String text;
 //   final bool isMe;
 //   final DateTime timestamp;
-//   List<ReactionUser> reactions;
+//   List<ReactionAdmin> reactions;
 //   final ChatMessage? replyTo;
 //   // Thêm trường lưu tin nhắn đang được trích dẫn phản hồi
 //
@@ -23,7 +23,7 @@ import '../widgets/modals_options_chat/modal_icons_reaction.dart';
 //     required this.text,
 //     required this.isMe,
 //     required this.timestamp,
-//     List<ReactionUser>? reactions,
+//     List<ReactionAdmin>? reactions,
 //     this.replyTo,
 //   }) : reactions = reactions ?? [];
 // }
@@ -37,7 +37,7 @@ class ChatDetailScreen extends StatefulWidget {
 }
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
-  final String currentUserId = '1'; // Giả lập ID tài khoản hiện tại là 1
+  final String currentAdminId = '1'; // Giả lập ID tài khoản hiện tại là 1
 
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -67,9 +67,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         isMe: false,
         timestamp: hanoiNow.subtract(const Duration(days: 2)),
         reactions: [
-          ReactionUser(
-            userId: '2',
-            userName: widget.senderName,
+          ReactionAdmin(
+            adminId: '2',
+            adminName: widget.senderName,
             emoji: '👍',
           ),
         ],
@@ -80,9 +80,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         isMe: false,
         timestamp: hanoiNow.subtract(const Duration(hours: 26)),
         reactions: [
-          ReactionUser(
-            userId: currentUserId,
-            userName: 'Tôi',
+          ReactionAdmin(
+            adminId: currentAdminId,
+            adminName: 'Tôi',
             emoji: '❤️',
           ),
         ],
@@ -378,11 +378,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       onReactionSelected: (selectedReaction) {
                         setState(() {
                           message.reactions
-                              .removeWhere((r) => r.userId == currentUserId);
+                              .removeWhere((r) => r.adminId == currentAdminId);
                           message.reactions.add(
-                            ReactionUser(
-                              userId: currentUserId,
-                              userName: 'Tôi',
+                            ReactionAdmin(
+                              adminId: currentAdminId,
+                              adminName: 'Tôi',
                               emoji: selectedReaction.value,
                             ),
                           );
@@ -438,10 +438,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       builder: (context) {
         return ModalDetailReactionBoxChat(
           reactions: message.reactions,
-          currentUserId: currentUserId,
+          currentAdminId: currentAdminId,
           onRemoveReaction: () {
             setState(() {
-              message.reactions.removeWhere((r) => r.userId == currentUserId);
+              message.reactions.removeWhere((r) => r.adminId == currentAdminId);
             });
           },
         );

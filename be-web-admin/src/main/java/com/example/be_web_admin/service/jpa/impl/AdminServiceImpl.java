@@ -129,6 +129,24 @@ public class AdminServiceImpl implements I_AdminService {
         return responseData;
     }
 
+    @Override
+    public Map<String, Object> getAdminDetailInformation(Long adminId) throws JpaSystemException {
+        Map<String, Object> responseData = new HashMap<>();
+        Admin adminFound = adminRepository.findAdminByAdminId(adminId);
+        if (adminFound != null) {
+            responseData.put("adminId", adminFound.getAdminId());
+            responseData.put("address", adminFound.getAddress());
+            responseData.put("idCard", adminFound.getIdCard());
+            responseData.put("industry", adminFound.getCourse().getIndustry());
+            responseData.put("faculty", adminFound.getCourse().getFaculty());
+            responseData.put("trainingSystem", adminFound.getCourse().getTrainingSystem());
+            responseData.put("typeOfTraining", adminFound.getCourse().getTypeOfTraining());
+            responseData.put("major", adminFound.getCourse().getMajor());
+            responseData.put("branch", adminFound.getCourse().getBranch());
+        }
+        return responseData;
+    }
+
 //    public String generateHash(String rawText, int strength) {
 //        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(strength);
 //        return encoder.encode(rawText);

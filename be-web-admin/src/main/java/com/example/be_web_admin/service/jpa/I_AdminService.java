@@ -12,4 +12,6 @@ public interface I_AdminService {
     public Object loginAdmin(Long adminId, String password) throws Exception;
 
     public Map<String, Object> getAdminInfo(Long adminId) throws Exception;
+
+    public Map<String, Object> getAdminDetailInformation(Long adminId) throws Exception;
 }

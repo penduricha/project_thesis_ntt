@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../data/model/ReactionUser.dart';
+import '../../../data/model/ReactionAdmin.dart';
 
 class ModalDetailReactionBoxChat extends StatefulWidget {
-  final List<ReactionUser> reactions;
-  final String currentUserId;
+  final List<ReactionAdmin> reactions;
+  final String currentAdminId;
   final VoidCallback onRemoveReaction;
 
   const ModalDetailReactionBoxChat({
     super.key,
     required this.reactions,
-    required this.currentUserId,
+    required this.currentAdminId,
     required this.onRemoveReaction,
   });
 
@@ -24,7 +24,7 @@ class _ModalDetailReactionBoxChatState
   // 5 loại cảm xúc cơ bản + Tất cả
   final List<String> _allowedEmojis = ['❤️', '👍', '😆', '😲', '😭', '😡'];
   String _selectedFilter = 'ALL';
-  late List<ReactionUser> _localReactions;
+  late List<ReactionAdmin> _localReactions;
 
   @override
   void initState() {
@@ -38,7 +38,7 @@ class _ModalDetailReactionBoxChatState
   }
 
   // Danh sách đã lọc theo tab đang chọn
-  List<ReactionUser> get _filteredReactions {
+  List<ReactionAdmin> get _filteredReactions {
     if (_selectedFilter == 'ALL') {
       return _localReactions;
     }
@@ -47,16 +47,16 @@ class _ModalDetailReactionBoxChatState
 
   void _handleRemoveMyReaction() {
     setState(() {
-      _localReactions.removeWhere((r) => r.userId == widget.currentUserId);
+      _localReactions.removeWhere((r) => r.adminId == widget.currentAdminId);
     });
     widget.onRemoveReaction();
   }
 
-  String _getLetterFirstUserName(String? username) {
-    if (username == null || username.trim().isEmpty) {
+  String _getLetterFirstAdminName(String? adminname) {
+    if (adminname == null || adminname.trim().isEmpty) {
       return '';
     }
-    return username.trim()[0].toUpperCase();
+    return adminname.trim()[0].toUpperCase();
   }
 
   @override
@@ -135,7 +135,7 @@ class _ModalDetailReactionBoxChatState
               itemCount: _filteredReactions.length,
               itemBuilder: (context, index) {
                 final item = _filteredReactions[index];
-                final isMe = item.userId == widget.currentUserId;
+                final isMe = item.adminId == widget.currentAdminId;
 
                 return Container(
                   padding: const EdgeInsets.symmetric(
@@ -156,7 +156,7 @@ class _ModalDetailReactionBoxChatState
                             // backgroundColor: Colors.grey[300],
                             // Thay thế là kí tự đầu của tên người dùng.
                             child: Text(
-                              _getLetterFirstUserName(item.userName),
+                              _getLetterFirstAdminName(item.adminName),
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
@@ -185,7 +185,7 @@ class _ModalDetailReactionBoxChatState
                       // Tên người dùng (Căn trái)
                       Expanded(
                         child: Text(
-                          item.userName,
+                          item.adminName,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,

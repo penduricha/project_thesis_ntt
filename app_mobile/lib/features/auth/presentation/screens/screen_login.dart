@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/AppColors.dart';
 import '../../../chat/presentation/screens/screen_list_chat.dart';
-import '../../data/model/UserLogin.dart';
+import '../../data/model/AdminLogin.dart';
 import 'screen_create_account.dart';
 
 
@@ -17,8 +17,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Khởi tạo đối tượng UserLogin từ Model
-  final UserLogin _user = UserLogin();
+  // Khởi tạo đối tượng AdminLogin từ Model
+  final AdminLogin _admin = AdminLogin();
 
   // Trạng thái ẩn/hiện mật khẩu
   bool _obscurePassword = true;
@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 40),
                 // Trường nhập Email Address
                 const Text(
-                  'Email address',
+                  'Admin Id',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -66,18 +66,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
 
                 TextField(
-                  onChanged: (value) => _user.email = value,
+                  onChanged: (value) => _admin.email = value,
                   decoration: InputDecoration(
-                    hintText: 'Enter email',
+                    hintText: 'Enter admin Id',
                     hintStyle: const TextStyle(
                       color: Colors.grey,
                       fontSize: 14,
                     ),
-                    prefixIcon: const Icon(
-                      Icons.email_outlined,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
+                    // prefixIcon: const Icon(
+                    //   Icons.email_outlined,
+                    //   color: Colors.grey,
+                    //   size: 20,
+                    // ),
                     filled: true,
                     fillColor: const Color(0xFFF9F9F9),
                     border: OutlineInputBorder(
@@ -103,18 +103,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 TextField(
                   obscureText: _obscurePassword,
-                  onChanged: (value) => _user.password = value,
+                  onChanged: (value) => _admin.password = value,
                   decoration: InputDecoration(
                     hintText: 'Enter password',
                     hintStyle: const TextStyle(
                       color: Colors.grey,
                       fontSize: 14,
                     ),
-                    prefixIcon: const Icon(
-                      Icons.lock_outline,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
+                    // prefixIcon: const Icon(
+                    //   Icons.lock_outline,
+                    //   color: Colors.grey,
+                    //   size: 20,
+                    // ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -146,10 +146,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (_user.validate()) {
+                      if (_admin.validate()) {
                         // ScaffoldMessenger.of(context).showSnackBar(
                         //   SnackBar(
-                        //     content: Text('Logging in with: ${_user.email}'),
+                        //     content: Text('Logging in with: ${_admin.email}'),
                         //   ),
                         // );
                         Navigator.push(

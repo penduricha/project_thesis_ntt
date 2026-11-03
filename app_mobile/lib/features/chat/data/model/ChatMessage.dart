@@ -1,11 +1,11 @@
-import 'ReactionUser.dart';
+import 'ReactionAdmin.dart';
 
 class ChatMessage {
   final String id;
   final String text;
   final bool isMe;
   final DateTime timestamp;
-  List<ReactionUser> reactions;
+  List<ReactionAdmin> reactions;
   final ChatMessage? replyTo;
 
   ChatMessage({
@@ -13,7 +13,7 @@ class ChatMessage {
     required this.text,
     required this.isMe,
     required this.timestamp,
-    List<ReactionUser>? reactions,
+    List<ReactionAdmin>? reactions,
     this.replyTo,
   }) : reactions = reactions ?? [];
 }

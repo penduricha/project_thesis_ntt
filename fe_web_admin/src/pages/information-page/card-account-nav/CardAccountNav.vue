@@ -122,8 +122,6 @@ export default {
       let adminInformationBasic = await adminRepository.getAdminInformationBasicByAdminId();
       console.log(adminInformationBasic);
       if(adminInformationBasic) {
-
-
         this.adminId = adminInformationBasic.adminId;
         this.adminName = adminInformationBasic.adminName;
         this.genderBool = adminInformationBasic.gender;

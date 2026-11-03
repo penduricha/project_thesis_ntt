@@ -79,6 +79,19 @@ export default class AdminRepository {
         return response?.data?.data ?? null;
     }
 
+    async getAdminInformationDetailByAdminId() {
+        // Auto login PHẢI chạy trước: nó có thể ghi adminId mới vào localStorage
+        const isAutoLoggedIn = await this.loginService.getStatusAutoLogin();
+        const adminId = this.adminLocalStorage.getAdminIdToLocalStorage();
+
+        if (!isAutoLoggedIn || !adminId) {
+            return null;
+        }
+
+        const response = await this.adminService.getAdminInformationDetailRequestByAdminId(adminId);
+        return response?.data?.data ?? null;
+    }
+
     // ---------- Private helpers ----------
 
     #saveLoginSession(adminAccount, {accessToken, refreshToken}) {

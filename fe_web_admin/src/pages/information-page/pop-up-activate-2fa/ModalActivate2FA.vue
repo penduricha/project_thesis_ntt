@@ -21,7 +21,7 @@ export default {
           <h5 class="modal-title fw-bold" id="setup2FaModalLabel">
             <i class="fa-solid fa-key me-1" aria-hidden="true"></i> Cài đặt xác thực 2 lớp 2FA
           </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"/>
         </div>
 
         <!-- Body Modal -->
