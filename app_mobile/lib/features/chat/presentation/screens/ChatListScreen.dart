@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../../../core/constants/AppColors.dart';
-import '../widgets/menu_bar_chat_list_screen.dart';
-import 'screen_detail_chat.dart';
+import '../../../menu/MenuBarApp.dart';
+import 'ChatDetailScreen.dart';
 
 
 String truncateMessage(String text, int limit) {
@@ -49,7 +49,7 @@ class ChatListScreen extends StatelessWidget {
       canPop: false,
       child: Scaffold(
         // Tích hợp Menu vào bên trái Scaffold
-        drawer: const MenuBarChatListScreen(),
+        drawer: const MenuBarApp(),
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,

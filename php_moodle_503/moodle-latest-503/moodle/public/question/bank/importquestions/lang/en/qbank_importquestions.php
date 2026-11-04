@@ -25,3 +25,4 @@
 
 $string['pluginname'] = 'Import questions';
 $string['privacy:metadata'] = 'The Import questions question bank plugin imports questions from a file according to the selected file format.';
+$string['importfromotherserver'] = 'Import questions from other server';

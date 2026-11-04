@@ -122,13 +122,12 @@ public class EncryptionUtil {
         System.out.println("Khóa bí mật 2FA (Base64): " + secretKey);
 
         // Chuỗi khóa bí mật gốc sinh ra từ Spring Boot
-        String originalSecretKey = "JBSWY3DPEHPK3PXP";
 
         System.out.println("=== KIỂM TRA MÃ HÓA & GIẢI MÃ 2FA ===");
-        System.out.println("1. Chuỗi gốc (Plain Text): " + originalSecretKey);
+        System.out.println("1. Chuỗi gốc (Plain Text): " + secretKey);
 
         // 1. Thực hiện mã hóa trước khi lưu xuống MariaDB
-        String encryptedData = encrypt(originalSecretKey);
+        String encryptedData = encrypt(secretKey);
         System.out.println("2. Chuỗi sau khi mã hóa (Lưu DB): " + encryptedData);
 
         // 2. Thực hiện giải mã khi cần đối soát TOTP
@@ -136,7 +135,7 @@ public class EncryptionUtil {
         System.out.println("3. Chuỗi sau khi giải mã: " + decryptedData);
 
         // Kiểm tra tính toàn vẹn
-        if (originalSecretKey.equals(decryptedData)) {
+        if (secretKey.equals(decryptedData)) {
             System.out.println("\n=> KẾT QUẢ: Thành công! Dữ liệu giải mã khớp hoàn toàn với bản gốc.");
         } else {
             System.out.println("\n=> KẾT QUẢ: Thất bại! Dữ liệu không khớp.");

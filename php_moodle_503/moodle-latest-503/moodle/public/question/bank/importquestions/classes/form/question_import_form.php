@@ -38,7 +38,8 @@ require_once($CFG->libdir . '/formslib.php');
  * @copyright  2007 Jamie Pratt me@jamiep.org
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class question_import_form extends moodleform {
+class question_import_form extends moodleform
+{
 
     /**
      * Build the form definition.
@@ -46,7 +47,8 @@ class question_import_form extends moodleform {
      * This adds all the form fields that the manage categories feature needs.
      * @throws \coding_exception
      */
-    protected function definition() {
+    protected function definition()
+    {
         global $OUTPUT;
 
         $mform = $this->_form;
@@ -110,6 +112,22 @@ class question_import_form extends moodleform {
         // Submit button.
         $mform->addElement('submit', 'submitbutton', get_string('import'));
 
+        // Moodle appends the "Required" note to the LAST section of the form. Render it here instead,
+        // so it stays inside "Import questions from file", then disable the automatic one.
+        $mform->addElement('html', '<div class="fdescription required">' . $mform->getRequiredNote() . '</div>');
+        $mform->setRequiredNote('');
+
+        // === Import questions from other server ===
+        $mform->addElement(
+            'header',
+            'importfromotherserver',
+            get_string('importfromotherserver', 'qbank_importquestions')
+        );
+        $mform->setExpanded('importfromotherserver', false); // Collapsed by default, like the sections above.
+
+        // TODO: add the inner components of this section gradually.
+        $mform->addElement('static', 'otherserver_placeholder', '', 'Coming soon...');
+
         // Set a template for the format select elements.
         $renderer = $mform->defaultRenderer();
         $template = "{help} {element}\n";
@@ -123,7 +141,8 @@ class question_import_form extends moodleform {
      * @return array the updated errors.
      * @throws moodle_exception
      */
-    protected function validate_uploaded_file($data, $errors) {
+    protected function validate_uploaded_file($data, $errors)
+    {
         global $CFG;
 
         if (empty($data['newfile'])) {
@@ -177,7 +196,8 @@ class question_import_form extends moodleform {
      * @return array the errors that were found
      * @throws \dml_exception|\coding_exception|moodle_exception
      */
-    public function validation($data, $files) {
+    public function validation($data, $files)
+    {
         $errors = parent::validation($data, $files);
         $errors = $this->validate_uploaded_file($data, $errors);
         return $errors;

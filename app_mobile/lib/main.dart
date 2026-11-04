@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 // Import màn hình login vào
-import 'features/auth/auth.dart';
-// import 'features/chat/chat.dart';
+import 'features/login/login.dart';
+// Khung Tab (Authenticator | Chat) - chỉ hiển thị sau khi đăng nhập thành công
+import 'features/menu/TabBarApp.dart';
+// import 'features/chat/setting.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,7 +28,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Login',
-      home: const LoginScreen(),
+      // Mở app: vào màn hình đăng nhập trước
+      initialRoute: '/login',
+      routes: {
+        '/login': (_) => const LoginScreen(),
+        // Chỉ được gọi khi đăng nhập thành công (xem LoginScreen)
+        '/home': (_) => const TabBarApp(),
+      },
     );
   }
 }

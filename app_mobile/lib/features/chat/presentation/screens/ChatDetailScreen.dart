@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/AppColors.dart';
 import '../../data/model/ChatMessage.dart';
 import '../../data/model/ReactionAdmin.dart';
-import '../widgets/modals_options_chat/modal_detail_reaction_box_chat.dart';
-import '../widgets/modals_options_chat/modal_options_box_chat.dart';
-import '../widgets/modals_options_chat/modal_icons_reaction.dart';
+import '../widgets/modals_options_chat/ModalDetailReactionBoxChat.dart';
+import '../widgets/modals_options_chat/ModalIconOptionsChat.dart';
+import '../widgets/modals_options_chat/ModalIconsReaction.dart';
 
 
 // class ChatMessage {
