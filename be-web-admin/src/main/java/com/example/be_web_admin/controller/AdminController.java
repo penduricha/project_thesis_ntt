@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -105,5 +106,22 @@ public class AdminController {
         }
         responseHttp.put("data", responseData);
         return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
+    }
+
+    @GetMapping ("/all")
+    //@RequestHeader(value = "Authorization", required = false) String authHeader
+    public ResponseEntity<?> getAllAdmins() throws RuntimeException {
+        //Map<String, Object> responseHttp = new HashMap<>();
+        List<Admin> responseData = adminServiceImpl.getAllAdmins();
+
+//        responseHttp.put("status", HttpStatus.OK.value());
+//
+//        if(responseData.isEmpty()) {
+//            responseHttp.put("message", "Admin not found.");
+//        } else {
+//            responseHttp.put("message", "Admin found successfully.");
+//        }
+//        responseHttp.put("data", responseData);
+        return ResponseEntity.status(HttpStatus.OK).body(responseData);
     }
 }

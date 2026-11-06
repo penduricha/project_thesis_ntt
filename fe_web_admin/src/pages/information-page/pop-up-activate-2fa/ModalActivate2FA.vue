@@ -1,12 +1,72 @@
 <script>
 import './modal-activate-2fa.scss';
 // npm install @phosphor-icons/vue --legacy-peer-deps
-import { PhCopy } from '@phosphor-icons/vue'
+import { PhCopy, PhCheck, PhCheckCircle, PhWarningCircle } from '@phosphor-icons/vue'
+
+const FEEDBACK_DURATION = 3000 // ms: thời gian hiện alert + icon tích
 
 export default {
   name: "ModalActivate2FA",
   components: {
-    PhCopy
+    PhCopy,
+    PhCheck,
+    PhCheckCircle,
+    PhWarningCircle
+  },
+  data() {
+    return {
+      copied: false, // true => nút đổi sang icon tích trắng
+      alert: { show: false, type: 'success', message: '' },
+      feedbackTimer: null
+    }
+  },
+  beforeUnmount() {
+    clearTimeout(this.feedbackTimer)
+  },
+  methods: {
+    async copySecret() {
+      const input = this.$refs.secretInput
+      const text = input.value
+
+      // try {
+      //   if (navigator.clipboard && window.isSecureContext) {
+      //     // Cách hiện đại (cần HTTPS hoặc localhost)
+      //     await navigator.clipboard.writeText(text)
+      //   } else {
+      //     // Dự phòng cho HTTP / trình duyệt cũ: chọn chính ô input rồi copy.
+      //     // Không tạo <textarea> ngoài modal vì focus trap của Bootstrap sẽ chặn focus.
+      //     input.focus()
+      //     input.select()
+      //     input.setSelectionRange(0, text.length) // iOS Safari
+      //     if (!document.execCommand('copy')) throw new Error('execCommand copy failed')
+      //   }
+      //   this.showFeedback(true, 'Đã sao chép khóa bí mật!')
+      // } catch (error) {
+      //   console.error('Copy secret key failed:', error)
+      //   this.showFeedback(false, 'Không thể sao chép, vui lòng sao chép thủ công.')
+      // }
+      try {
+        if (!navigator.clipboard) throw new Error('Clipboard API unavailable')
+        await navigator.clipboard.writeText(text)
+        this.showFeedback(true, 'Đã sao chép khóa bí mật!')
+      } catch (error) {
+        console.error('Copy secret key failed:', error)
+        this.showFeedback(false, 'Không thể sao chép, vui lòng sao chép thủ công.')
+      }
+    },
+
+    // Hiện alert + (nếu thành công) đổi icon, rồi tự khôi phục sau FEEDBACK_DURATION.
+    // Bấm liên tục sẽ reset lại bộ đếm 3 giây.
+    showFeedback(success, message) {
+      clearTimeout(this.feedbackTimer)
+      this.copied = success
+      this.alert = { show: true, type: success ? 'success' : 'danger', message }
+
+      this.feedbackTimer = setTimeout(() => {
+        this.copied = false
+        this.alert.show = false // giữ nguyên message để hiệu ứng mờ dần không bị mất chữ
+      }, FEEDBACK_DURATION)
+    }
   }
 }
 </script>
@@ -26,8 +86,9 @@ export default {
 
         <!-- Body Modal -->
         <div class="modal-body border-radius-zero">
-          <p class="modal-2fa__desc text-muted small">
-            Sao chép chuỗi khóa bí mật dưới đây và dán vào ứng dụng <strong>Mobile Authenticator</strong> của bạn để bắt đầu sinh mã.
+          <!-- Đã bỏ class "small": cỡ chữ do biến --m2fa-text-size trong SCSS điều khiển theo thiết bị -->
+          <p class="modal-2fa__desc text-muted">
+            Sao chép chuỗi khóa bí mật dưới đây và dán vào ứng dụng di động <strong>Authenticator</strong> của để bắt đầu sinh mã 6 số.
           </p>
 
           <!-- Khóa Bí Mật (Secret Key) -->
@@ -36,6 +97,7 @@ export default {
             <div class="input-group">
               <input
                   id="secretKey2fa"
+                  ref="secretInput"
                   type="text"
                   class="form-control modal-2fa__secret font-monospace bg-light text-dark border-radius-zero"
                   value="JBSWY3DPEHPK3PXP"
@@ -44,13 +106,17 @@ export default {
                   spellcheck="false"
                   @focus="$event.target.select()"
               >
+              <!-- Khi đã copy: bỏ các class outline-primary để nền xanh lá + icon trắng hiển thị đúng -->
               <button
-                  class="btn btn-outline-primary border-primary text-custom-blue border-radius-zero btn-copy"
+                  class="btn border-radius-zero btn-copy"
+                  :class="copied ? 'is-copied' : 'btn-outline-primary border-primary text-custom-blue'"
                   type="button"
-                  aria-label="Sao chép khóa bí mật"
-                  title="Sao chép"
+                  :aria-label="copied ? 'Đã sao chép' : 'Sao chép khóa bí mật'"
+                  :title="copied ? 'Đã sao chép' : 'Sao chép'"
+                  @click="copySecret"
               >
-                <PhCopy :size="20" aria-hidden="true" />
+                <PhCheck v-if="copied" :size="20" weight="bold" color="#fff" aria-hidden="true" />
+                <PhCopy v-else :size="20" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -76,6 +142,26 @@ export default {
         </div>
       </div>
     </div>
+
+    <!--
+      Alert thông báo sao chép: Teleport ra <body> để luôn cố định ở góc phải trên viewport,
+      nằm trên modal + backdrop. Vùng aria-live luôn tồn tại để trình đọc màn hình đọc được nội dung.
+    -->
+    <Teleport to="body">
+      <div class="copy-alert-container" aria-live="polite" aria-atomic="true">
+        <Transition name="copy-alert">
+          <div
+              v-if="alert.show"
+              class="copy-alert alert"
+              :class="alert.type === 'success' ? 'alert-success' : 'alert-danger'"
+          >
+            <PhCheckCircle v-if="alert.type === 'success'" :size="20" weight="fill" aria-hidden="true" />
+            <PhWarningCircle v-else :size="20" weight="fill" aria-hidden="true" />
+            <span>{{ alert.message }}</span>
+          </div>
+        </Transition>
+      </div>
+    </Teleport>
   </div>
 </template>
 

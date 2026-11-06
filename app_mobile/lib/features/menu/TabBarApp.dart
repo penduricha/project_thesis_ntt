@@ -12,9 +12,10 @@ import '../chat/presentation/screens/ChatListScreen.dart';
 enum AppTab {
   authenticator(
     label: 'Authenticator',
-    icon: Icons.verified_user_outlined,
-    activeIcon: Icons.shield_outlined,
+    icon: Icons.home_filled,
+    activeIcon: Icons.home_filled,
   ),
+
   chat(
     label: 'Chat',
     icon: Icons.chat_bubble_outline,

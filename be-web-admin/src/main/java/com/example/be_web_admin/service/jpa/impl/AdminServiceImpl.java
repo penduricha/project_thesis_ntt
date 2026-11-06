@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 //Gradle cho security
@@ -145,6 +146,11 @@ public class AdminServiceImpl implements I_AdminService {
             responseData.put("branch", adminFound.getCourse().getBranch());
         }
         return responseData;
+    }
+
+    @Override
+    public List<Admin> getAllAdmins() throws JpaSystemException {
+        return adminRepository.findAll();
     }
 
 //    public String generateHash(String rawText, int strength) {

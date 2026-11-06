@@ -1,5 +1,5 @@
 import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
-import RouterMgmt from "@/routers/RouterMgmt.js";
+import RouterMgmt from "@/router/RouterMgmt.js";
 import {AdminAccount} from "@/model/AdminAccount.js";
 import {TokenLogin} from "@/model/TokenLogin.js";
 import {AdminService} from "@/services/spring/AdminService.js";

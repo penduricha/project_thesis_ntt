@@ -2,7 +2,7 @@
 import Footer from "@/components/footer/Footer.vue";
 import Header from "@/components/header/Header.vue";
 import './page-not-found.scss';
-import RouterMgmt from "@/routers/RouterMgmt.js";
+import RouterMgmt from "@/router/RouterMgmt.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
 

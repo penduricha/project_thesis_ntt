@@ -15,9 +15,9 @@
 // // Plugins & Local Storage / Routers
 // import CanvasJSChart from '@canvasjs/vue-charts'
 // import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js"
-// import RouterMgmt from "@/routers/RouterMgmt.js"
-// import routersBeforeLogin from "@/routers/routers_before_login.js"
-// import routersAfterLogin from "@/routers/routers_after_login.js"
+// import RouterMgmt from "@/router/RouterMgmt.js"
+// import routersBeforeLogin from "@/router/routers_before_login.js"
+// import routersAfterLogin from "@/router/routers_after_login.js"
 // import {AdminService} from "@/services/spring/AdminService.js";
 // import {TokenLogin} from "@/model/TokenLogin.js";
 //
@@ -100,7 +100,7 @@
 //         }
 //     }
 //
-//     // Init path and routers
+//     // Init path and router
 //     initApp(activeRouters, targetPath)
 // }
 //
@@ -122,9 +122,9 @@ import 'vuetify/dist/vuetify-labs.min.css';
 
 
 // Routers / Services / Models
-import RouterMgmt from '@/routers/RouterMgmt.js'
-import routersBeforeLogin from '@/routers/routers_before_login.js'
-import routersAfterLogin from '@/routers/routers_after_login.js'
+import RouterMgmt from '@/router/RouterMgmt.js'
+import routersBeforeLogin from '@/router/routers_before_login.js'
+import routersAfterLogin from '@/router/routers_after_login.js'
 import { AdminService } from '@/services/spring/AdminService.js'
 import { TokenLogin } from '@/model/TokenLogin.js'
 

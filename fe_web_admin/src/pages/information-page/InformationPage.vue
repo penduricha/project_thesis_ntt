@@ -1,7 +1,7 @@
 <script>
 import './information-page.scss';
 import './event-text-2fa.scss';
-import RouterMgmt from "@/routers/RouterMgmt.js";
+import RouterMgmt from "@/router/RouterMgmt.js";
 import Header from "../../components/header/Header.vue";
 import Footer from "../../components/footer/Footer.vue";
 

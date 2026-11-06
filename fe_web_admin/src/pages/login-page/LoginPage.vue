@@ -2,7 +2,7 @@
 import './login-page.scss';
 import './form-event.scss';
 import '@/assets/main_scss/theme-color.scss';
-import RouterMgmt from "@/routers/RouterMgmt.js";
+import RouterMgmt from "@/router/RouterMgmt.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 import TextRed from "@/components/span/TextRed.vue";
 

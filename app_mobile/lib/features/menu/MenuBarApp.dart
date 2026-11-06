@@ -155,30 +155,25 @@ class MenuBarApp extends StatelessWidget {
   }
 
   // Đăng xuất là thao tác "phá hủy phiên" -> luôn hỏi xác nhận trước khi thực hiện
+  // Đăng xuất là thao tác "phá hủy phiên" -> luôn hỏi xác nhận trước khi thực hiện
   Future<void> _onLogout(BuildContext context) async {
-    // Lấy navigator trước các lệnh await để không dùng context sau khoảng chờ
-    final navigator = Navigator.of(context);
-
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => _buildLogoutDialog(dialogContext),
     );
 
     // Bấm Hủy hoặc chạm ra ngoài -> giữ nguyên drawer đang mở
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
 
-    // 1. Đóng Drawer
-    navigator.pop();
-
-    // TODO: 2. Gọi API đăng xuất hoặc xóa Token/SharedPreferences ở đây
-    // Ví dụ: await SharedPreferences.getInstance().then((prefs) => prefs.clear());
+    // TODO: Gọi API đăng xuất / xóa Token, SharedPreferences ở đây
     // Ví dụ: await AuthService.logout();
+    // Có await ở trên thì phải kiểm tra lại: if (!context.mounted) return;
 
-    // 3. Chuyển về LoginScreen và xóa toàn bộ các màn hình trước đó
-    navigator.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (Route<dynamic> route) => false,
-    );
+    // rootNavigator: true -> dùng Navigator GỐC của MaterialApp (không phải
+    // Navigator lồng trong TabBarApp), nên xóa sạch stack gồm cả route '/home'
+    // chứa TabBarApp. Sau đó chỉ còn LoginScreen, không còn thanh Tab.
+    Navigator.of(context, rootNavigator: true)
+        .pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   // Popup xác nhận đăng xuất: mọi thứ căn giữa, 2 nút ngang hàng, cùng chiều rộng

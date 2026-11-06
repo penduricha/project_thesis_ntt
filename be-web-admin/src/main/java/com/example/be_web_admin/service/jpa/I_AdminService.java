@@ -3,6 +3,7 @@ package com.example.be_web_admin.service.jpa;
 import com.example.be_web_admin.model.jpa.Admin;
 import org.springframework.orm.jpa.JpaSystemException;
 
+import java.util.List;
 import java.util.Map;
 
 public interface I_AdminService {
@@ -14,4 +15,6 @@ public interface I_AdminService {
     public Map<String, Object> getAdminInfo(Long adminId) throws Exception;
 
     public Map<String, Object> getAdminDetailInformation(Long adminId) throws Exception;
+
+    public List<Admin> getAllAdmins() throws JpaSystemException;
 }

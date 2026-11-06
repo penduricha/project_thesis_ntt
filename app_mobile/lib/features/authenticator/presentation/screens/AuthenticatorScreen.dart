@@ -1,10 +1,11 @@
-import 'dart:math' as math;
-
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../menu/MenuBarApp.dart';
+// Class sinh mã TOTP đã được tách riêng (cùng thư mục với file này)
+import '../widgets/ActivateKeyDialog.dart';
+import '../widgets/RingPainter.dart';
+import 'TotpGenerator.dart';
 
 // ============================================================================
 //  MODEL
@@ -25,69 +26,6 @@ class AuthAccount {
 }
 
 // ============================================================================
-//  TOTP (RFC 6238) - HMAC-SHA1, 6 số, chu kỳ 30 giây
-//  Cần thêm vào pubspec.yaml:  crypto: ^3.0.3
-// ============================================================================
-
-class TotpGenerator {
-  TotpGenerator._();
-
-  /// Chuẩn hóa secret: viết hoa, bỏ khoảng trắng, dấu "-" và "="
-  /// (vd: "abcd efgh-ijkl" -> "ABCDEFGHIJKL")
-  static String normalizeSecret(String input) {
-    return input.toUpperCase().replaceAll(RegExp(r'[\s=-]'), '');
-  }
-
-  static String generate(
-      String base32Secret, {
-        int period = 30,
-        int digits = 6,
-        DateTime? at,
-      }) {
-    final key = _base32Decode(base32Secret);
-    final seconds = (at ?? DateTime.now()).millisecondsSinceEpoch ~/ 1000;
-    final counter = seconds ~/ period;
-
-    // Counter 8 byte big-endian (32 bit cao = 0 nên chỉ cần ghi 32 bit thấp)
-    final message = Uint8List(8);
-    ByteData.view(message.buffer).setUint32(4, counter);
-
-    final hash = Hmac(sha1, key).convert(message).bytes;
-    final offset = hash.last & 0x0f;
-    final binary = ((hash[offset] & 0x7f) << 24) |
-    ((hash[offset + 1] & 0xff) << 16) |
-    ((hash[offset + 2] & 0xff) << 8) |
-    (hash[offset + 3] & 0xff);
-
-    final otp = binary % math.pow(10, digits).toInt();
-    return otp.toString().padLeft(digits, '0');
-  }
-
-  static Uint8List _base32Decode(String input) {
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    final clean = normalizeSecret(input);
-
-    final bytes = <int>[];
-    var buffer = 0;
-    var bits = 0;
-    for (final ch in clean.split('')) {
-      final value = alphabet.indexOf(ch);
-      if (value < 0) {
-        throw FormatException('Secret key không hợp lệ: "$ch"');
-      }
-      buffer = (buffer << 5) | value;
-      bits += 5;
-      if (bits >= 8) {
-        bits -= 8;
-        bytes.add((buffer >> bits) & 0xFF);
-        buffer &= (1 << bits) - 1; // giữ buffer nhỏ, tránh tràn số
-      }
-    }
-    return Uint8List.fromList(bytes);
-  }
-}
-
-// ============================================================================
 //  MÀN HÌNH
 // ============================================================================
 
@@ -105,7 +43,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   static const Color _dividerColor = Color(0xFFEDEDED);
   static const Color _searchFill = Color(0xFFEFEFEF);
 
-  static const int _period = 30; // giây
+  static const int _period = TotpGenerator.defaultPeriod; // 30 giây
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
@@ -219,7 +157,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
       context: context,
       // Tránh lỡ chạm ra ngoài làm mất khóa vừa nhập/dán; vẫn đóng được bằng nút Hủy
       barrierDismissible: false,
-      builder: (_) => _ActivateKeyDialog(existingSecrets: existingSecrets),
+      builder: (_) => ActivateKeyDialog(existingSecrets: existingSecrets),
     );
 
     if (secret == null || !mounted) return; // bấm Hủy
@@ -393,248 +331,10 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 //  Trả về secret đã chuẩn hóa (String) khi bấm Activate, hoặc null khi bấm Hủy.
 // ============================================================================
 
-class _ActivateKeyDialog extends StatefulWidget {
-  const _ActivateKeyDialog({required this.existingSecrets});
 
-  /// Các khóa đã có trong danh sách (đã chuẩn hóa) để chặn thêm trùng
-  final Set<String> existingSecrets;
-
-  @override
-  State<_ActivateKeyDialog> createState() => _ActivateKeyDialogState();
-}
-
-class _ActivateKeyDialogState extends State<_ActivateKeyDialog> {
-  static const Color _brandColor = Color(0xFF004B87); // nút Activate
-  static const Color _errorColor = Color(0xFFC61F1F);
-  static const Color _fieldFill = Color(0xFFEFEFEF);
-  static const int _minKeyLength = 16;
-
-  final TextEditingController _controller = TextEditingController();
-  String? _error;
-
-  bool get _hasText => _controller.text.trim().isNotEmpty;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  // Dán nhanh từ clipboard (khóa bí mật thường dài, gõ tay dễ sai)
-  Future<void> _paste() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = data?.text?.trim();
-    if (text == null || text.isEmpty || !mounted) return;
-    setState(() {
-      _controller.value = TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
-      );
-      _error = null;
-    });
-  }
-
-  void _clear() {
-    setState(() {
-      _controller.clear();
-      _error = null;
-    });
-  }
-
-  String? _validate(String secret) {
-    if (secret.isEmpty) return 'Vui lòng nhập khóa bí mật';
-    if (!RegExp(r'^[A-Z2-7]+$').hasMatch(secret)) {
-      return 'Khóa chỉ gồm chữ A–Z và số 2–7';
-    }
-    if (secret.length < _minKeyLength) {
-      return 'Khóa phải có ít nhất $_minKeyLength ký tự';
-    }
-    if (widget.existingSecrets.contains(secret)) {
-      return 'Khóa này đã được thêm trước đó';
-    }
-    return null;
-  }
-
-  void _onActivate() {
-    final secret = TotpGenerator.normalizeSecret(_controller.text);
-    final error = _validate(secret);
-    if (error != null) {
-      setState(() => _error = error);
-      return;
-    }
-    Navigator.pop(context, secret);
-  }
-
-  OutlineInputBorder _border(Color color, [double width = 1]) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: color, width: width),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        // Cuộn được để không bị overflow khi bàn phím mở hoặc màn hình xoay ngang
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE6EEF5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.vpn_key_outlined,
-                    color: _brandColor,
-                    size: 28,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Nhập khóa bí mật',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Nhập hoặc dán khóa bí mật được cấp để kích hoạt mã xác thực 6 số.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, height: 1.4, color: Colors.black54),
-              ),
-              const SizedBox(height: 20),
-              _buildKeyField(),
-              const SizedBox(height: 24),
-              _buildFooter(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildKeyField() {
-    return TextField(
-      maxLength: 30,
-      controller: _controller,
-      autofocus: true, // mở bàn phím ngay khi popup hiện
-      minLines: 1,
-      maxLines: 3, // khóa dài sẽ xuống dòng để nhìn được toàn bộ
-      // Bàn phím ký tự thuần: tắt gợi ý/tự sửa, tự viết hoa
-      keyboardType: TextInputType.visiblePassword,
-      textCapitalization: TextCapitalization.characters,
-      autocorrect: false,
-      enableSuggestions: false,
-      textInputAction: TextInputAction.done,
-      onChanged: (_) => setState(() => _error = null),
-      onSubmitted: (_) => _hasText ? _onActivate() : null,
-      style: const TextStyle(fontSize: 16, letterSpacing: 1),
-      decoration: InputDecoration(
-        hintText: 'Nhập khóa bí mật',
-        hintStyle: const TextStyle(
-          color: Colors.grey,
-          fontSize: 16,
-          letterSpacing: 0,
-        ),
-        errorText: _error,
-        errorMaxLines: 2,
-        filled: true,
-        fillColor: _fieldFill,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        // Rỗng -> nút Dán; có chữ -> nút Xóa
-        suffixIcon: _hasText
-            ? IconButton(
-          icon: const Icon(Icons.close, color: Colors.grey, size: 20),
-          tooltip: 'Xóa',
-          onPressed: _clear,
-        )
-            : IconButton(
-          icon: const Icon(
-            Icons.content_paste_rounded,
-            color: _brandColor,
-            size: 22,
-          ),
-          tooltip: 'Dán',
-          onPressed: _paste,
-        ),
-        border: _border(Colors.transparent),
-        enabledBorder: _border(Colors.transparent),
-        focusedBorder: _border(_brandColor, 1.5),
-        errorBorder: _border(_errorColor),
-        focusedErrorBorder: _border(_errorColor, 1.5),
-      ),
-    );
-  }
-
-  // Footer: Hủy (viền) | Activate (nền xanh 0xFF004B87), 2 nút cùng kích thước
-  Widget _buildFooter() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 48),
-              foregroundColor: Colors.black87,
-              side: const BorderSide(color: Color(0xFFBDBDBD), width: 1.2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: const Text('Hủy'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            // Chưa nhập gì -> nút mờ, không bấm được
-            onPressed: _hasText ? _onActivate : null,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(0, 48),
-              backgroundColor: _brandColor,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: const Color(0x66004B87),
-              disabledForegroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: const Text('Activate'),
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 // ============================================================================
-//  1 DÒNG TÀI KHOẢN: avatar | tên + email + mã 6 số + vòng đếm ngược
+//  1 DÒNG TÀI KHOẢN: avatar | tên + email + mã 6 số + vòng đếm ngược | mũi tên >
 // ============================================================================
 
 class _AccountTile extends StatelessWidget {
@@ -666,67 +366,85 @@ class _AccountTile extends StatelessWidget {
     return InkWell(
       onTap: onTap, // chạm để sao chép mã (đổi thành mở màn chi tiết nếu cần)
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          // center: mũi tên nằm giữa chiều cao của cả dòng
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const CircleAvatar(
-              radius: 24,
-              backgroundColor: Color(0xFF004B87),
-              child: Icon(
-                Icons.person_outline,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-            const SizedBox(width: 16),
+            // Nội dung chính. Row lồng bên trong giữ avatar bám mép trên như cũ.
             Expanded(
-              child: Column(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    account.issuer,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
+                  const CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Color(0xFF004B87),
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: Colors.white,
+                      size: 28,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    account.account,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        _formattedCode,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w400,
-                          color: codeColor,
-                          letterSpacing: 1,
-                          // Số cùng độ rộng -> mã không bị "nhảy" khi đổi
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          account.issuer,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      _CountdownRing(
-                        clock: clock,
-                        period: period,
-                        color: codeColor,
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          account.account,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              _formattedCode,
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w400,
+                                color: codeColor,
+                                letterSpacing: 1,
+                                // Số cùng độ rộng -> mã không bị "nhảy" khi đổi
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            _CountdownRing(
+                              clock: clock,
+                              period: period,
+                              color: codeColor,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
+
+            // Mũi tên phải màu xám (muốn mảnh hơn: Icons.arrow_forward_ios_rounded, size 16)
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: Colors.grey, size: 24),
           ],
         ),
       ),
@@ -735,7 +453,8 @@ class _AccountTile extends StatelessWidget {
 }
 
 // ============================================================================
-//  VÒNG ĐẾM NGƯỢC (hiệu ứng đồng hồ): cung tròn thu nhỏ dần + số giây ở giữa
+//  VÒNG ĐẾM NGƯỢC (hiệu ứng đồng hồ): cung xanh mòn dần theo chiều kim đồng hồ
+//  + số giây ở giữa.
 //  Chỉ vùng nhỏ này được vẽ lại theo từng frame, danh sách không bị rebuild.
 // ============================================================================
 
@@ -767,7 +486,7 @@ class _CountdownRing extends StatelessWidget {
             width: _size,
             height: _size,
             child: CustomPaint(
-              painter: _RingPainter(progress: remaining, color: ringColor),
+              painter: RingPainter(progress: remaining, color: ringColor),
               child: Center(
                 child: Text(
                   '$seconds',
@@ -786,35 +505,3 @@ class _CountdownRing extends StatelessWidget {
   }
 }
 
-class _RingPainter extends CustomPainter {
-  _RingPainter({required this.progress, required this.color});
-
-  final double progress; // phần còn lại: 1.0 (đầy) -> 0.0 (hết)
-  final Color color;
-
-  static const double _stroke = 2.5;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(_stroke / 2);
-
-    // Vòng nền mờ
-    final track = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _stroke
-      ..color = color.withAlpha(46);
-    canvas.drawArc(rect, 0, math.pi * 2, false, track);
-
-    // Cung còn lại: bắt đầu từ 12 giờ, quay theo chiều kim đồng hồ
-    final arc = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _stroke
-      ..strokeCap = StrokeCap.round
-      ..color = color;
-    canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * progress, false, arc);
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.color != color;
-}
