@@ -99,6 +99,12 @@ gg:
     developmentMode: false
 
 spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: StrongPass!123
+
   application:
     name: be-web-students
 

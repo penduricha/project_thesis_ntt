@@ -112,22 +112,6 @@ class question_import_form extends moodleform
         // Submit button.
         $mform->addElement('submit', 'submitbutton', get_string('import'));
 
-        // Moodle appends the "Required" note to the LAST section of the form. Render it here instead,
-        // so it stays inside "Import questions from file", then disable the automatic one.
-        $mform->addElement('html', '<div class="fdescription required">' . $mform->getRequiredNote() . '</div>');
-        $mform->setRequiredNote('');
-
-        // === Import questions from other server ===
-        $mform->addElement(
-            'header',
-            'importfromotherserver',
-            get_string('importfromotherserver', 'qbank_importquestions')
-        );
-        $mform->setExpanded('importfromotherserver', false); // Collapsed by default, like the sections above.
-
-        // TODO: add the inner components of this section gradually.
-        $mform->addElement('static', 'otherserver_placeholder', '', 'Coming soon...');
-
         // Set a template for the format select elements.
         $renderer = $mform->defaultRenderer();
         $template = "{help} {element}\n";

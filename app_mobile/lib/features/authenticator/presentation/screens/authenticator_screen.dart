@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../menu/MenuBarApp.dart';
+import '../../../main_shell/presentation/widgets/app_menu_bar.dart';
 // Class sinh mã TOTP đã được tách riêng (cùng thư mục với file này)
-import '../widgets/ActivateKeyDialog.dart';
-import '../widgets/RingPainter.dart';
-import 'TotpGenerator.dart';
+import '../widgets/activate_key_dialog.dart';
+import '../widgets/ring_painter.dart';
+import 'totp_generator.dart';
 
 // ============================================================================
 //  MODEL
@@ -206,7 +206,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      drawer: const MenuBarApp(),
+      drawer: const AppMenuBar(),
       body: SafeArea(
         child: Column(
           children: [

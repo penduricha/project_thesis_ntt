@@ -39,19 +39,19 @@ export default {
 </script>
 
 <template>
-<!--   -->
-  <button class="button-red" :disabled="disableButton"
-          :class="['button_red-opacity-disabled', setOpacityBtnLogin]"
-         >
-    {{ textButton }}
-    <div v-if="loadingButton" class="spinner-border text-light style-icon-spinner" role="status"/>
-      <!-- <span class="sr-only">Loading...</span>-->
+  <!--
+    Khi loading: chữ được ẩn (visibility: hidden, vẫn giữ chỗ nên nút không bị đổi kích thước)
+    và spinner nằm chính giữa nút. Spinner tự viết trong button-red.scss,
+    không dùng .spinner-border của Bootstrap.
+  -->
+  <button
+      class="button-red"
+      :class="['button-red-opacity-disabled', setOpacityBtnLogin]"
+      :disabled="disableButton"
+      :aria-busy="loadingButton"
+      :aria-label="loadingButton ? 'Đang xử lý' : null"
+  >
+    <span class="button-red__text" :class="{ 'is-hidden': loadingButton }">{{ textButton }}</span>
+    <span v-if="loadingButton" class="button-red__spinner" aria-hidden="true"></span>
   </button>
 </template>
-
-<style scoped lang="scss">
-.style-icon-spinner {
-  width: 1.2rem;
-  height: 1.2rem;
-}
-</style>

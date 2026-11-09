@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 
-import '../../../../core/constants/AppColors.dart';
-import '../../data/model/ChatMessage.dart';
-import '../../data/model/ReactionAdmin.dart';
-import '../widgets/modals_options_chat/ModalDetailReactionBoxChat.dart';
-import '../widgets/modals_options_chat/ModalIconOptionsChat.dart';
-import '../widgets/modals_options_chat/ModalIconsReaction.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../data/model/chat_message.dart';
+import '../../data/model/reaction_admin.dart';
+import '../widgets/modals_options_chat/modal_detail_reaction_box_chat.dart';
+import '../widgets/modals_options_chat/modal_icon_options_chat.dart';
+import '../widgets/modals_options_chat/modal_icons_reaction.dart';
 
 
 // class ChatMessage {

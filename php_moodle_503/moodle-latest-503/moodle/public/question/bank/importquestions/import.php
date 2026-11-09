@@ -27,13 +27,97 @@ require_once(__DIR__ . '/../../../config.php');
 require_once($CFG->dirroot . '/question/editlib.php');
 require_once($CFG->dirroot . '/question/format.php');
 require_once($CFG->dirroot . '/question/renderer.php');
+require_once($CFG->libdir . '/filelib.php');
 
 use qbank_importquestions\form\question_import_form;
+use qbank_importquestions\form\server_import_form;
+
+/**
+ * Download the questions from the other server into a local file.
+ *
+ * Uses Moodle's curl class, so the "HTTP security" settings (blocked hosts / allowed ports) still apply.
+ *
+ * @param stdClass $form the submitted data of the server import form.
+ * @param string $targetfile the local file to write to.
+ * @param moodle_url $returnurl where the "Continue" link of an error page should go.
+ * @throws moodle_exception if the server cannot be reached or returns nothing usable.
+ */
+function qbank_importquestions_fetch_from_server(stdClass $form, string $targetfile, moodle_url $returnurl): void
+{
+    $component = 'qbank_importquestions';
+
+    $scheme = ($form->serverscheme ?? 'http') === 'https' ? 'https' : 'http';
+    $url = new moodle_url("{$scheme}://{$form->serverhost}:" . (int) $form->serverport . $form->serverpath);
+
+    // Query parameters are only meaningful for a REST API; a direct file URL is downloaded as is.
+    if ($form->servertype === 'rest') {
+        $params = ['format' => $form->serverformat];
+        if (!empty($form->serverbankid)) {
+            $params['bank'] = $form->serverbankid;
+        }
+        if (!empty($form->servertopic)) {
+            $params['topic'] = $form->servertopic;
+        }
+        if (!empty($form->serverlimit)) {
+            $params['limit'] = (int) $form->serverlimit;
+        }
+        $url->params($params);
+    }
+
+    $headers = [];
+    $options = [
+        'CURLOPT_TIMEOUT' => max(1, (int) $form->servertimeout),
+        'CURLOPT_CONNECTTIMEOUT' => max(1, (int) $form->servertimeout),
+    ];
+
+    if ($form->serverauth === 'token') {
+        // Send the token both ways, so the backend can use whichever it prefers.
+        $headers[] = 'Authorization: Bearer ' . $form->servertoken;
+        $headers[] = 'X-API-Key: ' . $form->servertoken;
+    } else if ($form->serverauth === 'basic') {
+        $options['CURLOPT_HTTPAUTH'] = CURLAUTH_BASIC;
+        $options['CURLOPT_USERPWD'] = ($form->serverusername ?? '') . ':' . ($form->serverpassword ?? '');
+    }
+
+    if ($scheme === 'https' && empty($form->serververifyssl)) {
+        $options['CURLOPT_SSL_VERIFYPEER'] = false;
+        $options['CURLOPT_SSL_VERIFYHOST'] = 0;
+    }
+
+    $curl = new curl();
+    $curl->setHeader($headers);
+    $content = $curl->get($url->out(false), [], $options);
+
+    $httpcode = (int) ($curl->get_info()['http_code'] ?? 0);
+    if ($curl->get_errno() || $content === false) {
+        // Includes the case where Moodle's own cURL security helper blocked the host or the port.
+        throw new moodle_exception('servererror', $component, $returnurl->out(), $curl->error);
+    }
+    if ($httpcode !== 200) {
+        throw new moodle_exception(
+            'servererror',
+            $component,
+            $returnurl->out(),
+            get_string('servererror_http', $component, $httpcode)
+        );
+    }
+    if (trim((string) $content) === '') {
+        throw new moodle_exception(
+            'servererror',
+            $component,
+            $returnurl->out(),
+            get_string('servererror_empty', $component)
+        );
+    }
+    if (file_put_contents($targetfile, $content) === false) {
+        throw new moodle_exception('uploadproblem');
+    }
+}
 
 require_login();
 core_question\local\bank\helper::require_plugin_enabled('qbank_importquestions');
 list($thispageurl, $contexts, $cmid, $cm, $module, $pagevars) =
-        question_edit_setup('import', '/question/bank/importquestions/import.php');
+    question_edit_setup('import', '/question/bank/importquestions/import.php');
 
 // Get display strings.
 $txt = new stdClass();
@@ -59,8 +143,17 @@ if ($contexts === null) { // Need to get the course from the chosen category.
 
 $PAGE->set_url($thispageurl);
 
-$importform = new question_import_form($thispageurl, ['contexts' => $contexts->having_one_edit_tab_cap('import'),
-    'defaultcategory' => $pagevars['cat']]);
+$formcustomdata = [
+    'contexts' => $contexts->having_one_edit_tab_cap('import'),
+    'defaultcategory' => $pagevars['cat'],
+];
+
+// Business 1: import questions from a file.
+$importform = new question_import_form($thispageurl, $formcustomdata);
+
+// Business 2: import questions from another server.
+// Moodle makes a request to a host chosen by the user, so this is limited to site administrators.
+$serverform = is_siteadmin() ? new server_import_form($thispageurl, $formcustomdata) : null;
 
 if ($importform->is_cancelled()) {
     redirect($thispageurl);
@@ -79,12 +172,11 @@ $renderer = $PAGE->get_renderer('core_question', 'bank');
 $qbankaction = new \core_question\output\qbank_action_menu($thispageurl);
 echo $renderer->render($qbankaction);
 
-// File upload form submitted.
+// Work out which of the two forms was submitted. Both end up in the same $import object,
+// so the real import below is shared.
+$import = null;
+
 if ($form = $importform->get_data()) {
-
-    // File checks out ok.
-    $fileisgood = false;
-
     // Work out if this is an uploaded file.
     // Or one from the filesarea.
     $realfilename = $importform->get_new_filename('newfile');
@@ -93,26 +185,70 @@ if ($form = $importform->get_data()) {
         throw new moodle_exception('uploadproblem');
     }
 
-    $formatfile = $CFG->dirroot . '/question/format/' . $form->format . '/format.php';
+    $import = (object) [
+        'format' => $form->format,
+        'category' => $category,
+        'importfile' => $importfile,
+        'realfilename' => $realfilename,
+        'matchgrades' => $form->matchgrades,
+        'catfromfile' => !empty($form->catfromfile),
+        'contextfromfile' => !empty($form->contextfromfile),
+        'stoponerror' => $form->stoponerror,
+    ];
+} else if ($serverform && ($serverdata = $serverform->get_data())) {
+    if (!is_siteadmin()) {
+        throw new moodle_exception(
+            'nopermissions',
+            'error',
+            $thispageurl->out(),
+            get_string('importfromotherserver', 'qbank_importquestions')
+        );
+    }
+
+    // The category chosen in the server form is "categoryid,contextid".
+    [$servercatid] = explode(',', $serverdata->servercategory);
+    $servercategory = $DB->get_record('question_categories', ['id' => (int) $servercatid], '*', MUST_EXIST);
+    $servercategory->context = context::instance_by_id($servercategory->contextid);
+
+    $realfilename = 'server_import.' . ($serverdata->serverformat === 'xml' ? 'xml' : 'txt');
+    $importfile = make_request_directory() . "/{$realfilename}";
+    qbank_importquestions_fetch_from_server($serverdata, $importfile, $thispageurl);
+
+    $import = (object) [
+        'format' => $serverdata->serverformat,
+        'category' => $servercategory,
+        'importfile' => $importfile,
+        'realfilename' => $realfilename,
+        'matchgrades' => $serverdata->servermatchgrades,
+        'catfromfile' => !empty($serverdata->servercatfromfile),
+        'contextfromfile' => !empty($serverdata->servercontextfromfile),
+        'stoponerror' => $serverdata->serverstoponerror,
+    ];
+}
+
+// A form was submitted and the data is ready to be imported.
+if ($import) {
+
+    $formatfile = $CFG->dirroot . '/question/format/' . $import->format . '/format.php';
     if (!is_readable($formatfile)) {
-        throw new moodle_exception('formatnotfound', 'question', '', $form->format);
+        throw new moodle_exception('formatnotfound', 'question', '', $import->format);
     }
 
     require_once($formatfile);
 
-    $classname = 'qformat_' . $form->format;
+    $classname = 'qformat_' . $import->format;
     $qformat = new $classname();
 
     // Load data into class.
-    $qformat->setCategory($category);
+    $qformat->setCategory($import->category);
     $qformat->setContexts($contexts->having_one_edit_tab_cap('import'));
     $qformat->setCourse($COURSE);
-    $qformat->setFilename($importfile);
-    $qformat->setRealfilename($realfilename);
-    $qformat->setMatchgrades($form->matchgrades);
-    $qformat->setCatfromfile(!empty($form->catfromfile));
-    $qformat->setContextfromfile(!empty($form->contextfromfile));
-    $qformat->setStoponerror($form->stoponerror);
+    $qformat->setFilename($import->importfile);
+    $qformat->setRealfilename($import->realfilename);
+    $qformat->setMatchgrades($import->matchgrades);
+    $qformat->setCatfromfile($import->catfromfile);
+    $qformat->setContextfromfile($import->contextfromfile);
+    $qformat->setStoponerror($import->stoponerror);
 
     // Do anything before that we need to.
     if (!$qformat->importpreprocess()) {
@@ -131,8 +267,8 @@ if ($form = $importform->get_data()) {
 
     // Log the import into this category.
     $eventparams = [
-            'contextid' => $qformat->category->contextid,
-            'other' => ['format' => $form->format, 'categoryid' => $qformat->category->id],
+        'contextid' => $qformat->category->contextid,
+        'other' => ['format' => $import->format, 'categoryid' => $qformat->category->id],
     ];
     $event = \core\event\questions_imported::create($eventparams);
     $event->trigger();
@@ -143,8 +279,20 @@ if ($form = $importform->get_data()) {
     exit;
 }
 
+// Business 1: title + form (unchanged).
 echo $OUTPUT->heading_with_help($txt->importquestions, 'importquestions', 'question');
-
-// Print upload form.
 $importform->display();
+
+// Business 2: its own title + its own form, with its own "Expand all" link and sub-sections.
+if ($serverform) {
+    echo html_writer::start_div('mt-5');
+    echo $OUTPUT->heading_with_help(
+        get_string('importfromotherserver', 'qbank_importquestions'),
+        'importfromotherserver',
+        'qbank_importquestions'
+    );
+    $serverform->display();
+    echo html_writer::end_div();
+}
+
 echo $OUTPUT->footer();

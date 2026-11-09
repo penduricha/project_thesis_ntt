@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RabbitMQ Demo - 1000 Unique Admins</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; }
+        .desc { text-align: center; color: #7f8c8d; margin-bottom: 20px; }
+
+        .controls { text-align: center; margin-bottom: 20px; }
+        button {
+            padding: 12px 24px; font-size: 16px; font-weight: bold; color: white;
+            background-color: #3498db; border: none; border-radius: 5px; cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+        .stats { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .stat-box { flex: 1; text-align: center; padding: 15px; background: #ecf0f1; margin: 0 10px; border-radius: 8px; }
+        .stat-box h3 { margin: 0; color: #7f8c8d; font-size: 14px; text-transform: uppercase; }
+        .stat-box .value { font-size: 24px; font-weight: bold; color: #2c3e50; margin-top: 5px; }
+
+        #log {
+            background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px;
+            height: 400px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 14px;
+        }
+        .log-success { color: #4caf50; }
+        .log-error { color: #f44336; }
+        .log-info { color: #2196f3; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 RabbitMQ Async Demo</h1>
+    <div class="desc">Gửi 1000 request tạo Admin (Unique ID). API sẽ phản hồi 202 ngay lập tức!</div>
+
+    <div class="controls">
+        <button id="startBtn">Bắt đầu gửi 1000 Request</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <h3>Đã gửi (202)</h3>
+            <div class="value" id="successCount">0 / 1000</div>
+        </div>
+        <div class="stat-box">
+            <h3>Thất bại</h3>
+            <div class="value" id="failCount" style="color: #e74c3c;">0</div>
+        </div>
+        <div class="stat-box">
+            <h3>Tổng thời gian</h3>
+            <div class="value" id="totalTime">0 ms</div>
+        </div>
+    </div>
+
+    <div id="log"></div>
+</div>
+
+<script>
+    // Đổi URL này nếu backend của bạn chạy port khác
+    const API_URL = 'http://localhost:8080/admin/async';
+    const TOTAL_REQUESTS = 1000;
+
+    let successCount = 0;
+    let failCount = 0;
+    let startTime = 0;
+
+    const startBtn = document.getElementById('startBtn');
+    const successCountEl = document.getElementById('successCount');
+    const failCountEl = document.getElementById('failCount');
+    const totalTimeEl = document.getElementById('totalTime');
+    const logEl = document.getElementById('log');
+
+    // Hàm ghi log ra màn hình
+    function addLog(message, type = 'info') {
+        const time = new Date().toLocaleTimeString();
+        const div = document.createElement('div');
+        div.className = `log-${type}`;
+        div.textContent = `[${time}] ${message}`;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight; // Auto scroll xuống cuối
+    }
+
+    // Hàm tạo 1 Admin và gửi request
+    async function sendAdminRequest(index) {
+        // Tạo ID duy nhất (13 chữ số). Dùng Date.now() + index để đảm bảo không bao giờ trùng.
+        // Ví dụ: 1715000000000 + 1, 1715000000000 + 2...
+        const uniqueId = Date.now() + index;
+
+        const payload = {
+            adminId: uniqueId,
+            password: "123456",
+            adminName: "Admin_Demo_" + uniqueId, // Tên cũng unique luôn
+            address: "123 Đường Demo, TP.HCM",
+            idCard: "079" + index,
+            gender: true,
+            dateOfBirthAdminDay: 15,
+            dateOfBirthAdminMonth: 8,
+            dateOfBirthAdminYear: 1999,
+            courseId: 1 // Giả sử courseId = 1 tồn tại
+        };
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.status === 202) { // HTTP 202 Accepted
+                successCount++;
+                successCountEl.textContent = `${successCount} / ${TOTAL_REQUESTS}`;
+
+                // Chỉ log mỗi 100 request để không lag trình duyệt
+                if (successCount % 100 === 0 || successCount === 1) {
+                    addLog(`✅ Đã gửi thành công ${successCount} request (Mã: 202)`, 'success');
+                }
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } catch (error) {
+            failCount++;
+            failCountEl.textContent = failCount;
+            addLog(`❌ Lỗi request ID ${uniqueId}: ${error.message}`, 'error');
+        }
+    }
+
+    // Xử lý khi bấm nút
+    startBtn.addEventListener('click', async () => {
+        // Reset trạng thái
+        successCount = 0;
+        failCount = 0;
+        successCountEl.textContent = `0 / ${TOTAL_REQUESTS}`;
+        failCountEl.textContent = '0';
+        totalTimeEl.textContent = '0 ms';
+        logEl.innerHTML = '';
+        startBtn.disabled = true;
+
+        addLog(`Bắt đầu gửi ${TOTAL_REQUESTS} request cùng lúc...`, 'info');
+        startTime = performance.now();
+
+        // Tạo mảng 1000 Promise để bắn request đồng thời
+        const promises = [];
+        for (let i = 0; i < TOTAL_REQUESTS; i++) {
+            promises.push(sendAdminRequest(i));
+        }
+
+        // Chờ tất cả 1000 request hoàn thành
+        await Promise.all(promises);
+
+        const endTime = performance.now();
+        const duration = Math.round(endTime - startTime);
+        totalTimeEl.textContent = `${duration} ms`;
+
+        addLog(`🎉 HOÀN THÀNH! Tổng thời gian: ${duration} ms`, 'info');
+        addLog(`⏱️ Tốc độ trung bình: ${(duration / TOTAL_REQUESTS).toFixed(2)} ms/request`, 'info');
+        addLog(`👉 Hãy nhìn sang Console IDE để xem Consumer xử lý ngầm từ từ!`, 'info');
+
+        startBtn.disabled = false;
+    });
+</script>
+
+</body>
+</html>

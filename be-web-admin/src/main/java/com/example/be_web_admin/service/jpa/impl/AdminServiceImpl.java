@@ -3,6 +3,8 @@ package com.example.be_web_admin.service.jpa.impl;
 import com.example.be_web_admin.model.cached.AdminAccessToken;
 import com.example.be_web_admin.model.cached.AdminRefreshToken;
 import com.example.be_web_admin.model.jpa.Admin;
+import com.example.be_web_admin.model.jpa.Course;
+import com.example.be_web_admin.repository.jpa.CourseRepository;
 import com.example.be_web_admin.security.jwt.AdminJwtTokenProvider;
 
 
@@ -37,6 +39,8 @@ public class AdminServiceImpl implements I_AdminService {
 
     private final AdminRepository adminRepository;
 
+    private final CourseRepository courseRepository;
+
     private final AdminTokenServiceImpl adminTokenService;
 
     @Autowired
@@ -45,13 +49,23 @@ public class AdminServiceImpl implements I_AdminService {
 //    @Autowired
 //    private RedisTemplate<String, String> redisTemplate;
 
-    public AdminServiceImpl(AdminRepository adminRepository, AdminTokenServiceImpl adminTokenService) {
+    public AdminServiceImpl(AdminRepository adminRepository, CourseRepository courseRepository, AdminTokenServiceImpl adminTokenService) {
         this.adminRepository = adminRepository;
+        this.courseRepository = courseRepository;
         this.adminTokenService = adminTokenService;
     }
 
     @Override
     public boolean addAdmin(Admin admin, Long courseId) throws JpaSystemException {
+        Course courseFound = courseRepository.findCourseByCourseId(courseId);
+        if(courseFound != null) {
+
+            courseFound.getAdmins().add(admin);
+            admin.setCourse(courseFound);
+
+            adminRepository.save(admin);
+            return true;
+        }
         return false;
     }
 

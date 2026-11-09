@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/AppColors.dart';
-import '../login/presentation/screens/LoginScreen.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../login/presentation/screens/login_screen.dart';
 
-class MenuBarApp extends StatelessWidget {
-  const MenuBarApp({
+class AppMenuBar extends StatelessWidget {
+  const AppMenuBar({
     super.key,
     this.adminName = 'Tu Quang Nhat',
     this.subtitle, // vd: email hoặc "Admin Id: 123456", để null thì không hiện

@@ -10,7 +10,7 @@ class AdminLogin {
   int? adminId;
   String password;
 
-  AdminLogin({this.adminId, this.password = ''});
+  AdminLogin({this.adminId, this.password= ''});
 
   /// true khi Admin Id và mật khẩu đều đúng.
   bool validate() {

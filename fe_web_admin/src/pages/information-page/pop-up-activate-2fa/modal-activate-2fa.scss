@@ -46,6 +46,13 @@
    Cần Bootstrap >= 5.2 (dùng --bs-modal-margin).
    ========================================================================== */
 
+// Xoay spinner của nút "Kích hoạt" (tự viết, không phụ thuộc .spinner-border của Bootstrap)
+@keyframes m2fa-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Dùng chiều cao viewport động để thanh địa chỉ trên mobile không che modal */
 .modal.modal-2fa {
   @supports (height: 100dvh) {
@@ -148,14 +155,14 @@
       color: #fff !important;
     }
   }
-  // Đã sao chép: nền xanh lá + icon tích trắng.
+  // Đã sao chép: nền --blue-color + icon tích trắng (đồng bộ header modal và nút Kích hoạt).
   // Đặt SAU :hover/:active và liệt kê lại các trạng thái để không bị ghi đè.
   .btn-copy.is-copied,
   .btn-copy.is-copied:hover,
   .btn-copy.is-copied:active,
   .btn-copy.is-copied:focus {
-    background-color: var(--green-color);
-    border-color: var(--green-color);
+    background-color: var(--blue-color);
+    border-color: var(--blue-color);
     color: #fff !important;
   }
 
@@ -167,9 +174,70 @@
       margin: 0;
     }
   }
-  .btn-submit {
+
+  /* ---------- Nút "Kích hoạt": button thường, KHÔNG dùng .btn của Bootstrap ----------
+     Nền: var(--blue-color) (#004B87). Loading/disabled do method điều khiển
+     (loadButtonActivate / stopLoadButtonActivate) nên Bootstrap không đè được. */
+  .btn-activate {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     width: 100%; // mobile: full-width, dễ bấm bằng một tay
     min-height: calc(var(--m2fa-control-h) + 0.25rem);
+    margin: 0;
+    padding: 0 1rem;
+    border: 1px solid var(--blue-color, #004B87);
+    border-radius: 0;
+    background-color: var(--blue-color, #004B87);
+    color: #fff;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+
+    &:not(:disabled) {
+      cursor: pointer;
+    }
+    // Nhấn (cảm ứng + chuột)
+    &:not(:disabled):active {
+      background-color: #093b6a;
+      border-color: #093b6a;
+    }
+    // Loading / disabled: mờ nhẹ + con trỏ cấm (vẫn hiển thị được vì không bị pointer-events: none)
+    &:disabled {
+      opacity: 0.8;
+      cursor: not-allowed;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--blue-color, #004B87);
+      outline-offset: 2px;
+    }
+  }
+  // Hover chỉ áp dụng cho thiết bị có chuột, tránh "kẹt hover" trên cảm ứng
+  @media (hover: hover) and (pointer: fine) {
+    .btn-activate:not(:disabled):hover {
+      background-color: #093b6a;
+      border-color: #093b6a;
+    }
+  }
+
+  // Spinner tự viết, không phụ thuộc .spinner-border của Bootstrap
+  .btn-activate__spinner {
+    flex-shrink: 0;
+    width: 1.2rem;
+    height: 1.2rem;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: m2fa-spin 0.7s linear infinite;
   }
 
   /* ---------- Focus bàn phím rõ ràng ---------- */
@@ -218,10 +286,6 @@
     --m2fa-gap: 1.125rem;
     --m2fa-title-size: 1.125rem;
     --m2fa-text-size: 0.96875rem; // ~15.5px
-
-    .btn-submit {
-      width: 100%; // nút nằm giữa, rộng 80%
-    }
   }
 
   /* ---------- Tablet (>= 768px) ---------- */
@@ -277,8 +341,7 @@
     .modal-footer {
       padding-top: 0;
     }
-    .btn-submit {
-      width: 100%;
+    .btn-activate {
       min-height: var(--m2fa-control-h);
     }
   }
@@ -329,6 +392,19 @@ body.modal-open {
   }
 }
 
+// Thành công: nền --blue-color + chữ/icon trắng (đồng bộ header modal).
+// Thay cho .alert-success của Bootstrap (xanh lá). Đặt SAU .copy-alert.alert
+// để cùng độ ưu tiên nhưng được áp dụng sau. Icon Phosphor dùng currentColor nên tự thành trắng.
+.copy-alert.copy-alert--success {
+  --bs-alert-color: #fff;
+  --bs-alert-bg: var(--blue-color, #004B87);
+  --bs-alert-border-color: var(--blue-color, #004B87);
+
+  background-color: var(--blue-color, #004B87);
+  border-color: var(--blue-color, #004B87);
+  color: #fff;
+}
+
 // Hiệu ứng vào/ra (Vue <Transition name="copy-alert">)
 .copy-alert-enter-active,
 .copy-alert-leave-active {
@@ -348,5 +424,9 @@ body.modal-open {
   .copy-alert-enter-from,
   .copy-alert-leave-to {
     transform: none;
+  }
+  // Spinner quay chậm lại thay vì tắt hẳn để người dùng vẫn biết đang xử lý
+  .modal-2fa .btn-activate__spinner {
+    animation-duration: 1.6s;
   }
 }

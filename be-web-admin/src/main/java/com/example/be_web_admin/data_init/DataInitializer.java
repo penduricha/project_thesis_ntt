@@ -4,6 +4,7 @@ import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.Course;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.repository.jpa.CourseRepository;
+import com.example.be_web_admin.security.password.MgmtPassword;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -38,8 +39,8 @@ public class DataInitializer {
     }
 
     public String generateHash(String rawText, int strength) {
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(strength);
-        return encoder.encode(rawText);
+        MgmtPassword mgmtPassword = new MgmtPassword();
+        return mgmtPassword.generateHash(rawText, strength);
     }
 
     @EventListener(ApplicationReadyEvent.class)

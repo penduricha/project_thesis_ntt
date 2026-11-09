@@ -1,111 +1,3 @@
-// import './assets/main.css'
-// import { createApp } from 'vue'
-// import App from './App.vue'
-//
-// // Bootstrap
-// import 'bootstrap/dist/css/bootstrap.css'
-// import 'bootstrap/dist/js/bootstrap.js'
-//
-// // Vue Router & Vuetify
-// import { createRouter, createWebHistory } from 'vue-router'
-// import { createVuetify } from 'vuetify'
-// import 'vuetify/styles'
-// import 'vuetify/dist/vuetify-labs.min.css'
-//
-// // Plugins & Local Storage / Routers
-// import CanvasJSChart from '@canvasjs/vue-charts'
-// import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js"
-// import RouterMgmt from "@/router/RouterMgmt.js"
-// import routersBeforeLogin from "@/router/routers_before_login.js"
-// import routersAfterLogin from "@/router/routers_after_login.js"
-// import {AdminService} from "@/services/spring/AdminService.js";
-// import {TokenLogin} from "@/model/TokenLogin.js";
-//
-// const adminService = new AdminService();
-//
-// const tokenLogin = new TokenLogin();
-//
-// const app = createApp(App)
-// app.use(createVuetify())
-//
-// function initApp(routes, targetPath) {
-//     const router = createRouter({
-//         history: createWebHistory(),
-//         routes,
-//     })
-//
-//     app.use(router)
-//
-//     router.replace(targetPath).catch((error) => {
-//         console.error('Error navigating:', error)
-//     })
-//
-//     app.mount('#app')
-// }
-//
-// async function execute() {
-//     //const adminLocalStorage = new AdminLocalStorage()
-//     // const isLoggedIn = Boolean(
-//     //     routerManagement.getPath_From_LocalStorage() &&
-//     //     adminLocalStorage.getAdminId_From_LocalStorage() &&
-//     //     tokenLogin.getRefreshTokenFromStorage()
-//     // )
-//
-//     const routerManagement = new RouterMgmt();
-//
-//     const currentPath = window.location.pathname;
-//
-//     // Flag login auto
-//     let statusLoginAuto = false;
-//
-//     let accessToken = tokenLogin.getAccessTokenFromStorage();
-//     let refreshToken = tokenLogin.getRefreshTokenFromStorage();
-//     tokenLogin.setAccessToken(accessToken);
-//     tokenLogin.setRefreshToken(refreshToken);
-//
-//     if(refreshToken) {
-//         statusLoginAuto = await adminService.getDataToAutoLoginAccessToken(tokenLogin);
-//     }
-//
-//     console.log("Status login auto:", statusLoginAuto);
-//
-//     //neu 2 token ko co thi remove het
-//     if(!accessToken || !refreshToken) {
-//         routerManagement.removePathFromLocalStorage();
-//     }
-//
-//     const activeRouters = statusLoginAuto ? routersAfterLogin : routersBeforeLogin;
-//
-//     const defaultPath = statusLoginAuto ? routerManagement.getPathFromLocalStorage() : '/login';
-//
-//     // Tìm route khớp với currentPath
-//     const matchedRoute = activeRouters.find(route => route.path === currentPath)
-//
-//     let targetPath = currentPath;
-//
-//     // 1. Kiểm tra nếu chưa đăng nhập và route có cờ allow === false (hoặc route không hợp lệ)
-//     // 2. Nếu đã đăng nhập nhưng route không tồn tại trong danh sách
-//     // 3. Nếu đang ở root '/'
-//     // 4. Kiểm tra SessionStorage
-//     if (!statusLoginAuto && (matchedRoute?.allow === false || !matchedRoute)) {
-//         targetPath = '/login'
-//     } else if (!matchedRoute) {
-//         targetPath = '/404-not-found'
-//     } else if (currentPath === '/') {
-//         targetPath = defaultPath
-//     } else {
-//         const pathSession = routerManagement.getPathFromSessionStorage();
-//         if (pathSession && currentPath !== pathSession) {
-//             targetPath = pathSession;
-//         }
-//     }
-//
-//     // Init path and router
-//     initApp(activeRouters, targetPath)
-// }
-//
-// await execute();
-
 import './assets/main.css'
 import { createApp } from 'vue'
 import App from './App.vue'
@@ -127,6 +19,7 @@ import routersBeforeLogin from '@/router/routers_before_login.js'
 import routersAfterLogin from '@/router/routers_after_login.js'
 import { AdminService } from '@/services/spring/AdminService.js'
 import { TokenLogin } from '@/model/TokenLogin.js'
+import { onRemoteLogout } from '@/assets/auth-sync.js'
 
 const LOGIN_PATH = '/login'
 const NOT_FOUND_PATH = '/404-not-found'
@@ -194,6 +87,32 @@ function resolveTargetPath(currentPath, routes, isLoggedIn) {
     return canRestoreSession ? pathSession : currentPath
 }
 
+/**
+ * Đồng bộ đăng xuất giữa các tab.
+ * Tab khác đã đăng xuất thành công (server huỷ phiên, token trong localStorage
+ * đã bị xoá) → tab này chỉ cần dọn trạng thái cục bộ rồi tải lại trang /login.
+ *
+ * Dùng window.location.replace thay vì router.replace vì app dùng 2 bộ route
+ * (routersBeforeLogin / routersAfterLogin): bộ "sau đăng nhập" có thể không có
+ * '/login'. Tải lại sẽ chạy lại bootstrap() và nạp đúng bộ route "trước đăng nhập".
+ * Cách này cũng không kích hoạt beforeRouteLeave nên không gọi API đăng xuất lần 2.
+ */
+function setupCrossTabLogout() {
+    onRemoteLogout(() => {
+        if (window.location.pathname === LOGIN_PATH) return
+
+        try {
+            routerManagement.removePathFromLocalStorage()
+            // sessionStorage là riêng từng tab → phải tự xoá ở tab này
+            sessionStorage.clear()
+        } catch (error) {
+            console.error('Error clearing session on remote logout:', error)
+        }
+
+        window.location.replace(LOGIN_PATH)
+    })
+}
+
 async function mountApp(routes, targetPath) {
     const app = createApp(App)
     const router = createRouter({
@@ -215,6 +134,9 @@ async function mountApp(routes, targetPath) {
 }
 
 async function bootstrap() {
+    // Đăng ký lắng nghe sớm, một lần duy nhất cho cả vòng đời tab
+    setupCrossTabLogout()
+
     const { isLoggedIn, hasTokens } = await autoLogin()
 
     if (import.meta.env.DEV) {

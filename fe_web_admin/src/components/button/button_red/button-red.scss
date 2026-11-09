@@ -1,16 +1,49 @@
+// Xoay spinner (tự viết, không phụ thuộc .spinner-border của Bootstrap)
+@keyframes button-red-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .button-red {
+  // Dùng grid để chữ và spinner chồng lên cùng một ô, luôn căn giữa.
+  // Nhờ vậy khi loading ẩn chữ đi, kích thước nút không bị thay đổi.
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+
   border-radius: 0;
   color: white;
   background-color: var(--red-button);
-  display: flex;
-  justify-content: center;
-  align-items: center;
   font-weight: bold;
   cursor: pointer;
 }
 
 .button-red:hover {
   opacity: 0.8;
+}
+
+.button-red__text,
+.button-red__spinner {
+  grid-area: 1 / 1;
+}
+
+// Ẩn chữ khi loading nhưng vẫn giữ chỗ
+.button-red__text.is-hidden {
+  visibility: hidden;
+}
+
+// Spinner giống nút "Kích hoạt" của modal 2FA:
+// vòng tròn mảnh trắng mờ 40%, một cung trắng đậm quay đều
+.button-red__spinner {
+  box-sizing: border-box;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: button-red-spin 0.7s linear infinite;
 }
 
 //.border-color-button-choose {
@@ -23,7 +56,7 @@
 //  }
 //}
 
-.button-blue-opacity-disabled {
+.button-red-opacity-disabled {
   &.opacity-disabled {
     opacity: 0.8;
     //pointer-events: none;
@@ -38,5 +71,12 @@
 
   &.opacity-allow:hover {
     opacity: 0.8;
+  }
+}
+
+// Người dùng bật "giảm chuyển động": quay chậm lại thay vì tắt hẳn để vẫn biết đang xử lý
+@media (prefers-reduced-motion: reduce) {
+  .button-red__spinner {
+    animation-duration: 1.6s;
   }
 }

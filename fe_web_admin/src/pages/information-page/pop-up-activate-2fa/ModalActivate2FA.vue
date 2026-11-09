@@ -2,6 +2,7 @@
 import './modal-activate-2fa.scss';
 // npm install @phosphor-icons/vue --legacy-peer-deps
 import { PhCopy, PhCheck, PhCheckCircle, PhWarningCircle } from '@phosphor-icons/vue'
+// import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 
 const FEEDBACK_DURATION = 3000 // ms: thời gian hiện alert + icon tích
 
@@ -13,16 +14,24 @@ export default {
     PhCheckCircle,
     PhWarningCircle
   },
+
   data() {
     return {
-      copied: false, // true => nút đổi sang icon tích trắng
+      copied: false, // true => nút đổi sang icon tích trắng (nền --blue-color)
       alert: { show: false, type: 'success', message: '' },
-      feedbackTimer: null
+      feedbackTimer: null,
+
+      //btn activate
+      textButtonActivate: 'Kích hoạt',
+      disableButtonActivate: false,
+      loadingButtonActivate: false,
     }
   },
+
   beforeUnmount() {
     clearTimeout(this.feedbackTimer)
   },
+
   methods: {
     async copySecret() {
       const input = this.$refs.secretInput
@@ -53,6 +62,36 @@ export default {
         console.error('Copy secret key failed:', error)
         this.showFeedback(false, 'Không thể sao chép, vui lòng sao chép thủ công.')
       }
+    },
+
+    // Bật trạng thái loading cho nút Kích hoạt:
+    // khóa nút, ẩn chữ (template sẽ hiện spinner thay cho chữ)
+    loadButtonActivate() {
+      this.loadingButtonActivate = true
+      this.disableButtonActivate = true
+      this.textButtonActivate = ''
+    },
+
+    // Tắt trạng thái loading, khôi phục chữ "Kích hoạt"
+    stopLoadButtonActivate() {
+      this.loadingButtonActivate = false
+      this.disableButtonActivate = false
+      this.textButtonActivate = 'Kích hoạt'
+    },
+
+    async handleActivate2FAEvent() {
+      // if (this.loadingButtonActivate) return // chặn bấm liên tục khi đang xử lý
+      //
+      // this.loadButtonActivate();
+      // try {
+      //   // TODO: gọi API kích hoạt 2FA ở đây, ví dụ:
+      //   // await activate2FA({ secret: this.$refs.secretInput.value, interval: ... })
+      //   // Muốn test hiệu ứng loading: await new Promise(resolve => setTimeout(resolve, 2000))
+      // } catch (error) {
+      //   console.error('Activate 2FA failed:', error)
+      // } finally {
+      //   this.stopLoadButtonActivate() // luôn tắt loading dù thành công hay lỗi
+      // }
     },
 
     // Hiện alert + (nếu thành công) đổi icon, rồi tự khôi phục sau FEEDBACK_DURATION.
@@ -106,7 +145,7 @@ export default {
                   spellcheck="false"
                   @focus="$event.target.select()"
               >
-              <!-- Khi đã copy: bỏ các class outline-primary để nền xanh lá + icon trắng hiển thị đúng -->
+              <!-- Khi đã copy: bỏ các class outline-primary để nền --blue-color + icon trắng hiển thị đúng -->
               <button
                   class="btn border-radius-zero btn-copy"
                   :class="copied ? 'is-copied' : 'btn-outline-primary border-primary text-custom-blue'"
@@ -134,10 +173,21 @@ export default {
           </div>
         </div>
 
-        <!-- Footer Modal: không viền, chỉ có nút Kích hoạt (kích thước do SCSS điều khiển theo thiết bị) -->
+        <!-- Footer Modal: không viền, chỉ có nút Kích hoạt.
+             Nút là <button> thường (class "btn-activate"), KHÔNG dùng .btn của Bootstrap
+             nên trạng thái loading/disabled hoàn toàn do method + SCSS riêng điều khiển. -->
         <div class="modal-footer border-0 bg-transparent justify-content-center border-radius-zero">
-          <button type="button" class="btn btn-custom-success fw-semibold btn-submit border-radius-zero">
-            Kích hoạt
+          <button
+              type="button"
+              class="btn-activate"
+              :class="{ 'is-loading': loadingButtonActivate }"
+              :disabled="disableButtonActivate"
+              :aria-busy="loadingButtonActivate"
+              :aria-label="loadingButtonActivate ? 'Đang xử lý' : null"
+              @click="handleActivate2FAEvent"
+          >
+            <span v-if="loadingButtonActivate" class="btn-activate__spinner" aria-hidden="true"></span>
+            <span v-if="textButtonActivate">{{ textButtonActivate }}</span>
           </button>
         </div>
       </div>
@@ -146,6 +196,8 @@ export default {
     <!--
       Alert thông báo sao chép: Teleport ra <body> để luôn cố định ở góc phải trên viewport,
       nằm trên modal + backdrop. Vùng aria-live luôn tồn tại để trình đọc màn hình đọc được nội dung.
+      Thành công: dùng class riêng "copy-alert--success" (nền --blue-color) thay cho "alert-success" của Bootstrap.
+      Lỗi: giữ "alert-danger" (đỏ) để phân biệt rõ trạng thái cảnh báo.
     -->
     <Teleport to="body">
       <div class="copy-alert-container" aria-live="polite" aria-atomic="true">
@@ -153,7 +205,7 @@ export default {
           <div
               v-if="alert.show"
               class="copy-alert alert"
-              :class="alert.type === 'success' ? 'alert-success' : 'alert-danger'"
+              :class="alert.type === 'success' ? 'copy-alert--success' : 'alert-danger'"
           >
             <PhCheckCircle v-if="alert.type === 'success'" :size="20" weight="fill" aria-hidden="true" />
             <PhWarningCircle v-else :size="20" weight="fill" aria-hidden="true" />
@@ -164,7 +216,3 @@ export default {
     </Teleport>
   </div>
 </template>
-
-<style scoped lang="scss">
-
-</style>

@@ -1,1 +1,0 @@
-export '../authenticator/presentation/screens/AuthenticatorScreen.dart';

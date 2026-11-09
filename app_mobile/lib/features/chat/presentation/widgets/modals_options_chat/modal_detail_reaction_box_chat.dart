@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../data/model/ReactionAdmin.dart';
+import '../../../data/model/reaction_admin.dart';
 
 class ModalDetailReactionBoxChat extends StatefulWidget {
   final List<ReactionAdmin> reactions;

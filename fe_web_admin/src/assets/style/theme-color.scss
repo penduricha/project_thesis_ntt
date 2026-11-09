@@ -1,0 +1,61 @@
+:root {
+  /* =========================================================
+     1. PALETTE GỐC (giữ nguyên các mã màu của dự án)
+     ========================================================= */
+  --blue-color: #004B87;
+  --blue-footer: #45a0e9;
+  --blue-card: #4eb0ff;
+  --orange-log-out: #eb7b21;
+  --blue-text-nav: #4aa4e7;
+  --blue-text-title: #0f70bf;
+  --blue-row-merged: #0abde3;
+  --blue-row-merged-1: #0abde3;
+  --blue-row-merged-2: #daefff;
+  --grey-result: #eeeeee;
+  --red-diff-calendar: #de1f45;
+  --blue-choose-group-practice: #81ecec;
+  --red-color: #dd3333;
+  --white-web: #f8faff;
+  --red-button: #c61f1f;
+  --green-color: #16A34A;
+
+  /* =========================================================
+     2. SEMANTIC TOKENS (component chỉ dùng nhóm này)
+     Muốn đổi theme: chỉ sửa ở đây, không đụng component.
+     ========================================================= */
+  /* Thương hiệu */
+  --primary: var(--blue-color);
+  --primary-hover: #003a69;
+  --primary-soft: #e8f1fa;
+
+  /* Trạng thái. "-strong" dùng cho chữ (đạt tương phản WCAG AA trên nền nhạt) */
+  --danger: var(--red-color);
+  --danger-strong: var(--red-button);
+  --danger-soft: #fdeeee;
+  --danger-border: #f3c3c3;
+
+  --success: var(--green-color);
+  --success-strong: #166534;
+  --success-soft: #e8f6ee;
+  --success-border: #bfe5cc;
+
+  /* Chữ, nền, viền */
+  --text: #1b2a41;
+  --text-muted: #5b6b82;
+  --bg: var(--white-web);
+  --surface: #ffffff;
+  --surface-hover: #f1f5fa;
+  --border: #e3ebf5;
+  --border-strong: #8596ad;
+
+  /* Thang spacing 8 / 16 / 24 / 32 / 48 */
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-5: 3rem;
+
+  /* Bo góc, đổ bóng */
+  --radius: 4px;
+  --shadow-card: 0 1px 2px rgba(19, 82, 157, 0.06), 0 8px 24px rgba(19, 82, 157, 0.08);
+}

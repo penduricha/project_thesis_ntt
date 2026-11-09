@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // TODO: chỉnh lại 2 đường dẫn import cho đúng với cấu trúc thư mục của dự án
-import '../authenticator/presentation/screens/AuthenticatorScreen.dart';
-import '../chat/presentation/screens/ChatListScreen.dart';
+import '../../../authenticator/presentation/screens/authenticator_screen.dart';
+import '../../../chat/presentation/screens/chat_list_screen.dart';
 
 // ============================================================================
 //  DANH SÁCH TAB: nhãn + icon (thường / đang chọn)
@@ -43,20 +43,20 @@ enum AppTab {
 //     khi chuyển qua lại.
 //
 //  Cách dùng:
-//    - Mở khung app:        home: const TabBarApp()
+//    - Mở khung app:        home: const AppTabBar()
 //    - Chuyển tab từ bất kỳ màn hình con nào:
-//          TabBarApp.navigate(context, AppTab.chat);
-//          TabBarApp.navigate(context, AppTab.authenticator);
+//          AppTabBar.navigate(context, AppTab.chat);
+//          AppTabBar.navigate(context, AppTab.authenticator);
 // ============================================================================
 
-class TabBarApp extends StatefulWidget {
-  const TabBarApp({super.key, this.initialTab = AppTab.authenticator});
+class AppTabBar extends StatefulWidget {
+  const AppTabBar({super.key, this.initialTab = AppTab.authenticator});
 
   /// Tab hiển thị đầu tiên
   final AppTab initialTab;
 
-  static TabBarAppState? maybeOf(BuildContext context) {
-    return context.findAncestorStateOfType<TabBarAppState>();
+  static AppTabBarState? maybeOf(BuildContext context) {
+    return context.findAncestorStateOfType<AppTabBarState>();
   }
 
   /// Hàm Navigate: chuyển sang tab [tab] từ bất kỳ đâu trong cây widget.
@@ -70,10 +70,10 @@ class TabBarApp extends StatefulWidget {
   }
 
   @override
-  State<TabBarApp> createState() => TabBarAppState();
+  State<AppTabBar> createState() => AppTabBarState();
 }
 
-class TabBarAppState extends State<TabBarApp> {
+class AppTabBarState extends State<AppTabBar> {
   // ---- Màu sắc ----
   static const Color _brandColor = Color(0xFF004B87); // tab đang chọn
   static const Color _inactiveColor = Color(0xFF8E8E93); // tab chưa chọn

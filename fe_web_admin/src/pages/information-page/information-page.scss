@@ -1,282 +1,328 @@
 // =========================================================
 //  TRANG THÔNG TIN QUẢN TRỊ VIÊN - Mobile first
 //  Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
-//
-//  LƯU Ý: file này thay thế HOÀN TOÀN CSS cũ của trang.
-//  Hãy xoá khối cũ (.div-detail-information { border-left... }
-//  và 2 media query 767px / 1223px), nếu để lại 2 bộ breakpoint
-//  sẽ đè lên nhau gây lỗi vạch dọc + cắt chiều cao như ảnh.
+//  Màu / spacing lấy từ token trong theme-color.scss
+//  (các class .ui-badge / .ui-btn / .ui-spinner nằm ở card-account-nav.scss)
 // =========================================================
 
 $bp-tablet: 768px;
 $bp-desktop: 1024px;
 
-// Từ mốc này trở lên, thông tin chia 2 cột và MỚI hiện vạch dọc ở giữa.
-// Vạch dọc và lưới 2 cột dùng chung 1 mốc nên không thể lệch nhau.
-// Muốn tablet vẫn xếp 1 cột thì đổi thành: $bp-two-columns: $bp-desktop;
-$bp-two-columns: $bp-tablet;
-
-$color-line: #e8eef6;
-
-@mixin breakpoint-up($width) {
+@mixin up($width) {
   @media only screen and (min-width: $width) {
     @content;
   }
 }
 
 // ---------- Trang ----------
+// Nếu Header của bạn là position: fixed/sticky, khai báo chiều cao của nó:
+//   .section-page-information { --header-offset: 5rem; }
+// Header nằm trong luồng bình thường thì để mặc định 0.
 .section-page-information {
+  --header-offset: 0px;
+
   width: 100%;
-  height: auto; // huỷ height: 120vh của CSS cũ
   min-height: 100vh;
-  min-height: 100dvh; // tránh bị thanh địa chỉ trên trình duyệt mobile che
+  min-height: 100dvh; // tránh bị thanh địa chỉ mobile che
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  gap: 1rem;
-  padding: 5rem 1rem 2rem; // 5rem phía trên chừa chỗ cho Header
-  background-color: var(--white-web, #f4f7fb);
+  gap: var(--space-2);
+  padding: calc(var(--header-offset) + var(--space-3)) var(--space-2) var(--space-4);
+  background-color: var(--bg);
 
-  // Mobile nhỏ (iPhone SE, Android màn nhỏ)
   @media only screen and (max-width: 360px) {
-    padding: 5rem 0.75rem 1.5rem;
+    padding-inline: 0.75rem;
   }
 
-  @include breakpoint-up($bp-tablet) {
-    gap: 1.25rem;
-    padding: 6rem 2rem 3rem;
+  @include up($bp-tablet) {
+    gap: var(--space-3);
+    padding: calc(var(--header-offset) + var(--space-4)) var(--space-3) var(--space-5);
+  }
+}
+
+// ---------- Card thông tin ----------
+.info-card {
+  width: 100%;
+  max-width: 75rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+
+  @include up($bp-tablet) {
+    padding: var(--space-4);
+  }
+}
+
+.info-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.info-card__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius);
+  background-color: var(--primary-soft);
+  color: var(--primary);
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+// Sentence case, đậm vừa phải (viết hoa toàn bộ làm dấu tiếng Việt chồng nhau)
+.info-card__title {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+// ---------- Nhóm thông tin ----------
+.info-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+
+  // Chỉ 1 đường kẻ nhạt giữa các nhóm, bỏ kẻ từng dòng
+  & + & {
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+  }
+}
+
+.info-group__title {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+// Mobile: 1 cột | Tablet: 2 cột | Desktop: --3 thì 3 cột
+// minmax(0, 1fr) để chữ dài xuống dòng, không làm tràn khung
+.info-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+
+  @include up($bp-tablet) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  @include breakpoint-up($bp-desktop) {
-    gap: 1.5rem;
-  }
-
-  // Điện thoại xoay ngang (chiều cao thấp) - đặt cuối để không bị breakpoint trên đè
-  @media only screen and (max-height: 500px) and (orientation: landscape) {
-    padding-bottom: 1rem;
-  }
-
-  // ---------- Khung chi tiết ----------
-  // Viết lồng trong .section-page-information để thắng độ ưu tiên của
-  // .div-account-nav (class dùng chung với CardAccountNav) và CSS cũ.
-  .div-detail-information {
-    width: 100%;
-    max-width: 75rem;
-    height: auto; // cao theo nội dung, không cố định nữa
-    min-height: 0;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch; // tiêu đề + đường kẻ luôn full chiều ngang khung
-    gap: 0.75rem;
-    padding: 1.25rem 1rem 1rem;
-    background-color: #fff;
-    border-left: 4px solid var(--blue-color);
-    box-shadow: 0 8px 24px rgba(19, 82, 157, 0.1);
-
-    @media only screen and (max-width: 360px) {
-      padding: 1rem 0.875rem 0.75rem;
-    }
-
-    @include breakpoint-up($bp-tablet) {
-      gap: 1rem;
-      padding: 1.5rem 2rem 1.25rem;
-    }
-
-    @include breakpoint-up($bp-desktop) {
-      padding: 1.75rem 2.5rem 1.5rem;
-    }
-  }
-
-  // ---------- Tiêu đề ----------
-  .text-title-information {
-    width: 100%;
-    margin: 0;
-    padding-bottom: 0.75rem;
-    box-sizing: border-box;
-    color: var(--blue-text-title, #13529d);
-    font-size: clamp(1.0625rem, 0.95rem + 0.6vw, 1.25rem); // 17px -> 20px
-    font-weight: bold;
-    line-height: 1.4;
-    letter-spacing: 0.03em;
-    text-align: left;
-    border-bottom: 1px solid #e3ebf5;
-  }
-
-  // ---------- Vùng chứa 2 nhóm thông tin ----------
-  // Mobile: 1 cột | từ $bp-two-columns: 2 cột bằng nhau
-  .div-background-text-detail {
-    --col-gap: 1.5rem; // khoảng cách 2 bên vạch dọc (tablet)
-
-    width: 100%;
-    height: auto;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr); // minmax(0, ..) để chữ dài xuống dòng, không làm tràn khung
-
-    @include breakpoint-up($bp-two-columns) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      column-gap: var(--col-gap);
-    }
-
-    @include breakpoint-up($bp-desktop) {
-      --col-gap: 3rem;
-    }
-  }
-
-  .div-text-detail-information {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-
-  // Vạch dọc: chỉ tồn tại khi đang chia 2 cột
-  .div-text-detail-information-flex-responsive {
-    @include breakpoint-up($bp-two-columns) {
-      padding-left: var(--col-gap);
-      border-left: 1px solid $color-line;
-    }
-  }
-
-  // ---------- Từng dòng "Nhãn: Giá trị" ----------
-  // Nhãn và giá trị nằm chung 1 dòng, cùng font / cỡ chữ / màu / độ đậm.
-  // Giá trị dài thì tự xuống dòng bên trong chính dòng đó.
-  .text-detail-information {
-    display: block;
-    padding: 0.875rem 0;
-    color: #1b2a41;
-    //font-size: calc(1rem - 0.5px); // 16px -> 15.75px
-    font-weight: 400;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-    border-bottom: 1px solid $color-line;
-
-    @media only screen and (max-width: 360px) {
-      //font-size: calc(0.9375rem - 0.5px); // 15px -> 14.75px
-    }
-
-    @include breakpoint-up($bp-tablet) {
-      padding: 1rem 0;
-      //font-size: calc(1.125rem - 0.5px); // 18px -> 17.75px
-    }
-
-    // Điện thoại xoay ngang: thu gọn khoảng cách dòng (đặt cuối để thắng breakpoint trên)
-    @media only screen and (max-height: 500px) and (orientation: landscape) {
-      padding: 0.5rem 0;
-    }
-  }
-
-  // Dòng cuối của khung không cần đường kẻ dưới
-  .div-text-detail-information:last-child .text-detail-information:last-child {
-    border-bottom: 0;
-  }
-
-  // 2 cột: dòng cuối của MỖI cột đều không cần đường kẻ
-  @include breakpoint-up($bp-two-columns) {
-    .div-text-detail-information .text-detail-information:last-child {
-      border-bottom: 0;
+  &--3 {
+    @include up($bp-desktop) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 }
 
-// Card 2FA
-$color-2fa-off: #c62828; // đỏ đậm, tương phản ~5.6:1 trên nền trắng (đạt WCAG AA)
-$color-2fa-on: #2e7d32;  // xanh đậm, tương phản ~5.1:1 trên nền trắng (đạt WCAG AA)
+// Nhãn nhỏ xám ở trên, giá trị đậm ở dưới
+.info-field {
+  min-width: 0;
+}
 
-.div-detail-2fa {
-  // Hàng chứa: [Trạng thái] [Nút]
-  .div-2fa-row {
-    width: 100%;
-    box-sizing: border-box;
+.info-field__label {
+  margin: 0 0 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.info-field__value {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  // Giá trị nhạy cảm: số + nút hiện/ẩn nằm cùng 1 hàng
+  &--secret {
     display: flex;
-    flex-direction: column; // mobile: xếp dọc
-    align-items: stretch;   // nút giãn full chiều ngang
-    gap: 1rem;
-    padding: 0.5rem 0 0.25rem;
-
-    @include breakpoint-up($bp-tablet) {
-      flex-direction: row;
-      align-items: center; // nút và chữ cùng nằm giữa theo chiều dọc
-      justify-content: space-between;
-      gap: 1.5rem;
-      padding: 0.75rem 0 0.25rem;
-    }
-
-    @include breakpoint-up($bp-desktop) {
-      max-width: 40rem; // card rộng 75rem: không để nút trôi tít bên phải
-    }
-
-    // Điện thoại xoay ngang (chiều cao thấp): thu gọn khoảng cách
-    @media only screen and (max-height: 500px) and (orientation: landscape) {
-      gap: 0.5rem;
-      padding-top: 0;
-    }
-  }
-
-  // "Trạng thái: <giá trị>" - cùng font / màu với các dòng ở card thông tin
-  .div-2fa-status {
-    min-width: 0; // cho phép co lại trong flex, không làm tràn khung
-    display: flex;
-    flex-wrap: wrap; // màn hình hẹp: giá trị tự xuống dòng
     align-items: center;
-    column-gap: 0.375rem;
-    row-gap: 0.125rem;
-    color: #1b2a41;
-    font-weight: 400;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
+    gap: var(--space-1);
+    min-height: 1.5rem;
+  }
+}
+
+.info-field__secret-text {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+// Nút icon (hiện / ẩn CCCD)
+.icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-block: -0.5rem; // không làm dòng cao lên
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background-color: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
-  // Giá trị trạng thái: chấm màu + chữ đậm.
-  // Ý nghĩa KHÔNG chỉ dựa vào màu: luôn có chữ "Đã / Chưa kích hoạt".
-  .text-2fa-status {
-    display: inline-flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    font-weight: 700;
-
-    //&::before {
-    //  content: "";
-    //  flex: none;
-    //  width: 0.5rem;
-    //  height: 0.5rem;
-    //  margin-top: 0.5em; // canh chấm giữa dòng đầu tiên
-    //  border-radius: 50%;
-    //  background-color: currentColor;
-    //}
+  &:hover {
+    background-color: var(--surface-hover);
+    color: var(--primary);
   }
 
-  // Viết lồng trong .div-detail-2fa để thắng độ ưu tiên của class cũ
-  // (.text-2fa-unactivate / .text-2fa-activate định nghĩa ở nơi khác)
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 
+  // Màn hình cảm ứng: vùng chạm lớn hơn
+  @media (pointer: coarse) {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
 
-  // Nút kích hoạt: chỉ chỉnh KÍCH THƯỚC, màu/hover/disabled do ButtonBlue quản lý
-  .style-btn-activate {
-    box-sizing: border-box;
-    flex: none;
-    width: 100%;        // mobile: full-width, dễ bấm bằng ngón cái
-    min-height: 2.5rem;   // 48px - chuẩn Material / đủ vùng chạm
-    border-radius: 4px;
-    font-weight: bold;
+// ---------- Khối 2FA ----------
+// Chưa bật = khối cảnh báo nổi bật | Đã bật = khối xanh nhẹ.
+// Trạng thái có icon + chữ, không chỉ dựa vào màu.
+.twofa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
 
-    @include breakpoint-up($bp-tablet) {
-      width: auto;
-      min-width: 11rem;
-      min-height: 2.75rem; // 44px - chuẩn Apple HIG
-    }
+  @include up($bp-tablet) {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
 
-    @include breakpoint-up($bp-desktop) {
-      min-width: 12rem;
-    }
+  &--off {
+    background-color: var(--danger-soft);
+    border-color: var(--danger-border);
+  }
 
-    // Viền focus khi điều hướng bằng bàn phím (Tab)
-    &:focus-visible,
-    :focus-visible {
-      outline: 2px solid var(--blue-color, #13529d);
-      outline-offset: 2px;
-    }
+  &--on {
+    background-color: var(--success-soft);
+    border-color: var(--success-border);
+  }
+}
+
+.twofa__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.twofa__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: var(--surface);
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .twofa--off & {
+    color: var(--danger-strong);
+  }
+
+  .twofa--on & {
+    color: var(--success-strong);
+  }
+}
+
+.twofa__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.twofa__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem var(--space-1);
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.twofa__desc {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+// Nút kích hoạt: chỉ chỉnh KÍCH THƯỚC, màu/hover/disabled do ButtonBlue quản lý
+.twofa .style-btn-activate {
+  box-sizing: border-box;
+  flex: none;
+  width: 100%; // mobile: full-width, dễ bấm bằng ngón cái
+  min-height: 2.75rem;
+  border-radius: var(--radius);
+  font-weight: 700;
+
+  @include up($bp-tablet) {
+    width: auto;
+    min-width: 11rem;
+  }
+
+  @include up($bp-desktop) {
+    min-width: 12rem;
+  }
+
+  &:focus-visible,
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-btn {
+    transition: none;
   }
 }

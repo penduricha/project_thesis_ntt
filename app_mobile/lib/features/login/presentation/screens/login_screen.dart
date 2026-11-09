@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/constants/AppColors.dart';
-import '../widgets/ErrorDialog.dart';
-import '../../data/model/AdminAccount.dart';
-import 'CreateAccountScreen.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../widgets/error_dialog.dart';
+import '../../data/model/admin_account.dart';
+import 'create_account_screen.dart';
 
 // ---- Màu dùng chung cho màn hình Login ----
 const Color _fieldFill = Color(0xFFF9F9F9); // nền ô nhập

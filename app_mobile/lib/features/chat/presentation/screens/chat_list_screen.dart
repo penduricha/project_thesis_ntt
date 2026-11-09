@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
-import '../../../../core/constants/AppColors.dart';
-import '../../../menu/MenuBarApp.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../main_shell/presentation/widgets/app_menu_bar.dart';
 
-import '../widgets/custom/ChatAvatar.dart';
-import 'ChatDetailScreen.dart';
+import '../widgets/custom/chat_avatar.dart';
+import 'chat_detail_screen.dart';
 
 String truncateMessage(String text, int limit) {
   if (text.length <= limit) {
@@ -84,7 +84,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: Colors.white,
-        drawer: const MenuBarApp(),
+        drawer: const AppMenuBar(),
         body: SafeArea(
           child: Column(
             children: [

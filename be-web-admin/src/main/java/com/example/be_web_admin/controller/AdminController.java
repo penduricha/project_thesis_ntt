@@ -1,6 +1,7 @@
 package com.example.be_web_admin.controller;
 
 import com.example.be_web_admin.model.jpa.Admin;
+import com.example.be_web_admin.security.password.MgmtPassword;
 import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,24 +45,39 @@ public class AdminController {
 
         String adminName = (String) adminToPost.get("adminName");
         String password = (String) adminToPost.get("password");
-        boolean gender = (boolean) adminToPost.get("gender");
-        String clazzName = (String) adminToPost.get("clazzName");
+        Boolean gender = (Boolean) adminToPost.get("gender");
+        String address = (String) adminToPost.get("address");
+        String idCard = (String) adminToPost.get("idCard");
 
-        int dateOfBirthAdminDay = (Integer) adminToPost.get("dateOfBirthAdminDay");
-        int dateOfBirthAdminMonth = (Integer) adminToPost.get("dateOfBirthAdminMonth");
-        int dateOfBirthAdminYear = (Integer) adminToPost.get("dateOfBirthAdminYear");
+        Integer dayObj = (Integer) adminToPost.get("dateOfBirthAdminDay");
+        Integer monthObj = (Integer) adminToPost.get("dateOfBirthAdminMonth");
+        Integer yearObj = (Integer) adminToPost.get("dateOfBirthAdminYear");
+
+        // Nếu bị null, ném ra lỗi Bad Request (400) thay vì để sập API (500)
+        if (dayObj == null || monthObj == null || yearObj == null) {
+            return ResponseEntity.badRequest().body("Lỗi: Thiếu thông tin ngày, tháng, năm sinh!");
+        }
+
+        // Ép kiểu an toàn sau khi đã check null
+        int dateOfBirthAdminDay = dayObj;
+        int dateOfBirthAdminMonth = monthObj;
+        int dateOfBirthAdminYear = yearObj;
 
         LocalDate dateOfBirth = LocalDate.of(dateOfBirthAdminYear, dateOfBirthAdminMonth, dateOfBirthAdminDay);
 
         Number courseIdInt = (Number) adminToPost.get("courseId");
         Long courseId = courseIdInt != null ? courseIdInt.longValue() : null;
 
+        MgmtPassword mgmtPassword = new MgmtPassword();
+
         Admin admin = new Admin();
         admin.setAdminId(adminId);
-        admin.setPassword(password);
+        admin.setPassword(mgmtPassword.generateHash(password, 12));
         admin.setAdminName(adminName);
         admin.setGender(gender);
         admin.setDateOfBirthAdmin(dateOfBirth);
+        admin.setAddress(address);
+        admin.setIdCard(idCard);
 
         if(adminServiceImpl.addAdmin(admin, courseId)) {
             Map<String, Object> response = new HashMap<>();
