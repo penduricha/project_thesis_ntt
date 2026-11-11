@@ -159,7 +159,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         textInputAction: TextInputAction.search,
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
-          hintText: 'Tìm kiếm',
+          hintText: 'Search',
           hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
           filled: true,
           fillColor: _searchFill,

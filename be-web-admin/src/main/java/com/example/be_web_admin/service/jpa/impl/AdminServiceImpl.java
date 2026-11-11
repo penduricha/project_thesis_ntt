@@ -1,16 +1,16 @@
 package com.example.be_web_admin.service.jpa.impl;
 
-import com.example.be_web_admin.model.cached.AdminAccessToken;
-import com.example.be_web_admin.model.cached.AdminRefreshToken;
+import com.example.be_web_admin.model.redis.AdminAccessToken;
+import com.example.be_web_admin.model.redis.AdminRefreshToken;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.Course;
 import com.example.be_web_admin.repository.jpa.CourseRepository;
-import com.example.be_web_admin.security.jwt.AdminJwtTokenProvider;
+import com.example.be_web_admin.security.jwt.user.AdminJwtToken;
 
 
 import com.example.be_web_admin.repository.jpa.AdminRepository;
-import com.example.be_web_admin.service.cached.impl.AdminTokenServiceImpl;
-import com.example.be_web_admin.service.jpa.I_AdminService;
+import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
+import com.example.be_web_admin.service.jpa.AdminService;
 import io.lettuce.core.RedisBusyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.jpa.JpaSystemException;
@@ -35,7 +35,7 @@ import java.util.Map;
 //        testImplementation("org.springframework.security:spring-security-test")
 
 @Service
-public class AdminServiceImpl implements I_AdminService {
+public class AdminServiceImpl implements AdminService {
 
     private final AdminRepository adminRepository;
 
@@ -44,7 +44,7 @@ public class AdminServiceImpl implements I_AdminService {
     private final AdminTokenServiceImpl adminTokenService;
 
     @Autowired
-    private AdminJwtTokenProvider adminJwtTokenProvider;
+    private AdminJwtToken adminJwtToken;
 
 //    @Autowired
 //    private RedisTemplate<String, String> redisTemplate;
@@ -95,8 +95,8 @@ public class AdminServiceImpl implements I_AdminService {
         // 3. Tạo cặp JWT Token RIÊNG BIỆT (Access Token & Refresh Token)
         // - Access Token (5 phút): Dùng để xác thực request thông thường.
         // - Refresh Token (30 ngày): Dùng để xin cấp lại Access Token mới.
-        String accessToken = adminJwtTokenProvider.generateAccessToken(adminFound.getAdminId());
-        String refreshToken = adminJwtTokenProvider.generateRefreshToken(adminFound.getAdminId());
+        String accessToken = adminJwtToken.generateAccessToken(adminFound.getAdminId());
+        String refreshToken = adminJwtToken.generateRefreshToken(adminFound.getAdminId());
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -122,6 +122,7 @@ public class AdminServiceImpl implements I_AdminService {
 
                 Map<String, Object> responseSuccessData = new HashMap<>();
                 responseSuccessData.put("adminId", adminAccessToken.getAdminId());
+                responseSuccessData.put("adminName", adminFound.getAdminName());
                 responseSuccessData.put("accessToken", accessToken);   // Trả về Access Token
                 responseSuccessData.put("refreshToken", refreshToken); // Trả thêm Refresh Token cho FE lưu trữ
 
@@ -165,6 +166,15 @@ public class AdminServiceImpl implements I_AdminService {
     @Override
     public List<Admin> getAllAdmins() throws JpaSystemException {
         return adminRepository.findAll();
+    }
+
+    @Override
+    public String getAdminNameByAdminId(Long adminId) throws JpaSystemException {
+        Admin adminFound = adminRepository.findAdminByAdminId(adminId);
+        if (adminFound != null) {
+            return adminFound.getAdminName();
+        }
+        return null;
     }
 
 //    public String generateHash(String rawText, int strength) {

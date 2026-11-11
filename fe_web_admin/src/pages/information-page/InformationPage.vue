@@ -5,9 +5,9 @@ import RouterMgmt from "@/router/RouterMgmt.js";
 import Header from "../../components/header/Header.vue";
 import Footer from "../../components/footer/Footer.vue";
 
-import './card-account-nav/card-account-nav.scss';
+import './card-account-nav/card-account.scss';
 import '@/assets/style/theme-color.scss';
-import CardAccountNav from "@/pages/information-page/card-account-nav/CardAccountNav.vue";
+import CardAccount from "@/pages/information-page/card-account-nav/CardAccount.vue";
 import AdminRepository from "@/repository/AdminRepository.js";
 import TextRed from "@/components/span/TextRed.vue";
 import TextGreen from "@/components/span/TextGreen.vue";
@@ -28,6 +28,8 @@ const TYPE_OF_TRAINING_LABELS = {
   Application: 'Ứng dụng',
 };
 
+const PAGE_TITLE = 'Thông tin quản trị';
+
 // Tự ẩn lại CCCD sau 30 giây để tránh để lộ khi quên che màn hình
 const ID_CARD_AUTO_HIDE_MS = 30000;
 
@@ -38,7 +40,7 @@ export default {
     ButtonBlue,
     TextGreen,
     TextRed,
-    CardAccountNav,
+    CardAccountNav: CardAccount,
     Header,
     Footer,
     ModalActivate2FA,
@@ -64,26 +66,82 @@ export default {
 
       // btn activate
       is2faEnabled: false,
+
+      // Vòng đời
+      previousTitle: null,  // tiêu đề tab trước khi vào trang, để khôi phục khi rời
+      isUnmounted: false,   // bỏ qua kết quả API trả về sau khi trang đã bị gỡ
     }
   },
 
+  computed: {
+    displayIdCard() {
+      if (!this.idCard) return '—';
+      return this.isIdCardVisible ? this.idCard : this.maskIdCard(this.idCard);
+    },
+
+    trainingSystemLabel() {
+      return TRAINING_SYSTEM_LABELS[this.trainingSystem] || this.trainingSystem || '—';
+    },
+
+    typeOfTrainingLabel() {
+      return TYPE_OF_TRAINING_LABELS[this.typeOfTraining] || this.typeOfTraining || '—';
+    },
+
+    twoFAStateClass() {
+      return this.is2faEnabled ? 'twofa--on' : 'twofa--off';
+    }
+  },
+
+  // ================= LIFECYCLE (theo đúng thứ tự chạy) =================
+
+  // 1. created: data/computed/methods đã sẵn sàng, CHƯA có DOM.
+  //    Chỉ làm việc không cần DOM: ghi lại đường dẫn route hiện tại.
   created() {
+    this.isUnmounted = false;
     this.saveRouterPath();
   },
 
+  // 2. mounted: DOM đã render xong.
+  //    Làm việc chạm vào DOM (document.title) rồi gọi API lấy dữ liệu.
   async mounted() {
     this.setTitlePage();
     await this.fetchDataAdminInformationDetail();
   },
 
-  // Vue 3: beforeDestroy đã đổi tên thành beforeUnmount
+  // 3. beforeUnmount: instance còn nguyên vẹn -> dọn dẹp mọi thứ đã tạo ở trên.
+  //    (Vue 3: đây là tên mới của beforeDestroy)
   beforeUnmount() {
+    // Hủy timer tự ẩn CCCD
     clearTimeout(this.idCardTimer);
+    this.idCardTimer = null;
+
+    // Xóa số CCCD khỏi bộ nhớ component khi rời trang
+    this.isIdCardVisible = false;
+    this.idCard = null;
+
+    // Khôi phục tiêu đề tab. Đặt ở beforeUnmount (chạy đồng bộ lúc gỡ)
+    // để không ghi đè tiêu đề mà trang kế tiếp đặt trong mounted của nó.
+    this.restoreTitlePage();
   },
+
+  // 4. unmounted: đã gỡ xong -> đánh dấu để các Promise còn treo không ghi vào state nữa.
+  unmounted() {
+    this.isUnmounted = true;
+  },
+
+  // =====================================================================
 
   methods: {
     setTitlePage() {
-      document.title = 'Thông tin quản trị';
+      this.previousTitle = document.title;
+      document.title = PAGE_TITLE;
+    },
+
+    restoreTitlePage() {
+      if (this.previousTitle !== null) {
+        document.title = this.previousTitle;
+        this.previousTitle = null;
+      }
     },
 
     saveRouterPath() {
@@ -93,18 +151,26 @@ export default {
     },
 
     async fetchDataAdminInformationDetail() {
-      const adminRepository = new AdminRepository();
-      let adminInformationDetail = await adminRepository.getAdminInformationDetailByAdminId();
-      if (adminInformationDetail) {
-        this.address = adminInformationDetail.address;
-        this.idCard = adminInformationDetail.idCard;
-        this.industry = adminInformationDetail.industry;
-        this.faculty = adminInformationDetail.faculty;
+      try {
+        const adminRepository = new AdminRepository();
+        let adminInformationDetail = await adminRepository.getAdminInformationDetailByAdminId();
 
-        this.trainingSystem = adminInformationDetail.trainingSystem;
-        this.typeOfTraining = adminInformationDetail.typeOfTraining;
-        this.major = adminInformationDetail.major;
-        this.branch = adminInformationDetail.branch;
+        // Người dùng đã rời trang trong lúc chờ API: bỏ qua kết quả
+        if (this.isUnmounted) return;
+
+        if (adminInformationDetail) {
+          this.address = adminInformationDetail.address;
+          this.idCard = adminInformationDetail.idCard;
+          this.industry = adminInformationDetail.industry;
+          this.faculty = adminInformationDetail.faculty;
+
+          this.trainingSystem = adminInformationDetail.trainingSystem;
+          this.typeOfTraining = adminInformationDetail.typeOfTraining;
+          this.major = adminInformationDetail.major;
+          this.branch = adminInformationDetail.branch;
+        }
+      } catch (error) {
+        console.error('Error to fetch admin information detail:', error);
       }
     },
 
@@ -131,25 +197,6 @@ export default {
           this.isIdCardVisible = false;
         }, ID_CARD_AUTO_HIDE_MS);
       }
-    }
-  },
-
-  computed: {
-    displayIdCard() {
-      if (!this.idCard) return '—';
-      return this.isIdCardVisible ? this.idCard : this.maskIdCard(this.idCard);
-    },
-
-    trainingSystemLabel() {
-      return TRAINING_SYSTEM_LABELS[this.trainingSystem] || this.trainingSystem || '—';
-    },
-
-    typeOfTrainingLabel() {
-      return TYPE_OF_TRAINING_LABELS[this.typeOfTraining] || this.typeOfTraining || '—';
-    },
-
-    twoFAStateClass() {
-      return this.is2faEnabled ? 'twofa--on' : 'twofa--off';
     }
   }
 }

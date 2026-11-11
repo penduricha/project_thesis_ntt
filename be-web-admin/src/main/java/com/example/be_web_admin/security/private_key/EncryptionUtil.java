@@ -1,3 +1,4 @@
+
 package com.example.be_web_admin.security.private_key;
 
 import javax.crypto.Cipher;
@@ -15,21 +16,28 @@ import java.util.Base64;
 public class EncryptionUtil {
 
     private static final String ALGORITHM = "AES/GCM/NoPadding";
-    private static final int TAG_LENGTH_BIT = 128; // Độ dài Authentication Tag (128 bits)
-    private static final int IV_LENGTH_BYTE = 12;  // Độ dài chuẩn cho IV trong GCM (12 bytes)
-    private static final int SALT_LENGTH_BYTE = 16;// Độ dài Salt cho PBKDF2
-    private static final int ITERATION_COUNT = 65536; // Số vòng lặp băm PBKDF2
-    private static final int KEY_LENGTH = 256;     // Khóa AES-256
+    private static final int TAG_LENGTH_BIT = 128;
+    private static final int IV_LENGTH_BYTE = 12;
+    private static final int SALT_LENGTH_BYTE = 16;
+    private static final int ITERATION_COUNT = 65536;
+    private static final int KEY_LENGTH = 256;
 
-    // Khóa mật khẩu gốc của hệ thống (Master Password/Secret dùng để sinh key mã hóa)
-    private static final String MASTER_SECRET = "HeThongBaoMat2FA_NTT_2026_TQN";
+    private static final String MASTER_SECRET =
+            "HeThongBaoMat2FA_NTT_2026_TQN";
 
     /**
      * Hàm sinh khóa AES từ Master Password dựa trên PBKDF2
      */
-    private static SecretKey getSecretKey(char[] password, byte[] salt) throws Exception {
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        KeySpec spec = new PBEKeySpec(password, salt, ITERATION_COUNT, KEY_LENGTH);
+    private static SecretKey getSecretKey(char[] password, byte[] salt)
+            throws Exception {
+
+        SecretKeyFactory factory =
+                SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+
+        KeySpec spec = new PBEKeySpec(
+                password, salt, ITERATION_COUNT, KEY_LENGTH
+        );
+
         SecretKey tmp = factory.generateSecret(spec);
         return new SecretKeySpec(tmp.getEncoded(), "AES");
     }
@@ -39,34 +47,41 @@ public class EncryptionUtil {
      */
     public static String encrypt(String plainText) {
         try {
-            // 1. Tạo Salt và IV ngẫu nhiên
             byte[] salt = new byte[SALT_LENGTH_BYTE];
-            new SecureRandom().nextBytes(salt);
+            SecureRandom secureRandom = new SecureRandom();
+            secureRandom.nextBytes(salt);
 
             byte[] iv = new byte[IV_LENGTH_BYTE];
-            new SecureRandom().nextBytes(iv);
+            secureRandom.nextBytes(iv);
 
-            // 2. Tạo khóa AES từ Master Secret và Salt
-            SecretKey secretKey = getSecretKey(MASTER_SECRET.toCharArray(), salt);
+            SecretKey secretKey =
+                    getSecretKey(MASTER_SECRET.toCharArray(), salt);
 
-            // 3. Khởi tạo Cipher với chuẩn AES/GCM/NoPadding
             Cipher cipher = Cipher.getInstance(ALGORITHM);
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, iv);
+
+            GCMParameterSpec parameterSpec =
+                    new GCMParameterSpec(TAG_LENGTH_BIT, iv);
+
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
 
-            // 4. Thực hiện mã hóa dữ liệu
-            byte[] cipherText = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+            byte[] cipherText =
+                    cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
-            // 5. Gom Salt + IV + CipherText lại thành một mảng duy nhất để lưu trữ
-            ByteBuffer byteBuffer = ByteBuffer.allocate(salt.length + iv.length + cipherText.length);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(
+                    salt.length + iv.length + cipherText.length
+            );
+
             byteBuffer.put(salt);
             byteBuffer.put(iv);
             byteBuffer.put(cipherText);
 
-            // 6. Trả về dưới dạng chuỗi Base64
-            return Base64.getEncoder().encodeToString(byteBuffer.array());
+            return Base64.getEncoder()
+                    .encodeToString(byteBuffer.array());
+
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi mã hóa dữ liệu: " + e.getMessage(), e);
+            throw new RuntimeException(
+                    "Lỗi mã hóa dữ liệu: " + e.getMessage(), e
+            );
         }
     }
 
@@ -75,11 +90,10 @@ public class EncryptionUtil {
      */
     public static String decrypt(String encryptedStr) {
         try {
-            // 1. Giải mã chuỗi Base64 thành mảng Byte
             byte[] decoded = Base64.getDecoder().decode(encryptedStr);
+
             ByteBuffer byteBuffer = ByteBuffer.wrap(decoded);
 
-            // 2. Tách Salt, IV và CipherText ra từ mảng byte đã lưu
             byte[] salt = new byte[SALT_LENGTH_BYTE];
             byteBuffer.get(salt);
 
@@ -89,56 +103,130 @@ public class EncryptionUtil {
             byte[] cipherText = new byte[byteBuffer.remaining()];
             byteBuffer.get(cipherText);
 
-            // 3. Tái tạo lại khóa AES từ Master Secret và Salt cũ
-            SecretKey secretKey = getSecretKey(MASTER_SECRET.toCharArray(), salt);
+            SecretKey secretKey =
+                    getSecretKey(MASTER_SECRET.toCharArray(), salt);
 
-            // 4. Khởi tạo Cipher để giải mã
             Cipher cipher = Cipher.getInstance(ALGORITHM);
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, iv);
+
+            GCMParameterSpec parameterSpec =
+                    new GCMParameterSpec(TAG_LENGTH_BIT, iv);
+
             cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
 
-            // 5. Trả về chuỗi văn bản gốc (Secret Key ban đầu)
             byte[] plainText = cipher.doFinal(cipherText);
+
             return new String(plainText, StandardCharsets.UTF_8);
+
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi giải mã dữ liệu: " + e.getMessage(), e);
+            throw new RuntimeException(
+                    "Lỗi giải mã dữ liệu: " + e.getMessage(), e
+            );
         }
     }
 
+    /**
+     * Chuyển đổi byte[] sang Base32 theo RFC 4648
+     * Dùng cho Secret Key của TOTP / Google Authenticator.
+     */
+    private static String encodeBase32(byte[] data) {
+
+        final String BASE32_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+        StringBuilder result = new StringBuilder();
+
+        int buffer = 0;
+        int bitsLeft = 0;
+
+        for (byte b : data) {
+
+            buffer = (buffer << 8) | (b & 0xFF);
+            bitsLeft += 8;
+
+            while (bitsLeft >= 5) {
+
+                result.append(
+                        BASE32_CHARS.charAt(
+                                (buffer >> (bitsLeft - 5)) & 0x1F
+                        )
+                );
+
+                bitsLeft -= 5;
+            }
+        }
+
+        if (bitsLeft > 0) {
+            result.append(
+                    BASE32_CHARS.charAt(
+                            (buffer << (5 - bitsLeft)) & 0x1F
+                    )
+            );
+        }
+
+        // Không thêm padding '=' để phù hợp với cách sử dụng TOTP phổ biến.
+        return result.toString();
+    }
+
+    /**
+     * Sinh Secret Key 2FA dưới dạng Base32
+     */
     public static String generateSecretKey() {
+
         SecureRandom secureRandom = new SecureRandom();
 
         // Tạo mảng 20 bytes ngẫu nhiên an toàn (160 bits)
         byte[] randomBytes = new byte[20];
         secureRandom.nextBytes(randomBytes);
 
-        // Mã hóa sang Base64Url (bỏ các ký tự đặc biệt như '/' và '+' để an toàn khi truyền dữ liệu)
+        // ==========================================
+        // CODE CŨ: Chuyển đổi sang Base64URL
+        // ==========================================
 
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+        // return Base64.getUrlEncoder()
+        //         .withoutPadding()
+        //         .encodeToString(randomBytes);
+
+        // ==========================================
+        // CODE MỚI: Chuyển đổi sang Base32 (RFC 4648)
+        // ==========================================
+
+        return encodeBase32(randomBytes);
     }
 
     public static void main(String[] args) {
-        String secretKey = generateSecretKey();
-        System.out.println("Khóa bí mật 2FA (Base64): " + secretKey);
 
-        // Chuỗi khóa bí mật gốc sinh ra từ Spring Boot
+        String secretKey = generateSecretKey();
+
+        System.out.println("Khóa bí mật 2FA (Base32): " + secretKey);
 
         System.out.println("=== KIỂM TRA MÃ HÓA & GIẢI MÃ 2FA ===");
+
         System.out.println("1. Chuỗi gốc (Plain Text): " + secretKey);
 
-        // 1. Thực hiện mã hóa trước khi lưu xuống MariaDB
+        // 1. Mã hóa trước khi lưu xuống MariaDB
         String encryptedData = encrypt(secretKey);
-        System.out.println("2. Chuỗi sau khi mã hóa (Lưu DB): " + encryptedData);
 
-        // 2. Thực hiện giải mã khi cần đối soát TOTP
+        System.out.println("2. Chuỗi sau khi mã hóa (Lưu DB): "
+                + encryptedData);
+
+        // 2. Giải mã khi cần đối soát TOTP
         String decryptedData = decrypt(encryptedData);
-        System.out.println("3. Chuỗi sau khi giải mã: " + decryptedData);
+
+        System.out.println("3. Chuỗi sau khi giải mã: "
+                + decryptedData);
 
         // Kiểm tra tính toàn vẹn
         if (secretKey.equals(decryptedData)) {
-            System.out.println("\n=> KẾT QUẢ: Thành công! Dữ liệu giải mã khớp hoàn toàn với bản gốc.");
+
+            System.out.println(
+                    "\n=> KẾT QUẢ: Thành công! "
+                            + "Dữ liệu giải mã khớp hoàn toàn với bản gốc."
+            );
+
         } else {
-            System.out.println("\n=> KẾT QUẢ: Thất bại! Dữ liệu không khớp.");
+
+            System.out.println(
+                    "\n=> KẾT QUẢ: Thất bại! Dữ liệu không khớp."
+            );
         }
     }
 }

@@ -1,6 +1,7 @@
 flutter pub get
 
-fuser -k 33000/tcp && flutter run -d web-server --web-port 33000 --web-hostname localhost
+fuser -k 33000/tcp && 
+flutter run -d web-server --web-port 33000 --web-hostname localhost
 
 Dừng: fuser -k 33000/tcp
 

@@ -4,8 +4,14 @@ import 'package:flutter/services.dart';
 import '../screens/totp_generator.dart';
 
 // ============================================================================
-//  POPUP NHẬP KHÓA BÍ MẬT + NÚT KÍCH HOẠT
-//  Trả về secret đã chuẩn hóa (String) khi bấm Kích hoạt, hoặc null khi bấm Hủy.
+//  POPUP NHẬP KHÓA BÍ MẬT (Base32) + NÚT ACTIVATE
+//  Trả về secret đã chuẩn hóa (String) khi bấm Activate, hoặc null khi bấm Cancel.
+//
+//  Cách báo lỗi GIỐNG màn Login:
+//   - Lúc mới mở, người dùng đang gõ dở -> KHÔNG báo lỗi.
+//   - Bấm Activate (hoặc phím Done) lần đầu -> mới kiểm tra, lỗi hiện ngay dưới ô
+//     (viền đỏ + icon + chữ đỏ), con trỏ quay lại ô nhập.
+//   - Từ đó trở đi lỗi tự cập nhật theo từng ký tự gõ, hết lỗi thì tự biến mất.
 //
 //  Cách dùng:
 //    final secret = await showDialog<String>(
@@ -26,20 +32,86 @@ class ActivateKeyDialog extends StatefulWidget {
 }
 
 class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
-  static const Color _brandColor = Color(0xFF004B87); // nút Kích hoạt
+  static const Color _brandColor = Color(0xFF004B87); // nút Activate
   static const Color _errorColor = Color(0xFFC61F1F);
   static const Color _fieldFill = Color(0xFFEFEFEF);
-  static const int _minKeyLength = 16;
+
+  // ---- Quy tắc khóa (khớp EncryptionUtil.generateSecretKey() bên Java) ----
+  // Java: 20 byte ngẫu nhiên (160 bit) -> Base32 RFC 4648, KHÔNG padding '='.
+  // 160 bit / 5 bit mỗi ký tự = đúng 32 ký tự, bảng chữ cái: A-Z và 2-7.
+  static const int _keyLength = 32;
+  static final RegExp _base32Pattern = RegExp('^[A-Z2-7]{$_keyLength}\$');
+  static final RegExp _invalidChar = RegExp(r'[^A-Z2-7]');
 
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
   String? _error;
 
+  // Chỉ bắt đầu "soi lỗi" sau lần bấm Activate đầu tiên (giống _submitted ở Login).
+  bool _submitted = false;
+
   bool get _hasText => _controller.text.trim().isNotEmpty;
+
+  String get _normalized => TotpGenerator.normalizeSecret(_controller.text);
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Validator: trả về câu lỗi ngắn gọn (1 dòng) hoặc null nếu hợp lệ.
+  // ---------------------------------------------------------------------------
+  String? _validate(String secret) {
+    if (secret.isEmpty) return 'Enter your secret key';
+
+    if (_invalidChar.hasMatch(secret)) {
+      return 'Use only letters A-Z and digits 2-7';
+    }
+
+    if (secret.length != _keyLength) {
+      return 'Key must be $_keyLength characters (now ${secret.length})';
+    }
+
+    // Chốt chặn cuối bằng biểu thức chính quy đầy đủ ^[A-Z2-7]{32}$
+    if (!_base32Pattern.hasMatch(secret)) return 'Invalid key format';
+
+    if (widget.existingSecrets.contains(secret)) {
+      return 'This key has already been added';
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sự kiện
+  // ---------------------------------------------------------------------------
+
+  // Bấm Activate hoặc phím Done trên bàn phím
+  void _onActivate() {
+    final secret = _normalized;
+    final error = _validate(secret);
+
+    setState(() {
+      _submitted = true; // từ giờ ô nào sửa là lỗi tự cập nhật
+      _error = error;
+    });
+
+    if (error != null) {
+      HapticFeedback.lightImpact();
+      _focusNode.requestFocus();
+      return;
+    }
+    Navigator.pop(context, secret);
+  }
+
+  // Người dùng gõ: trước lần Activate đầu thì im lặng, sau đó cập nhật lỗi trực tiếp
+  void _onChanged(String _) {
+    setState(() {
+      if (_submitted) _error = _validate(_normalized);
+    });
   }
 
   // Dán nhanh từ clipboard (khóa bí mật thường dài, gõ tay dễ sai)
@@ -49,45 +121,27 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
     if (text == null || text.isEmpty || !mounted) return;
     setState(() {
       _controller.value = TextEditingValue(
-        text: text,
+        text: text.toUpperCase(),
         selection: TextSelection.collapsed(offset: text.length),
       );
-      _error = null;
+      _error = _submitted ? _validate(_normalized) : null;
     });
+    _focusNode.requestFocus();
   }
 
+  // Xóa sạch: người dùng chủ động làm lại nên không báo lỗi "trống" ngay
   void _clear() {
     setState(() {
       _controller.clear();
       _error = null;
     });
+    _focusNode.requestFocus();
   }
 
-  String? _validate(String secret) {
-    if (secret.isEmpty) return 'Vui lòng nhập khóa bí mật';
-    if (!RegExp(r'^[A-Z2-7]+$').hasMatch(secret)) {
-      return 'Khóa chỉ gồm chữ A–Z và số 2–7';
-    }
-    if (secret.length < _minKeyLength) {
-      return 'Khóa phải có ít nhất $_minKeyLength ký tự';
-    }
-    if (widget.existingSecrets.contains(secret)) {
-      return 'Khóa này đã được thêm trước đó';
-    }
-    return null;
-  }
-
-  void _onActivate() {
-    final secret = TotpGenerator.normalizeSecret(_controller.text);
-    final error = _validate(secret);
-    if (error != null) {
-      setState(() => _error = error);
-      return;
-    }
-    Navigator.pop(context, secret);
-  }
-
-  OutlineInputBorder _border(Color color, [double width = 1]) {
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
+  static OutlineInputBorder _border(Color color, [double width = 1]) {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: color, width: width),
@@ -127,7 +181,7 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Nhập khóa bí mật',
+                'Enter secret key',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 20,
@@ -137,13 +191,14 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Nhập hoặc dán khóa bí mật được cấp để kích hoạt mã xác thực 6 số.',
+                'Enter or paste the 32-character secret key you were given to activate your 6-digit verification code.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, height: 1.4, color: Colors.black54),
               ),
               const SizedBox(height: 20),
               _buildKeyField(),
-              const SizedBox(height: 24),
+              _FieldError(_error), // dòng lỗi tự vẽ, y hệt màn Login
+              const SizedBox(height: 12),
               _buildFooter(),
             ],
           ),
@@ -153,38 +208,40 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
   }
 
   Widget _buildKeyField() {
+    final hasError = _error != null;
+
     return TextField(
-      maxLength: 30,
       controller: _controller,
+      focusNode: _focusNode,
       autofocus: true, // mở bàn phím ngay khi popup hiện
       minLines: 1,
       maxLines: 3, // khóa dài sẽ xuống dòng để nhìn được toàn bộ
-      // Bàn phím ký tự thuần: tắt gợi ý/tự sửa, tự viết hoa
+      // Bàn phím ký tự thuần: tắt gợi ý/tự sửa. Chữ gõ vào tự viết HOA.
       keyboardType: TextInputType.visiblePassword,
       textCapitalization: TextCapitalization.characters,
+      inputFormatters: [_UpperCaseFormatter()],
       autocorrect: false,
       enableSuggestions: false,
       textInputAction: TextInputAction.done,
-      onChanged: (_) => setState(() => _error = null),
-      onSubmitted: (_) => _hasText ? _onActivate() : null,
+      cursorColor: _brandColor,
+      onChanged: _onChanged,
+      onSubmitted: (_) => _onActivate(), // phím Done = bấm Activate
       style: const TextStyle(fontSize: 16, letterSpacing: 1),
       decoration: InputDecoration(
-        hintText: 'Nhập khóa bí mật',
+        hintText: 'Enter secret key',
         hintStyle: const TextStyle(
           color: Colors.grey,
           fontSize: 16,
           letterSpacing: 0,
         ),
-        errorText: _error,
-        errorMaxLines: 2,
         filled: true,
         fillColor: _fieldFill,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        // Rỗng -> nút Dán; có chữ -> nút Xóa
+        // Rỗng -> nút Paste; có chữ -> nút Clear
         suffixIcon: _hasText
             ? IconButton(
           icon: const Icon(Icons.close, color: Colors.grey, size: 20),
-          tooltip: 'Xóa',
+          tooltip: 'Clear',
           onPressed: _clear,
         )
             : IconButton(
@@ -193,19 +250,19 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
             color: _brandColor,
             size: 22,
           ),
-          tooltip: 'Dán',
+          tooltip: 'Paste',
           onPressed: _paste,
         ),
-        border: _border(Colors.transparent),
-        enabledBorder: _border(Colors.transparent),
-        focusedBorder: _border(_brandColor, 1.5),
-        errorBorder: _border(_errorColor),
-        focusedErrorBorder: _border(_errorColor, 1.5),
+        // Có lỗi -> viền đỏ (kể cả khi đang focus), không lỗi -> không viền
+        border: _border(hasError ? _errorColor : Colors.transparent),
+        enabledBorder: _border(hasError ? _errorColor : Colors.transparent),
+        focusedBorder:
+        hasError ? _border(_errorColor, 1.5) : _border(_brandColor, 1.5),
       ),
     );
   }
 
-  // Footer: Hủy (viền) | Kích hoạt (nền xanh 0xFF004B87), 2 nút cùng kích thước
+  // Footer: Cancel (viền) | Activate (nền xanh 0xFF004B87), 2 nút cùng kích thước
   Widget _buildFooter() {
     return Row(
       children: [
@@ -224,20 +281,18 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            child: const Text('Hủy'),
+            child: const Text('Cancel'),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            // Chưa nhập gì -> nút mờ, không bấm được
-            onPressed: _hasText ? _onActivate : null,
+            // Luôn cho bấm (để nhận phản hồi lỗi), giống nút Login.
+            onPressed: _onActivate,
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(0, 48),
               backgroundColor: _brandColor,
               foregroundColor: Colors.white,
-              disabledBackgroundColor: const Color(0x66004B87),
-              disabledForegroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -247,10 +302,75 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            child: const Text('Kích hoạt'),
+            child: const Text('Activate'),
           ),
         ),
       ],
+    );
+  }
+}
+
+// Tự viết HOA mọi ký tự gõ/dán vào (Base32 chỉ dùng chữ hoa), giữ nguyên vị trí con trỏ.
+class _UpperCaseFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
+    return newValue.copyWith(text: newValue.text.toUpperCase());
+  }
+}
+
+// Dòng lỗi dưới ô nhập: sát lề trái, chữ 14, giữ sẵn chỗ để layout không nhảy.
+// Cùng kiểu với _FieldError của màn Login (icon tròn + chữ đỏ).
+class _FieldError extends StatelessWidget {
+  const _FieldError(this.message);
+
+  final String? message;
+
+  static const Color _errorColor = Color(0xFFC61F1F);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      alignment: Alignment.topLeft,
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 24), // giữ chỗ 1 dòng
+        padding: const EdgeInsets.only(top: 6),
+        child: message == null
+            ? null
+            : Semantics(
+          liveRegion: true, // screen reader tự đọc khi lỗi xuất hiện
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 1),
+                child: Icon(
+                  Icons.error_outline,
+                  color: _errorColor,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  message!,
+                  style: const TextStyle(
+                    color: _errorColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

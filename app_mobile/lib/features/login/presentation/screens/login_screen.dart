@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../data/model/login_result.dart';
+import '../controller/login_controller.dart';
 import '../widgets/error_dialog.dart';
-import '../../data/model/admin_account.dart';
 import 'create_account_screen.dart';
 
 // ---- Màu dùng chung cho màn hình Login ----
 const Color _fieldFill = Color(0xFFF9F9F9); // nền ô nhập
+const Color _fieldFillDisabled = Color(0xFFF1F1F1); // nền ô nhập khi bị khóa
 const Color _fieldBorder = Color(0xFFEDEDED); // viền nhạt khi bình thường
 const Color _errorColor = Color(0xFFC61F1F); // cùng đỏ với nút OK của popup
 
@@ -19,7 +21,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final AdminLogin _admin = AdminLogin();
+  final LoginController _controller = LoginController();
 
   final _formKey = GlobalKey<FormState>();
   final _idController = TextEditingController();
@@ -35,6 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _controller.dispose();
     _idController.dispose();
     _passwordController.dispose();
     _idFocus.dispose();
@@ -64,6 +67,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // Xử lý bấm Login
   // ---------------------------------------------------------------------------
   Future<void> _onSubmit() async {
+    // Đang gọi API thì bỏ qua (ví dụ bấm phím Done trên bàn phím)
+    if (_controller.isLoading) return;
+
     setState(() => _submitted = true); // từ giờ ô nào sửa là lỗi tự cập nhật
 
     // 1) Còn ô trống -> báo lỗi ngay dưới ô
@@ -77,31 +83,86 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    FocusScope.of(context).unfocus(); // hạ bàn phím trước khi hiện popup
+    FocusScope.of(context).unfocus(); // hạ bàn phím trước khi gọi API / hiện popup
 
-    // 2) Đủ dữ liệu -> kiểm tra Admin Id + mật khẩu bằng Model
-    if (!_admin.validate()) {
-      HapticFeedback.mediumImpact();
-      await showErrorDialog(
-        context,
-        icon: Icons.lock_outline_rounded,
-        title: 'Login failed',
-        message: 'Admin Id or password is incorrect.\nPlease check and try again.',
-        buttonText: 'OK',
-      );
-      if (!mounted) return;
+    final adminId = int.tryParse(_idController.text.trim());
+    if (adminId == null) return; // không xảy ra: ô nhập chỉ cho phép chữ số
 
-      // Đóng popup xong: đưa con trỏ về ô mật khẩu, bôi đen sẵn để gõ lại luôn
-      _passwordController.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _passwordController.text.length,
-      );
-      _passwordFocus.requestFocus();
-      return;
+    // 2) Đủ dữ liệu -> gọi API (spinner + khóa form do controller điều khiển)
+    final result = await _controller.login(
+      adminId: adminId,
+      password: _passwordController.text,
+    );
+    if (!mounted) return;
+
+    await _handleLoginResult(result);
+  }
+
+  Future<void> _handleLoginResult(LoginResult result) async {
+    switch (result) {
+    // Trường hợp 1: thành công -> vào khung Tab (Authenticator | Chat),
+    // xóa LoginScreen khỏi lịch sử. Token đã được controller lưu.
+      case LoginSuccess():
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+
+    // Trường hợp 2: sai Admin Id hoặc mật khẩu.
+      case LoginRejected(:final message):
+        HapticFeedback.mediumImpact();
+        await showErrorDialog(
+          context,
+          icon: Icons.lock_outline_rounded,
+          title: 'Login failed',
+          message: '$message\nPlease check and try again.',
+          buttonText: 'OK',
+        );
+        _focusPasswordAndSelectAll();
+
+    // Trường hợp 3: tài khoản đã đăng nhập ở thiết bị khác.
+      case LoginBlockedByOtherDevice blocked:
+        HapticFeedback.heavyImpact();
+        await showErrorDialog(
+          context,
+          icon: Icons.devices_other_rounded,
+          title: 'Account in use',
+          message: _buildBlockedMessage(blocked),
+          buttonText: 'OK',
+        );
+
+    // Không gọi được server (mất mạng, quá thời gian chờ, lỗi 5xx).
+      case LoginFailure(:final message):
+        HapticFeedback.mediumImpact();
+        await showErrorDialog(
+          context,
+          icon: Icons.wifi_off_rounded,
+          title: 'Connection error',
+          message: message,
+          buttonText: 'OK',
+        );
     }
+  }
 
-    // 3) Thành công -> vào khung Tab (Authenticator | Chat), xóa LoginScreen khỏi lịch sử
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+  /// Nội dung popup trường hợp 3: câu cảnh báo của server + thiết bị đang giữ phiên.
+  String _buildBlockedMessage(LoginBlockedByOtherDevice blocked) {
+    final deviceName = blocked.deviceName;
+    final platform = blocked.platform;
+    final loggedInAt = blocked.loggedInAt;
+
+    return [
+      blocked.message,
+      if (deviceName != null)
+        '\nDevice: $deviceName${platform != null ? ' ($platform)' : ''}',
+      if (loggedInAt != null) 'Since: ${_formatLocalTime(loggedInAt)}',
+    ].join('\n');
+  }
+
+  // Đóng popup xong: đưa con trỏ về ô mật khẩu, bôi đen sẵn để gõ lại luôn
+  void _focusPasswordAndSelectAll() {
+    if (!mounted) return;
+    _passwordController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _passwordController.text.length,
+    );
+    _passwordFocus.requestFocus();
   }
 
   // ---------------------------------------------------------------------------
@@ -125,126 +186,177 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(
-                      width: double.infinity,
-                      child: Text(
-                        'Authenticator',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 24,
-                          color: AppColors.primaryBlue,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                // Chỉ phần phụ thuộc trạng thái loading mới được dựng lại
+                child: ListenableBuilder(
+                  listenable: _controller,
+                  builder: (context, _) {
+                    final isLoading = _controller.isLoading;
 
-                    const SizedBox(height: 40),
-
-                    // ---------- Admin Id ----------
-                    _AuthTextField(
-                      label: 'Admin Id',
-                      hint: 'Enter admin Id',
-                      controller: _idController,
-                      focusNode: _idFocus,
-                      autoValidateMode: autoMode,
-                      validator: _validateId,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly, // chỉ cho nhập 0-9
-                        LengthLimitingTextInputFormatter(10), // tối đa 10 ký tự
-                      ],
-                      onChanged: (value) => _admin.adminId = int.tryParse(value),
-                      onSubmitted: (_) => _passwordFocus.requestFocus(),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    // ---------- Password ----------
-                    _AuthTextField(
-                      label: 'Password',
-                      hint: 'Enter password',
-                      controller: _passwordController,
-                      focusNode: _passwordFocus,
-                      autoValidateMode: autoMode,
-                      validator: _validatePassword,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      onChanged: (value) => _admin.password = value,
-                      onSubmitted: (_) => _onSubmit(), // phím Done = bấm Login
-                      suffixIcon: IconButton(
-                        tooltip: _obscurePassword ? 'Show password' : 'Hide password',
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: Colors.grey,
-                          size: 20,
-                        ),
-                        onPressed: () {
-                          setState(() => _obscurePassword = !_obscurePassword);
-                        },
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ---------- Nút Login ----------
-                    // Luôn cho bấm (không disable) để người dùng nhận được phản hồi lỗi
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _onSubmit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Login',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    Center(
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const CreateAccountScreen(),
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(
+                          width: double.infinity,
+                          child: Text(
+                            'Authenticator',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 24,
+                              color: AppColors.primaryBlue,
+                              fontWeight: FontWeight.w600,
                             ),
-                          );
-                        },
-                        child: const Text(
-                          'Create account',
-                          style: TextStyle(
-                            color: AppColors.primaryBlue,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ),
-                    ),
-                  ],
+
+                        const SizedBox(height: 40),
+
+                        // ---------- Admin Id ----------
+                        _AuthTextField(
+                          label: 'Admin Id',
+                          hint: 'Enter admin Id',
+                          controller: _idController,
+                          focusNode: _idFocus,
+                          enabled: !isLoading,
+                          autoValidateMode: autoMode,
+                          validator: _validateId,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly, // chỉ cho nhập 0-9
+                            LengthLimitingTextInputFormatter(10), // tối đa 10 ký tự
+                          ],
+                          onSubmitted: (_) => _passwordFocus.requestFocus(),
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        // ---------- Password ----------
+                        _AuthTextField(
+                          label: 'Password',
+                          hint: 'Enter password',
+                          controller: _passwordController,
+                          focusNode: _passwordFocus,
+                          enabled: !isLoading,
+                          autoValidateMode: autoMode,
+                          validator: _validatePassword,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _onSubmit(), // phím Done = bấm Login
+                          suffixIcon: IconButton(
+                            tooltip:
+                            _obscurePassword ? 'Show password' : 'Hide password',
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: Colors.grey,
+                              size: 20,
+                            ),
+                            onPressed: isLoading
+                                ? null
+                                : () {
+                              setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                              );
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // ---------- Nút Login ----------
+                        // Bình thường luôn cho bấm (để nhận phản hồi lỗi).
+                        // Đang gọi API: chữ "Login" -> spinner, nút bị khóa.
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : _onSubmit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryBlue,
+                              // Giữ nguyên màu xanh khi bị khóa (mặc định sẽ xám)
+                              disabledBackgroundColor: AppColors.primaryBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: isLoading
+                                  ? const _ButtonSpinner(key: ValueKey('spinner'))
+                                  : const Text(
+                                'Login',
+                                key: ValueKey('label'),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        Center(
+                          child: TextButton(
+                            onPressed: isLoading
+                                ? null
+                                : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                  const CreateAccountScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Create account',
+                              style: TextStyle(
+                                color: AppColors.primaryBlue,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Định dạng giờ địa phương: dd/MM/yyyy HH:mm
+String _formatLocalTime(DateTime time) {
+  final local = time.toLocal();
+  String twoDigits(int value) => value.toString().padLeft(2, '0');
+  return '${twoDigits(local.day)}/${twoDigits(local.month)}/${local.year} '
+      '${twoDigits(local.hour)}:${twoDigits(local.minute)}';
+}
+
+// Vòng xoay trong nút Login khi đang xử lý API (kích thước cố định để nút không nhảy).
+class _ButtonSpinner extends StatelessWidget {
+  const _ButtonSpinner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 22,
+      height: 22,
+      child: CircularProgressIndicator(
+        strokeWidth: 2.5,
+        color: Colors.white,
+        semanticsLabel: 'Logging in',
       ),
     );
   }
@@ -266,6 +378,7 @@ class _AuthTextField extends StatelessWidget {
     required this.focusNode,
     required this.validator,
     required this.autoValidateMode,
+    this.enabled = true,
     this.onChanged,
     this.onSubmitted,
     this.keyboardType,
@@ -281,6 +394,7 @@ class _AuthTextField extends StatelessWidget {
   final FocusNode focusNode;
   final String? Function(String value) validator;
   final AutovalidateMode autoValidateMode;
+  final bool enabled; // false: khóa ô nhập khi đang gọi API
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final TextInputType? keyboardType;
@@ -314,6 +428,7 @@ class _AuthTextField extends StatelessWidget {
             TextField(
               controller: controller,
               focusNode: focusNode,
+              enabled: enabled,
               obscureText: obscureText,
               keyboardType: keyboardType,
               textInputAction: textInputAction,
@@ -329,13 +444,14 @@ class _AuthTextField extends StatelessWidget {
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
                 suffixIcon: suffixIcon,
                 filled: true,
-                fillColor: _fieldFill,
+                fillColor: enabled ? _fieldFill : _fieldFillDisabled,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 16,
                 ),
                 border: _border(hasError ? _errorColor : _fieldBorder),
                 enabledBorder: _border(hasError ? _errorColor : _fieldBorder),
+                disabledBorder: _border(_fieldBorder),
                 focusedBorder: hasError
                     ? _border(_errorColor, 1.5)
                     : _border(AppColors.primaryBlue, 1.5),

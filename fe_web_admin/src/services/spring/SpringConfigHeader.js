@@ -1,7 +1,7 @@
 import axios from "axios";
-import AxiosConfiguration from "@/services/AxiosConfiguration.js";
+import NetworkConfiguration from "@/services/NetworkConfiguration.js";
 
-const axiosConfig = new AxiosConfiguration();
+const axiosConfig = new NetworkConfiguration();
 
 export default class SpringConfigHeader {
 

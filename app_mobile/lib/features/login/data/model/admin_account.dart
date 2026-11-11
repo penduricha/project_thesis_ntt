@@ -1,19 +1,24 @@
-/// Model đăng nhập admin.
+/// Dữ liệu gửi lên API đăng nhập mobile (POST /admin/mobile/auth/login).
 ///
-/// Hiện tại dùng tài khoản cứng để test. Khi có API thật, chỉ cần thay
-/// phần bên trong [validate] (hoặc chuyển thành hàm async gọi server).
+/// Chỉ là dữ liệu, không còn tài khoản cứng: việc kiểm tra Admin Id + mật khẩu
+/// do server (Spring Boot) thực hiện.
 class AdminLogin {
-  // TODO: bỏ dữ liệu cứng khi nối API.
-  static const int _validAdminId = 2500021770;
-  static const String _validPassword = '1234';
+  const AdminLogin({
+    required this.adminId,
+    required this.password,
+    required this.deviceName,
+    required this.platform,
+  });
 
-  int? adminId;
-  String password;
+  final int adminId;
+  final String password;
+  final String deviceName;
+  final String platform;
 
-  AdminLogin({this.adminId, this.password= ''});
-
-  /// true khi Admin Id và mật khẩu đều đúng.
-  bool validate() {
-    return adminId == _validAdminId && password.trim() == _validPassword;
-  }
+  Map<String, dynamic> toJson() => {
+    'adminId': adminId,
+    'password': password,
+    'deviceName': deviceName,
+    'platform': platform,
+  };
 }

@@ -7,4 +7,4 @@ Tao 2 bang ghi redis cache luu jwt.
 1 ngay va 7 ngay.
 
 Delete all keys redis:
-redis-cli -p 6379 --user default -a 1234 -n 1 FLUSHDB
+redis-cli -p 6379 --user default -a 1234 -n 0 FLUSHDB

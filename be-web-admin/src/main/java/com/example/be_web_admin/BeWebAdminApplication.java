@@ -10,7 +10,7 @@ import org.springframework.data.redis.repository.configuration.EnableRedisReposi
 
 @SpringBootApplication
 @EnableJpaRepositories(basePackages = "com.example.be_web_admin.repository.jpa")
-@EnableRedisRepositories(basePackages = "com.example.be_web_admin.repository.cached")
+@EnableRedisRepositories(basePackages = "com.example.be_web_admin.repository.redis")
 @EntityScan(basePackages = "com.example.be_web_admin.model.jpa")
 public class BeWebAdminApplication {
 

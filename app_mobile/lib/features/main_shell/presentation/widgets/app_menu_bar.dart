@@ -1,23 +1,83 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../login/presentation/screens/login_screen.dart';
+import '../../../../core/storage/auth_storage.dart';
+import '../../../config/network/spring_config_header.dart';
+import 'logout_confirm_dialog.dart';
 
-class AppMenuBar extends StatelessWidget {
+class AppMenuBar extends StatefulWidget {
   const AppMenuBar({
     super.key,
-    this.adminName = 'Tu Quang Nhat',
+    this.adminName, // null (mặc định) -> tự lấy tên từ server theo adminId đã lưu
     this.subtitle, // vd: email hoặc "Admin Id: 123456", để null thì không hiện
   });
 
-  final String adminName;
+  final String? adminName;
   final String? subtitle;
 
+  @override
+  State<AppMenuBar> createState() => _AppMenuBarState();
+}
+
+class _AppMenuBarState extends State<AppMenuBar> {
   // Màu viền/đường kẻ trung tính (đồng bộ với viền ô nhập ở màn Login)
   static const Color _dividerColor = Color(0xFFEDEDED);
 
-  // Màu nút "Đăng xuất" trong popup xác nhận
-  static const Color _logoutColor = Color(0xFFC61F1F);
+  static const String _adminNamePath = '/admin/information/admin-name';
+  static const String _fallbackName = 'Administrator';
+
+  // null = đang tải: hiện khung xám thay vì một cái tên sai rồi đổi.
+  String? _adminName;
+
+  @override
+  void initState() {
+    super.initState();
+    final presetName = widget.adminName;
+    if (presetName != null) {
+      _adminName = presetName;
+    } else {
+      _loadAdminName();
+    }
+  }
+
+  /// Tên đã lưu lúc đăng nhập thì dùng luôn, KHÔNG gọi API.
+  /// Chỉ khi chưa có tên (phiên cũ lưu trước khi có tính năng này) mới gọi
+  /// GET /admin/information/admin-name một lần rồi lưu lại cho các lần sau.
+  Future<void> _loadAdminName() async {
+    final name = await _resolveAdminName();
+    if (!mounted) return;
+    setState(() => _adminName = name);
+  }
+
+  Future<String> _resolveAdminName() async {
+    try {
+      final authStorage = AuthStorage();
+      final session = AuthStorage.cachedSession ?? await authStorage.readSession();
+      if (session == null) return _fallbackName;
+
+      final storedName = session.adminName;
+      if (storedName != null && storedName.isNotEmpty) return storedName;
+
+      final fetchedName = await _fetchAdminName(session.adminId);
+      if (fetchedName == null) return _fallbackName; // lỗi: lần sau sẽ thử lại
+      await authStorage.saveAdminName(fetchedName);
+      return fetchedName;
+    } catch (_) {
+      return _fallbackName; // không để menu bị trống
+    }
+  }
+
+  /// Server trả chữ thuần. Trả null nếu lỗi mạng / server / tên rỗng.
+  Future<String?> _fetchAdminName(int adminId) async {
+    final response = await SpringConfigHeader().getApiClientNoHeaders().get<String>(
+      _adminNamePath,
+      queryParameters: {'adminId': adminId},
+      options: Options(responseType: ResponseType.plain),
+    );
+    final name = response.data?.trim();
+    return response.statusCode == 200 && name != null && name.isNotEmpty ? name : null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +107,7 @@ class AppMenuBar extends StatelessWidget {
                 children: [
                   _MenuItem(
                     icon: Icons.person_outline,
-                    label: 'Tài khoản',
+                    label: 'Account',
                     onTap: () {
                       Navigator.pop(context); // Đóng drawer
                       // TODO: Chuyển sang màn hình Tài khoản
@@ -55,7 +115,7 @@ class AppMenuBar extends StatelessWidget {
                   ),
                   _MenuItem(
                     icon: Icons.shield_outlined,
-                    label: 'Xác thực 6 số',
+                    label: '2-Step Verification',
                     onTap: () {
                       Navigator.pop(context); // Đóng drawer
                       // TODO: Chuyển sang màn hình Xác thực 6 số
@@ -63,7 +123,7 @@ class AppMenuBar extends StatelessWidget {
                   ),
                   _MenuItem(
                     icon: Icons.settings_outlined,
-                    label: 'Cài đặt',
+                    label: 'Settings',
                     onTap: () {
                       Navigator.pop(context); // Đóng drawer
                       // TODO: Chuyển sang màn hình Cài đặt
@@ -90,7 +150,7 @@ class AppMenuBar extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () => _onLogout(context),
                   //icon: const Icon(Icons.logout_outlined, size: 20),
-                  label: const Text('Đăng xuất'),
+                  label: const Text('Log out'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryRed,
                     foregroundColor: Colors.white, // áp dụng cho cả icon và text
@@ -128,19 +188,11 @@ class AppMenuBar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  adminName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (subtitle != null) ...[
+                _buildNameText(),
+                if (widget.subtitle != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    subtitle!,
+                    widget.subtitle!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13, color: Colors.grey),
@@ -154,126 +206,43 @@ class AppMenuBar extends StatelessWidget {
     );
   }
 
-  // Đăng xuất là thao tác "phá hủy phiên" -> luôn hỏi xác nhận trước khi thực hiện
-  // Đăng xuất là thao tác "phá hủy phiên" -> luôn hỏi xác nhận trước khi thực hiện
+  // Đang tải: khung xám cùng chiều cao chữ (menu không bị giật). Xong: tên admin.
+  Widget _buildNameText() {
+    final name = _adminName;
+    if (name == null) {
+      return Container(
+        width: 140,
+        height: 16,
+        decoration: BoxDecoration(
+          color: _dividerColor,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      );
+    }
+    return Text(
+      name,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    );
+  }
+
+  // Đăng xuất là thao tác "phá hủy phiên" -> luôn hỏi xác nhận trước khi thực hiện.
+  // Popup tự gọi API đăng xuất và chỉ trả về true khi server xác nhận thành công.
   Future<void> _onLogout(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final loggedOut = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => _buildLogoutDialog(dialogContext),
+      builder: (_) => const LogoutConfirmDialog(),
     );
 
-    // Bấm Hủy hoặc chạm ra ngoài -> giữ nguyên drawer đang mở
-    if (confirmed != true || !context.mounted) return;
-
-    // TODO: Gọi API đăng xuất / xóa Token, SharedPreferences ở đây
-    // Ví dụ: await AuthService.logout();
-    // Có await ở trên thì phải kiểm tra lại: if (!context.mounted) return;
+    // Bấm Cancel, chạm ra ngoài hoặc đăng xuất thất bại -> giữ nguyên drawer đang mở
+    if (loggedOut != true || !context.mounted) return;
 
     // rootNavigator: true -> dùng Navigator GỐC của MaterialApp (không phải
     // Navigator lồng trong TabBarApp), nên xóa sạch stack gồm cả route '/home'
     // chứa TabBarApp. Sau đó chỉ còn LoginScreen, không còn thanh Tab.
     Navigator.of(context, rootNavigator: true)
         .pushNamedAndRemoveUntil('/login', (route) => false);
-  }
-
-  // Popup xác nhận đăng xuất: mọi thứ căn giữa, 2 nút ngang hàng, cùng chiều rộng
-  Widget _buildLogoutDialog(BuildContext dialogContext) {
-    return Dialog(
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icon tròn nền đỏ nhạt (xóa khối này nếu không muốn hiển thị icon)
-            Container(
-              width: 60,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFCE9E9),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: _logoutColor,
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Xác nhận đăng xuất',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Bạn có chắc chắn đăng xuất không?',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                height: 1.4,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                // Nút Hủy: nền trắng, viền xám đậm, chữ đen -> nhìn rõ trên nền trắng
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(dialogContext, false),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                      foregroundColor: Colors.black87,
-                      side: const BorderSide(
-                        color: Color(0xFFBDBDBD),
-                        width: 1.2,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    child: const Text('Hủy'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Nút Đăng xuất: nền đỏ 0xFFC61F1F, chữ trắng
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(dialogContext, true),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                      backgroundColor: _logoutColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    child: const Text('Đăng xuất'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

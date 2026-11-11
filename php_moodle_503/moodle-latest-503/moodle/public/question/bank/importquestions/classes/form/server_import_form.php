@@ -167,7 +167,7 @@ class server_import_form extends moodleform
 
         $radioarray[] = $mform->createElement('static', 'servermakelasthelpiconshowup', '');
         $mform->addGroup($radioarray, 'serverformatchoices', '', $separators, false);
-        $mform->addRule('serverformatchoices', null, 'required', null, 'client');
+        // $mform->addRule('serverformatchoices', null, 'required', null, 'client');
         if (isset($formatnames['gift'])) {
             $mform->setDefault('serverformat', 'gift');
         }
