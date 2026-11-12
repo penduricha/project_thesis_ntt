@@ -1,4 +1,4 @@
-import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
+import AdminStorage from "@/local_storage/AdminStorage.js";
 import RouterMgmt from "@/router/RouterMgmt.js";
 import {AdminAccount} from "@/model/AdminAccount.js";
 import {TokenLogin} from "@/model/TokenLogin.js";
@@ -18,7 +18,7 @@ export default class AdminRepository {
     constructor(
         adminService = new AdminService(),
         loginService = new LoginService(),
-        adminLocalStorage = new AdminLocalStorage(),
+        adminLocalStorage = new AdminStorage(),
     ) {
         this.adminService = adminService;
         this.loginService = loginService;

@@ -1,7 +1,7 @@
 package com.example.be_web_admin.controller.web;
 
 import com.example.be_web_admin.dto.AdminLoginDTO;
-import com.example.be_web_admin.security.jwt.user.AdminJwtToken;
+import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,17 +15,17 @@ import java.util.Map;
 @RestController
 @RequestMapping("/web/admin")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
-public class AdminControllerMgmt {
+public class AdminControllerMgmtWeb {
 
     private final AdminServiceImpl adminService;
 
     private final AdminTokenServiceImpl adminTokenService;
 
     @Autowired
-    private AdminJwtToken adminJwtToken;
+    private AdminJwtTokenProvider adminJwtTokenProvider;
 
 
-    public AdminControllerMgmt(AdminServiceImpl adminService, AdminTokenServiceImpl adminTokenService) {
+    public AdminControllerMgmtWeb(AdminServiceImpl adminService, AdminTokenServiceImpl adminTokenService) {
         this.adminService = adminService;
         this.adminTokenService = adminTokenService;
     }
@@ -121,7 +121,7 @@ public class AdminControllerMgmt {
         String jwtToken = authHeader.substring(7);
 
         // 3. Verify chữ ký & hạn sử dụng JWT Token
-        if (!adminJwtToken.validateToken(jwtToken)) {
+        if (!adminJwtTokenProvider.validateToken(jwtToken)) {
             Map<String, Object> responseInvalid = new HashMap<>();
             responseInvalid.put("success", false);
             responseInvalid.put("message", "Token is invalid or expired.");
@@ -141,7 +141,7 @@ public class AdminControllerMgmt {
         }
 
         // 5. Trích xuất adminId từ Token hợp lệ
-        Long adminId = adminJwtToken.getAdminIdFromToken(jwtToken);
+        Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
 
         // 6. Trả về Response thành công (HTTP 200 OK)
         Map<String, Object> responseSuccess = new HashMap<>();
@@ -169,7 +169,7 @@ public class AdminControllerMgmt {
         String jwtToken = authHeader.substring(7);
 
         // 3. Verify chữ ký & hạn sử dụng JWT Token
-        if (!adminJwtToken.validateToken(jwtToken)) {
+        if (!adminJwtTokenProvider.validateToken(jwtToken)) {
             Map<String, Object> responseInvalid = new HashMap<>();
             responseInvalid.put("success", false);
             responseInvalid.put("message", "Token is invalid or expired.");
@@ -189,7 +189,7 @@ public class AdminControllerMgmt {
         }
 
         // 5. Trích xuất adminId từ Token hợp lệ
-        Long adminId = adminJwtToken.getAdminIdFromToken(jwtToken);
+        Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
 
         // 6. Trả về Response thành công (HTTP 200 OK)
         Map<String, Object> responseSuccess = new HashMap<>();
@@ -204,5 +204,39 @@ public class AdminControllerMgmt {
             }
         }
         return ResponseEntity.ok(responseSuccess);
+    }
+
+    @GetMapping ("/information/basic")
+    //@RequestHeader(value = "Authorization", required = false) String authHeader
+    public ResponseEntity<?> getAdminInformationBasic(@RequestParam Long adminId) throws RuntimeException {
+        Map<String, Object> responseHttp = new HashMap<>();
+        Map<String, Object> responseData = adminService.getAdminInfo(adminId);
+
+        responseHttp.put("status", HttpStatus.OK.value());
+
+        if(responseData.isEmpty()) {
+            responseHttp.put("message", "Admin not found.");
+        } else {
+            responseHttp.put("message", "Admin found successfully.");
+        }
+        responseHttp.put("data", responseData);
+        return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
+    }
+
+    @GetMapping ("/information/detail")
+    //@RequestHeader(value = "Authorization", required = false) String authHeader
+    public ResponseEntity<?> getAdminInformationDetail(@RequestParam Long adminId) throws RuntimeException {
+        Map<String, Object> responseHttp = new HashMap<>();
+        Map<String, Object> responseData = adminService.getAdminDetailInformation(adminId);
+
+        responseHttp.put("status", HttpStatus.OK.value());
+
+        if(responseData.isEmpty()) {
+            responseHttp.put("message", "Admin not found.");
+        } else {
+            responseHttp.put("message", "Admin found successfully.");
+        }
+        responseHttp.put("data", responseData);
+        return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
     }
 }

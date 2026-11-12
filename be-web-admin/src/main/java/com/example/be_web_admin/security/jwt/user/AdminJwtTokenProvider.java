@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
-public class AdminJwtToken {
+public class AdminJwtTokenProvider {
 
     // Khóa bí mật (Tối thiểu 32 ký tự / 256-bit cho HS256)
     // Lưu ý: Trong thực tế nên đưa chuỗi này vào file application.properties/yml

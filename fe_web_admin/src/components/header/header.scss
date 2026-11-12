@@ -4,6 +4,8 @@
 //  (cùng mốc breakpoint với information-page / not-found-page / footer)
 //
 //  LƯU Ý: file này thay thế HOÀN TOÀN CSS cũ của header.
+//  Style gắn vào class .site-header (không còn dùng selector `header`
+//  trần, tránh vô tình ảnh hưởng các thẻ <header> khác trong web).
 // =========================================================
 
 $bp-tablet: 768px;
@@ -15,6 +17,7 @@ $header-pad-y: 0.5rem;
 $logo-h-mobile: 2.75rem; // 44px -> header 3.75rem
 $logo-h-tablet: 3.5rem; //  56px -> header 4.5rem
 $logo-h-desktop: 4.5rem; //  72px -> header 5.5rem
+$logo-h-landscape: 2.25rem; // 36px -> điện thoại xoay ngang, màn hình rất thấp
 
 @mixin breakpoint-up($width) {
   @media only screen and (min-width: $width) {
@@ -22,37 +25,80 @@ $logo-h-desktop: 4.5rem; //  72px -> header 5.5rem
   }
 }
 
-header {
+// Điện thoại xoay ngang: chiều cao thấp, thu nhỏ header để nhường chỗ cho nội dung
+@mixin landscape-short {
+  @media only screen and (max-height: 500px) and (orientation: landscape) {
+    @content;
+  }
+}
+
+.site-header {
   width: 100%;
   min-height: $logo-h-mobile + 2 * $header-pad-y;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: $header-pad-y 1rem; // lề ngang để logo không dính mép màn hình
+  // Lề ngang dùng biến chung --page-padding-x (12px / 16px / 32px tuỳ thiết bị),
+  // luôn thẳng hàng với lề nội dung các trang.
+  padding: $header-pad-y var(--page-padding-x, 1rem);
   background-color: var(--blue-color, #0b4d8a);
-
-  // Mobile nhỏ (iPhone SE, Android màn nhỏ)
-  @media only screen and (max-width: 360px) {
-    padding-inline: 0.75rem;
-  }
 
   @include breakpoint-up($bp-tablet) {
     min-height: $logo-h-tablet + 2 * $header-pad-y;
-    padding-inline: 2rem;
   }
 
   @include breakpoint-up($bp-desktop) {
     min-height: $logo-h-desktop + 2 * $header-pad-y;
   }
+
+  // Đặt SAU các breakpoint để thắng khi điện thoại xoay ngang (chiều rộng vẫn >= 768px)
+  @include landscape-short {
+    min-height: $logo-h-landscape + 2 * $header-pad-y;
+  }
+}
+
+// Khung bao quanh logo (là <a> ở trang trong, là <div> ở trang đăng nhập)
+.logo-link {
+  display: flex; // bỏ khe hở nhỏ dưới ảnh do ảnh mặc định là inline
+  min-width: 0; // cho phép co lại trên màn hình rất hẹp
+  max-width: 100%;
+  border-radius: var(--radius-md, 4px);
+  text-decoration: none;
+}
+
+// Chỉ khi logo là link (trang trong)
+a.logo-link {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:active {
+    opacity: 0.85; // phản hồi khi chạm trên điện thoại
+  }
+
+  // Viền focus chung của web màu xanh -> chìm vào nền header xanh.
+  // Đổi sang trắng để người dùng bàn phím (Tab) nhìn thấy.
+  &:focus-visible {
+    outline: 2px solid var(--white-text, #fff);
+    outline-offset: 3px;
+  }
+
+  // Chỉ hover trên thiết bị có chuột (tránh bị "kẹt" hover trên cảm ứng)
+  @media (hover: hover) {
+    &:hover {
+      opacity: 0.9;
+    }
+  }
 }
 
 .image-banner-ntt {
-  display: block; // bỏ khe hở nhỏ dưới ảnh do ảnh mặc định là inline
+  display: block;
   width: auto;
   max-width: 100%; // màn hình quá hẹp thì ảnh co lại, không tràn ngang
   height: $logo-h-mobile;
   object-fit: contain;
+  border-radius: var(--radius-md, 4px); // bo nhẹ nền trắng của ảnh cho hợp với các card bên dưới
+  user-select: none;
 
   @include breakpoint-up($bp-tablet) {
     height: $logo-h-tablet;
@@ -60,5 +106,16 @@ header {
 
   @include breakpoint-up($bp-desktop) {
     height: $logo-h-desktop;
+  }
+
+  @include landscape-short {
+    height: $logo-h-landscape;
+  }
+}
+
+// Người dùng tắt hiệu ứng chuyển động
+@media (prefers-reduced-motion: reduce) {
+  a.logo-link {
+    transition: none;
   }
 }

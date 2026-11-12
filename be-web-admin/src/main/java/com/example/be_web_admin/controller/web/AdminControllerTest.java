@@ -16,11 +16,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/web/admin")
 //@ResponseBody
-public class AdminController {
+public class AdminControllerTest {
 
     private final AdminServiceImpl adminServiceImpl;
 
-    public AdminController(AdminServiceImpl adminServiceImpl) {
+    public AdminControllerTest(AdminServiceImpl adminServiceImpl) {
         this.adminServiceImpl = adminServiceImpl;
     }
 
@@ -90,45 +90,13 @@ public class AdminController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
-    @GetMapping ("/information/basic")
-    //@RequestHeader(value = "Authorization", required = false) String authHeader
-    public ResponseEntity<?> getAdminInformationBasic(@RequestParam Long adminId) throws RuntimeException {
-        Map<String, Object> responseHttp = new HashMap<>();
-        Map<String, Object> responseData = adminServiceImpl.getAdminInfo(adminId);
 
-        responseHttp.put("status", HttpStatus.OK.value());
 
-        if(responseData.isEmpty()) {
-            responseHttp.put("message", "Admin not found.");
-        } else {
-            responseHttp.put("message", "Admin found successfully.");
-        }
-        responseHttp.put("data", responseData);
-        return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
-    }
-
-    @GetMapping ("/information/detail")
-    //@RequestHeader(value = "Authorization", required = false) String authHeader
-    public ResponseEntity<?> getAdminInformationDetail(@RequestParam Long adminId) throws RuntimeException {
-        Map<String, Object> responseHttp = new HashMap<>();
-        Map<String, Object> responseData = adminServiceImpl.getAdminDetailInformation(adminId);
-
-        responseHttp.put("status", HttpStatus.OK.value());
-
-        if(responseData.isEmpty()) {
-            responseHttp.put("message", "Admin not found.");
-        } else {
-            responseHttp.put("message", "Admin found successfully.");
-        }
-        responseHttp.put("data", responseData);
-        return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
-    }
-
-    @GetMapping ("/information/admin-name")
-    //@RequestHeader(value = "Authorization", required = false) String authHeader
-    public ResponseEntity<?> getAdminName(@RequestParam Long adminId) throws RuntimeException {
-        return ResponseEntity.status(HttpStatus.OK).body(adminServiceImpl.getAdminNameByAdminId(adminId));
-    }
+//    @GetMapping ("/information/admin-name")
+//    //@RequestHeader(value = "Authorization", required = false) String authHeader
+//    public ResponseEntity<?> getAdminName(@RequestParam Long adminId) throws RuntimeException {
+//        return ResponseEntity.status(HttpStatus.OK).body(adminServiceImpl.getAdminNameByAdminId(adminId));
+//    }
 
     @GetMapping ("/all")
     //@RequestHeader(value = "Authorization", required = false) String authHeader

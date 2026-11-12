@@ -1,7 +1,7 @@
 package com.example.be_web_admin.controller.mobile;
 
 import com.example.be_web_admin.model.redis.SessionLoginMobile;
-import com.example.be_web_admin.security.jwt.user.AdminJwtToken;
+import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
 import com.example.be_web_admin.service.redis.SessionLoginMobileService;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
@@ -27,16 +27,16 @@ public class AdminControllerMgmtMobile {
 
     private final SessionLoginMobileService sessionLoginMobileService;
 
-    private final AdminJwtToken adminJwtToken;
+    private final AdminJwtTokenProvider adminJwtTokenProvider;
 
     public AdminControllerMgmtMobile(AdminServiceImpl adminService,
                                      AdminTokenServiceImpl adminTokenService,
                                      SessionLoginMobileService sessionLoginMobileService,
-                                     AdminJwtToken adminJwtToken) {
+                                     AdminJwtTokenProvider adminJwtTokenProvider) {
         this.adminService = adminService;
         this.adminTokenService = adminTokenService;
         this.sessionLoginMobileService = sessionLoginMobileService;
-        this.adminJwtToken = adminJwtToken;
+        this.adminJwtTokenProvider = adminJwtTokenProvider;
     }
 
     // ===================== LOGIN =====================
@@ -154,7 +154,7 @@ public class AdminControllerMgmtMobile {
         String jwtToken = authHeader.substring(7);
 
         // 3. Verify chữ ký & hạn sử dụng JWT Token
-        if (!adminJwtToken.validateToken(jwtToken)) {
+        if (!adminJwtTokenProvider.validateToken(jwtToken)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(errorBody("Token is invalid or expired."));
         }
@@ -166,7 +166,7 @@ public class AdminControllerMgmtMobile {
         }
 
         // 5. Trích xuất adminId từ Token hợp lệ
-        Long adminId = adminJwtToken.getAdminIdFromToken(jwtToken);
+        Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
 
         // 6. Phải còn phiên đăng nhập mobile
         if (!sessionLoginMobileService.existsByAdminId(adminId)) {
@@ -199,7 +199,7 @@ public class AdminControllerMgmtMobile {
         String jwtToken = authHeader.substring(7);
 
         // 3. Verify chữ ký & hạn sử dụng JWT Token
-        if (!adminJwtToken.validateToken(jwtToken)) {
+        if (!adminJwtTokenProvider.validateToken(jwtToken)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(errorBody("Token is invalid or expired."));
         }
@@ -211,7 +211,7 @@ public class AdminControllerMgmtMobile {
         }
 
         // 5. Trích xuất adminId từ Token hợp lệ
-        Long adminId = adminJwtToken.getAdminIdFromToken(jwtToken);
+        Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
 
         // 6. Phải còn phiên đăng nhập mobile
         if (!sessionLoginMobileService.existsByAdminId(adminId)) {
@@ -299,8 +299,8 @@ public class AdminControllerMgmtMobile {
         for (String jwtToken : jwtTokens) {
             if (jwtToken == null) continue;
             try {
-                if (adminJwtToken.validateToken(jwtToken)) {
-                    return adminJwtToken.getAdminIdFromToken(jwtToken);
+                if (adminJwtTokenProvider.validateToken(jwtToken)) {
+                    return adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
                 }
             } catch (Exception e) {
                 log.warn("Can't read adminId from token: {}", e.getMessage());

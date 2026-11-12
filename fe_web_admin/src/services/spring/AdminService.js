@@ -1,7 +1,7 @@
 import {AdminAccount} from "@/model/AdminAccount.js";
 import {TokenLogin} from "@/model/TokenLogin.js";
 import SpringConfigHeader from "@/services/spring/SpringConfigHeader.js";
-import AdminLocalStorage from "@/local_storage/AdminLocalStorage.js";
+import AdminStorage from "@/local_storage/AdminStorage.js";
 
 const ENDPOINTS = Object.freeze({
     LOGIN: '/admin/auth/login',
@@ -24,7 +24,7 @@ function assertInstanceOf(value, expectedClass, label) {
 export class AdminService {
     constructor(
         springConfigHeader = new SpringConfigHeader(),
-        adminLocalStorage = new AdminLocalStorage(),
+        adminLocalStorage = new AdminStorage(),
     ) {
         this.springConfigHeader = springConfigHeader;
         this.adminLocalStorage = adminLocalStorage;

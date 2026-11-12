@@ -1,4 +1,4 @@
-export default class AdminLocalStorage {
+export default class AdminStorage {
     // Định nghĩa các key cố định dưới dạng static readonly (hoặc hằng số)
     static STORAGE_KEYS = {
         ADMIN_ID: 'adminIdLocalStorage',
@@ -14,7 +14,7 @@ export default class AdminLocalStorage {
     //         console.error('Admin object is empty.');
     //         return;
     //     }
-    //     localStorage.setItem(AdminLocalStorage.STORAGE_KEYS.ADMIN, JSON.stringify(admin));
+    //     localStorage.setItem(AdminStorage.STORAGE_KEYS.ADMIN, JSON.stringify(admin));
     // }
     /**
      * Lưu thông tin Remember Me (adminId & password)
@@ -28,7 +28,7 @@ export default class AdminLocalStorage {
         }
         const credentials = { adminId, password };
         localStorage.setItem(
-            AdminLocalStorage.STORAGE_KEYS.REMEMBER_LOGIN,
+            AdminStorage.STORAGE_KEYS.REMEMBER_LOGIN,
             JSON.stringify(credentials)
         );
     }
@@ -38,7 +38,7 @@ export default class AdminLocalStorage {
      * @returns {Object}
      */
     getLocalStorageRememberMe() {
-        const data = localStorage.getItem(AdminLocalStorage.STORAGE_KEYS.REMEMBER_LOGIN);
+        const data = localStorage.getItem(AdminStorage.STORAGE_KEYS.REMEMBER_LOGIN);
         return data ? JSON.parse(data) : {};
     }
 
@@ -46,7 +46,7 @@ export default class AdminLocalStorage {
      * Xóa thông tin Remember Me
      */
     removeLocalStorageRememberMe() {
-        const key = AdminLocalStorage.STORAGE_KEYS.REMEMBER_LOGIN;
+        const key = AdminStorage.STORAGE_KEYS.REMEMBER_LOGIN;
         if (localStorage.getItem(key)) {
             localStorage.removeItem(key);
         }
@@ -61,18 +61,18 @@ export default class AdminLocalStorage {
             console.error('Admin ID is empty.');
             return;
         }
-        localStorage.setItem(AdminLocalStorage.STORAGE_KEYS.ADMIN_ID, adminId);
+        localStorage.setItem(AdminStorage.STORAGE_KEYS.ADMIN_ID, adminId);
     }
 
     getAdminIdToLocalStorage() {
-        return localStorage.getItem(AdminLocalStorage.STORAGE_KEYS.ADMIN_ID);
+        return localStorage.getItem(AdminStorage.STORAGE_KEYS.ADMIN_ID);
     }
 
     /**
      * Xóa riêng adminId khỏi localStorage
      */
     removeAdminIdFromLocalStorage() {
-        const key = AdminLocalStorage.STORAGE_KEYS.ADMIN_ID;
+        const key = AdminStorage.STORAGE_KEYS.ADMIN_ID;
         if (localStorage.getItem(key)) {
             localStorage.removeItem(key);
         } else {

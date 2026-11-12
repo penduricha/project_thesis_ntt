@@ -213,7 +213,7 @@ $bp-desktop: 1024px;
 // ---------- Khối 2FA ----------
 // Chưa bật = khối cảnh báo nổi bật | Đã bật = khối xanh nhẹ.
 // Trạng thái có icon + chữ, không chỉ dựa vào màu.
-.twofa {
+.two_fa {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -239,7 +239,7 @@ $bp-desktop: 1024px;
   }
 }
 
-.twofa__main {
+.two_fa__main {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -247,7 +247,7 @@ $bp-desktop: 1024px;
   gap: var(--space-2);
 }
 
-.twofa__icon {
+.two_fa__icon {
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -262,16 +262,16 @@ $bp-desktop: 1024px;
     height: 1.5rem;
   }
 
-  .twofa--off & {
+  .two_fa--off & {
     color: var(--danger-strong);
   }
 
-  .twofa--on & {
+  .two_fa--on & {
     color: var(--success-strong);
   }
 }
 
-.twofa__content {
+.two_fa__content {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -279,7 +279,7 @@ $bp-desktop: 1024px;
   gap: 0.25rem;
 }
 
-.twofa__status {
+.two_fa__status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -290,14 +290,14 @@ $bp-desktop: 1024px;
   line-height: 1.5;
 }
 
-.twofa__desc {
+.two_fa__desc {
   margin: 0;
   color: var(--text-muted);
   line-height: 1.5;
 }
 
 // Nút kích hoạt: chỉ chỉnh KÍCH THƯỚC, màu/hover/disabled do ButtonBlue quản lý
-.twofa .style-btn-activate {
+.two_fa .style-btn-activate {
   box-sizing: border-box;
   flex: none;
   width: 100%; // mobile: full-width, dễ bấm bằng ngón cái

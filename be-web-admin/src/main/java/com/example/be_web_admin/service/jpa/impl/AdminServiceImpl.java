@@ -5,7 +5,7 @@ import com.example.be_web_admin.model.redis.AdminRefreshToken;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.Course;
 import com.example.be_web_admin.repository.jpa.CourseRepository;
-import com.example.be_web_admin.security.jwt.user.AdminJwtToken;
+import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 
 
 import com.example.be_web_admin.repository.jpa.AdminRepository;
@@ -44,7 +44,7 @@ public class AdminServiceImpl implements AdminService {
     private final AdminTokenServiceImpl adminTokenService;
 
     @Autowired
-    private AdminJwtToken adminJwtToken;
+    private AdminJwtTokenProvider adminJwtTokenProvider;
 
 //    @Autowired
 //    private RedisTemplate<String, String> redisTemplate;
@@ -95,8 +95,8 @@ public class AdminServiceImpl implements AdminService {
         // 3. Tạo cặp JWT Token RIÊNG BIỆT (Access Token & Refresh Token)
         // - Access Token (5 phút): Dùng để xác thực request thông thường.
         // - Refresh Token (30 ngày): Dùng để xin cấp lại Access Token mới.
-        String accessToken = adminJwtToken.generateAccessToken(adminFound.getAdminId());
-        String refreshToken = adminJwtToken.generateRefreshToken(adminFound.getAdminId());
+        String accessToken = adminJwtTokenProvider.generateAccessToken(adminFound.getAdminId());
+        String refreshToken = adminJwtTokenProvider.generateRefreshToken(adminFound.getAdminId());
 
         LocalDateTime now = LocalDateTime.now();
 

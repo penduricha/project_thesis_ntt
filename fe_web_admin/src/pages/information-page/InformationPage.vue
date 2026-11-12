@@ -1,13 +1,14 @@
 <script>
 import './information-page.scss';
 import './event-text-2fa.scss';
+import './two-fa-pending.scss';
 import RouterMgmt from "@/router/RouterMgmt.js";
 import Header from "../../components/header/Header.vue";
 import Footer from "../../components/footer/Footer.vue";
 
-import './card-account-nav/card-account.scss';
+import '@/pages/information-page/card-account/card-account.scss';
 import '@/assets/style/theme-color.scss';
-import CardAccount from "@/pages/information-page/card-account-nav/CardAccount.vue";
+import CardAccount from "@/pages/information-page/card-account/CardAccount.vue";
 import AdminRepository from "@/repository/AdminRepository.js";
 import TextRed from "@/components/span/TextRed.vue";
 import TextGreen from "@/components/span/TextGreen.vue";
@@ -33,6 +34,41 @@ const PAGE_TITLE = 'Thông tin quản trị';
 // Tự ẩn lại CCCD sau 30 giây để tránh để lộ khi quên che màn hình
 const ID_CARD_AUTO_HIDE_MS = 30000;
 
+// ===== Trạng thái 2FA: chuỗi khớp 1-1 với giá trị backend trả về (GET /web/admin/2fa/status) =====
+//  NOT_ENABLED: chưa có credential, hoặc credential chờ xác nhận đã quá hạn
+//  PENDING:     đã bấm "Kích hoạt" trên web, mobile CHƯA xác nhận (totp_enabled = false)
+//  ENABLED:     mobile đã xác nhận mã đầu tiên (totp_enabled = true)
+const TWO_FA_STATUS = Object.freeze({
+  NOT_ENABLED: 'NOT_ENABLED',
+  PENDING: 'PENDING',
+  ENABLED: 'ENABLED',
+});
+
+// Mọi thứ phụ thuộc trạng thái gom vào một chỗ để template không phải rải ternary.
+const TWO_FA_VIEW = Object.freeze({
+  [TWO_FA_STATUS.NOT_ENABLED]: {
+    stateClass: 'two_fa--off',
+    badgeClass: 'ui-badge--danger',
+    badgeText: 'Chưa kích hoạt',
+    desc: 'Tài khoản quản trị có quyền truy cập dữ liệu nhạy cảm. Bật xác thực hai yếu tố để chặn truy cập trái phép ngay cả khi mật khẩu bị lộ.',
+  },
+  [TWO_FA_STATUS.PENDING]: {
+    stateClass: 'two_fa--pending',
+    badgeClass: 'ui-badge--warning',
+    badgeText: 'Đang chờ xác nhận',
+    desc: 'Khóa bí mật đã được tạo. Hãy dán khóa vào ứng dụng Authenticator trên điện thoại và xác nhận kích hoạt trong ứng dụng để hoàn tất.',
+  },
+  [TWO_FA_STATUS.ENABLED]: {
+    stateClass: 'two_fa--on',
+    badgeClass: 'ui-badge--success',
+    badgeText: 'Đã kích hoạt',
+    desc: 'Tài khoản của bạn đang được bảo vệ bằng mã xác thực từ thiết bị.',
+  },
+});
+
+// Khi đang chờ xác nhận: cứ mỗi N giây hỏi lại server để tự chuyển sang "Đã kích hoạt".
+const PENDING_POLL_SECONDS = 5;
+
 export default {
   name: "InformationPage",
 
@@ -40,7 +76,7 @@ export default {
     ButtonBlue,
     TextGreen,
     TextRed,
-    CardAccountNav: CardAccount,
+    CardAccount,
     Header,
     Footer,
     ModalActivate2FA,
@@ -64,8 +100,17 @@ export default {
       major: null,
       yearOpening: null,
 
-      // btn activate
-      is2faEnabled: false,
+      // 2FA
+      // 2FA
+      twoFaStatus: 'PENDING',          // đổi từ null sang 'PENDING'
+      pendingRemainingSeconds: 600,    // 600 giây = hiện "Còn 10:00"
+      //twoFaStatus: null,             // null = đang tải; còn lại là một giá trị của TWO_FA_STATUS
+      //pendingRemainingSeconds: 0,    // thời gian còn lại của trạng thái chờ (server gửi, FE đếm ngược)
+      isResettingPending: false,     // đang gọi API "Hủy và cài lại"
+      twoFaActionError: null,        // lỗi hiển thị dưới mô tả khi hủy thất bại
+      twoFaTimer: null,              // setInterval 1 giây (đếm ngược + poll)
+      twoFaTickCount: 0,
+      twoFaFetchSeq: 0,              // bỏ qua phản hồi cũ khi có nhiều request chồng nhau
 
       // Vòng đời
       previousTitle: null,  // tiêu đề tab trước khi vào trang, để khôi phục khi rời
@@ -87,9 +132,34 @@ export default {
       return TYPE_OF_TRAINING_LABELS[this.typeOfTraining] || this.typeOfTraining || '—';
     },
 
-    twoFAStateClass() {
-      return this.is2faEnabled ? 'twofa--on' : 'twofa--off';
-    }
+    // ----- 2FA -----
+    twoFaView() {
+      return TWO_FA_VIEW[this.twoFaStatus] || null;
+    },
+
+    isTwoFaLoading() {
+      return this.twoFaStatus === null;
+    },
+
+    isTwoFaNotEnabled() {
+      return this.twoFaStatus === TWO_FA_STATUS.NOT_ENABLED;
+    },
+
+    isTwoFaPending() {
+      return this.twoFaStatus === TWO_FA_STATUS.PENDING;
+    },
+
+    isTwoFaEnabled() {
+      return this.twoFaStatus === TWO_FA_STATUS.ENABLED;
+    },
+
+    // 600 giây -> "10:00"
+    pendingCountdownLabel() {
+      const total = Math.max(0, this.pendingRemainingSeconds);
+      const minutes = String(Math.floor(total / 60)).padStart(2, '0');
+      const seconds = String(total % 60).padStart(2, '0');
+      return `${minutes}:${seconds}`;
+    },
   },
 
   // ================= LIFECYCLE (theo đúng thứ tự chạy) =================
@@ -103,9 +173,13 @@ export default {
 
   // 2. mounted: DOM đã render xong.
   //    Làm việc chạm vào DOM (document.title) rồi gọi API lấy dữ liệu.
+  //    Hai API độc lập nên gọi song song.
   async mounted() {
     this.setTitlePage();
-    await this.fetchDataAdminInformationDetail();
+    await Promise.all([
+      this.fetchDataAdminInformationDetail(),
+      this.fetchTwoFaStatus(),
+    ]);
   },
 
   // 3. beforeUnmount: instance còn nguyên vẹn -> dọn dẹp mọi thứ đã tạo ở trên.
@@ -114,6 +188,9 @@ export default {
     // Hủy timer tự ẩn CCCD
     clearTimeout(this.idCardTimer);
     this.idCardTimer = null;
+
+    // Hủy timer đếm ngược / poll trạng thái 2FA
+    this.stopTwoFaTimer();
 
     // Xóa số CCCD khỏi bộ nhớ component khi rời trang
     this.isIdCardVisible = false;
@@ -173,6 +250,104 @@ export default {
         console.error('Error to fetch admin information detail:', error);
       }
     },
+
+    // ================= 2FA =================
+
+    // Hỏi server trạng thái hiện tại. Server là nguồn sự thật: tải lại trang vẫn đúng.
+    // Kỳ vọng AdminRepository.getTwoFaStatus() trả về { status, pendingExpiresInSeconds }.
+    async fetchTwoFaStatus() {
+      const seq = ++this.twoFaFetchSeq;
+      try {
+        const adminRepository = new AdminRepository();
+        const result = await adminRepository.getTwoFaStatus();
+
+        // Rời trang, hoặc đã có request mới hơn: bỏ phản hồi này
+        if (this.isUnmounted || seq !== this.twoFaFetchSeq) return;
+        this.applyTwoFaStatus(result);
+      } catch (error) {
+        console.error('Error to fetch 2FA status:', error);
+        if (this.isUnmounted || seq !== this.twoFaFetchSeq) return;
+        // Lần tải đầu mà lỗi: coi như chưa bật (nút Kích hoạt vẫn dùng được, server sẽ kiểm tra lại).
+        // Đang poll mà lỗi mạng thoáng qua: giữ nguyên trạng thái đang hiển thị.
+        if (this.twoFaStatus === null) {
+          this.twoFaStatus = TWO_FA_STATUS.NOT_ENABLED;
+        }
+      }
+    },
+
+    applyTwoFaStatus(result) {
+      const status = result?.status;
+      this.twoFaStatus = Object.values(TWO_FA_STATUS).includes(status)
+          ? status
+          : TWO_FA_STATUS.NOT_ENABLED;
+
+      const expiresIn = Number(result?.pendingExpiresInSeconds);
+      this.pendingRemainingSeconds = expiresIn > 0 ? Math.floor(expiresIn) : 0;
+
+      this.syncTwoFaTimer();
+    },
+
+    // Chỉ chạy timer khi đang PENDING; các trạng thái khác thì dừng.
+    syncTwoFaTimer() {
+      if (this.isTwoFaPending) {
+        if (!this.twoFaTimer) {
+          this.twoFaTickCount = 0;
+          this.twoFaTimer = setInterval(this.onTwoFaTick, 1000);
+        }
+      } else {
+        this.stopTwoFaTimer();
+      }
+    },
+
+    stopTwoFaTimer() {
+      clearInterval(this.twoFaTimer);
+      this.twoFaTimer = null;
+      this.twoFaTickCount = 0;
+    },
+
+    onTwoFaTick() {
+      const wasCounting = this.pendingRemainingSeconds > 0;
+      if (wasCounting) this.pendingRemainingSeconds -= 1;
+      this.twoFaTickCount += 1;
+
+      const justExpired = wasCounting && this.pendingRemainingSeconds === 0;
+      const isPollTurn = this.twoFaTickCount % PENDING_POLL_SECONDS === 0;
+
+      // Hết hạn: hỏi ngay để chuyển về "Chưa kích hoạt".
+      // Đến lượt poll: chỉ hỏi khi tab đang hiện, tránh gọi API vô ích ở tab nền.
+      if (justExpired || (isPollTurn && !document.hidden)) {
+        this.fetchTwoFaStatus();
+      }
+    },
+
+    // "Hủy và cài lại": xóa yêu cầu đang chờ rồi mở lại modal để sinh khóa mới.
+    // Kỳ vọng AdminRepository.cancelPendingTwoFa() gọi DELETE /web/admin/2fa/enrollment/pending.
+    async onResetPending() {
+      if (this.isResettingPending) return;
+      this.isResettingPending = true;
+      this.twoFaActionError = null;
+
+      try {
+        const adminRepository = new AdminRepository();
+        await adminRepository.cancelPendingTwoFa();
+        if (this.isUnmounted) return;
+
+        this.applyTwoFaStatus({ status: TWO_FA_STATUS.NOT_ENABLED });
+
+        // Mở lại modal bằng nút ẩn (dùng đúng data-bs-toggle như nút "Kích hoạt 2FA")
+        await this.$nextTick();
+        this.$refs.setup2FaTrigger?.click();
+      } catch (error) {
+        console.error('Error to cancel pending 2FA enrollment:', error);
+        if (!this.isUnmounted) {
+          this.twoFaActionError = 'Không thể hủy yêu cầu hiện tại. Vui lòng thử lại.';
+        }
+      } finally {
+        this.isResettingPending = false;
+      }
+    },
+
+    // =======================================
 
     // Che số CCCD: 060203000127 -> 060203••••27
     // visibleStart / visibleEnd: số ký tự giữ lại ở đầu / cuối.
@@ -288,7 +463,7 @@ export default {
     </article>
 
     <!-- ===== Xác thực hai yếu tố ===== -->
-    <article class="info-card" aria-labelledby="twofa-title">
+    <article class="info-card" aria-labelledby="two_fa-title">
       <div class="info-card__header">
         <span class="info-card__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -297,17 +472,32 @@ export default {
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
         </span>
-        <h3 id="twofa-title" class="info-card__title">Xác thực hai yếu tố</h3>
+        <h3 id="two_fa-title" class="info-card__title">Xác thực hai yếu tố</h3>
       </div>
 
-      <div class="twofa" :class="twoFAStateClass">
-        <div class="twofa__main">
-          <span class="twofa__icon" aria-hidden="true">
-            <svg v-if="is2faEnabled" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      <!-- Đang hỏi server: chưa biết trạng thái thì không hiện đỏ/vàng/xanh để tránh báo sai -->
+      <div v-if="isTwoFaLoading" class="two_fa two_fa--loading" role="status" aria-busy="true">
+        <span class="two_fa__spinner" aria-hidden="true"></span>
+        <p class="two_fa__desc">Đang kiểm tra trạng thái bảo mật…</p>
+      </div>
+
+      <!-- Ba trạng thái: NOT_ENABLED (đỏ) | PENDING (vàng) | ENABLED (xanh) -->
+      <div v-else class="two_fa" :class="twoFaView.stateClass">
+        <div class="two_fa__main">
+          <span class="two_fa__icon" aria-hidden="true">
+            <!-- Đã bật: khiên + dấu tick -->
+            <svg v-if="isTwoFaEnabled" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               <polyline points="9 12 11 14 15 10"/>
             </svg>
+            <!-- Đang chờ: đồng hồ -->
+            <svg v-else-if="isTwoFaPending" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <!-- Chưa bật: khiên + chấm than -->
             <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -316,15 +506,21 @@ export default {
             </svg>
           </span>
 
-          <div class="twofa__content">
-            <!-- role="status": trình đọc màn hình tự đọc lại khi trạng thái đổi -->
-            <p class="twofa__status" role="status">
+          <div class="two_fa__content">
+            <!-- role="status": trình đọc màn hình tự đọc lại khi trạng thái đổi.
+                 Đếm ngược để NGOÀI vùng này, nếu không sẽ bị đọc lại mỗi giây. -->
+            <p class="two_fa__status" role="status">
               <span>Trạng thái:</span>
-              <span class="ui-badge" :class="is2faEnabled ? 'ui-badge--success' : 'ui-badge--danger'">
-                <svg v-if="is2faEnabled" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              <span class="ui-badge" :class="twoFaView.badgeClass">
+                <svg v-if="isTwoFaEnabled" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                   <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <svg v-else-if="isTwoFaPending" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
                 </svg>
                 <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -332,20 +528,27 @@ export default {
                   <line x1="12" y1="9" x2="12" y2="13"/>
                   <line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
-                {{ is2faEnabled ? 'Đã kích hoạt' : 'Chưa kích hoạt' }}
+                {{ twoFaView.badgeText }}
               </span>
             </p>
-            <p class="twofa__desc">
-              {{ is2faEnabled
-                ? 'Tài khoản của bạn đang được bảo vệ bằng mã xác thực từ thiết bị.'
-                : 'Tài khoản quản trị có quyền truy cập dữ liệu nhạy cảm. Bật xác thực hai yếu tố để chặn truy cập trái phép ngay cả khi mật khẩu bị lộ.' }}
+
+            <p class="two_fa__desc">{{ twoFaView.desc }}</p>
+
+            <!-- Chỉ ở trạng thái chờ: báo hạn còn lại + đăng nhập chưa bị yêu cầu mã -->
+            <p v-if="isTwoFaPending" class="two_fa__hint">
+              <template v-if="pendingRemainingSeconds > 0">
+                Còn <span class="two_fa__countdown">{{ pendingCountdownLabel }}</span> để hoàn tất.
+              </template>
+              Trong lúc chờ, đăng nhập chưa yêu cầu mã xác thực.
             </p>
+
+            <p v-if="twoFaActionError" class="two_fa__error" role="alert">{{ twoFaActionError }}</p>
           </div>
         </div>
 
-        <!-- Đã bật rồi thì ẩn nút kích hoạt (tránh bấm thừa) -->
+        <!-- Chưa bật: nút kích hoạt (mở modal) -->
         <ButtonBlue
-            v-if="!is2faEnabled"
+            v-if="isTwoFaNotEnabled"
             data-bs-toggle="modal"
             data-bs-target="#setup2FaModal"
             class="style-btn-activate"
@@ -353,9 +556,35 @@ export default {
             :loading-button="false"
             text-button="Kích hoạt 2FA"
         />
+
+        <!-- Đang chờ xác nhận: hủy yêu cầu hiện tại rồi cài lại từ đầu -->
+        <button
+            v-else-if="isTwoFaPending"
+            type="button"
+            class="two_fa__btn-reset"
+            :disabled="isResettingPending"
+            @click="onResetPending"
+        >
+          <span v-if="isResettingPending" class="two_fa__spinner" aria-hidden="true"></span>
+          {{ isResettingPending ? '' : 'Hủy và cài lại' }}
+        </button>
+
+        <!-- Đã bật: không có nút (tránh bấm thừa) -->
       </div>
+
+      <!-- Nút ẩn: để onResetPending() mở lại modal qua data-bs-toggle, không cần import bootstrap -->
+      <button
+          ref="setup2FaTrigger"
+          type="button"
+          hidden
+          tabindex="-1"
+          aria-hidden="true"
+          data-bs-toggle="modal"
+          data-bs-target="#setup2FaModal"
+      ></button>
     </article>
   </section>
   <Footer/>
-  <ModalActivate2FA/>
+  <!-- Modal cần $emit('activated') sau khi gọi API kích hoạt thành công, để trang chuyển sang trạng thái vàng -->
+  <ModalActivate2FA @activated="fetchTwoFaStatus"/>
 </template>

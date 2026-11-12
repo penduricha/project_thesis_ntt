@@ -26,6 +26,13 @@
 
 /* Khung form */
 .form-login {
+  /* Màu cho trạng thái lỗi: dùng lại --red-color / --red-dark của web.
+     --error-bg chưa có trong :root, có thể chuyển sang file style chung nếu muốn. */
+  --login-error: var(--red-color, #c41e1e);
+  --login-error-dark: var(--red-dark, #a51818);
+  --login-error-bg: var(--error-bg, #fdf2f2);
+
+  position: relative; /* để thanh tiến trình nằm đúng mép trên của khung */
   width: 100%;
   max-width: 420px;
   display: flex;
@@ -48,6 +55,22 @@
   font-weight: bold;
   font-size: clamp(1.25rem, 1.05rem + 1vw, 1.625rem);
   letter-spacing: 0.04em;
+}
+
+/* Bỏ viền/padding mặc định của <fieldset> (dùng để khoá cả form bằng thuộc tính disabled) */
+.form-fieldset {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Các ô nhập xếp dọc */
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 /* Ô nhập liệu */
@@ -74,6 +97,118 @@
   color: var(--blue-color, #13529d);
 }
 
+/* ---------- Trạng thái LỖI của ô nhập ---------- */
+/* Viền đỏ dày 2px (dùng inset shadow nên không làm nhảy layout) + quầng đỏ nhẹ + nhãn đỏ */
+.form-login .form-floating.style-input-login.has-error > .form-control {
+  border-color: var(--login-error);
+  box-shadow: inset 0 0 0 1px var(--login-error), 0 0 0 0.2rem rgba(196, 30, 30, 0.12);
+}
+
+.form-login .form-floating.style-input-login.has-error > .form-control:focus {
+  border-color: var(--login-error);
+  box-shadow: inset 0 0 0 1px var(--login-error), 0 0 0 0.25rem rgba(196, 30, 30, 0.25);
+}
+
+.form-login .form-floating.style-input-login.has-error > .form-control ~ label {
+  color: var(--login-error);
+}
+
+/* Thông báo lỗi dưới từng ô + khung lỗi chung: cùng một biểu tượng "!" */
+.field-error,
+.form-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.4;
+  font-weight: bold;
+}
+
+.field-error::before,
+.form-error-banner::before {
+  content: '!';
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.0625rem;
+  border-radius: 50%;
+  background-color: var(--login-error);
+  color: var(--white-text, #fff);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.field-error {
+  margin: 0.375rem 0 0;
+  font-size: 0.875rem;
+  color: var(--login-error);
+}
+
+.form-error-banner {
+  padding: 0.625rem 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--login-error-dark);
+  background-color: var(--login-error-bg);
+  border: 1px solid var(--login-error);
+  border-left-width: 4px;
+}
+
+/* Hiệu ứng hiện / ẩn thông báo lỗi (<Transition name="error-fade">) */
+.error-fade-enter-active,
+.error-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.error-fade-enter-from,
+.error-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ---------- Nút hiện / ẩn mật khẩu ---------- */
+.form-login .form-floating.has-toggle > .form-control {
+  padding-right: calc(var(--tap-target-min, 2.75rem) + 0.25rem);
+}
+
+.btn-toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  z-index: 5; /* nổi trên nhãn (label) của ô nhập */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target-min, 2.75rem);
+  height: var(--tap-target-min, 2.75rem);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary, #5b6778);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.btn-toggle-password:hover {
+  color: var(--blue-color, #13529d);
+}
+
+.btn-toggle-password:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.btn-toggle-password svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Ghi nhớ đăng nhập */
 .box-remember-me {
   width: 100%;
@@ -85,7 +220,8 @@
   color: #3d4a5c;
 }
 
-.box-remember-me span {
+.box-remember-me label {
+  margin: 0;
   cursor: pointer;
   user-select: none;
 }
@@ -122,6 +258,47 @@
   cursor: not-allowed;
 }
 
+/* ---------- Đang đăng nhập (form bị khoá) ---------- */
+/* Con trỏ "đang xử lý" thay cho biểu tượng cấm */
+.form-login.is-loading .form-control:disabled,
+.form-login.is-loading .btn-login:disabled,
+.form-login.is-loading .box-remember-me label {
+  cursor: progress;
+}
+
+.form-fieldset:disabled .box-remember-me {
+  opacity: 0.6;
+}
+
+/* Thanh tiến trình chạy trên mép xanh của khung form */
+.form-login.is-loading::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -1px;
+  right: -1px;
+  height: 4px;
+  background-image: linear-gradient(
+          90deg,
+          transparent,
+          var(--text-on-blue, rgba(255, 255, 255, 0.88)),
+          transparent
+  );
+  background-repeat: no-repeat;
+  background-size: 40% 100%;
+  animation: login-progress 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes login-progress {
+  from {
+    background-position: -70% 0;
+  }
+  to {
+    background-position: 170% 0;
+  }
+}
+
 /* ---------- Mobile nhỏ (iPhone SE, Android màn nhỏ) ---------- */
 @media only screen and (max-width: 360px) {
   .container-form-login-page {
@@ -143,6 +320,10 @@
   .form-login {
     gap: 0.25rem;
     padding: 1rem 1.25rem;
+  }
+
+  .form-fields {
+    gap: 0.75rem;
   }
 
   .title-login {
@@ -199,8 +380,17 @@
 /* ---------- Người dùng tắt hiệu ứng chuyển động ---------- */
 @media (prefers-reduced-motion: reduce) {
   .form-login .form-control,
-  .btn-login {
+  .btn-login,
+  .error-fade-enter-active,
+  .error-fade-leave-active {
     transition: none;
+  }
+
+  /* Thanh tiến trình đứng yên (vẫn thấy là đang xử lý) thay vì chạy */
+  .form-login.is-loading::before {
+    animation: none;
+    background-image: none;
+    background-color: var(--text-on-blue-muted, rgba(255, 255, 255, 0.72));
   }
 }
 

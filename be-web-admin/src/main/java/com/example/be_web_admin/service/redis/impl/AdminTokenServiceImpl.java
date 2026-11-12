@@ -6,7 +6,7 @@ import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.repository.redis.AdminAccessTokenRepository;
 import com.example.be_web_admin.repository.redis.AdminRefreshTokenRepository;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
-import com.example.be_web_admin.security.jwt.user.AdminJwtToken;
+import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.redis.AdminTokenService;
 import io.lettuce.core.RedisBusyException;
 import org.springframework.stereotype.Service;
@@ -24,13 +24,13 @@ public class AdminTokenServiceImpl implements AdminTokenService {
 
     private final AdminRepository adminRepository;
 
-    private final AdminJwtToken adminJwtToken;
+    private final AdminJwtTokenProvider adminJwtTokenProvider;
 
-    public AdminTokenServiceImpl(AdminAccessTokenRepository adminAccessTokenRepository, AdminRefreshTokenRepository adminRefreshTokenRepository, AdminRepository adminRepository, AdminJwtToken adminJwtToken) {
+    public AdminTokenServiceImpl(AdminAccessTokenRepository adminAccessTokenRepository, AdminRefreshTokenRepository adminRefreshTokenRepository, AdminRepository adminRepository, AdminJwtTokenProvider adminJwtTokenProvider) {
         this.adminAccessTokenRepository = adminAccessTokenRepository;
         this.adminRefreshTokenRepository = adminRefreshTokenRepository;
         this.adminRepository = adminRepository;
-        this.adminJwtToken = adminJwtToken;
+        this.adminJwtTokenProvider = adminJwtTokenProvider;
     }
 
     @Override
@@ -98,8 +98,8 @@ public class AdminTokenServiceImpl implements AdminTokenService {
         Admin adminFound = adminRepository.findAdminByAdminId(adminId);
 
         if(adminFound != null) {
-            String accessToken = adminJwtToken.generateAccessToken(adminId);
-            String refreshToken = adminJwtToken.generateRefreshToken(adminId);
+            String accessToken = adminJwtTokenProvider.generateAccessToken(adminId);
+            String refreshToken = adminJwtTokenProvider.generateRefreshToken(adminId);
             LocalDateTime now = LocalDateTime.now();
 
             AdminAccessToken adminAccessToken = new AdminAccessToken();

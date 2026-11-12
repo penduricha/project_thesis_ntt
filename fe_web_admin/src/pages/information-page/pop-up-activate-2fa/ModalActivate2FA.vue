@@ -2,6 +2,8 @@
 import './modal-activate-2fa.scss';
 // npm install @phosphor-icons/vue --legacy-peer-deps
 import { PhCopy, PhCheck, PhCheckCircle, PhWarningCircle } from '@phosphor-icons/vue'
+import { TokenLogin } from '@/model/TokenLogin.js'
+import { EnrollmentRepository } from '@/repository/EnrollmentRepository.js'
 // import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 
 const FEEDBACK_DURATION = 3000 // ms: thời gian hiện alert + icon tích
@@ -21,6 +23,12 @@ export default {
       alert: { show: false, type: 'success', message: '' },
       feedbackTimer: null,
 
+      // Khóa Base32 do Spring Boot sinh (lưu ở Redis: EnrollSession). Rỗng = chưa có khóa.
+      secretKey: '',
+      loadingSecretKey: false,
+      secretKeyError: '',
+      intervalSeconds: 30, // khớp ô chọn "Tần suất đổi mã"
+
       //btn activate
       textButtonActivate: 'Kích hoạt',
       disableButtonActivate: false,
@@ -28,14 +36,108 @@ export default {
     }
   },
 
+  // ================= LIFECYCLE =================
+
+  // created: chưa có DOM. Tạo các đối tượng dùng chung. Các biến dưới đây KHÔNG đặt trong data()
+  // vì chỉ là cờ nội bộ / đối tượng gọi API, không cần Vue theo dõi để vẽ lại giao diện.
+  created() {
+    this.enrollSessionRepository = new EnrollmentRepository()
+    this.tokenLogin = new TokenLogin() // tạo giống cách bạn đang tạo ở nơi khác
+    this.isModalOpen = false
+    this.startRequestId = 0 // đánh số mỗi lần xin khóa để bỏ kết quả của lần đã cũ
+  },
+
+  // mounted: DOM đã có. Lắng nghe sự kiện của Bootstrap Modal (bắn trên chính phần tử modal):
+  //  - show.bs.modal : modal BẮT ĐẦU mở (nút "Kích hoạt 2FA" ở InformationPage bấm vào)
+  //  - hide.bs.modal : modal BẮT ĐẦU đóng, dù đóng bằng nút X, bấm ra ngoài hay phím Esc
+  //  - pagehide      : tắt tab / đóng trình duyệt
+  mounted() {
+    this.modalElement = this.$el
+    this.modalElement.addEventListener('show.bs.modal', this.handleModalShow)
+    this.modalElement.addEventListener('hide.bs.modal', this.handleModalHide)
+    window.addEventListener('pagehide', this.handlePageHide)
+  },
+
+  // beforeUnmount: chuyển sang trang khác trong app (component bị gỡ) -> dọn listener
+  // và xóa khóa nếu modal đang mở.
   beforeUnmount() {
     clearTimeout(this.feedbackTimer)
+
+    this.modalElement?.removeEventListener('show.bs.modal', this.handleModalShow)
+    this.modalElement?.removeEventListener('hide.bs.modal', this.handleModalHide)
+    window.removeEventListener('pagehide', this.handlePageHide)
+
+    this.releaseSecretKey()
   },
 
   methods: {
+    // ===== Khóa bí mật: xin khi mở modal, xóa khi đóng / rời đi =====
+
+    handleModalShow() {
+      this.isModalOpen = true
+      this.requestSecretKey()
+    },
+
+    handleModalHide() {
+      this.releaseSecretKey()
+    },
+
+    // Tắt tab: yêu cầu fetch keepalive vẫn được gửi dù trang đang đóng
+    handlePageHide() {
+      if (!this.isModalOpen) return
+      this.isModalOpen = false
+      this.enrollSessionRepository.cancelEnrollmentOnPageHide(this.tokenLogin)
+    },
+
+    // Gọi Spring Boot sinh khóa Base32 mới (cũng dùng cho nút "Thử lại")
+    async requestSecretKey() {
+      const requestId = ++this.startRequestId
+      this.secretKey = ''
+      this.secretKeyError = ''
+      this.loadingSecretKey = true
+
+      const result = await this.enrollSessionRepository
+          .startEnrollment(this.tokenLogin, this.intervalSeconds)
+
+      // Lần xin này đã cũ (modal đã đóng hoặc mở lại trong lúc chờ API): bỏ kết quả.
+      // Nếu server vừa tạo khóa mà modal đã đóng thì xóa ngay, không để khóa mồ côi trên Redis.
+      if (requestId !== this.startRequestId) {
+        if (result.success && !this.isModalOpen) {
+          this.enrollSessionRepository.cancelEnrollment(this.tokenLogin)
+        }
+        return
+      }
+
+      this.loadingSecretKey = false
+
+      if (!result.success) {
+        this.secretKeyError = result.message
+        this.showFeedback(false, result.message)
+        return
+      }
+      this.secretKey = result.data.secretKey
+    },
+
+    // Modal đóng (mọi cách) hoặc component bị gỡ: xóa khóa trong bộ nhớ trình duyệt
+    // và báo Spring Boot xóa khóa trên Redis. Không chờ kết quả (có TTL 5 phút dự phòng).
+    releaseSecretKey() {
+      const wasOpen = this.isModalOpen
+      this.isModalOpen = false
+      this.startRequestId++ // vô hiệu hóa lần xin khóa đang chờ (nếu có)
+
+      this.secretKey = ''
+      this.secretKeyError = ''
+      this.loadingSecretKey = false
+
+      if (wasOpen) {
+        this.enrollSessionRepository.cancelEnrollment(this.tokenLogin)
+      }
+    },
+
     async copySecret() {
       const input = this.$refs.secretInput
       const text = input.value
+      if (!text) return // chưa có khóa thì không có gì để sao chép
 
       // try {
       //   if (navigator.clipboard && window.isSecureContext) {
@@ -139,7 +241,9 @@ export default {
                   ref="secretInput"
                   type="text"
                   class="form-control modal-2fa__secret font-monospace bg-light text-dark border-radius-zero"
-                  value="JBSWY3DPEHPK3PXP"
+                  :value="secretKey"
+                  :placeholder="loadingSecretKey ? 'Đang tạo khóa...' : (secretKeyError ? 'Không thể tạo khóa' : '')"
+                  :aria-busy="loadingSecretKey"
                   readonly
                   autocomplete="off"
                   spellcheck="false"
@@ -150,6 +254,7 @@ export default {
                   class="btn border-radius-zero btn-copy"
                   :class="copied ? 'is-copied' : 'btn-outline-primary border-primary text-custom-blue'"
                   type="button"
+                  :disabled="!secretKey"
                   :aria-label="copied ? 'Đã sao chép' : 'Sao chép khóa bí mật'"
                   :title="copied ? 'Đã sao chép' : 'Sao chép'"
                   @click="copySecret"
@@ -158,14 +263,21 @@ export default {
                 <PhCopy v-else :size="20" aria-hidden="true" />
               </button>
             </div>
+            <!-- Lỗi tạo khóa (mất mạng, hết phiên...): cho thử lại ngay trong modal -->
+            <button
+                v-if="secretKeyError"
+                type="button"
+                class="btn btn-link p-0 mt-1 small"
+                @click="requestSecretKey"
+            >Thử lại</button>
           </div>
 
           <!-- Tùy chọn tần suất thời gian (Time Interval) -->
           <div class="modal-2fa__field">
             <label for="interval2fa" class="form-label fw-bold small color-text-label">TẦN SUẤT ĐỔI MÃ (INTERVAL):</label>
-            <select id="interval2fa" class="form-select border-radius-zero" aria-describedby="interval2faHelp">
+            <select id="interval2fa" v-model.number="intervalSeconds" class="form-select border-radius-zero" aria-describedby="interval2faHelp">
               <option value="15">15 giây</option>
-              <option value="30" selected>30 giây</option>
+              <option value="30">30 giây</option>
               <option value="45">45 giây</option>
               <option value="60">60 giây</option>
             </select>
@@ -181,7 +293,7 @@ export default {
               type="button"
               class="btn-activate"
               :class="{ 'is-loading': loadingButtonActivate }"
-              :disabled="disableButtonActivate"
+              :disabled="disableButtonActivate || !secretKey"
               :aria-busy="loadingButtonActivate"
               :aria-label="loadingButtonActivate ? 'Đang xử lý' : null"
               @click="handleActivate2FAEvent"
