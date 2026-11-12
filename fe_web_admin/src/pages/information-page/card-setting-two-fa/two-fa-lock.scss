@@ -1,0 +1,13 @@
+// =========================================================
+//  KHÓA TƯƠNG TÁC TOÀN TRANG khi đang gọi API "Kích hoạt"
+//  Phủ kín viewport, CAO HƠN modal Bootstrap (1055) và backdrop (1050),
+//  THẤP HƠN alert thông báo (.copy-alert-container, 1100) để thông báo vẫn thấy được.
+//  Trong suốt: chỉ chặn chuột + đổi con trỏ; bàn phím do thuộc tính `inert` chặn.
+// =========================================================
+.two-fa-page-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  background: transparent;
+  cursor: progress;
+}

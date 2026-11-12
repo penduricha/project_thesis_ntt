@@ -1,20 +1,22 @@
 package com.example.be_web_admin.config;
 
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 /** Ánh xạ khối app.totp trong application.yml. */
 @Getter
 @Setter
 @Component
 @ConfigurationProperties(prefix = "app.totp")
+@Validated
 public class TotpProperties {
-
-    /** Thời gian mobile phải xác nhận sau khi web bấm "Kích hoạt" (khớp đồng hồ "Còn 10:00"). */
+    @Min(1) @Max(60)
     private int confirmWindowMinutes = 10;
 
-    /** Số lần nhập sai mã xác nhận tối đa; vượt quá thì xóa phần cài dở, admin phải cài lại. */
+    @Min(1) @Max(10)
     private int confirmMaxAttempts = 5;
 }

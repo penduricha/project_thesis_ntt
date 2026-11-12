@@ -93,7 +93,14 @@ public class EnrollmentServiceImpl {
 
     // ------------------------------------------------------------------ kích hoạt
 
-    public ActivationResult activate(Long adminId, String ip, String userAgent) {
+    /**
+     * @param periodOverride chu kỳ admin chọn trong modal lúc bấm "Kích hoạt" (15/30/45/60);
+     *                       null thì dùng chu kỳ đã lưu cùng khóa ở Redis. Phải khớp chu kỳ app Authenticator dùng.
+     */
+    public ActivationResult activate(Long adminId, Integer periodOverride, String ip, String userAgent) {
+        if (periodOverride != null && !EnrollSessionServiceImpl.isPeriodAllowed(periodOverride)) {
+            throw new IllegalArgumentException("Unsupported period: " + periodOverride);
+        }
         EnrollSession pending = enrollSessionRepository.findById(adminId)
                 .orElseThrow(EnrollmentExpiredException::new);
         // Phiên tạo trước khi nâng cấp mã hóa (chưa có keyVersion): bắt cài lại.
@@ -107,9 +114,11 @@ public class EnrollmentServiceImpl {
             throw new IllegalStateException("Unexpected secret cipher length: " + sealed.cipher().length);
         }
 
-        int period = pending.getPeriodSeconds() == null
+        int period = periodOverride != null
+                ? periodOverride
+                : (pending.getPeriodSeconds() == null
                 ? EnrollSessionServiceImpl.DEFAULT_PERIOD_SECONDS
-                : pending.getPeriodSeconds();
+                : pending.getPeriodSeconds());
 
         // BCrypt tốn vài trăm ms: làm TRƯỚC khi mở transaction để không giữ kết nối DB.
         List<GeneratedCode> codes = generateBackupCodes();

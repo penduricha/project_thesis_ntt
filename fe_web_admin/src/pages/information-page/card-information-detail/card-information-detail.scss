@@ -1,0 +1,187 @@
+// =========================================================
+//  CARD THÔNG TIN QUẢN TRỊ VIÊN - Mobile first
+//  Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
+//  Màu / spacing lấy từ token trong theme-color.scss
+// =========================================================
+
+$bp-tablet: 768px;
+$bp-desktop: 1024px;
+
+@mixin up($width) {
+  @media only screen and (min-width: $width) {
+    @content;
+  }
+}
+
+// ---------- Card thông tin ----------
+.info-card {
+  width: 100%;
+  max-width: 75rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+
+  @include up($bp-tablet) {
+    padding: var(--space-4);
+  }
+}
+
+.info-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.info-card__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius);
+  background-color: var(--primary-soft);
+  color: var(--primary);
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+// Sentence case, đậm vừa phải (viết hoa toàn bộ làm dấu tiếng Việt chồng nhau)
+.info-card__title {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+// ---------- Nhóm thông tin ----------
+.info-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+
+  // Chỉ 1 đường kẻ nhạt giữa các nhóm, bỏ kẻ từng dòng
+  & + & {
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+  }
+}
+
+.info-group__title {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+// Mobile: 1 cột | Tablet: 2 cột | Desktop: --3 thì 3 cột
+// minmax(0, 1fr) để chữ dài xuống dòng, không làm tràn khung
+.info-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+
+  @include up($bp-tablet) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  &--3 {
+    @include up($bp-desktop) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}
+
+// Nhãn nhỏ xám ở trên, giá trị đậm ở dưới
+.info-field {
+  min-width: 0;
+}
+
+.info-field__label {
+  margin: 0 0 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.info-field__value {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  // Giá trị nhạy cảm: số + nút hiện/ẩn nằm cùng 1 hàng
+  &--secret {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 1.5rem;
+  }
+}
+
+.info-field__secret-text {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+// Nút icon (hiện / ẩn CCCD)
+.icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-block: -0.5rem; // không làm dòng cao lên
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background-color: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  &:hover {
+    background-color: var(--surface-hover);
+    color: var(--primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  // Màn hình cảm ứng: vùng chạm lớn hơn
+  @media (pointer: coarse) {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-btn {
+    transition: none;
+  }
+}

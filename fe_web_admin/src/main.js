@@ -20,6 +20,7 @@ import routersAfterLogin from '@/router/routers_after_login.js'
 import { AdminService } from '@/services/spring/AdminService.js'
 import { TokenLogin } from '@/model/TokenLogin.js'
 import { onRemoteLogout } from '@/assets/auth-sync.js'
+import { silentRefresher } from '@/services/auth/SilentTokenRefresher.js'
 
 const LOGIN_PATH = '/login'
 const NOT_FOUND_PATH = '/404-not-found'
@@ -27,6 +28,44 @@ const NOT_FOUND_PATH = '/404-not-found'
 const adminService = new AdminService()
 const tokenLogin = new TokenLogin()
 const routerManagement = new RouterMgmt()
+
+/**
+ * Dọn trạng thái cục bộ rồi tải lại trang /login.
+ * Dùng chung cho 2 trường hợp: tab khác đã đăng xuất, và refresh token bị server từ chối.
+ *
+ * Dùng window.location.replace thay vì router.replace vì app dùng 2 bộ route
+ * (routersBeforeLogin / routersAfterLogin): bộ "sau đăng nhập" có thể không có
+ * '/login'. Tải lại sẽ chạy lại bootstrap() và nạp đúng bộ route "trước đăng nhập".
+ * Cách này cũng không kích hoạt beforeRouteLeave nên không gọi API đăng xuất lần 2.
+ */
+function clearSessionAndGoToLogin() {
+    silentRefresher.stop() // dừng làm mới ngầm trước khi rời trang
+
+    if (window.location.pathname === LOGIN_PATH) return
+
+    try {
+        routerManagement.removePathFromLocalStorage()
+        // sessionStorage là riêng từng tab → phải tự xoá ở tab này
+        sessionStorage.clear()
+    } catch (error) {
+        console.error('Error clearing session:', error)
+    }
+
+    window.location.replace(LOGIN_PATH)
+}
+
+/**
+ * Cấu hình bộ làm mới access token ngầm (SilentTokenRefresher).
+ * Chỉ init ở đây; việc start() chỉ chạy khi đã đăng nhập (xem bootstrap).
+ * Hết hạn refresh token (server từ chối) → về /login. Lỗi mạng thì KHÔNG đăng xuất, tự thử lại.
+ */
+function setupSilentRefresh() {
+    silentRefresher.init({
+        tokenLogin,
+        adminService,
+        onSessionExpired: clearSessionAndGoToLogin,
+    })
+}
 
 /**
  * Nạp token từ storage và thử auto-login bằng refresh token.
@@ -91,26 +130,9 @@ function resolveTargetPath(currentPath, routes, isLoggedIn) {
  * Đồng bộ đăng xuất giữa các tab.
  * Tab khác đã đăng xuất thành công (server huỷ phiên, token trong localStorage
  * đã bị xoá) → tab này chỉ cần dọn trạng thái cục bộ rồi tải lại trang /login.
- *
- * Dùng window.location.replace thay vì router.replace vì app dùng 2 bộ route
- * (routersBeforeLogin / routersAfterLogin): bộ "sau đăng nhập" có thể không có
- * '/login'. Tải lại sẽ chạy lại bootstrap() và nạp đúng bộ route "trước đăng nhập".
- * Cách này cũng không kích hoạt beforeRouteLeave nên không gọi API đăng xuất lần 2.
  */
 function setupCrossTabLogout() {
-    onRemoteLogout(() => {
-        if (window.location.pathname === LOGIN_PATH) return
-
-        try {
-            routerManagement.removePathFromLocalStorage()
-            // sessionStorage là riêng từng tab → phải tự xoá ở tab này
-            sessionStorage.clear()
-        } catch (error) {
-            console.error('Error clearing session on remote logout:', error)
-        }
-
-        window.location.replace(LOGIN_PATH)
-    })
+    onRemoteLogout(clearSessionAndGoToLogin)
 }
 
 async function mountApp(routes, targetPath) {
@@ -136,6 +158,7 @@ async function mountApp(routes, targetPath) {
 async function bootstrap() {
     // Đăng ký lắng nghe sớm, một lần duy nhất cho cả vòng đời tab
     setupCrossTabLogout()
+    setupSilentRefresh()
 
     const { isLoggedIn, hasTokens } = await autoLogin()
 
@@ -150,6 +173,10 @@ async function bootstrap() {
 
     const routes = isLoggedIn ? routersAfterLogin : routersBeforeLogin
     const targetPath = resolveTargetPath(window.location.pathname, routes, isLoggedIn)
+
+    // Đã đăng nhập → chạy ngầm làm mới access token trước khi hết TTL.
+    // (Nếu đăng nhập ở trang Login mà không reload, gọi silentRefresher.start() sau khi login thành công.)
+    if (isLoggedIn) silentRefresher.start()
 
     await mountApp(routes, targetPath)
 }

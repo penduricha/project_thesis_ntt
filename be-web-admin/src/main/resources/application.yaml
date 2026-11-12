@@ -37,7 +37,7 @@ app:
   totp:
     confirm-window-minutes: 10      # thời gian mobile phải xác nhận sau khi bấm "Kích hoạt"
     confirm-max-attempts: 5         # số lần nhập sai mã xác nhận tối đa
-    enroll-session-ttl-seconds: 300 # thời gian sống của khóa chờ ở Redis (modal)
+#    enroll-session-ttl-seconds: 300 # thời gian sống của khóa chờ ở Redis (modal)
 
 spring:
   config:

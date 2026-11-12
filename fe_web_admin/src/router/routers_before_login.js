@@ -2,7 +2,7 @@ import LoginPage from "@/pages/login-page/LoginPage.vue";
 // import RegisterCourses from "@/pages/register-courses-page/RegisterCourses.vue";
 import InformationPage from "@/pages/information-page/InformationPage.vue";
 // import ListCourses from "@/pages/list-courses/ListCourses.vue";
-import PageNotFound from "@/pages/404-not-found-page/PageNotFound.vue";
+import PageNotFound from "@/pages/page-not-found/PageNotFound.vue";
 // import UniversitySchedule from "@/pages/university-schedule/UniversitySchedule.vue";
 
 

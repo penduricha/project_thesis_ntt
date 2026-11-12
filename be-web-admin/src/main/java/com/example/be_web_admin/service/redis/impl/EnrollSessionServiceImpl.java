@@ -4,7 +4,7 @@ import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.redis.EnrollSession;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.repository.redis.EnrollSessionRepository;
-import com.example.be_web_admin.security.private_key.EncryptionUtil;
+import com.example.be_web_admin.security.private_key.CryptoService;
 import com.example.be_web_admin.service.redis.EnrollSessionService;
 import org.springframework.stereotype.Service;
 
@@ -25,14 +25,22 @@ public class EnrollSessionServiceImpl implements EnrollSessionService {
 
     private final EnrollSessionRepository enrollSessionRepository;
     private final AdminRepository adminRepository;
+    private final CryptoService cryptoService;
 
     public EnrollSessionServiceImpl(EnrollSessionRepository enrollSessionRepository,
-                                    AdminRepository adminRepository) {
+                                    AdminRepository adminRepository,
+                                    CryptoService cryptoService) {
         this.enrollSessionRepository = enrollSessionRepository;
         this.adminRepository = adminRepository;
+        this.cryptoService = cryptoService;
     }
 
     public boolean isAllowedPeriod(int periodSeconds) {
+        return isPeriodAllowed(periodSeconds);
+    }
+
+    /** Bản static để EnrollmentServiceImpl dùng chung, không phải inject thêm service. */
+    public static boolean isPeriodAllowed(int periodSeconds) {
         return ALLOWED_PERIOD_SECONDS.contains(periodSeconds);
     }
 
@@ -52,9 +60,12 @@ public class EnrollSessionServiceImpl implements EnrollSessionService {
             throw new TotpAlreadyEnabledException();
         }
 
-        String secretKey = EncryptionUtil.generateSecretKey();
+        String secretKey = cryptoService.generateSecretKey();
+        // AAD gắn với adminId + keyVersion: bản mã chép sang admin khác sẽ không giải mã được.
+        CryptoService.Sealed sealed = cryptoService.encrypt(secretKey, adminId);
+        // Thứ tự tham số của EnrollSession: adminId, secretCipher, keyVersion, periodSeconds, createdAt
         enrollSessionRepository.save(new EnrollSession(
-                adminId, EncryptionUtil.encrypt(secretKey), period, 0, Instant.now()));
+                adminId, sealed.toBase64(), sealed.keyVersion(), period, Instant.now()));
         return new StartedEnrollment(secretKey, period, EnrollSession.TTL_SECONDS);
     }
 

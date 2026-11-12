@@ -3,11 +3,24 @@ import {EnrollmentService} from "@/services/spring/EnrollmentService.js";
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_CONFLICT = 409;
+const HTTP_GONE = 410;
+
+// Giá trị trạng thái 2FA mà InformationPage dùng (khớp TWO_FA_STATUS trong trang).
+export const TWO_FA_STATUS = Object.freeze({
+    NOT_ENABLED: 'NOT_ENABLED',
+    PENDING: 'PENDING',
+    ENABLED: 'ENABLED',
+});
 
 const MESSAGES = Object.freeze({
     DEFAULT_ERROR: 'Không thể tạo khóa bí mật. Vui lòng thử lại.',
     SESSION_EXPIRED: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
     NETWORK_ERROR: 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng.',
+    ACTIVATE_ERROR: 'Không thể kích hoạt. Vui lòng thử lại.',
+    ALREADY_ENABLED: 'Xác thực hai yếu tố đã được bật.',
+    KEY_EXPIRED: 'Khóa bí mật đã hết hạn (5 phút). Vui lòng bấm Thử lại để tạo khóa mới.',
+    STATUS_ERROR: 'Không thể đọc trạng thái xác thực hai yếu tố.',
 });
 
 function buildFailure(status, message) {
@@ -20,8 +33,8 @@ function buildFailure(status, message) {
  * cấu trúc response hay mã HTTP.
  */
 export class EnrollmentRepository {
-    constructor(enrollSessionService = new EnrollmentService()) {
-        this.enrollSessionService = enrollSessionService;
+    constructor(enrollmentService = new EnrollmentService()) {
+        this.enrollmentService = enrollmentService;
     }
 
     /**
@@ -33,7 +46,7 @@ export class EnrollmentRepository {
      *   success = false -> message là câu báo lỗi đã sẵn để hiện cho người dùng.
      */
     async startEnrollment(tokenLogin, periodSeconds) {
-        const response = await this.enrollSessionService
+        const response = await this.enrollmentService
             .postDataToStartEnrollmentRequest(tokenLogin, periodSeconds);
 
         if (response === null) {
@@ -61,15 +74,18 @@ export class EnrollmentRepository {
         if (response.status === HTTP_UNAUTHORIZED) {
             return buildFailure(response.status, MESSAGES.SESSION_EXPIRED);
         }
+        if (response.status === HTTP_CONFLICT) {
+            return buildFailure(response.status, MESSAGES.ALREADY_ENABLED);
+        }
         return buildFailure(response.status, body?.message ?? MESSAGES.DEFAULT_ERROR);
     }
 
     /**
-     * Đóng modal / chuyển trang trong app: xóa khóa đang chờ.
+     * Đóng modal / chuyển trang trong app: xóa khóa đang chờ ở Redis.
      * @returns {Promise<boolean>} true nếu server xác nhận (kể cả khi khóa đã hết hạn từ trước)
      */
     async cancelEnrollment(tokenLogin) {
-        const response = await this.enrollSessionService
+        const response = await this.enrollmentService
             .deleteDataToCancelEnrollmentRequest(tokenLogin);
 
         return response?.status === HTTP_OK;
@@ -80,6 +96,99 @@ export class EnrollmentRepository {
      * Gọi trong sự kiện pagehide.
      */
     cancelEnrollmentOnPageHide(tokenLogin) {
-        this.enrollSessionService.deleteDataToCancelEnrollmentOnPageHide(tokenLogin);
+        this.enrollmentService.deleteDataToCancelEnrollmentOnPageHide(tokenLogin);
+    }
+
+    /**
+     * Bấm "Kích hoạt" trong modal: ghi khóa xuống MariaDB (chờ mobile xác nhận), nhận 10 mã dự phòng.
+     *
+     * @returns {Promise<{success: boolean, status: number|null, message: string, expired?: boolean,
+     *   data: {expiresInSeconds: number, periodSeconds: number, backupCodes: string[]}|null}>}
+     *   expired = true khi khóa chờ ở Redis đã hết 5 phút (HTTP 410): modal nên xin khóa mới.
+     */
+    async activateEnrollment(tokenLogin, periodSeconds) {
+        const response = await this.enrollmentService
+            .postDataToActivateEnrollmentRequest(tokenLogin, periodSeconds);
+
+        if (response === null) {
+            return buildFailure(null, MESSAGES.NETWORK_ERROR);
+        }
+
+        const body = response.data;
+        const data = body?.data;
+
+        if (response.status === HTTP_CREATED && body?.success === true && Array.isArray(data?.backupCodes)) {
+            return {
+                success: true,
+                status: response.status,
+                message: body.message,
+                data: {
+                    expiresInSeconds: data.expiresInSeconds,
+                    periodSeconds: data.periodSeconds,
+                    backupCodes: data.backupCodes,
+                },
+            };
+        }
+
+        if (response.status === HTTP_UNAUTHORIZED) {
+            return buildFailure(response.status, MESSAGES.SESSION_EXPIRED);
+        }
+        if (response.status === HTTP_CONFLICT) {
+            return buildFailure(response.status, MESSAGES.ALREADY_ENABLED);
+        }
+        if (response.status === HTTP_GONE) {
+            return {...buildFailure(response.status, MESSAGES.KEY_EXPIRED), expired: true};
+        }
+        return buildFailure(response.status, body?.message ?? MESSAGES.ACTIVATE_ERROR);
+    }
+
+    /**
+     * Trang thông tin hỏi trạng thái 2FA (cũng dùng để polling).
+     *
+     * @returns {Promise<{success: boolean, httpStatus: number|null, message: string,
+     *   status: 'NOT_ENABLED'|'PENDING'|'ENABLED'|null, pendingExpiresInSeconds: number}>}
+     *   Ở đây `status` là TRẠNG THÁI 2FA (khớp TWO_FA_STATUS của InformationPage), không phải mã HTTP.
+     *   pendingExpiresInSeconds: số giây còn lại để mobile xác nhận (chỉ có nghĩa khi PENDING).
+     */
+    async getTwoFaStatus(tokenLogin) {
+        const response = await this.enrollmentService.getDataTwoFaStatusRequest(tokenLogin);
+
+        const failure = (httpStatus, message) => ({
+            success: false, httpStatus, message, status: null, pendingExpiresInSeconds: 0,
+        });
+
+        if (response === null) {
+            return failure(null, MESSAGES.NETWORK_ERROR);
+        }
+
+        const body = response.data;
+        const data = body?.data;
+
+        if (response.status === HTTP_OK && body?.success === true && typeof data?.totpEnabled === 'boolean') {
+            let status = TWO_FA_STATUS.NOT_ENABLED;
+            if (data.totpEnabled) status = TWO_FA_STATUS.ENABLED;
+            else if (data.pending === true) status = TWO_FA_STATUS.PENDING;
+
+            return {
+                success: true,
+                httpStatus: response.status,
+                message: body.message,
+                status,
+                pendingExpiresInSeconds: Number(data.expiresInSeconds) || 0,
+            };
+        }
+        if (response.status === HTTP_UNAUTHORIZED) {
+            return failure(response.status, MESSAGES.SESSION_EXPIRED);
+        }
+        return failure(response.status, body?.message ?? MESSAGES.STATUS_ERROR);
+    }
+
+    /**
+     * "Hủy và cài lại" hoặc hết 10 phút chờ: xóa phần chờ xác nhận ở MariaDB.
+     * @returns {Promise<boolean>} true nếu server xác nhận đã xóa
+     */
+    async cancelPendingEnrollment(tokenLogin) {
+        const response = await this.enrollmentService.deleteDataToCancelPendingRequest(tokenLogin);
+        return response?.status === HTTP_OK;
     }
 }

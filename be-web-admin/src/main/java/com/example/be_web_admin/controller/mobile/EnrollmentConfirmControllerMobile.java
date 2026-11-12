@@ -6,6 +6,7 @@ import com.example.be_web_admin.service.redis.impl.EnrollmentConfirmServiceImpl;
 import com.example.be_web_admin.service.redis.impl.EnrollmentConfirmServiceImpl.ConfirmExpiredException;
 import com.example.be_web_admin.service.redis.impl.EnrollmentConfirmServiceImpl.NoPendingEnrollmentException;
 import com.example.be_web_admin.service.redis.impl.EnrollmentConfirmServiceImpl.PendingParams;
+import com.example.be_web_admin.service.redis.impl.TooManyAttemptsException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -16,10 +17,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Giai đoạn 3 của cài 2FA (app Flutter). Gọi SAU KHI web đã bấm "Kích hoạt" (giao diện màu vàng "Đang chờ xác nhận").
+ * App mobile gọi qua HTTP nên không cần @CrossOrigin (CORS chỉ áp dụng cho trình duyệt).
+ */
 @Slf4j
 @RestController
 @RequestMapping("/admin/mobile/2fa/enrollment")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class EnrollmentConfirmControllerMobile {
 
     private final EnrollmentConfirmServiceImpl confirmService;
@@ -36,7 +40,7 @@ public class EnrollmentConfirmControllerMobile {
 
     // GET /api/admin/mobile/2fa/enrollment/pending      Header: Authorization: Bearer <accessToken>
     // 200: { success, message, data: { algorithm, digits, periodSeconds, expiresInSeconds } }   (không có khóa)
-    // 404: web chưa bấm "Kích hoạt"  |  410: quá 10 phút
+    // 401 token sai | 404: web chưa bấm "Kích hoạt" (app nên chờ và hỏi lại) | 410: quá thời hạn xác nhận | 500
     @GetMapping("/pending")
     public ResponseEntity<?> pending(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         Long adminId = resolveAdminId(authHeader);
@@ -53,11 +57,15 @@ public class EnrollmentConfirmControllerMobile {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(false, "No pending enrollment. Activate 2FA on the web first.", null));
         } catch (ConfirmExpiredException e) {
             return ResponseEntity.status(HttpStatus.GONE).body(body(false, "Enrollment expired. Start again on the web.", null));
+        } catch (Exception e) {
+            log.error("Get pending enrollment failed for admin {}", adminId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body(false, "Can't read pending enrollment.", null));
         }
     }
 
     // POST /api/admin/mobile/2fa/enrollment/confirm     Body: { "code": "123456" }
-    // 200: 2FA bật hoàn toàn  |  422: mã sai  |  400: thiếu mã  |  404 / 410 như trên
+    // 200: 2FA bật hoàn toàn | 422: mã sai | 400: không đủ 6 số | 401 token sai
+    // 404 / 410: như trên | 429: nhập sai quá số lần, phần cài dở đã bị xóa, phải cài lại trên web | 500
     @PostMapping("/confirm")
     public ResponseEntity<?> confirm(@RequestHeader(value = "Authorization", required = false) String authHeader,
                                      @RequestBody(required = false) Map<String, Object> request,
@@ -81,6 +89,9 @@ public class EnrollmentConfirmControllerMobile {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(false, "No pending enrollment.", null));
         } catch (ConfirmExpiredException e) {
             return ResponseEntity.status(HttpStatus.GONE).body(body(false, "Enrollment expired. Start again on the web.", null));
+        } catch (TooManyAttemptsException e) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(body(false, "Too many wrong codes. Enrollment was removed. Start again on the web.", null));
         } catch (Exception e) {
             log.error("Confirm enrollment failed for admin {}", adminId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body(false, "Can't confirm 2FA.", null));

@@ -2,6 +2,7 @@ package com.example.be_web_admin.controller.web;
 
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
+import com.example.be_web_admin.service.redis.impl.EnrollSessionServiceImpl;
 import com.example.be_web_admin.service.redis.impl.EnrollmentServiceImpl;
 import com.example.be_web_admin.service.redis.impl.EnrollmentServiceImpl.ActivationResult;
 import com.example.be_web_admin.service.redis.impl.EnrollmentServiceImpl.AdminNotFoundException;
@@ -42,7 +43,7 @@ public class EnrollmentController {
 
     // ===================== KÍCH HOẠT: GHI KHÓA XUỐNG MARIADB =====================
     // POST /api/web/admin/2fa/enrollment/activate     Header: Authorization: Bearer <accessToken>
-    // Không có body. adminId lấy từ token.
+    // Body (không bắt buộc): { "periodSeconds": 30 } (15|30|45|60) = chu kỳ admin đang chọn. adminId lấy từ token.
     // 201: { success, message, data: { adminId, credentialId, algorithm, digits, periodSeconds,
     //                                  totpEnabled:false, expiresInSeconds:600, backupCodes:[10 mã] } }
     //      backupCodes chỉ hiển thị đúng một lần.
@@ -50,6 +51,7 @@ public class EnrollmentController {
     @PostMapping("/2fa/enrollment/activate")
     public ResponseEntity<?> activateEnrollment(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) Map<String, Object> requestBody,
             HttpServletRequest request) {
 
         Long adminId = resolveAdminId(authHeader);
@@ -57,9 +59,14 @@ public class EnrollmentController {
             return unauthorized();
         }
 
+        Integer periodSeconds = toInteger(requestBody == null ? null : requestBody.get("periodSeconds"));
+        if (periodSeconds != null && !EnrollSessionServiceImpl.isPeriodAllowed(periodSeconds)) {
+            return ResponseEntity.badRequest().body(errorBody("periodSeconds must be 15, 30, 45 or 60."));
+        }
+
         try {
             ActivationResult result = enrollmentService.activate(
-                    adminId, request.getRemoteAddr(), request.getHeader(HttpHeaders.USER_AGENT));
+                    adminId, periodSeconds, request.getRemoteAddr(), request.getHeader(HttpHeaders.USER_AGENT));
 
             Map<String, Object> data = new HashMap<>();
             data.put("adminId", result.adminId());
@@ -170,6 +177,20 @@ public class EnrollmentController {
             log.warn("Can't resolve adminId from token: {}", e.getMessage());
             return null;
         }
+    }
+
+    private Integer toInteger(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String text && !text.isBlank()) {
+            try {
+                return Integer.parseInt(text.trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private ResponseEntity<?> unauthorized() {
