@@ -3,56 +3,51 @@ import 'package:flutter/services.dart';
 
 import '../../../main_shell/presentation/widgets/app_menu_bar.dart';
 // Class sinh mã TOTP đã được tách riêng (cùng thư mục với file này)
+import '../../data/model/auth_account.dart';
+import '../../data/service/account_store.dart';
+import '../../data/service/enrollment_service.dart';
 import '../widgets/activate_key_dialog.dart';
 import '../widgets/ring_painter.dart';
 import 'totp_generator.dart';
 
-// ============================================================================
-//  MODEL
-// ============================================================================
-
-class AuthAccount {
-  const AuthAccount({
-    required this.id,
-    required this.issuer,
-    required this.account,
-    required this.secret,
-  });
-
-  final String id;
-  final String issuer; // vd: "Microsoft", "PAM360"
-  final String account; // vd: email đăng nhập
-  final String secret; // khóa bí mật dạng Base32
-}
+// AuthAccount đã chuyển sang data/model/auth_account.dart. Export lại để các file khác
+// đang import AuthAccount từ file này vẫn chạy bình thường.
+export '../../data/model/auth_account.dart';
 
 // ============================================================================
 //  MÀN HÌNH
 // ============================================================================
 
 class AuthenticatorScreen extends StatefulWidget {
-  const AuthenticatorScreen({super.key});
+  const AuthenticatorScreen({super.key, this.auth});
+
+  /// Phiên đăng nhập dùng để gọi API kích hoạt 2FA (access token + adminId + tên).
+  /// Không truyền -> đọc từ flutter_secure_storage (xem SecureStorageEnrollmentAuth).
+  final EnrollmentAuth? auth;
 
   @override
   State<AuthenticatorScreen> createState() => _AuthenticatorScreenState();
 }
 
 class _AuthenticatorScreenState extends State<AuthenticatorScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // ---- Màu sắc ----
   static const Color _blueColor = Color(0xFF004B87); // nút "+" góc trên phải
   static const Color _dividerColor = Color(0xFFEDEDED);
   static const Color _searchFill = Color(0xFFEFEFEF);
 
-  static const int _period = TotpGenerator.defaultPeriod; // 30 giây
-
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
 
-  // Đồng hồ chung: chạy 0 -> 1 trong 30s, đồng bộ theo giờ thật của máy
-  late final AnimationController _clock;
+  // Mỗi chu kỳ (15 / 30 / 45 / 60 giây) có 1 đồng hồ chung: chạy 0 -> 1,
+  // đồng bộ theo giờ thật của máy. Tài khoản cùng chu kỳ dùng chung đồng hồ.
+  final Map<int, AnimationController> _clocks = {};
 
-  // TODO: lấy danh sách từ nơi lưu an toàn (vd: flutter_secure_storage / API)
-  // Đây chỉ là dữ liệu demo. (Không dùng const cho list vì cần thêm tài khoản mới)
+  final AccountStore _store = AccountStore();
+  late final EnrollmentService _enrollment;
+
+  // Danh sách demo (SHA-1, 6 số, 30 giây) + tài khoản kích hoạt từ server (được lưu máy).
+  // (Không dùng const cho list vì cần thêm tài khoản mới)
   final List<AuthAccount> _accounts = [
     const AuthAccount(
       id: '1',
@@ -82,23 +77,20 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    _enrollment = EnrollmentService(
+      auth: widget.auth ?? const SecureStorageEnrollmentAuth(),
+    );
+
     _codes = _generateCodes();
-
-    _clock = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: _period),
-    )..addStatusListener((status) {
-      // Hết 30s -> tính lại mã và chạy chu kỳ mới (đồng bộ lại theo giờ thật)
-      if (status == AnimationStatus.completed) _syncClock();
-    });
-
-    _clock.forward(from: _elapsedFraction);
+    _loadStoredAccounts();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _clock.dispose();
+    for (final clock in _clocks.values) {
+      clock.dispose();
+    }
     _searchController.dispose();
     super.dispose();
   }
@@ -106,27 +98,55 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   // Quay lại app từ nền -> đồng hồ có thể đã lệch, đồng bộ lại ngay
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _syncClock();
+    if (state == AppLifecycleState.resumed) _syncAllClocks();
   }
 
-  /// Tỉ lệ thời gian đã trôi qua trong chu kỳ hiện tại (0.0 -> 1.0)
-  double get _elapsedFraction {
-    const periodMs = _period * 1000;
+  /// Đồng hồ của chu kỳ [period] giây; chưa có thì tạo và chạy ngay theo giờ thật.
+  AnimationController _clockFor(int period) {
+    return _clocks.putIfAbsent(period, () {
+      final clock = AnimationController(
+        vsync: this,
+        duration: Duration(seconds: period),
+      )..addStatusListener((status) {
+        // Hết 1 chu kỳ -> tính lại mã và chạy chu kỳ mới (đồng bộ lại theo giờ thật)
+        if (status == AnimationStatus.completed) _onClockCompleted(period);
+      });
+      clock.forward(from: _elapsedFraction(period));
+      return clock;
+    });
+  }
+
+  /// Tỉ lệ thời gian đã trôi qua trong chu kỳ [period] hiện tại (0.0 -> 1.0)
+  double _elapsedFraction(int period) {
+    final periodMs = period * 1000;
     final ms = DateTime.now().millisecondsSinceEpoch % periodMs;
     return ms / periodMs;
   }
 
-  void _syncClock() {
+  void _onClockCompleted(int period) {
     if (!mounted) return;
     setState(() => _codes = _generateCodes());
-    _clock.forward(from: _elapsedFraction);
+    _clocks[period]?.forward(from: _elapsedFraction(period));
+  }
+
+  void _syncAllClocks() {
+    if (!mounted) return;
+    setState(() => _codes = _generateCodes());
+    _clocks.forEach((period, clock) {
+      clock.forward(from: _elapsedFraction(period));
+    });
   }
 
   Map<String, String> _generateCodes() {
     final result = <String, String>{};
     for (final acc in _accounts) {
       try {
-        result[acc.id] = TotpGenerator.generate(acc.secret, period: _period);
+        result[acc.id] = TotpGenerator.generate(
+          acc.secret,
+          period: acc.periodSeconds,
+          digits: acc.digits,
+          algorithm: acc.algorithm,
+        );
       } on FormatException {
         result[acc.id] = '------'; // secret sai định dạng
       }
@@ -143,9 +163,28 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     }).toList();
   }
 
+  // Chỉ tài khoản kích hoạt từ server mới được lưu; demo thì không
+  Iterable<AuthAccount> get _enrolledAccounts =>
+      _accounts.where((a) => a.enrolled);
+
+  // ---- Dữ liệu đã lưu ----
+
+  Future<void> _loadStoredAccounts() async {
+    final stored = await _store.load();
+    if (!mounted || stored.isEmpty) return;
+    setState(() {
+      for (final acc in stored) {
+        _accounts.removeWhere((a) => a.id == acc.id);
+        _accounts.add(acc);
+      }
+      _codes = _generateCodes();
+    });
+  }
+
   // ---- Hành động ----
 
-  /// Bấm dấu "+": mở popup nhập khóa bí mật, bấm Activate để thêm tài khoản
+  /// Bấm dấu "+": mở popup nhập khóa bí mật. Bấm Activate -> gọi server đối chiếu
+  /// khóa (DB + Redis). Khớp thì 2FA được bật hoàn toàn và tài khoản được thêm vào danh sách.
   Future<void> _onAddAccount() async {
     FocusScope.of(context).unfocus(); // đóng bàn phím của ô tìm kiếm (nếu đang mở)
 
@@ -153,30 +192,57 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     final existingSecrets =
     _accounts.map((a) => TotpGenerator.normalizeSecret(a.secret)).toSet();
 
+    // Thông số thật (chu kỳ, số chữ số, thuật toán) do server trả về lúc xác nhận
+    EnrolledKey? enrolled;
+
     final secret = await showDialog<String>(
       context: context,
       // Tránh lỡ chạm ra ngoài làm mất khóa vừa nhập/dán; vẫn đóng được bằng nút Hủy
       barrierDismissible: false,
-      builder: (_) => ActivateKeyDialog(existingSecrets: existingSecrets),
+      builder: (_) => ActivateKeyDialog(
+        existingSecrets: existingSecrets,
+        onVerify: (enteredKey) async {
+          try {
+            enrolled = await _enrollment.activate(enteredKey);
+            return null; // thành công
+          } on EnrollmentException catch (e) {
+            return e.message; // hiện dưới ô nhập, popup vẫn mở
+          }
+        },
+      ),
     );
 
-    if (secret == null || !mounted) return; // bấm Hủy
+    final result = enrolled;
+    if (secret == null || result == null || !mounted) return; // bấm Cancel
 
-    // TODO: gọi API kích hoạt khóa (nếu có) và lưu secret vào flutter_secure_storage
+    // Tài khoản mới: tên quản trị viên + adminId (thay cho email), mã đổi theo chu kỳ đã chọn
+    final account = AuthAccount(
+      id: 'admin_${result.adminId}',
+      issuer: result.adminName,
+      account: result.adminId,
+      secret: secret,
+      periodSeconds: result.periodSeconds,
+      digits: result.digits,
+      algorithm: result.algorithm,
+      enrolled: true,
+    );
+
     setState(() {
       _searchController.clear(); // bỏ lọc để thấy ngay tài khoản vừa thêm
-      _accounts.add(
-        AuthAccount(
-          id: DateTime.now().microsecondsSinceEpoch.toString(),
-          issuer: 'Tài khoản ${_accounts.length + 1}',
-          account: 'Thêm bằng khóa bí mật',
-          secret: secret,
-        ),
-      );
+      // Cài lại 2FA cho cùng adminId -> thay khóa cũ, không để 2 dòng
+      _accounts.removeWhere((a) => a.id == account.id);
+      _accounts.add(account);
       _codes = _generateCodes();
     });
 
-    _showToast('Kích hoạt thành công');
+    try {
+      await _store.save(_enrolledAccounts);
+      if (mounted) _showToast('Kích hoạt thành công');
+    } catch (_) {
+      if (mounted) {
+        _showToast('Đã kích hoạt, nhưng không lưu được khóa vào máy');
+      }
+    }
   }
 
   Future<void> _copyCode(String code) async {
@@ -233,8 +299,8 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
                     key: ValueKey(acc.id),
                     account: acc,
                     code: _codes[acc.id] ?? '------',
-                    clock: _clock,
-                    period: _period,
+                    clock: _clockFor(acc.periodSeconds),
+                    period: acc.periodSeconds,
                     codeColor: _blueColor,
                     onTap: () => _copyCode(_codes[acc.id] ?? ''),
                   );
@@ -327,14 +393,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 }
 
 // ============================================================================
-//  POPUP NHẬP KHÓA BÍ MẬT + NÚT ACTIVATE
-//  Trả về secret đã chuẩn hóa (String) khi bấm Activate, hoặc null khi bấm Hủy.
-// ============================================================================
-
-
-
-// ============================================================================
-//  1 DÒNG TÀI KHOẢN: avatar | tên + email + mã 6 số + vòng đếm ngược | mũi tên >
+//  1 DÒNG TÀI KHOẢN: avatar | tên + email/adminId + mã 6 số + vòng đếm ngược | mũi tên >
 // ============================================================================
 
 class _AccountTile extends StatelessWidget {
@@ -504,4 +563,3 @@ class _CountdownRing extends StatelessWidget {
     );
   }
 }
-
