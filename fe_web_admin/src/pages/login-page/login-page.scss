@@ -400,3 +400,15 @@
 @media (prefers-color-scheme: dark) {
 
 }
+
+/* Nút "Đổi tài khoản" ở bước nhập mã 6 số */
+.btn-link-back {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  margin-top: 4px;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  color: inherit;
+  cursor: pointer;
+}

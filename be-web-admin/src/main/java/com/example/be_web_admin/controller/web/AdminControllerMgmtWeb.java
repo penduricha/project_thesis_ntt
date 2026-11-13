@@ -1,9 +1,12 @@
 package com.example.be_web_admin.controller.web;
 
 import com.example.be_web_admin.dto.AdminLoginDTO;
+import com.example.be_web_admin.dto.LoginOutcome;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
+import com.example.be_web_admin.service.jpa.impl.AdminLoginServiceImpl;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +24,16 @@ public class AdminControllerMgmtWeb {
 
     private final AdminTokenServiceImpl adminTokenService;
 
+    private final AdminLoginServiceImpl adminLoginService;
+
     @Autowired
     private AdminJwtTokenProvider adminJwtTokenProvider;
 
 
-    public AdminControllerMgmtWeb(AdminServiceImpl adminService, AdminTokenServiceImpl adminTokenService) {
+    public AdminControllerMgmtWeb(AdminServiceImpl adminService, AdminTokenServiceImpl adminTokenService, AdminLoginServiceImpl adminLoginService) {
         this.adminService = adminService;
         this.adminTokenService = adminTokenService;
+        this.adminLoginService = adminLoginService;
     }
 
     //    {
@@ -51,24 +57,24 @@ public class AdminControllerMgmtWeb {
     //            "message": "Mã sinh viên hoặc mật khẩu không chính xác",
     //            "data": null
     //    }
-    @PostMapping("/auth/login")
-    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, Object> adminRequestLogin) throws RuntimeException {
-        Number adminIdInt = (Number) adminRequestLogin.get("adminId");
-        Long adminId = adminIdInt != null ? adminIdInt.longValue() : null;
-        String password = (String) adminRequestLogin.get("password");
-
-        AdminLoginDTO loginRequestAdminDTO = new AdminLoginDTO();
-        loginRequestAdminDTO.setAdminId(adminId);
-        loginRequestAdminDTO.setPassword(password);
-
-        // Gọi service trả về kết quả (ví dụ trả về Map, Token, hoặc DTO)
-        Object result = adminService.loginAdmin(
-                loginRequestAdminDTO.getAdminId(),
-                loginRequestAdminDTO.getPassword()
-        );
-
-        return ResponseEntity.ok(result);
-    }
+//    @PostMapping("/auth/login")
+//    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, Object> adminRequestLogin) throws RuntimeException {
+//        Number adminIdInt = (Number) adminRequestLogin.get("adminId");
+//        Long adminId = adminIdInt != null ? adminIdInt.longValue() : null;
+//        String password = (String) adminRequestLogin.get("password");
+//
+//        AdminLoginDTO loginRequestAdminDTO = new AdminLoginDTO();
+//        loginRequestAdminDTO.setAdminId(adminId);
+//        loginRequestAdminDTO.setPassword(password);
+//
+//        // Gọi service trả về kết quả (ví dụ trả về Map, Token, hoặc DTO)
+//        Object result = adminService.loginAdmin(
+//                loginRequestAdminDTO.getAdminId(),
+//                loginRequestAdminDTO.getPassword()
+//        );
+//
+//        return ResponseEntity.ok(result);
+//    }
 
 //    @PostMapping("/auth/login/mobile")
 //    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, Object> adminRequestLogin) throws RuntimeException {
@@ -238,5 +244,71 @@ public class AdminControllerMgmtWeb {
         }
         responseHttp.put("data", responseData);
         return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
+    }
+
+//    @PostMapping("/login")   // giữ đường dẫn hiện tại: Vue gọi /admin/auth/login
+//    public ResponseEntity<?> login(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
+//        LoginOutcome r = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
+//        return switch (r.status()) {
+//            case OK -> ResponseEntity.ok(Map.of("success", true,
+//                    "data", Map.of("accessToken", r.accessToken(), "refreshToken", r.refreshToken())));
+//            case TOTP_REQUIRED, TOTP_INVALID -> ResponseEntity.ok(Map.of("success", false,
+//                    "data", Map.of("code", r.status().name())));
+//            case LOCKED -> ResponseEntity.ok(Map.of("success", false,
+//                    "data", Map.of("code", "LOCKED", "retryAfterSeconds", r.retryAfterSeconds())));
+//            default -> ResponseEntity.ok(Map.of("success", false));   // BAD_CREDENTIALS: giữ như cũ
+//        };
+//    }
+
+    @PostMapping("/auth/login")
+    public ResponseEntity<?> loginAdmin(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
+        req.setTotpCode(null); // endpoint này không nhận mã 6 số
+        LoginOutcome outcome = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
+        return ResponseEntity.ok(buildLoginResponse(outcome, req.getAdminId()));
+    }
+
+    // Bước 2 (chỉ khi bước 1 trả TOTP_REQUIRED): gửi lại kèm mã 6 số từ app Authenticator.
+    //  - Mã đúng                     -> success=true kèm token
+    //  - Mã sai/hết hạn/đã dùng      -> success=false, data.code="TOTP_INVALID"
+    //  - Nhập sai quá nhiều lần      -> success=false, data.code="LOCKED", data.retryAfterSeconds
+    @PostMapping("/auth/login/totp")
+    public ResponseEntity<?> loginAdminWithTotp(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
+        LoginOutcome outcome = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
+        return ResponseEntity.ok(buildLoginResponse(outcome, req.getAdminId()));
+    }
+
+    private Map<String, Object> buildLoginResponse(LoginOutcome outcome, Long adminId) {
+        Map<String, Object> body = new HashMap<>();
+        switch (outcome.status()) {
+            case OK -> {
+                body.put("success", true);
+                body.put("message", "Đăng nhập thành công");
+                body.put("data", Map.of(
+                        "adminId", adminId,
+                        "accessToken", outcome.accessToken(),
+                        "refreshToken", outcome.refreshToken()));
+            }
+            case TOTP_REQUIRED -> {
+                body.put("success", false);
+                body.put("message", "Tài khoản đã bật xác thực 2 lớp, cần mã 6 số.");
+                body.put("data", Map.of("code", "TOTP_REQUIRED"));
+            }
+            case TOTP_INVALID -> {
+                body.put("success", false);
+                body.put("message", "Mã xác thực không đúng hoặc đã hết hạn.");
+                body.put("data", Map.of("code", "TOTP_INVALID"));
+            }
+            case LOCKED -> {
+                body.put("success", false);
+                body.put("message", "Nhập sai mã quá nhiều lần, vui lòng thử lại sau.");
+                body.put("data", Map.of("code", "LOCKED", "retryAfterSeconds", outcome.retryAfterSeconds()));
+            }
+            default -> { // BAD_CREDENTIALS
+                body.put("success", false);
+                body.put("message", "Mã quản trị viên hoặc mật khẩu không chính xác");
+                body.put("data", null);
+            }
+        }
+        return body;
     }
 }

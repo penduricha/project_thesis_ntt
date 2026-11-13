@@ -6,7 +6,7 @@ import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 
 import AdminStorage from "@/local_storage/AdminStorage.js";
 import {AdminAccount} from "@/model/AdminAccount.js";
-import AdminRepository from "@/repository/AdminRepository.js";
+import AdminRepository, {REQUEST_STATUS} from "@/repository/AdminRepository.js";
 import Footer from "@/components/footer/Footer.vue";
 import Header from "@/components/header/Header.vue";
 
@@ -17,6 +17,10 @@ const MESSAGE = {
   WRONG_CREDENTIALS: 'Mã quản trị viên hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.',
   SERVER_ERROR: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng rồi thử lại.',
   NAVIGATE_ERROR: 'Đăng nhập thành công nhưng không thể chuyển trang. Vui lòng tải lại trang.',
+  TOTP_REQUIRED: 'Tài khoản đã bật xác thực 2 lớp. Nhập mã 6 số đang hiển thị trong ứng dụng Authenticator.',
+  TOTP_FORMAT: 'Mã xác thực gồm đúng 6 chữ số.',
+  TOTP_INVALID: 'Mã xác thực không đúng hoặc đã hết hạn. Hãy nhập mã mới đang hiển thị trên ứng dụng.',
+  LOCKED: (seconds) => `Nhập sai quá nhiều lần. Vui lòng thử lại sau ${Math.max(1, Math.ceil(seconds / 60))} phút.`,
 };
 
 /* Quá thời gian này mà server chưa trả lời thì mở khoá form, tránh bị treo vô hạn */
@@ -51,7 +55,9 @@ export default {
       adminId: null,
       password: "",
       rememberMe: false,
-      keyAuthenticator: null,
+      keyAuthenticator: "",
+      // true khi server báo tài khoản đã bật 2FA (chỉ sau khi mật khẩu đúng) -> hiện ô nhập mã 6 số
+      requireTotp: false,
       showPassword: false,
 
       // true từ lúc bấm đăng nhập đến lúc có kết quả: khoá cả form + hiện hiệu ứng load
@@ -61,6 +67,7 @@ export default {
       errors: {
         adminId: "",
         password: "",
+        totp: "",
       },
 
       // lỗi chung của form (sai tài khoản/mật khẩu, lỗi server...) hiện phía trên ô "Ghi nhớ"
@@ -115,15 +122,19 @@ export default {
     },
 
     setInputKeyAuthenticator(event) {
-      // Chỉ cho phép các ký tự số
-      // Gán lại giá trị cho biến adminId
-      this.keyAuthenticator = event.target.value.replace(/[^0-9]/g, '');
+      // Chỉ cho phép các ký tự số, tối đa 6
+      this.keyAuthenticator = event.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+      this.errors.totp = "";
+      this.validateLogin = "";
+    },
 
-      if (!this.keyAuthenticator) {
-        this.validateLogin = "";
-      } else {
-        this.validateLogin = "";
-      }
+    // Quay lại bước nhập mật khẩu (muốn đổi tài khoản)
+    cancelTotpStep() {
+      this.requireTotp = false;
+      this.keyAuthenticator = "";
+      this.errors.totp = "";
+      this.validateLogin = "";
+      this.focusField('password');
     },
 
     setInputPassword() {
@@ -141,8 +152,12 @@ export default {
     async focusField(field) {
       // Chờ Vue vẽ lại DOM (gỡ disabled) rồi mới focus được
       await this.$nextTick();
-      const input = field === 'adminId' ? this.$refs.inputAdminId : this.$refs.inputPassword;
-      input?.focus();
+      const inputs = {
+        adminId: this.$refs.inputAdminId,
+        password: this.$refs.inputPassword,
+        totp: this.$refs.inputTotp,
+      };
+      inputs[field]?.focus();
     },
 
     // Rung nhẹ ô nhập để thu hút sự chú ý. Tự tắt nếu người dùng bật "giảm chuyển động".
@@ -182,6 +197,14 @@ export default {
       }
       if (this.errors.password) {
         this.focusField('password');
+        return false;
+      }
+
+      // Bước 2: nếu đang yêu cầu mã thì phải đúng 6 số
+      if (this.requireTotp && !/^\d{6}$/.test(this.keyAuthenticator ?? '')) {
+        this.errors.totp = MESSAGE.TOTP_FORMAT;
+        this.shakeElement(this.$refs.boxTotp);
+        this.focusField('totp');
         return false;
       }
       return true;
@@ -229,6 +252,7 @@ export default {
 
       this.errors.adminId = "";
       this.errors.password = "";
+      this.errors.totp = "";
       this.loginFailed = false;
       this.validateLogin = "";
 
@@ -239,21 +263,51 @@ export default {
 
       try {
         const adminRepository = new AdminRepository();
-        const statusLogin = await this.withTimeout(
-            adminRepository.getResponseFromLoginRequest(Number(this.adminId), String(this.password)),
+        const result = await this.withTimeout(
+            adminRepository.getLoginResult(
+                Number(this.adminId),
+                String(this.password),
+                this.requireTotp ? this.keyAuthenticator : null // lần đầu chưa có mã
+            ),
             LOGIN_TIMEOUT_MS
         );
 
-        if (statusLogin === "OK") {
-          this.handleRememberMe();
-          //dang nhap thanh cong, dieu huong qua (đợi chuyển trang xong mới mở khoá form)
-          await this.navigateToMainPage();
-        } else if (statusLogin === "Failed") {
-          this.showWrongCredentials();
-          fieldToFocus = 'password';
-        } else {
-          // Server trả về trạng thái lạ (lỗi 5xx, mất kết nối...)
-          this.validateLogin = MESSAGE.SERVER_ERROR;
+        switch (result.getStatus()) {
+          case REQUEST_STATUS.OK:
+            this.handleRememberMe();
+            //dang nhap thanh cong, dieu huong qua (đợi chuyển trang xong mới mở khoá form)
+            await this.navigateToMainPage();
+            break;
+
+          case REQUEST_STATUS.TOTP_REQUIRED:
+            // Mật khẩu đúng và tài khoản đã bật 2FA -> hiện ô mã 6 số
+            this.requireTotp = true;
+            this.validateLogin = MESSAGE.TOTP_REQUIRED;
+            fieldToFocus = 'totp';
+            break;
+
+          case REQUEST_STATUS.TOTP_INVALID:
+            this.errors.totp = MESSAGE.TOTP_INVALID;
+            this.keyAuthenticator = "";
+            this.shakeElement(this.$refs.boxTotp);
+            fieldToFocus = 'totp';
+            break;
+
+          case REQUEST_STATUS.LOCKED:
+            this.validateLogin = MESSAGE.LOCKED(result.getRetryAfterSeconds());
+            this.keyAuthenticator = "";
+            break;
+
+          case REQUEST_STATUS.FAILED:
+            this.requireTotp = false;
+            this.keyAuthenticator = "";
+            this.showWrongCredentials();
+            fieldToFocus = 'password';
+            break;
+
+          default:
+            // Server trả về trạng thái lạ (lỗi 5xx, mất kết nối...)
+            this.validateLogin = MESSAGE.SERVER_ERROR;
         }
       } catch (error) {
         console.error('Login error:', error);
@@ -343,6 +397,7 @@ export default {
                        inputmode="numeric"
                        autocomplete="username"
                        maxlength="10"
+                       :readonly="requireTotp"
                        :aria-invalid="invalidAdminId"
                        :aria-describedby="errors.adminId ? 'errorAdminId' : null"
                        @input="setInputAdminId"
@@ -368,6 +423,7 @@ export default {
                        placeholder="Mật khẩu"
                        autocomplete="current-password"
                        maxlength="20"
+                       :readonly="requireTotp"
                        :aria-invalid="invalidPassword"
                        :aria-describedby="errors.password ? 'errorPassword' : null"
                        @input="setInputPassword"
@@ -395,15 +451,33 @@ export default {
               </Transition>
             </div>
 
-            <!-- Khóa 6 số xác thực: giữ nguyên sự kiện, chỉ đồng bộ style với các ô trên -->
-            <div class="form-floating style-input-login">
-              <input type="text" class="form-control border-radius-zero"
-                     id="floatingInputKeyAuthenticator"
-                     placeholder="Khóa 6 số xác thực"
-                     @input="setInputKeyAuthenticator"
-                     v-model="keyAuthenticator" maxlength="6">
-              <label for="floatingInputKeyAuthenticator">Khóa 6 số xác thực</label>
-            </div>
+            <!-- Khóa 6 số xác thực: chỉ hiện khi server báo tài khoản đã bật 2FA -->
+            <Transition name="error-fade">
+              <div v-if="requireTotp" class="field-group">
+                <div ref="boxTotp"
+                     class="form-floating style-input-login"
+                     :class="{ 'has-error': !!errors.totp }">
+                  <input type="text" class="form-control border-radius-zero"
+                         id="floatingInputKeyAuthenticator"
+                         ref="inputTotp"
+                         placeholder="Khóa 6 số xác thực"
+                         inputmode="numeric"
+                         autocomplete="one-time-code"
+                         maxlength="6"
+                         :aria-invalid="!!errors.totp"
+                         :aria-describedby="errors.totp ? 'errorTotp' : null"
+                         @input="setInputKeyAuthenticator"
+                         v-model="keyAuthenticator">
+                  <label for="floatingInputKeyAuthenticator">Khóa 6 số xác thực</label>
+                </div>
+                <Transition name="error-fade">
+                  <p v-if="errors.totp" id="errorTotp" class="field-error" role="alert">
+                    {{ errors.totp }}
+                  </p>
+                </Transition>
+                <button type="button" class="btn-link-back" @click="cancelTotpStep">Đổi tài khoản</button>
+              </div>
+            </Transition>
 
             <!-- Lỗi chung của form -->
             <Transition name="error-fade">

@@ -5,6 +5,7 @@ import AdminStorage from "@/local_storage/AdminStorage.js";
 
 const ENDPOINTS = Object.freeze({
     LOGIN: '/admin/auth/login',
+    LOGIN_TOTP: '/admin/auth/login/totp',
     LOGOUT: '/admin/auth/logout',
     INFORMATION: '/admin/information/basic',
     INFORMATION_DETAIL: '/admin/information/detail',
@@ -32,12 +33,28 @@ export class AdminService {
 
     // ---------- Public API ----------
 
+    /** Bước 1: chỉ mã quản trị viên + mật khẩu. */
     async postDataToLoginRequest(adminAccount) {
         assertInstanceOf(adminAccount, AdminAccount, 'AdminAccount');
 
         return this.#postWithAuthorization(ENDPOINTS.LOGIN, {
             adminId: adminAccount.getAdminId(),
             password: adminAccount.getPassword(),
+        });
+    }
+
+    /**
+     * Bước 2 (khi bước 1 báo TOTP_REQUIRED): gửi lại kèm mã 6 số từ app Authenticator.
+     * @param {AdminAccount} adminAccount
+     * @param {string} totpCode
+     */
+    async postDataToLoginTotpRequest(adminAccount, totpCode) {
+        assertInstanceOf(adminAccount, AdminAccount, 'AdminAccount');
+
+        return this.#postWithAuthorization(ENDPOINTS.LOGIN_TOTP, {
+            adminId: adminAccount.getAdminId(),
+            password: adminAccount.getPassword(),
+            totpCode: String(totpCode),
         });
     }
 

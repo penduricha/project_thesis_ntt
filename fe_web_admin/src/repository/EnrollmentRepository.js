@@ -254,7 +254,7 @@ export class EnrollmentRepository {
             }
         };
 
-        run();
+        run().then(r => {});
         return () => controller.abort();
     }
 }
