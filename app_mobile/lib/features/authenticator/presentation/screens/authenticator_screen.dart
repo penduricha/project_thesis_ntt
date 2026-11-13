@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../main_shell/presentation/widgets/app_menu_bar.dart';
-// Class sinh mã TOTP đã được tách riêng (cùng thư mục với file này)
+// TOTP code generation class has been separated (in the same folder as this file)
 import '../../data/model/auth_account.dart';
 import '../../data/service/account_store.dart';
 import '../../data/service/enrollment_service.dart';
@@ -10,19 +10,19 @@ import '../widgets/activate_key_dialog.dart';
 import '../widgets/ring_painter.dart';
 import 'totp_generator.dart';
 
-// AuthAccount đã chuyển sang data/model/auth_account.dart. Export lại để các file khác
-// đang import AuthAccount từ file này vẫn chạy bình thường.
+// AuthAccount has been moved to data/model/auth_account.dart. Re-export so other files
+// importing AuthAccount from this file still work normally.
 export '../../data/model/auth_account.dart';
 
 // ============================================================================
-//  MÀN HÌNH
+//  SCREEN
 // ============================================================================
 
 class AuthenticatorScreen extends StatefulWidget {
   const AuthenticatorScreen({super.key, this.auth});
 
-  /// Phiên đăng nhập dùng để gọi API kích hoạt 2FA (access token + adminId + tên).
-  /// Không truyền -> đọc từ flutter_secure_storage (xem SecureStorageEnrollmentAuth).
+  /// Login session used to call the 2FA activation API (access token + adminId + name).
+  /// If not passed -> read from flutter_secure_storage (see SecureStorageEnrollmentAuth).
   final EnrollmentAuth? auth;
 
   @override
@@ -31,30 +31,30 @@ class AuthenticatorScreen extends StatefulWidget {
 
 class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  // ---- Màu sắc ----
-  static const Color _blueColor = Color(0xFF004B87); // nút "+" góc trên phải
+  // ---- Colors ----
+  static const Color _blueColor = Color(0xFF004B87); // "+" button top right
   static const Color _dividerColor = Color(0xFFEDEDED);
   static const Color _searchFill = Color(0xFFEFEFEF);
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
 
-  // Mỗi chu kỳ (15 / 30 / 45 / 60 giây) có 1 đồng hồ chung: chạy 0 -> 1,
-  // đồng bộ theo giờ thật của máy. Tài khoản cùng chu kỳ dùng chung đồng hồ.
+  // Each period (15 / 30 / 45 / 60 seconds) has a shared clock: runs 0 -> 1,
+  // synchronized with the device's real time. Accounts with the same period share the clock.
   final Map<int, AnimationController> _clocks = {};
 
   late final EnrollmentAuth _auth;
   late final EnrollmentService _enrollment;
 
-  // Phiên đăng nhập hiện tại. Chỉ TOTP của _adminId mới được nạp và hiển thị.
-  // null = chưa nạp xong / chưa đăng nhập -> danh sách để trống.
+  // Current login session. Only TOTP of _adminId is loaded and displayed.
+  // null = not loaded yet / not logged in -> list is empty.
   String? _adminId;
-  AccountStore? _store; // key lưu riêng theo _adminId
+  AccountStore? _store; // key saved separately by _adminId
 
-  // TOTP của admin đang đăng nhập (kích hoạt từ server, được lưu máy). Không còn dữ liệu demo.
+  // TOTP of the logged-in admin (activated from server, saved on device). No more demo data.
   final List<AuthAccount> _accounts = [];
 
-  // Mã 6 số hiện tại của từng tài khoản (key = id), chỉ tính lại khi sang chu kỳ mới
+  // Current 6-digit code of each account (key = id), recalculated only on a new period
   Map<String, String> _codes = {};
 
   @override
@@ -79,20 +79,20 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     super.dispose();
   }
 
-  // Quay lại app từ nền -> đồng hồ có thể đã lệch, đồng bộ lại ngay
+  // Returning to app from background -> clock might be out of sync, resync immediately
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _syncAllClocks();
   }
 
-  /// Đồng hồ của chu kỳ [period] giây; chưa có thì tạo và chạy ngay theo giờ thật.
+  /// Clock for [period] seconds; if not exists, create and run immediately based on real time.
   AnimationController _clockFor(int period) {
     return _clocks.putIfAbsent(period, () {
       final clock = AnimationController(
         vsync: this,
         duration: Duration(seconds: period),
       )..addStatusListener((status) {
-        // Hết 1 chu kỳ -> tính lại mã và chạy chu kỳ mới (đồng bộ lại theo giờ thật)
+        // End of 1 period -> recalculate code and run new period (resync based on real time)
         if (status == AnimationStatus.completed) _onClockCompleted(period);
       });
       clock.forward(from: _elapsedFraction(period));
@@ -100,7 +100,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     });
   }
 
-  /// Tỉ lệ thời gian đã trôi qua trong chu kỳ [period] hiện tại (0.0 -> 1.0)
+  /// Elapsed time fraction in the current [period] (0.0 -> 1.0)
   double _elapsedFraction(int period) {
     final periodMs = period * 1000;
     final ms = DateTime.now().millisecondsSinceEpoch % periodMs;
@@ -132,13 +132,13 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
           algorithm: acc.algorithm,
         );
       } on FormatException {
-        result[acc.id] = '------'; // secret sai định dạng
+        result[acc.id] = '------'; // invalid secret format
       }
     }
     return result;
   }
 
-  // Chỉ TOTP của admin đang đăng nhập (account = adminId). Không bao giờ hiện mục của admin khác.
+  // Only TOTP of the logged-in admin (account = adminId). Never show other admins' items.
   List<AuthAccount> get _ownAccounts =>
       _accounts.where((a) => a.account == _adminId).toList();
 
@@ -152,17 +152,17 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     }).toList();
   }
 
-  // Chỉ tài khoản kích hoạt từ server mới được lưu; demo thì không
+  // Only accounts activated from server are saved; demo ones are not
   Iterable<AuthAccount> get _enrolledAccounts =>
       _accounts.where((a) => a.enrolled);
 
-  // ---- Dữ liệu đã lưu ----
+  // ---- Stored Data ----
 
   Future<void> _loadStoredAccounts() async {
     final profile = await _auth.profile();
     if (!mounted) return;
 
-    // Chưa đăng nhập: không hiện gì cả
+    // Not logged in: show nothing
     if (profile == null) {
       setState(() {
         _adminId = null;
@@ -174,7 +174,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     }
 
     final store = AccountStore(adminId: profile.adminId);
-    final stored = await store.load(); // chỉ đọc key của admin này
+    final stored = await store.load(); // only read keys of this admin
     if (!mounted) return;
 
     setState(() {
@@ -187,54 +187,54 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     });
   }
 
-  // ---- Hành động ----
+  // ---- Actions ----
 
-  /// Bấm dấu "+": mở popup nhập khóa bí mật. Bấm Activate -> gọi server đối chiếu
-  /// khóa (DB + Redis). Khớp thì 2FA được bật hoàn toàn và tài khoản được thêm vào danh sách.
+  /// Tap "+": open popup to enter secret key. Tap Activate -> call server to verify
+  /// key (DB + Redis). If matched, 2FA is fully enabled and the account is added to the list.
   Future<void> _onAddAccount() async {
-    FocusScope.of(context).unfocus(); // đóng bàn phím của ô tìm kiếm (nếu đang mở)
+    FocusScope.of(context).unfocus(); // close search keyboard (if open)
 
     final store = _store;
     final adminId = _adminId;
     if (store == null || adminId == null) {
-      _showToast('Đang tải phiên đăng nhập, vui lòng thử lại');
+      _showToast('Loading login session, please try again');
       return;
     }
 
-    // Các khóa đã có -> popup dùng để báo trùng
+    // Existing keys -> popup used to report duplicates
     final existingSecrets =
     _accounts.map((a) => TotpGenerator.normalizeSecret(a.secret)).toSet();
 
-    // Thông số thật (chu kỳ, số chữ số, thuật toán) do server trả về lúc xác nhận
+    // Real parameters (period, digits, algorithm) returned by server upon verification
     EnrolledKey? enrolled;
 
     final secret = await showDialog<String>(
       context: context,
-      // Tránh lỡ chạm ra ngoài làm mất khóa vừa nhập/dán; vẫn đóng được bằng nút Hủy
+      // Prevent accidental outside tap from losing entered/pasted key; can still close with Cancel button
       barrierDismissible: false,
       builder: (_) => ActivateKeyDialog(
         existingSecrets: existingSecrets,
         onVerify: (enteredKey) async {
           try {
             enrolled = await _enrollment.activate(enteredKey);
-            return null; // thành công
+            return null; // success
           } on EnrollmentException catch (e) {
-            return e.message; // hiện dưới ô nhập, popup vẫn mở
+            return e.message; // show under input, popup remains open
           }
         },
       ),
     );
 
     final result = enrolled;
-    if (secret == null || result == null || !mounted) return; // bấm Cancel
+    if (secret == null || result == null || !mounted) return; // tap Cancel
 
-    // Server xác nhận khóa này thuộc admin khác với phiên đang đăng nhập: không thêm vào danh sách
+    // Server confirms this key belongs to an admin different from the current session: do not add to list
     if (result.adminId != adminId) {
-      _showToast('Khóa không thuộc tài khoản đang đăng nhập');
+      _showToast('Key does not belong to the current logged-in account');
       return;
     }
 
-    // Tài khoản mới: tên quản trị viên + adminId (thay cho email), mã đổi theo chu kỳ đã chọn
+    // New account: admin name + adminId (instead of email), code changes according to selected period
     final account = AuthAccount(
       id: 'admin_${result.adminId}',
       issuer: result.adminName,
@@ -247,8 +247,8 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     );
 
     setState(() {
-      _searchController.clear(); // bỏ lọc để thấy ngay tài khoản vừa thêm
-      // Cài lại 2FA cho cùng adminId -> thay khóa cũ, không để 2 dòng
+      _searchController.clear(); // clear filter to immediately see newly added account
+      // Re-setup 2FA for the same adminId -> replace old key, do not leave 2 rows
       _accounts.removeWhere((a) => a.id == account.id);
       _accounts.add(account);
       _codes = _generateCodes();
@@ -256,10 +256,10 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
     try {
       await store.save(_enrolledAccounts);
-      if (mounted) _showToast('Kích hoạt thành công');
+      if (mounted) _showToast('Activated successfully');
     } catch (_) {
       if (mounted) {
-        _showToast('Đã kích hoạt, nhưng không lưu được khóa vào máy');
+        _showToast('Activated, but failed to save the key to the device');
       }
     }
   }
@@ -267,7 +267,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   Future<void> _copyCode(String code) async {
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
-    _showToast('Đã sao chép mã');
+    _showToast('Code copied');
   }
 
   void _showToast(String message) {
@@ -332,7 +332,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     );
   }
 
-  // Hàng trên cùng: menu | tiêu đề | dấu "+"
+  // Top row: menu | title | "+" button
   Widget _buildTopBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
@@ -359,14 +359,14 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
           IconButton(
             onPressed: _onAddAccount,
             icon: const Icon(Icons.add, color: _blueColor, size: 30),
-            tooltip: 'Thêm tài khoản',
+            tooltip: 'Add account',
           ),
         ],
       ),
     );
   }
 
-  // Thanh tìm kiếm bo góc, nền xám nhạt
+  // Rounded search bar, light gray background
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -402,15 +402,15 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   }
 
   Widget _buildEmptyState() {
-    // Chưa có TOTP nào của admin này (khác với "tìm không ra" khi đang lọc)
+    // No TOTP yet for this admin (different from "not found" when filtering)
     final noAccountsYet = _ownAccounts.isEmpty;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Text(
           noAccountsYet
-              ? 'Chưa có mã xác thực nào.\nBấm dấu + để thêm khóa bí mật.'
-              : 'Không tìm thấy tài khoản',
+              ? 'No authenticator codes yet.\nTap + to add a secret key.'
+              : 'Account not found',
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 15, color: Colors.grey),
         ),
@@ -420,7 +420,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 }
 
 // ============================================================================
-//  1 DÒNG TÀI KHOẢN: avatar | tên + email/adminId + mã 6 số + vòng đếm ngược | mũi tên >
+//  1 ACCOUNT ROW: avatar | name + email/adminId + 6-digit code + countdown ring | arrow >
 // ============================================================================
 
 class _AccountTile extends StatelessWidget {
@@ -435,7 +435,7 @@ class _AccountTile extends StatelessWidget {
   });
 
   final AuthAccount account;
-  final String code; // 6 số liền nhau, vd "940555"
+  final String code; // 6 contiguous digits, e.g. "940555"
   final Animation<double> clock;
   final int period;
   final Color codeColor;
@@ -450,14 +450,14 @@ class _AccountTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap, // chạm để sao chép mã (đổi thành mở màn chi tiết nếu cần)
+      onTap: onTap, // tap to copy code (change to open detail screen if needed)
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
         child: Row(
-          // center: mũi tên nằm giữa chiều cao của cả dòng
+          // center: arrow is centered in the row height
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Nội dung chính. Row lồng bên trong giữ avatar bám mép trên như cũ.
+            // Main content. Inner Row keeps avatar aligned to top as before.
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,7 +507,7 @@ class _AccountTile extends StatelessWidget {
                                 fontWeight: FontWeight.w400,
                                 color: codeColor,
                                 letterSpacing: 1,
-                                // Số cùng độ rộng -> mã không bị "nhảy" khi đổi
+                                // Tabular figures -> code doesn't "jump" when changing
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -528,7 +528,7 @@ class _AccountTile extends StatelessWidget {
               ),
             ),
 
-            // Mũi tên phải màu xám (muốn mảnh hơn: Icons.arrow_forward_ios_rounded, size 16)
+            // Gray right arrow (for thinner: Icons.arrow_forward_ios_rounded, size 16)
             const SizedBox(width: 8),
             const Icon(Icons.chevron_right, color: Colors.grey, size: 24),
           ],
@@ -539,9 +539,9 @@ class _AccountTile extends StatelessWidget {
 }
 
 // ============================================================================
-//  VÒNG ĐẾM NGƯỢC (hiệu ứng đồng hồ): cung xanh mòn dần theo chiều kim đồng hồ
-//  + số giây ở giữa.
-//  Chỉ vùng nhỏ này được vẽ lại theo từng frame, danh sách không bị rebuild.
+//  COUNTDOWN RING (clock effect): blue arc wears down clockwise
+//  + seconds in the middle.
+//  Only this small area is repainted per frame, the list is not rebuilt.
 // ============================================================================
 
 class _CountdownRing extends StatelessWidget {
@@ -556,7 +556,7 @@ class _CountdownRing extends StatelessWidget {
   final Color color;
 
   static const double _size = 28;
-  static const int _warningSeconds = 5; // còn <= 5s thì chuyển đỏ
+  static const int _warningSeconds = 5; // <= 5s remaining turns red
 
   @override
   Widget build(BuildContext context) {

@@ -8,3 +8,9 @@ Tao 2 bang ghi redis cache luu jwt.
 
 Delete all keys redis:
 redis-cli -p 6379 --user default -a 1234 -n 1 FLUSHDB
+
+git change file in branch
+
+git apply --check fix-login-2fa.patch
+
+git apply fix-login-2fa.patch
