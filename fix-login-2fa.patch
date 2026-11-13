@@ -1,0 +1,376 @@
+diff --git a/be-web-admin/src/main/java/com/example/be_web_admin/controller/web/AdminControllerMgmtWeb.java b/be-web-admin/src/main/java/com/example/be_web_admin/controller/web/AdminControllerMgmtWeb.java
+index fd8fc7c92..e112275e2 100644
+--- a/be-web-admin/src/main/java/com/example/be_web_admin/controller/web/AdminControllerMgmtWeb.java
++++ b/be-web-admin/src/main/java/com/example/be_web_admin/controller/web/AdminControllerMgmtWeb.java
+@@ -260,19 +260,13 @@ public class AdminControllerMgmtWeb {
+ //        };
+ //    }
+ 
+-    @PostMapping("/auth/login")
+-    public ResponseEntity<?> loginAdmin(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
+-        req.setTotpCode(null); // endpoint này không nhận mã 6 số
+-        LoginOutcome outcome = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
+-        return ResponseEntity.ok(buildLoginResponse(outcome, req.getAdminId()));
+-    }
+-
+-    // Bước 2 (chỉ khi bước 1 trả TOTP_REQUIRED): gửi lại kèm mã 6 số từ app Authenticator.
+-    //  - Mã đúng                     -> success=true kèm token
+-    //  - Mã sai/hết hạn/đã dùng      -> success=false, data.code="TOTP_INVALID"
++    // Đăng nhập 1 request: adminId + password + totpCode (totpCode có thể trống).
++    //  - Chưa bật 2FA                -> totpCode để trống vẫn success=true kèm token
++    //  - Đã bật 2FA, thiếu mã        -> success=false, data.code="TOTP_REQUIRED"
++    //  - Đã bật 2FA, mã sai/hết hạn  -> success=false, data.code="TOTP_INVALID"
+     //  - Nhập sai quá nhiều lần      -> success=false, data.code="LOCKED", data.retryAfterSeconds
+-    @PostMapping("/auth/login/totp")
+-    public ResponseEntity<?> loginAdminWithTotp(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
++    @PostMapping({"/auth/login", "/auth/login/totp"}) // /auth/login/totp giữ lại cho client cũ
++    public ResponseEntity<?> loginAdmin(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
+         LoginOutcome outcome = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
+         return ResponseEntity.ok(buildLoginResponse(outcome, req.getAdminId()));
+     }
+diff --git a/be-web-admin/src/main/java/com/example/be_web_admin/service/jpa/impl/AdminLoginServiceImpl.java b/be-web-admin/src/main/java/com/example/be_web_admin/service/jpa/impl/AdminLoginServiceImpl.java
+index 6f17c8056..4518f4015 100644
+--- a/be-web-admin/src/main/java/com/example/be_web_admin/service/jpa/impl/AdminLoginServiceImpl.java
++++ b/be-web-admin/src/main/java/com/example/be_web_admin/service/jpa/impl/AdminLoginServiceImpl.java
+@@ -20,13 +20,12 @@ import org.springframework.stereotype.Service;
+ import java.time.Duration;
+ import java.time.Instant;
+ import java.util.Map;
+-import java.util.Objects;
+ import java.util.Optional;
+ 
+ /**
+- * Đăng nhập 1 hoặc 2 bước dùng chung một hàm:
+- *  - Chưa bật 2FA: adminId + password là vào.
+- *  - Đã bật 2FA: lần đầu trả TOTP_REQUIRED, lần hai kèm totpCode.
++ * Đăng nhập một request duy nhất gồm adminId, password và totpCode (tùy chọn):
++ *  - Chưa bật 2FA: adminId + password là vào, totpCode để trống.
++ *  - Đã bật 2FA: bắt buộc totpCode; thiếu -> TOTP_REQUIRED, sai/hết hạn/đã dùng -> TOTP_INVALID.
+  */
+ @Slf4j
+ @Service
+@@ -54,24 +53,27 @@ public class AdminLoginServiceImpl {
+         }
+         Long adminId = req.getAdminId();
+ 
+-        // (a) Mật khẩu BCrypt (cost 12). Admin không tồn tại vẫn tốn thời gian BCrypt như bình thường.
++        // (a) Mật khẩu BCrypt. Cột password trong DB ĐÃ là hash BCrypt, so khớp thẳng với mật khẩu người dùng nhập
++        //     (không được băm lại hash đó). Admin không tồn tại: matches() vẫn chạy 1 lần BCrypt giả
++        //     để thời gian phản hồi không lộ tài khoản có tồn tại hay không.
+         Admin admin = adminRepository.findAdminByAdminId(adminId);
+-        String password = (admin == null) ? null : admin.getPassword(); // TODO 3: đúng tên getter hash trong entity Admin
+-        String passwordHashed = mgmtPassword.generateHash(password, 12);
+-
+-        if (!mgmtPassword.matches(req.getPassword(), passwordHashed)) {
++        String storedHash = (admin == null) ? null : admin.getPassword();
++        boolean passwordOk = mgmtPassword.matches(req.getPassword(), storedHash); // luôn chạy, kể cả admin = null
++        if (admin == null || !passwordOk) {
+             return LoginOutcome.of(LoginStatus.BAD_CREDENTIALS);
+         }
+ 
+-        // (b) Chỉ credential ĐÃ xác nhận bên mobile mới tính là bật 2FA (pending không tính)
++        // (b) Chỉ credential ĐÃ xác nhận bên mobile mới tính là bật 2FA (pending không tính).
++        //     - Chưa bật 2FA: bỏ qua ô mã 6 số (kể cả khi có gửi lên) -> vào luôn.
++        //     - Đã bật 2FA: BẮT BUỘC có mã 6 số. Chỉ trả TOTP_REQUIRED sau khi mật khẩu đã đúng.
+         Optional<TotpCredential> credOpt = totpCredentialRepository
+                 .findFirstByAdmin_AdminIdAndConfirmedTrueOrderByConfirmedAtDesc(adminId);
+         if (credOpt.isEmpty()) {
+-            return issueTokens(Objects.requireNonNull(admin));
++            return issueTokens(admin);
+         }
+ 
+-        String code = req.getTotpCode();
+-        if (code == null || code.isBlank()) {
++        String code = req.getTotpCode() == null ? null : req.getTotpCode().trim();
++        if (code == null || code.isEmpty()) {
+             return LoginOutcome.of(LoginStatus.TOTP_REQUIRED);
+         }
+ 
+diff --git a/be-web-admin/src/main/java/com/example/be_web_admin/service/totp/TotpLoginVerifier.java b/be-web-admin/src/main/java/com/example/be_web_admin/service/totp/TotpLoginVerifier.java
+deleted file mode 100644
+index 06476cd85..000000000
+--- a/be-web-admin/src/main/java/com/example/be_web_admin/service/totp/TotpLoginVerifier.java
++++ /dev/null
+@@ -1,116 +0,0 @@
+-package com.example.be_web_admin.service.totp;
+-
+-import org.springframework.data.redis.core.StringRedisTemplate;
+-import org.springframework.stereotype.Service;
+-
+-import javax.crypto.Mac;
+-import javax.crypto.spec.SecretKeySpec;
+-import java.nio.ByteBuffer;
+-import java.nio.charset.StandardCharsets;
+-import java.security.MessageDigest;
+-import java.time.Duration;
+-import java.time.Instant;
+-
+-/**
+- * Kiểm tra mã TOTP lúc ĐĂNG NHẬP.
+- *
+- * Khác với bước xác nhận khi cài đặt, ở đây:
+- *  - dò thêm các chu kỳ lân cận để bù độ trễ mạng / lệch đồng hồ,
+- *  - không bao giờ ném exception khi mã sai: luôn trả về Outcome,
+- *  - mỗi chu kỳ chỉ được dùng một lần (chống replay).
+- *
+- * Mô phỏng ví dụ trong đề bài: server đang ở chu kỳ N (mã 394583),
+- * nhưng người dùng gõ mã của chu kỳ N-1 (345344) vì POST tới chậm
+- * -> khớp ở offset -1 và vẫn được chấp nhận.
+- */
+-@Service
+-public class TotpLoginVerifier {
+-
+-    public enum Result { OK, INVALID, REPLAYED }
+-
+-    /**
+-     * @param matchedOffset  -1 = mã chu kỳ trước (trễ), 0 = đúng chu kỳ, +1 = mã chu kỳ sau (app chạy nhanh).
+-     *                       Chỉ có nghĩa khi result = OK hoặc REPLAYED. Dùng để ghi log đo độ trễ cho luận văn.
+-     */
+-    public record Outcome(Result result, int matchedOffset, long matchedStep) {
+-        static Outcome invalid() { return new Outcome(Result.INVALID, 0, -1); }
+-    }
+-
+-    /** Số chu kỳ chấp nhận phía TRƯỚC (bù độ trễ khi POST). */
+-    private static final int PAST_STEPS = 1;
+-    /** Số chu kỳ chấp nhận phía SAU (bù app/điện thoại chạy nhanh hơn server). */
+-    private static final int FUTURE_STEPS = 1;
+-    private static final int DIGITS = 6;
+-    private static final int MODULO = 1_000_000;
+-
+-    private final StringRedisTemplate redis;
+-
+-    public TotpLoginVerifier(StringRedisTemplate redis) {
+-        this.redis = redis;
+-    }
+-
+-    /**
+-     * @param secret        secret đã GIẢI MÃ AES (dạng byte, cùng cách decode Base32 với Flutter TotpGenerator)
+-     * @param periodSeconds chu kỳ lưu trong credential (15/30/45/60)
+-     * @param code          6 số người dùng nhập
+-     */
+-    public Outcome verify(long adminId, byte[] secret, int periodSeconds, String code, Instant now) {
+-        if (code == null || !code.matches("\\d{" + DIGITS + "}")) {
+-            return Outcome.invalid();
+-        }
+-
+-        long currentStep = now.getEpochSecond() / periodSeconds;
+-
+-        // Duyệt HẾT các offset, không return sớm, để thời gian xử lý không lộ offset nào khớp.
+-        long matchedStep = -1;
+-        int matchedOffset = 0;
+-        for (int offset = -PAST_STEPS; offset <= FUTURE_STEPS; offset++) {
+-            long step = currentStep + offset;
+-            String expected = generate(secret, step);
+-            if (constantTimeEquals(expected, code) && matchedStep < 0) {
+-                matchedStep = step;
+-                matchedOffset = offset;
+-            }
+-        }
+-
+-        if (matchedStep < 0) {
+-            return Outcome.invalid();
+-        }
+-
+-        // Chống replay: mỗi (admin, chu kỳ) chỉ được dùng 1 lần. setIfAbsent là thao tác nguyên tử trên Redis.
+-        String key = "totp:used:" + adminId + ":" + matchedStep;
+-        Duration ttl = Duration.ofSeconds((long) (PAST_STEPS + FUTURE_STEPS + 1) * periodSeconds + 5);
+-        Boolean firstUse = redis.opsForValue().setIfAbsent(key, "1", ttl);
+-        if (!Boolean.TRUE.equals(firstUse)) {
+-            return new Outcome(Result.REPLAYED, matchedOffset, matchedStep);
+-        }
+-        return new Outcome(Result.OK, matchedOffset, matchedStep);
+-    }
+-
+-    /**
+-     * RFC 6238 + RFC 4226 (dynamic truncation) với HMAC-SHA256.
+-     * Nếu bạn đã có hàm sinh mã trong TotpVerifier (dùng cho bước xác nhận), hãy gọi lại hàm đó
+-     * thay vì giữ bản này, để chắc chắn khớp 100% với TotpGenerator bên Flutter.
+-     */
+-    String generate(byte[] secret, long step) {
+-        try {
+-            Mac mac = Mac.getInstance("HmacSHA256");
+-            mac.init(new SecretKeySpec(secret, "HmacSHA256"));
+-            byte[] hash = mac.doFinal(ByteBuffer.allocate(8).putLong(step).array());
+-
+-            int o = hash[hash.length - 1] & 0x0F;
+-            int binary = ((hash[o] & 0x7F) << 24)
+-                    | ((hash[o + 1] & 0xFF) << 16)
+-                    | ((hash[o + 2] & 0xFF) << 8)
+-                    | (hash[o + 3] & 0xFF);
+-            return String.format("%0" + DIGITS + "d", binary % MODULO);
+-        } catch (Exception e) {
+-            // Lỗi cấu hình (thiếu thuật toán...), không phải lỗi do người dùng nhập sai.
+-            throw new IllegalStateException("Không sinh được mã TOTP", e);
+-        }
+-    }
+-
+-    private static boolean constantTimeEquals(String a, String b) {
+-        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
+-    }
+-}
+diff --git a/fe_web_admin/src/pages/login-page/LoginPage.vue b/fe_web_admin/src/pages/login-page/LoginPage.vue
+index 5976c8459..69a1c3a0d 100644
+--- a/fe_web_admin/src/pages/login-page/LoginPage.vue
++++ b/fe_web_admin/src/pages/login-page/LoginPage.vue
+@@ -17,8 +17,8 @@ const MESSAGE = {
+   WRONG_CREDENTIALS: 'Mã quản trị viên hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.',
+   SERVER_ERROR: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng rồi thử lại.',
+   NAVIGATE_ERROR: 'Đăng nhập thành công nhưng không thể chuyển trang. Vui lòng tải lại trang.',
+-  TOTP_REQUIRED: 'Tài khoản đã bật xác thực 2 lớp. Nhập mã 6 số đang hiển thị trong ứng dụng Authenticator.',
+-  TOTP_FORMAT: 'Mã xác thực gồm đúng 6 chữ số.',
++  TOTP_REQUIRED: 'Tài khoản đã bật xác thực 2 lớp. Bắt buộc nhập khóa 6 số đang hiển thị trong ứng dụng Authenticator.',
++  TOTP_FORMAT: 'Khóa xác thực gồm đúng 6 chữ số.',
+   TOTP_INVALID: 'Mã xác thực không đúng hoặc đã hết hạn. Hãy nhập mã mới đang hiển thị trên ứng dụng.',
+   LOCKED: (seconds) => `Nhập sai quá nhiều lần. Vui lòng thử lại sau ${Math.max(1, Math.ceil(seconds / 60))} phút.`,
+ };
+@@ -56,8 +56,6 @@ export default {
+       password: "",
+       rememberMe: false,
+       keyAuthenticator: "",
+-      // true khi server báo tài khoản đã bật 2FA (chỉ sau khi mật khẩu đúng) -> hiện ô nhập mã 6 số
+-      requireTotp: false,
+       showPassword: false,
+ 
+       // true từ lúc bấm đăng nhập đến lúc có kết quả: khoá cả form + hiện hiệu ứng load
+@@ -128,15 +126,6 @@ export default {
+       this.validateLogin = "";
+     },
+ 
+-    // Quay lại bước nhập mật khẩu (muốn đổi tài khoản)
+-    cancelTotpStep() {
+-      this.requireTotp = false;
+-      this.keyAuthenticator = "";
+-      this.errors.totp = "";
+-      this.validateLogin = "";
+-      this.focusField('password');
+-    },
+-
+     setInputPassword() {
+       this.clearFieldError('password');
+     },
+@@ -200,8 +189,11 @@ export default {
+         return false;
+       }
+ 
+-      // Bước 2: nếu đang yêu cầu mã thì phải đúng 6 số
+-      if (this.requireTotp && !/^\d{6}$/.test(this.keyAuthenticator ?? '')) {
++      // Ô khóa 6 số: để trống thì hợp lệ (tài khoản chưa cài 2FA vẫn đăng nhập được).
++      // Việc "đã cài 2FA thì bắt buộc nhập" do server quyết định (chỉ server biết, và chỉ nói sau khi mật khẩu đúng).
++      // Đã nhập thì phải đúng 6 số.
++      const totp = String(this.keyAuthenticator ?? '').trim();
++      if (totp !== '' && !/^\d{6}$/.test(totp)) {
+         this.errors.totp = MESSAGE.TOTP_FORMAT;
+         this.shakeElement(this.$refs.boxTotp);
+         this.focusField('totp');
+@@ -267,7 +259,7 @@ export default {
+             adminRepository.getLoginResult(
+                 Number(this.adminId),
+                 String(this.password),
+-                this.requireTotp ? this.keyAuthenticator : null // lần đầu chưa có mã
++                String(this.keyAuthenticator ?? '').trim() || null // trống -> null (chưa cài 2FA)
+             ),
+             LOGIN_TIMEOUT_MS
+         );
+@@ -280,9 +272,9 @@ export default {
+             break;
+ 
+           case REQUEST_STATUS.TOTP_REQUIRED:
+-            // Mật khẩu đúng và tài khoản đã bật 2FA -> hiện ô mã 6 số
+-            this.requireTotp = true;
+-            this.validateLogin = MESSAGE.TOTP_REQUIRED;
++            // Mật khẩu đúng + tài khoản đã bật 2FA nhưng ô khóa 6 số đang trống -> báo bắt buộc nhập
++            this.errors.totp = MESSAGE.TOTP_REQUIRED;
++            this.shakeElement(this.$refs.boxTotp);
+             fieldToFocus = 'totp';
+             break;
+ 
+@@ -299,7 +291,6 @@ export default {
+             break;
+ 
+           case REQUEST_STATUS.FAILED:
+-            this.requireTotp = false;
+             this.keyAuthenticator = "";
+             this.showWrongCredentials();
+             fieldToFocus = 'password';
+@@ -397,7 +388,6 @@ export default {
+                        inputmode="numeric"
+                        autocomplete="username"
+                        maxlength="10"
+-                       :readonly="requireTotp"
+                        :aria-invalid="invalidAdminId"
+                        :aria-describedby="errors.adminId ? 'errorAdminId' : null"
+                        @input="setInputAdminId"
+@@ -423,7 +413,6 @@ export default {
+                        placeholder="Mật khẩu"
+                        autocomplete="current-password"
+                        maxlength="20"
+-                       :readonly="requireTotp"
+                        :aria-invalid="invalidPassword"
+                        :aria-describedby="errors.password ? 'errorPassword' : null"
+                        @input="setInputPassword"
+@@ -451,33 +440,31 @@ export default {
+               </Transition>
+             </div>
+ 
+-            <!-- Khóa 6 số xác thực: chỉ hiện khi server báo tài khoản đã bật 2FA -->
+-            <Transition name="error-fade">
+-              <div v-if="requireTotp" class="field-group">
+-                <div ref="boxTotp"
+-                     class="form-floating style-input-login"
+-                     :class="{ 'has-error': !!errors.totp }">
+-                  <input type="text" class="form-control border-radius-zero"
+-                         id="floatingInputKeyAuthenticator"
+-                         ref="inputTotp"
+-                         placeholder="Khóa 6 số xác thực"
+-                         inputmode="numeric"
+-                         autocomplete="one-time-code"
+-                         maxlength="6"
+-                         :aria-invalid="!!errors.totp"
+-                         :aria-describedby="errors.totp ? 'errorTotp' : null"
+-                         @input="setInputKeyAuthenticator"
+-                         v-model="keyAuthenticator">
+-                  <label for="floatingInputKeyAuthenticator">Khóa 6 số xác thực</label>
+-                </div>
+-                <Transition name="error-fade">
+-                  <p v-if="errors.totp" id="errorTotp" class="field-error" role="alert">
+-                    {{ errors.totp }}
+-                  </p>
+-                </Transition>
+-                <button type="button" class="btn-link-back" @click="cancelTotpStep">Đổi tài khoản</button>
++            <!-- Khóa 6 số xác thực: luôn hiện.
++                 Đã cài 2FA -> bắt buộc nhập (server kiểm tra). Chưa cài 2FA -> để trống vẫn đăng nhập được. -->
++            <div class="field-group">
++              <div ref="boxTotp"
++                   class="form-floating style-input-login"
++                   :class="{ 'has-error': !!errors.totp }">
++                <input type="text" class="form-control border-radius-zero"
++                       id="floatingInputKeyAuthenticator"
++                       ref="inputTotp"
++                       placeholder="Khóa 6 số xác thực (để trống nếu chưa cài 2FA)"
++                       inputmode="numeric"
++                       autocomplete="one-time-code"
++                       maxlength="6"
++                       :aria-invalid="!!errors.totp"
++                       :aria-describedby="errors.totp ? 'errorTotp' : null"
++                       @input="setInputKeyAuthenticator"
++                       v-model="keyAuthenticator">
++                <label for="floatingInputKeyAuthenticator">Khóa 6 số xác thực (để trống nếu chưa cài 2FA)</label>
+               </div>
+-            </Transition>
++              <Transition name="error-fade">
++                <p v-if="errors.totp" id="errorTotp" class="field-error" role="alert">
++                  {{ errors.totp }}
++                </p>
++              </Transition>
++            </div>
+ 
+             <!-- Lỗi chung của form -->
+             <Transition name="error-fade">
+@@ -525,4 +512,4 @@ export default {
+ .btn-login-border-radius {
+   border-radius: 4px;
+ }
+-</style>
+\ No newline at end of file
++</style>
+\ No newline at end of file

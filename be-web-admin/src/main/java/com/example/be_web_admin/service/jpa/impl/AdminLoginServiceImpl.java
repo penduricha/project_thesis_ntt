@@ -20,13 +20,12 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Đăng nhập 1 hoặc 2 bước dùng chung một hàm:
- *  - Chưa bật 2FA: adminId + password là vào.
- *  - Đã bật 2FA: lần đầu trả TOTP_REQUIRED, lần hai kèm totpCode.
+ * Đăng nhập một request duy nhất gồm adminId, password và totpCode (tùy chọn):
+ *  - Chưa bật 2FA: adminId + password là vào, totpCode để trống.
+ *  - Đã bật 2FA: bắt buộc totpCode; thiếu -> TOTP_REQUIRED, sai/hết hạn/đã dùng -> TOTP_INVALID.
  */
 @Slf4j
 @Service
@@ -54,24 +53,27 @@ public class AdminLoginServiceImpl {
         }
         Long adminId = req.getAdminId();
 
-        // (a) Mật khẩu BCrypt (cost 12). Admin không tồn tại vẫn tốn thời gian BCrypt như bình thường.
+        // (a) Mật khẩu BCrypt. Cột password trong DB ĐÃ là hash BCrypt, so khớp thẳng với mật khẩu người dùng nhập
+        //     (không được băm lại hash đó). Admin không tồn tại: matches() vẫn chạy 1 lần BCrypt giả
+        //     để thời gian phản hồi không lộ tài khoản có tồn tại hay không.
         Admin admin = adminRepository.findAdminByAdminId(adminId);
-        String password = (admin == null) ? null : admin.getPassword(); // TODO 3: đúng tên getter hash trong entity Admin
-        String passwordHashed = mgmtPassword.generateHash(password, 12);
-
-        if (!mgmtPassword.matches(req.getPassword(), passwordHashed)) {
+        String storedHash = (admin == null) ? null : admin.getPassword();
+        boolean passwordOk = mgmtPassword.matches(req.getPassword(), storedHash); // luôn chạy, kể cả admin = null
+        if (admin == null || !passwordOk) {
             return LoginOutcome.of(LoginStatus.BAD_CREDENTIALS);
         }
 
-        // (b) Chỉ credential ĐÃ xác nhận bên mobile mới tính là bật 2FA (pending không tính)
+        // (b) Chỉ credential ĐÃ xác nhận bên mobile mới tính là bật 2FA (pending không tính).
+        //     - Chưa bật 2FA: bỏ qua ô mã 6 số (kể cả khi có gửi lên) -> vào luôn.
+        //     - Đã bật 2FA: BẮT BUỘC có mã 6 số. Chỉ trả TOTP_REQUIRED sau khi mật khẩu đã đúng.
         Optional<TotpCredential> credOpt = totpCredentialRepository
                 .findFirstByAdmin_AdminIdAndConfirmedTrueOrderByConfirmedAtDesc(adminId);
         if (credOpt.isEmpty()) {
-            return issueTokens(Objects.requireNonNull(admin));
+            return issueTokens(admin);
         }
 
-        String code = req.getTotpCode();
-        if (code == null || code.isBlank()) {
+        String code = req.getTotpCode() == null ? null : req.getTotpCode().trim();
+        if (code == null || code.isEmpty()) {
             return LoginOutcome.of(LoginStatus.TOTP_REQUIRED);
         }
 

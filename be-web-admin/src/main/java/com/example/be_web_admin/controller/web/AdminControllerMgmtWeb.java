@@ -260,19 +260,13 @@ public class AdminControllerMgmtWeb {
 //        };
 //    }
 
-    @PostMapping("/auth/login")
-    public ResponseEntity<?> loginAdmin(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
-        req.setTotpCode(null); // endpoint này không nhận mã 6 số
-        LoginOutcome outcome = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
-        return ResponseEntity.ok(buildLoginResponse(outcome, req.getAdminId()));
-    }
-
-    // Bước 2 (chỉ khi bước 1 trả TOTP_REQUIRED): gửi lại kèm mã 6 số từ app Authenticator.
-    //  - Mã đúng                     -> success=true kèm token
-    //  - Mã sai/hết hạn/đã dùng      -> success=false, data.code="TOTP_INVALID"
+    // Đăng nhập 1 request: adminId + password + totpCode (totpCode có thể trống).
+    //  - Chưa bật 2FA                -> totpCode để trống vẫn success=true kèm token
+    //  - Đã bật 2FA, thiếu mã        -> success=false, data.code="TOTP_REQUIRED"
+    //  - Đã bật 2FA, mã sai/hết hạn  -> success=false, data.code="TOTP_INVALID"
     //  - Nhập sai quá nhiều lần      -> success=false, data.code="LOCKED", data.retryAfterSeconds
-    @PostMapping("/auth/login/totp")
-    public ResponseEntity<?> loginAdminWithTotp(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
+    @PostMapping({"/auth/login", "/auth/login/totp"}) // /auth/login/totp giữ lại cho client cũ
+    public ResponseEntity<?> loginAdmin(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
         LoginOutcome outcome = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
         return ResponseEntity.ok(buildLoginResponse(outcome, req.getAdminId()));
     }
