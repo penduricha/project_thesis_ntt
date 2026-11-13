@@ -5,7 +5,6 @@ import com.example.be_web_admin.enums.AuthEvent;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.TotpCredential;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
-import com.example.be_web_admin.repository.jpa.BackupCodeRepository;
 import com.example.be_web_admin.repository.jpa.TotpCredentialRepository;
 import com.example.be_web_admin.security.private_key.CryptoService;
 import com.example.be_web_admin.security.totp.TotpVerifier;
@@ -37,7 +36,6 @@ public class EnrollmentConfirmServiceImpl {
     }
 
     private final TotpCredentialRepository totpCredentialRepository;
-    private final BackupCodeRepository backupCodeRepository;
     private final AdminRepository adminRepository;
     private final AuthAuditService auditService;
     private final CryptoService cryptoService;
@@ -47,7 +45,6 @@ public class EnrollmentConfirmServiceImpl {
     private final TwoFaEventServiceImpl eventService;
 
     public EnrollmentConfirmServiceImpl(TotpCredentialRepository totpCredentialRepository,
-                                        BackupCodeRepository backupCodeRepository,
                                         AdminRepository adminRepository,
                                         AuthAuditService auditService,
                                         CryptoService cryptoService,
@@ -56,7 +53,6 @@ public class EnrollmentConfirmServiceImpl {
                                         TransactionTemplate transactionTemplate,
                                         TwoFaEventServiceImpl eventService) {
         this.totpCredentialRepository = totpCredentialRepository;
-        this.backupCodeRepository = backupCodeRepository;
         this.adminRepository = adminRepository;
         this.auditService = auditService;
         this.cryptoService = cryptoService;
@@ -156,7 +152,7 @@ public class EnrollmentConfirmServiceImpl {
                 .findFirstByAdmin_AdminIdAndConfirmedFalseOrderByCreatedAtDesc(adminId)
                 .orElseThrow(NoPendingEnrollmentException::new);
         if (secondsLeft(c) <= 0) {
-            abortEnrollment(adminId); // quá hạn: bỏ cả credential lẫn mã dự phòng, admin phải cài lại
+            abortEnrollment(adminId); // quá hạn: bỏ credential chờ, admin phải cài lại
             throw new ConfirmExpiredException();
         }
         return c;
@@ -179,15 +175,10 @@ public class EnrollmentConfirmServiceImpl {
         return n;
     }
 
-    /** Xóa phần cài dở: credential chưa xác nhận + mã dự phòng (chỉ khi 2FA chưa bật) + bộ đếm. */
+    /** Xóa phần cài dở: credential chưa xác nhận + bộ đếm. */
     private void abortEnrollment(Long adminId) {
-        transactionTemplate.executeWithoutResult(status -> {
-            totpCredentialRepository.deletePendingByAdminId(adminId);
-            Admin admin = adminRepository.findAdminByAdminId(adminId);
-            if (admin != null && !Boolean.TRUE.equals(admin.getTotpEnabled())) {
-                backupCodeRepository.purgeByAdminId(adminId);
-            }
-        });
+        transactionTemplate.executeWithoutResult(status ->
+                totpCredentialRepository.deletePendingByAdminId(adminId));
         resetAttempts(adminId);
         // Quá hạn hoặc nhập sai quá số lần: web về "Chưa kích hoạt"
         eventService.publish(adminId, TwoFaEventServiceImpl.NOT_ENABLED);

@@ -1,0 +1,708 @@
+diff --git a/be-web-admin/src/main/java/com/example/be_web_admin/controller/web/EnrollmentController.java b/be-web-admin/src/main/java/com/example/be_web_admin/controller/web/EnrollmentController.java
+index 116b83481..e5fe3cc63 100644
+--- a/be-web-admin/src/main/java/com/example/be_web_admin/controller/web/EnrollmentController.java
++++ b/be-web-admin/src/main/java/com/example/be_web_admin/controller/web/EnrollmentController.java
+@@ -45,8 +45,7 @@ public class EnrollmentController {
+     // POST /api/web/admin/2fa/enrollment/activate     Header: Authorization: Bearer <accessToken>
+     // Body (không bắt buộc): { "periodSeconds": 30 } (15|30|45|60) = chu kỳ admin đang chọn. adminId lấy từ token.
+     // 201: { success, message, data: { adminId, credentialId, algorithm, digits, periodSeconds,
+-    //                                  totpEnabled:false, expiresInSeconds:600, backupCodes:[10 mã] } }
+-    //      backupCodes chỉ hiển thị đúng một lần.
++    //                                  totpEnabled:false, expiresInSeconds:600 } }
+     // 401 token sai | 404 không có admin | 409 đã bật 2FA | 410 khóa chờ ở Redis hết hạn | 500
+     @PostMapping("/2fa/enrollment/activate")
+     public ResponseEntity<?> activateEnrollment(
+@@ -76,7 +75,6 @@ public class EnrollmentController {
+             data.put("periodSeconds", result.periodSeconds());
+             data.put("expiresInSeconds", result.expiresInSeconds());
+             data.put("totpEnabled", false);
+-            data.put("backupCodes", result.backupCodes());
+ 
+             return ResponseEntity.status(HttpStatus.CREATED)
+                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
+@@ -134,7 +132,7 @@ public class EnrollmentController {
+ 
+     // ===================== HỦY VÀ CÀI LẠI (nút "Hủy và cài lại") =====================
+     // DELETE /api/web/admin/2fa/enrollment/pending     Header: Authorization: Bearer <accessToken>
+-    // Xóa credential chưa xác nhận + mã dự phòng của lần cài dở. KHÔNG đụng 2FA đã bật.
++    // Xóa credential chưa xác nhận của lần cài dở. KHÔNG đụng 2FA đã bật.
+     // Idempotent: luôn 200 nếu token hợp lệ.
+     @DeleteMapping("/2fa/enrollment/pending")
+     public ResponseEntity<?> cancelPending(
+diff --git a/be-web-admin/src/main/java/com/example/be_web_admin/service/redis/impl/EnrollmentConfirmServiceImpl.java b/be-web-admin/src/main/java/com/example/be_web_admin/service/redis/impl/EnrollmentConfirmServiceImpl.java
+index df08e97a3..7ef62ee7f 100644
+--- a/be-web-admin/src/main/java/com/example/be_web_admin/service/redis/impl/EnrollmentConfirmServiceImpl.java
++++ b/be-web-admin/src/main/java/com/example/be_web_admin/service/redis/impl/EnrollmentConfirmServiceImpl.java
+@@ -5,7 +5,6 @@ import com.example.be_web_admin.enums.AuthEvent;
+ import com.example.be_web_admin.model.jpa.Admin;
+ import com.example.be_web_admin.model.jpa.TotpCredential;
+ import com.example.be_web_admin.repository.jpa.AdminRepository;
+-import com.example.be_web_admin.repository.jpa.BackupCodeRepository;
+ import com.example.be_web_admin.repository.jpa.TotpCredentialRepository;
+ import com.example.be_web_admin.security.private_key.CryptoService;
+ import com.example.be_web_admin.security.totp.TotpVerifier;
+@@ -37,7 +36,6 @@ public class EnrollmentConfirmServiceImpl {
+     }
+ 
+     private final TotpCredentialRepository totpCredentialRepository;
+-    private final BackupCodeRepository backupCodeRepository;
+     private final AdminRepository adminRepository;
+     private final AuthAuditService auditService;
+     private final CryptoService cryptoService;
+@@ -47,7 +45,6 @@ public class EnrollmentConfirmServiceImpl {
+     private final TwoFaEventServiceImpl eventService;
+ 
+     public EnrollmentConfirmServiceImpl(TotpCredentialRepository totpCredentialRepository,
+-                                        BackupCodeRepository backupCodeRepository,
+                                         AdminRepository adminRepository,
+                                         AuthAuditService auditService,
+                                         CryptoService cryptoService,
+@@ -56,7 +53,6 @@ public class EnrollmentConfirmServiceImpl {
+                                         TransactionTemplate transactionTemplate,
+                                         TwoFaEventServiceImpl eventService) {
+         this.totpCredentialRepository = totpCredentialRepository;
+-        this.backupCodeRepository = backupCodeRepository;
+         this.adminRepository = adminRepository;
+         this.auditService = auditService;
+         this.cryptoService = cryptoService;
+@@ -156,7 +152,7 @@ public class EnrollmentConfirmServiceImpl {
+                 .findFirstByAdmin_AdminIdAndConfirmedFalseOrderByCreatedAtDesc(adminId)
+                 .orElseThrow(NoPendingEnrollmentException::new);
+         if (secondsLeft(c) <= 0) {
+-            abortEnrollment(adminId); // quá hạn: bỏ cả credential lẫn mã dự phòng, admin phải cài lại
++            abortEnrollment(adminId); // quá hạn: bỏ credential chờ, admin phải cài lại
+             throw new ConfirmExpiredException();
+         }
+         return c;
+@@ -179,15 +175,10 @@ public class EnrollmentConfirmServiceImpl {
+         return n;
+     }
+ 
+-    /** Xóa phần cài dở: credential chưa xác nhận + mã dự phòng (chỉ khi 2FA chưa bật) + bộ đếm. */
++    /** Xóa phần cài dở: credential chưa xác nhận + bộ đếm. */
+     private void abortEnrollment(Long adminId) {
+-        transactionTemplate.executeWithoutResult(status -> {
+-            totpCredentialRepository.deletePendingByAdminId(adminId);
+-            Admin admin = adminRepository.findAdminByAdminId(adminId);
+-            if (admin != null && !Boolean.TRUE.equals(admin.getTotpEnabled())) {
+-                backupCodeRepository.purgeByAdminId(adminId);
+-            }
+-        });
++        transactionTemplate.executeWithoutResult(status ->
++                totpCredentialRepository.deletePendingByAdminId(adminId));
+         resetAttempts(adminId);
+         // Quá hạn hoặc nhập sai quá số lần: web về "Chưa kích hoạt"
+         eventService.publish(adminId, TwoFaEventServiceImpl.NOT_ENABLED);
+diff --git a/be-web-admin/src/main/java/com/example/be_web_admin/service/redis/impl/EnrollmentServiceImpl.java b/be-web-admin/src/main/java/com/example/be_web_admin/service/redis/impl/EnrollmentServiceImpl.java
+index aa34621be..226a69034 100644
+--- a/be-web-admin/src/main/java/com/example/be_web_admin/service/redis/impl/EnrollmentServiceImpl.java
++++ b/be-web-admin/src/main/java/com/example/be_web_admin/service/redis/impl/EnrollmentServiceImpl.java
+@@ -2,25 +2,19 @@ package com.example.be_web_admin.service.redis.impl;
+ 
+ import com.example.be_web_admin.enums.AuthEvent;
+ import com.example.be_web_admin.model.jpa.Admin;
+-import com.example.be_web_admin.model.jpa.BackupCode;
+ import com.example.be_web_admin.model.jpa.TotpCredential;
+ import com.example.be_web_admin.model.redis.EnrollSession;
+ import com.example.be_web_admin.repository.jpa.AdminRepository;
+-import com.example.be_web_admin.repository.jpa.BackupCodeRepository;
+ import com.example.be_web_admin.repository.jpa.TotpCredentialRepository;
+ import com.example.be_web_admin.repository.redis.EnrollSessionRepository;
+ import com.example.be_web_admin.security.private_key.CryptoService;
+ import com.example.be_web_admin.service.jpa.impl.AuthAuditService;
+ import lombok.extern.slf4j.Slf4j;
+-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.support.TransactionTemplate;
+ 
+-import java.security.SecureRandom;
+ import java.time.Duration;
+ import java.time.Instant;
+-import java.util.ArrayList;
+-import java.util.List;
+ import java.util.Optional;
+ 
+ /**
+@@ -35,17 +29,9 @@ public class EnrollmentServiceImpl {
+     /** cột secret_cipher là varbinary(64). */
+     private static final int MAX_CIPHER_LENGTH = 64;
+ 
+-    private static final int BACKUP_CODE_COUNT = 10;
+-    private static final int BACKUP_CODE_LENGTH = 10;
+-    private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // bỏ I, O, 0, 1
+-
+-    private final SecureRandom secureRandom = new SecureRandom();
+-    private final BCryptPasswordEncoder backupCodeEncoder = new BCryptPasswordEncoder(10);
+-
+     private final EnrollSessionRepository enrollSessionRepository;
+     private final AdminRepository adminRepository;
+     private final TotpCredentialRepository totpCredentialRepository;
+-    private final BackupCodeRepository backupCodeRepository;
+     private final AuthAuditService auditService;
+     private final EnrollmentConfirmServiceImpl confirmService;
+     private final TransactionTemplate transactionTemplate;
+@@ -54,7 +40,6 @@ public class EnrollmentServiceImpl {
+     public EnrollmentServiceImpl(EnrollSessionRepository enrollSessionRepository,
+                                  AdminRepository adminRepository,
+                                  TotpCredentialRepository totpCredentialRepository,
+-                                 BackupCodeRepository backupCodeRepository,
+                                  AuthAuditService auditService,
+                                  EnrollmentConfirmServiceImpl confirmService,
+                                  TransactionTemplate transactionTemplate,
+@@ -62,26 +47,20 @@ public class EnrollmentServiceImpl {
+         this.enrollSessionRepository = enrollSessionRepository;
+         this.adminRepository = adminRepository;
+         this.totpCredentialRepository = totpCredentialRepository;
+-        this.backupCodeRepository = backupCodeRepository;
+         this.auditService = auditService;
+         this.confirmService = confirmService;
+         this.transactionTemplate = transactionTemplate;
+         this.eventService = eventService;
+     }
+ 
+-    /** backupCodes là mã GỐC, chỉ hiển thị đúng một lần. */
+     public record ActivationResult(Long adminId, Long credentialId, String algorithm, int digits,
+-                                   int periodSeconds, long expiresInSeconds, List<String> backupCodes) {
++                                   int periodSeconds, long expiresInSeconds) {
+     }
+ 
+     /** Trạng thái 2FA cho trang thông tin admin. */
+     public record TwoFaStatus(boolean totpEnabled, boolean pending, long expiresInSeconds, Integer periodSeconds) {
+     }
+ 
+-    /** Mã dự phòng đã sinh: plain để hiển thị một lần, hash để lưu DB. */
+-    private record GeneratedCode(String plain, String hash) {
+-    }
+-
+     public static class EnrollmentExpiredException extends RuntimeException {
+         public EnrollmentExpiredException() {
+             super("Enrollment session expired or not found.");
+@@ -123,11 +102,8 @@ public class EnrollmentServiceImpl {
+                 ? EnrollSessionServiceImpl.DEFAULT_PERIOD_SECONDS
+                 : pending.getPeriodSeconds());
+ 
+-        // BCrypt tốn vài trăm ms: làm TRƯỚC khi mở transaction để không giữ kết nối DB.
+-        List<GeneratedCode> codes = generateBackupCodes();
+-
+         ActivationResult result = transactionTemplate.execute(status ->
+-                persist(adminId, sealed, period, codes));
++                persist(adminId, sealed, period));
+ 
+         // Sau khi commit: việc phụ, lỗi cũng không ảnh hưởng kết quả.
+         confirmService.resetAttempts(adminId);
+@@ -137,19 +113,18 @@ public class EnrollmentServiceImpl {
+             log.warn("Can't delete enroll session of admin {}: {}", adminId, e.getMessage());
+         }
+         auditService.log(adminId, AuthEvent.TOTP_ENROLL_ACTIVATED, true, ip, userAgent,
+-                "period=" + period + "s, backupCodes=" + BACKUP_CODE_COUNT);
++                "period=" + period + "s");
+         // Tab web khác của cùng admin cũng chuyển sang "Đang chờ xác nhận"
+         eventService.publish(adminId, TwoFaEventServiceImpl.PENDING);
+         return result;
+     }
+ 
+-    private ActivationResult persist(Long adminId, CryptoService.Sealed sealed, int period,
+-                                     List<GeneratedCode> codes) {
++    private ActivationResult persist(Long adminId, CryptoService.Sealed sealed, int period) {
+         Admin admin = adminRepository.findAdminByAdminId(adminId);
+         if (admin == null) {
+             throw new AdminNotFoundException(adminId);
+         }
+-        // Đã bật 2FA thì không được cài đè: sẽ phá bộ mã dự phòng và để lại 2 credential.
++        // Đã bật 2FA thì không được cài đè: sẽ để lại 2 credential. Muốn cài lại phải tắt 2FA trước.
+         if (Boolean.TRUE.equals(admin.getTotpEnabled())) {
+             throw new TotpAlreadyEnabledException();
+         }
+@@ -173,26 +148,13 @@ public class EnrollmentServiceImpl {
+         admin.setUpdatedAt(Instant.now());
+         adminRepository.save(admin);
+ 
+-        backupCodeRepository.purgeByAdminId(adminId);
+-        List<BackupCode> entities = new ArrayList<>(codes.size());
+-        List<String> plainCodes = new ArrayList<>(codes.size());
+-        for (GeneratedCode code : codes) {
+-            BackupCode entity = new BackupCode();
+-            entity.setAdmin(admin);
+-            entity.setCodeHash(code.hash());
+-            entity.setUsed(false);
+-            entities.add(entity);
+-            plainCodes.add(code.plain());
+-        }
+-        backupCodeRepository.saveAll(entities);
+-
+         return new ActivationResult(adminId, credential.getCredentialId(), credential.getAlgorithm(),
+-                credential.getDigits(), period, confirmService.getConfirmWindow().getSeconds(), plainCodes);
++                credential.getDigits(), period, confirmService.getConfirmWindow().getSeconds());
+     }
+ 
+     // ------------------------------------------------------------------ hủy phần chờ xác nhận
+ 
+-    /** "Hủy và cài lại": xóa credential chưa xác nhận (và mã dự phòng của lần cài dở). Không chạm 2FA đã bật. */
++    /** "Hủy và cài lại": xóa credential chưa xác nhận của lần cài dở. Không chạm 2FA đã bật. */
+     public void cancelPending(Long adminId, String ip, String userAgent) {
+         transactionTemplate.executeWithoutResult(status -> {
+             Admin admin = adminRepository.findAdminByAdminId(adminId);
+@@ -200,9 +162,6 @@ public class EnrollmentServiceImpl {
+                 throw new AdminNotFoundException(adminId);
+             }
+             totpCredentialRepository.deletePendingByAdminId(adminId);
+-            if (!Boolean.TRUE.equals(admin.getTotpEnabled())) {
+-                backupCodeRepository.purgeByAdminId(adminId);
+-            }
+         });
+ 
+         confirmService.resetAttempts(adminId);
+@@ -235,22 +194,4 @@ public class EnrollmentServiceImpl {
+     }
+ 
+     // ------------------------------------------------------------------ hỗ trợ
+-
+-    private List<GeneratedCode> generateBackupCodes() {
+-        List<GeneratedCode> codes = new ArrayList<>(BACKUP_CODE_COUNT);
+-        for (int i = 0; i < BACKUP_CODE_COUNT; i++) {
+-            String code = generateBackupCode();
+-            codes.add(new GeneratedCode(code.substring(0, 5) + "-" + code.substring(5),
+-                    backupCodeEncoder.encode(code)));
+-        }
+-        return codes;
+-    }
+-
+-    private String generateBackupCode() {
+-        StringBuilder sb = new StringBuilder(BACKUP_CODE_LENGTH);
+-        for (int i = 0; i < BACKUP_CODE_LENGTH; i++) {
+-            sb.append(CODE_ALPHABET.charAt(secureRandom.nextInt(CODE_ALPHABET.length())));
+-        }
+-        return sb.toString();
+-    }
+-}
+\ No newline at end of file
++}
+diff --git a/fe_web_admin/src/pages/information-page/card-setting-two-fa/CardSettingTwoFA.vue b/fe_web_admin/src/pages/information-page/card-setting-two-fa/CardSettingTwoFA.vue
+index c72ef2b1e..202c5dc52 100644
+--- a/fe_web_admin/src/pages/information-page/card-setting-two-fa/CardSettingTwoFA.vue
++++ b/fe_web_admin/src/pages/information-page/card-setting-two-fa/CardSettingTwoFA.vue
+@@ -35,10 +35,10 @@ const TWO_FA_VIEW = Object.freeze({
+   },
+ });
+ 
+-// Đang chờ mobile xác nhận: server đẩy sự kiện qua SSE nên web chuyển xanh ngay.
+-// Polling chỉ còn là dự phòng: thưa (30s) khi SSE đang nối, dày (5s) khi SSE đứt.
+-const PENDING_POLL_SECONDS_PUSH_OK = 30;
+-const PENDING_POLL_SECONDS_PUSH_DOWN = 5;
++// Đang chờ mobile xác nhận: POLLING là cơ chế chính, cứ mỗi 3 giây hỏi lại GET /2fa/status
++// cho tới khi server báo ENABLED (thẻ tự chuyển xanh) hoặc NOT_ENABLED (quá hạn / đã hủy).
++// SSE chỉ là đường tắt để cập nhật sớm hơn; không phụ thuộc vào nó nên SSE hỏng cũng không bị kẹt ở màu vàng.
++const PENDING_POLL_SECONDS = 3;
+ 
+ export default {
+   name: "CardSettingTwoFA",
+@@ -98,21 +98,25 @@ export default {
+     this.enrollmentRepository = new EnrollmentRepository();
+     this.tokenLogin = new TokenLogin();
+     this.isExpiringPending = false; // chặn xử lý "hết 10 phút" chạy chồng
+-    this.isPushConnected = false;   // luồng SSE đang nối hay không (quyết định nhịp polling dự phòng)
+     this.stopWatchTwoFa = null;
+   },
+ 
+   async mounted() {
+     await this.fetchTwoFaStatus();
+ 
++    // Quay lại tab / cửa sổ (vừa xác nhận xong trên điện thoại): hỏi ngay, không chờ nhịp polling kế tiếp
++    document.addEventListener('visibilitychange', this.onVisibilityChange);
++    window.addEventListener('focus', this.onWindowFocus);
++
+     // Lắng nghe server báo đổi trạng thái (mobile xác nhận, tab khác kích hoạt / hủy, quá hạn)
+     this.stopWatchTwoFa = this.enrollmentRepository.watchTwoFaStatus(this.tokenLogin, {
+       onChange: this.onTwoFaPushEvent,
+-      onConnectionChange: (connected) => { this.isPushConnected = connected; },
+     });
+   },
+ 
+   beforeUnmount() {
++    document.removeEventListener('visibilitychange', this.onVisibilityChange);
++    window.removeEventListener('focus', this.onWindowFocus);
+     this.stopWatchTwoFa?.();
+     this.stopWatchTwoFa = null;
+     this.stopTwoFaTimer();
+@@ -227,6 +231,18 @@ export default {
+       this.fetchTwoFaStatus();
+     },
+ 
++    // Tab hiện lại / cửa sổ được focus: chỉ cần hỏi khi đang chờ xác nhận
++    onVisibilityChange() {
++      if (!document.hidden) this.refreshIfPending();
++    },
++    onWindowFocus() {
++      this.refreshIfPending();
++    },
++    refreshIfPending() {
++      if (this.isUnmounted || this.isPageLocked || !this.isTwoFaPending) return;
++      this.fetchTwoFaStatus();
++    },
++
+     // ===== Trạng thái + timer =====
+ 
+     applyTwoFaStatus(result) {
+@@ -265,13 +281,10 @@ export default {
+       this.twoFaTickCount += 1;
+ 
+       const justExpired = wasCounting && this.pendingRemainingSeconds === 0;
+-      const pollEvery = this.isPushConnected
+-          ? PENDING_POLL_SECONDS_PUSH_OK
+-          : PENDING_POLL_SECONDS_PUSH_DOWN;
+-      const isPollTurn = this.twoFaTickCount % pollEvery === 0;
++      const isPollTurn = this.twoFaTickCount % PENDING_POLL_SECONDS === 0;
+ 
+       // Hết 10 phút mà mobile chưa xác nhận: HỦY phần chờ rồi về "Chưa kích hoạt".
+-      // Đến lượt poll: chỉ hỏi khi tab đang hiện.
++      // Đến lượt poll (mỗi 3 giây): chỉ hỏi khi tab đang hiện; tab hiện lại thì onVisibilityChange hỏi bù.
+       if (justExpired) {
+         this.handlePendingExpired();
+       } else if (isPollTurn && !document.hidden) {
+diff --git a/fe_web_admin/src/pages/information-page/pop-up-activate-2fa/ModalActivate2FA.vue b/fe_web_admin/src/pages/information-page/pop-up-activate-2fa/ModalActivate2FA.vue
+index bf0e7200c..1a4c2dd05 100644
+--- a/fe_web_admin/src/pages/information-page/pop-up-activate-2fa/ModalActivate2FA.vue
++++ b/fe_web_admin/src/pages/information-page/pop-up-activate-2fa/ModalActivate2FA.vue
+@@ -34,10 +34,6 @@ export default {
+       secretKeyError: '',
+       intervalSeconds: 30, // khớp ô chọn "Tần suất đổi mã" (15 | 30 | 45 | 60)
+ 
+-      // Bước hiển thị: 'key' = khóa bí mật | 'backup' = 10 mã dự phòng (sau khi bấm Kích hoạt thành công)
+-      step: 'key',
+-      backupCodes: [],
+-
+       //btn activate
+       textButtonActivate: 'Kích hoạt',
+       disableButtonActivate: false,
+@@ -84,8 +80,6 @@ export default {
+ 
+     handleModalShow() {
+       this.isModalOpen = true
+-      this.step = 'key'
+-      this.backupCodes = []
+       this.requestSecretKey()
+     },
+ 
+@@ -98,9 +92,6 @@ export default {
+         return
+       }
+       this.releaseSecretKey()
+-      // Mã dự phòng chỉ hiển thị một lần: đóng modal là xóa khỏi bộ nhớ trình duyệt
+-      this.backupCodes = []
+-      this.step = 'key'
+     },
+ 
+     // Tắt tab: yêu cầu fetch keepalive vẫn được gửi dù trang đang đóng
+@@ -212,6 +203,7 @@ export default {
+       if (this.loadingButtonActivate || !this.secretKey) return // chặn bấm liên tục / chưa có khóa
+ 
+       this.loadButtonActivate()
++      let activated = false
+       try {
+         const result = await this.enrollmentRepository
+             .activateEnrollment(this.tokenLogin, this.intervalSeconds)
+@@ -228,8 +220,7 @@ export default {
+         this.isModalOpen = false
+         this.startRequestId++
+         this.secretKey = ''
+-        this.backupCodes = result.data.backupCodes
+-        this.step = 'backup'
++        activated = true
+ 
+         this.$emit('activated', {
+           expiresInSeconds: result.data.expiresInSeconds,
+@@ -241,16 +232,12 @@ export default {
+       } finally {
+         this.stopLoadButtonActivate() // luôn mở lại tương tác dù thành công hay lỗi
+       }
+-    },
+ 
+-    async copyBackupCodes() {
+-      try {
+-        if (!navigator.clipboard) throw new Error('Clipboard API unavailable')
+-        await navigator.clipboard.writeText(this.backupCodes.join('\n'))
+-        this.showFeedback(true, 'Đã sao chép mã dự phòng!')
+-      } catch (error) {
+-        console.error('Copy backup codes failed:', error)
+-        this.showFeedback(false, 'Không thể sao chép, vui lòng chép thủ công.')
++      // Xong thì đóng modal: thẻ 2FA phía sau đã chuyển sang "Đang chờ xác nhận" và tự cập nhật bằng polling.
++      // Bấm đúng nút X (data-bs-dismiss) để Bootstrap tự đóng; phải chờ DOM bỏ `disabled` của nút đó.
++      if (activated) {
++        await this.$nextTick()
++        this.$refs.btnClose?.click()
+       }
+     },
+ 
+@@ -283,15 +270,16 @@ export default {
+           <h5 class="modal-title fw-bold" id="setup2FaModalLabel">
+             <i class="fa-solid fa-key me-1" aria-hidden="true"></i> Cài đặt xác thực 2 lớp 2FA
+           </h5>
+-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"
+-                  :disabled="loadingButtonActivate"/>
++          <button ref="btnClose" type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
++                  aria-label="Đóng" :disabled="loadingButtonActivate"/>
+         </div>
+ 
+-        <!-- ===== Bước 1: khóa bí mật ===== -->
+-        <div v-if="step === 'key'" class="modal-body border-radius-zero">
++        <!-- Khóa bí mật (không có mã dự phòng: quên khóa thì hủy và cài lại) -->
++        <div class="modal-body border-radius-zero">
+           <!-- Đã bỏ class "small": cỡ chữ do biến --m2fa-text-size trong SCSS điều khiển theo thiết bị -->
+           <p class="modal-2fa__desc text-muted">
+             Sao chép chuỗi khóa bí mật dưới đây và dán vào ứng dụng di động <strong>Authenticator</strong> của để bắt đầu sinh mã 6 số.
++            Khóa chỉ hiển thị trong cửa sổ này; nếu quên, hãy hủy và cài lại.
+           </p>
+ 
+           <!-- Khóa Bí Mật (Secret Key) -->
+@@ -350,7 +338,7 @@ export default {
+         <!-- Footer Modal: không viền, chỉ có nút Kích hoạt.
+              Nút là <button> thường (class "btn-activate"), KHÔNG dùng .btn của Bootstrap
+              nên trạng thái loading/disabled hoàn toàn do method + SCSS riêng điều khiển. -->
+-        <div v-if="step === 'key'" class="modal-footer border-0 bg-transparent justify-content-center border-radius-zero">
++        <div class="modal-footer border-0 bg-transparent justify-content-center border-radius-zero">
+           <button
+               type="button"
+               class="btn-activate"
+@@ -364,27 +352,6 @@ export default {
+             <span v-if="textButtonActivate">{{ textButtonActivate }}</span>
+           </button>
+         </div>
+-
+-        <!-- ===== Bước 2: mã dự phòng (chỉ hiển thị một lần) ===== -->
+-        <div v-if="step === 'backup'" class="modal-body border-radius-zero">
+-          <p class="modal-2fa__desc text-muted">
+-            Đã tạo khóa. Hãy <strong>dán khóa vào ứng dụng Authenticator</strong> trên điện thoại và bấm
+-            <strong>Activate</strong> để hoàn tất trong vòng 10 phút. Lưu 10 mã dự phòng dưới đây ở nơi an toàn:
+-            chúng <strong>chỉ hiển thị một lần</strong> và dùng khi bạn mất điện thoại.
+-          </p>
+-          <ul class="backup-codes" aria-label="Mã dự phòng">
+-            <li v-for="code in backupCodes" :key="code" class="backup-codes__item font-monospace">{{ code }}</li>
+-          </ul>
+-        </div>
+-        <!-- 2 nút cùng width + height, căn giữa modal. KHÔNG dùng .btn của Bootstrap (xem .m2fa-btn trong SCSS) -->
+-        <div v-if="step === 'backup'" class="modal-footer m2fa-footer-pair border-0 bg-transparent">
+-          <button type="button" class="m2fa-btn m2fa-btn--outline" @click="copyBackupCodes">
+-            Sao chép mã dự phòng
+-          </button>
+-          <button type="button" class="m2fa-btn m2fa-btn--solid" data-bs-dismiss="modal">
+-            Đã lưu, đóng
+-          </button>
+-        </div>
+       </div>
+     </div>
+ 
+diff --git a/fe_web_admin/src/pages/information-page/pop-up-activate-2fa/modal-activate-2fa.scss b/fe_web_admin/src/pages/information-page/pop-up-activate-2fa/modal-activate-2fa.scss
+index 8bbd6aa8d..50d0c68f6 100644
+--- a/fe_web_admin/src/pages/information-page/pop-up-activate-2fa/modal-activate-2fa.scss
++++ b/fe_web_admin/src/pages/information-page/pop-up-activate-2fa/modal-activate-2fa.scss
+@@ -71,8 +71,6 @@
+   --m2fa-title-size: 1.0625rem;
+   --m2fa-text-size: 0.9375rem;   // 15px: cỡ chữ đoạn mô tả + dòng gợi ý (trước đây 14px)
+   --m2fa-hint-gap: 0.5rem;       // khoảng cách giữa ô select và dòng gợi ý bên dưới
+-  --m2fa-btn-h: calc(var(--m2fa-control-h) + 0.25rem); // chiều cao cặp nút footer (bước 2)
+-  --m2fa-btn-radius: 0.3125rem;  // 5px: bo góc giống nút Hủy / Đăng xuất
+   --bs-modal-margin: var(--m2fa-margin);
+ 
+   /* ---------- Dialog ---------- */
+@@ -242,104 +240,6 @@
+     animation: m2fa-spin 0.7s linear infinite;
+   }
+ 
+-  /* ---------- Bước 2: cặp nút "Sao chép mã dự phòng" + "Đã lưu, đóng" ----------
+-     Grid 2 cột bằng nhau (1fr 1fr) + align-items: stretch => 2 nút luôn CÙNG width và CÙNG height,
+-     kể cả khi chữ của 1 nút xuống dòng. margin-inline: auto => cả cặp nằm giữa modal. */
+-  .modal-footer.m2fa-footer-pair {
+-    display: grid;
+-    grid-template-columns: repeat(2, minmax(0, 1fr));
+-    align-items: stretch;
+-    justify-content: center;
+-    gap: 0.75rem;
+-    box-sizing: border-box;
+-    width: 100%;
+-    max-width: 36rem; // 2 nút trải gần hết bề ngang modal để chữ nằm gọn 1 dòng
+-    margin-inline: auto;
+-  }
+-
+-  .m2fa-btn {
+-    appearance: none;
+-    -webkit-appearance: none;
+-    box-sizing: border-box;
+-    display: inline-flex;
+-    align-items: center;
+-    justify-content: center;
+-    min-height: var(--m2fa-btn-h);
+-    margin: 0;
+-    padding: 0.375rem 1rem;
+-    border: 1px solid transparent;
+-    border-radius: var(--m2fa-btn-radius);
+-    font-family: inherit;
+-    font-size: 1rem;
+-    font-weight: 600;
+-    line-height: 1.3;
+-    text-align: center;
+-    text-wrap: balance; // nếu phải xuống dòng thì chia đều 2 dòng
+-    cursor: pointer;
+-    user-select: none;
+-    -webkit-tap-highlight-color: transparent;
+-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+-
+-    &:focus-visible {
+-      outline: 2px solid var(--blue-color, #004B87);
+-      outline-offset: 2px;
+-    }
+-  }
+-
+-  // Giống nút "Hủy": nền trắng, viền xanh nhạt 1px, chữ xanh đậm
+-  .m2fa-btn--outline {
+-    background-color: #fff;
+-    border-color: color-mix(in srgb, var(--blue-color, #004B87) 45%, white);
+-    color: #1c2b3a;
+-
+-    &:active {
+-      background-color: #eef3f8;
+-      border-color: var(--blue-color, #004B87);
+-    }
+-  }
+-
+-  // Giống nút "Đăng xuất": nền --blue-color, chữ trắng đậm
+-  .m2fa-btn--solid {
+-    background-color: var(--blue-color, #004B87);
+-    border-color: var(--blue-color, #004B87);
+-    color: #fff;
+-
+-    &:active {
+-      background-color: #093b6a;
+-      border-color: #093b6a;
+-    }
+-  }
+-
+-  // Hover chỉ cho thiết bị có chuột, tránh "kẹt hover" trên cảm ứng
+-  @media (hover: hover) and (pointer: fine) {
+-    .m2fa-btn--outline:hover {
+-      background-color: #f4f7fb;
+-      border-color: var(--blue-color, #004B87);
+-    }
+-    .m2fa-btn--solid:hover {
+-      background-color: #093b6a;
+-      border-color: #093b6a;
+-    }
+-  }
+-
+-  /* ---------- Bước 2: danh sách mã dự phòng (hiện sau khi bấm "Kích hoạt" thành công) ---------- */
+-  .backup-codes {
+-    display: grid;
+-    grid-template-columns: repeat(2, minmax(0, 1fr));
+-    gap: 0.5rem 1rem;
+-    margin: 0;
+-    padding: 0;
+-    list-style: none;
+-  }
+-  .backup-codes__item {
+-    padding: 0.5rem 0.75rem;
+-    background: #f1f5f9;
+-    border: 1px solid #d5dde7;
+-    text-align: center;
+-    letter-spacing: 0.06em;
+-    user-select: all;
+-  }
+-  // Footer bước 2 có 2 nút: xếp dọc full-width trên mobile
+   .modal-footer .btn {
+     min-height: var(--m2fa-control-h);
+   }
+@@ -365,21 +265,6 @@
+      Breakpoints
+      ====================================================================== */
+ 
+-  /* ---------- Từ 520px: chữ trong nút luôn 1 dòng, 2 nút bằng nhau ---------- */
+-  @media only screen and (min-width: 520px) {
+-    .m2fa-btn {
+-      white-space: nowrap;
+-    }
+-  }
+-
+-  /* ---------- Mobile (< 520px): 2 nút xếp dọc, mỗi nút full-width => vẫn bằng nhau ---------- */
+-  @media only screen and (max-width: 519px) {
+-    .modal-footer.m2fa-footer-pair {
+-      grid-template-columns: 1fr;
+-      max-width: none;
+-    }
+-  }
+-
+   /* ---------- Mobile nhỏ (iPhone SE, Android màn nhỏ) ---------- */
+   @media only screen and (max-width: 360px) {
+     --m2fa-margin: 0.5rem;
+@@ -398,9 +283,6 @@
+     .btn-copy {
+       padding: 0 0.625rem;
+     }
+-    .backup-codes {
+-      grid-template-columns: 1fr;
+-    }
+   }
+ 
+   /* ---------- Điện thoại lớn / tablet dọc nhỏ (>= 576px) ---------- */
+@@ -470,10 +352,6 @@
+     .btn-activate {
+       min-height: var(--m2fa-control-h);
+     }
+-    .modal-footer.m2fa-footer-pair {
+-      grid-template-columns: repeat(2, minmax(0, 1fr));
+-      max-width: 36rem;
+-    }
+   }
+ }
+ 
+diff --git a/fe_web_admin/src/repository/EnrollmentRepository.js b/fe_web_admin/src/repository/EnrollmentRepository.js
+index 38b7b7cdb..11b3bbe2a 100644
+--- a/fe_web_admin/src/repository/EnrollmentRepository.js
++++ b/fe_web_admin/src/repository/EnrollmentRepository.js
+@@ -100,10 +100,10 @@ export class EnrollmentRepository {
+     }
+ 
+     /**
+-     * Bấm "Kích hoạt" trong modal: ghi khóa xuống MariaDB (chờ mobile xác nhận), nhận 10 mã dự phòng.
++     * Bấm "Kích hoạt" trong modal: ghi khóa xuống MariaDB (chờ mobile xác nhận).
+      *
+      * @returns {Promise<{success: boolean, status: number|null, message: string, expired?: boolean,
+-     *   data: {expiresInSeconds: number, periodSeconds: number, backupCodes: string[]}|null}>}
++     *   data: {expiresInSeconds: number, periodSeconds: number}|null}>}
+      *   expired = true khi khóa chờ ở Redis đã hết 5 phút (HTTP 410): modal nên xin khóa mới.
+      */
+     async activateEnrollment(tokenLogin, periodSeconds) {
+@@ -117,15 +117,14 @@ export class EnrollmentRepository {
+         const body = response.data;
+         const data = body?.data;
+ 
+-        if (response.status === HTTP_CREATED && body?.success === true && Array.isArray(data?.backupCodes)) {
++        if (response.status === HTTP_CREATED && body?.success === true) {
+             return {
+                 success: true,
+                 status: response.status,
+                 message: body.message,
+                 data: {
+-                    expiresInSeconds: data.expiresInSeconds,
+-                    periodSeconds: data.periodSeconds,
+-                    backupCodes: data.backupCodes,
++                    expiresInSeconds: data?.expiresInSeconds,
++                    periodSeconds: data?.periodSeconds,
+                 },
+             };
+         }
+diff --git a/fe_web_admin/src/services/spring/EnrollmentService.js b/fe_web_admin/src/services/spring/EnrollmentService.js
+index c8763700c..6c01c1541 100644
+--- a/fe_web_admin/src/services/spring/EnrollmentService.js
++++ b/fe_web_admin/src/services/spring/EnrollmentService.js
+@@ -68,11 +68,11 @@ export class EnrollmentService {
+ 
+     /**
+      * Bấm "Kích hoạt" trong modal: ghi khóa xuống MariaDB ở trạng thái CHỜ XÁC NHẬN
+-     * (totp_enabled vẫn false) và nhận 10 mã dự phòng (chỉ hiển thị một lần).
++     * (totp_enabled vẫn false).
+      *
+      * @param {number} [periodSeconds] chu kỳ admin đang chọn trong ô "Tần suất đổi mã"
+      * @returns {Promise<import('axios').AxiosResponse|null>}
+-     *   HTTP 201: data = { success, message, data: { credentialId, periodSeconds, expiresInSeconds, backupCodes[] } }
++     *   HTTP 201: data = { success, message, data: { credentialId, periodSeconds, expiresInSeconds } }
+      *   400 / 401 / 409 (đã bật 2FA) / 410 (khóa chờ hết hạn 5 phút) -> error.response; mất mạng -> null
+      */
+     async postDataToActivateEnrollmentRequest(tokenLogin, periodSeconds) {

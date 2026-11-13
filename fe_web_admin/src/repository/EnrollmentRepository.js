@@ -100,10 +100,10 @@ export class EnrollmentRepository {
     }
 
     /**
-     * Bấm "Kích hoạt" trong modal: ghi khóa xuống MariaDB (chờ mobile xác nhận), nhận 10 mã dự phòng.
+     * Bấm "Kích hoạt" trong modal: ghi khóa xuống MariaDB (chờ mobile xác nhận).
      *
      * @returns {Promise<{success: boolean, status: number|null, message: string, expired?: boolean,
-     *   data: {expiresInSeconds: number, periodSeconds: number, backupCodes: string[]}|null}>}
+     *   data: {expiresInSeconds: number, periodSeconds: number}|null}>}
      *   expired = true khi khóa chờ ở Redis đã hết 5 phút (HTTP 410): modal nên xin khóa mới.
      */
     async activateEnrollment(tokenLogin, periodSeconds) {
@@ -117,15 +117,14 @@ export class EnrollmentRepository {
         const body = response.data;
         const data = body?.data;
 
-        if (response.status === HTTP_CREATED && body?.success === true && Array.isArray(data?.backupCodes)) {
+        if (response.status === HTTP_CREATED && body?.success === true) {
             return {
                 success: true,
                 status: response.status,
                 message: body.message,
                 data: {
-                    expiresInSeconds: data.expiresInSeconds,
-                    periodSeconds: data.periodSeconds,
-                    backupCodes: data.backupCodes,
+                    expiresInSeconds: data?.expiresInSeconds,
+                    periodSeconds: data?.periodSeconds,
                 },
             };
         }

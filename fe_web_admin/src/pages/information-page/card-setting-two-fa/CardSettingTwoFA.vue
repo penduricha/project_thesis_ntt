@@ -35,10 +35,10 @@ const TWO_FA_VIEW = Object.freeze({
   },
 });
 
-// Đang chờ mobile xác nhận: server đẩy sự kiện qua SSE nên web chuyển xanh ngay.
-// Polling chỉ còn là dự phòng: thưa (30s) khi SSE đang nối, dày (5s) khi SSE đứt.
-const PENDING_POLL_SECONDS_PUSH_OK = 30;
-const PENDING_POLL_SECONDS_PUSH_DOWN = 5;
+// Đang chờ mobile xác nhận: POLLING là cơ chế chính, cứ mỗi 3 giây hỏi lại GET /2fa/status
+// cho tới khi server báo ENABLED (thẻ tự chuyển xanh) hoặc NOT_ENABLED (quá hạn / đã hủy).
+// SSE chỉ là đường tắt để cập nhật sớm hơn; không phụ thuộc vào nó nên SSE hỏng cũng không bị kẹt ở màu vàng.
+const PENDING_POLL_SECONDS = 3;
 
 export default {
   name: "CardSettingTwoFA",
@@ -98,21 +98,25 @@ export default {
     this.enrollmentRepository = new EnrollmentRepository();
     this.tokenLogin = new TokenLogin();
     this.isExpiringPending = false; // chặn xử lý "hết 10 phút" chạy chồng
-    this.isPushConnected = false;   // luồng SSE đang nối hay không (quyết định nhịp polling dự phòng)
     this.stopWatchTwoFa = null;
   },
 
   async mounted() {
     await this.fetchTwoFaStatus();
 
+    // Quay lại tab / cửa sổ (vừa xác nhận xong trên điện thoại): hỏi ngay, không chờ nhịp polling kế tiếp
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
+    window.addEventListener('focus', this.onWindowFocus);
+
     // Lắng nghe server báo đổi trạng thái (mobile xác nhận, tab khác kích hoạt / hủy, quá hạn)
     this.stopWatchTwoFa = this.enrollmentRepository.watchTwoFaStatus(this.tokenLogin, {
       onChange: this.onTwoFaPushEvent,
-      onConnectionChange: (connected) => { this.isPushConnected = connected; },
     });
   },
 
   beforeUnmount() {
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    window.removeEventListener('focus', this.onWindowFocus);
     this.stopWatchTwoFa?.();
     this.stopWatchTwoFa = null;
     this.stopTwoFaTimer();
@@ -227,6 +231,18 @@ export default {
       this.fetchTwoFaStatus();
     },
 
+    // Tab hiện lại / cửa sổ được focus: chỉ cần hỏi khi đang chờ xác nhận
+    onVisibilityChange() {
+      if (!document.hidden) this.refreshIfPending();
+    },
+    onWindowFocus() {
+      this.refreshIfPending();
+    },
+    refreshIfPending() {
+      if (this.isUnmounted || this.isPageLocked || !this.isTwoFaPending) return;
+      this.fetchTwoFaStatus();
+    },
+
     // ===== Trạng thái + timer =====
 
     applyTwoFaStatus(result) {
@@ -265,13 +281,10 @@ export default {
       this.twoFaTickCount += 1;
 
       const justExpired = wasCounting && this.pendingRemainingSeconds === 0;
-      const pollEvery = this.isPushConnected
-          ? PENDING_POLL_SECONDS_PUSH_OK
-          : PENDING_POLL_SECONDS_PUSH_DOWN;
-      const isPollTurn = this.twoFaTickCount % pollEvery === 0;
+      const isPollTurn = this.twoFaTickCount % PENDING_POLL_SECONDS === 0;
 
       // Hết 10 phút mà mobile chưa xác nhận: HỦY phần chờ rồi về "Chưa kích hoạt".
-      // Đến lượt poll: chỉ hỏi khi tab đang hiện.
+      // Đến lượt poll (mỗi 3 giây): chỉ hỏi khi tab đang hiện; tab hiện lại thì onVisibilityChange hỏi bù.
       if (justExpired) {
         this.handlePendingExpired();
       } else if (isPollTurn && !document.hidden) {

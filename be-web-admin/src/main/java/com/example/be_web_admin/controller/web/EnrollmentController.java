@@ -45,8 +45,7 @@ public class EnrollmentController {
     // POST /api/web/admin/2fa/enrollment/activate     Header: Authorization: Bearer <accessToken>
     // Body (không bắt buộc): { "periodSeconds": 30 } (15|30|45|60) = chu kỳ admin đang chọn. adminId lấy từ token.
     // 201: { success, message, data: { adminId, credentialId, algorithm, digits, periodSeconds,
-    //                                  totpEnabled:false, expiresInSeconds:600, backupCodes:[10 mã] } }
-    //      backupCodes chỉ hiển thị đúng một lần.
+    //                                  totpEnabled:false, expiresInSeconds:600 } }
     // 401 token sai | 404 không có admin | 409 đã bật 2FA | 410 khóa chờ ở Redis hết hạn | 500
     @PostMapping("/2fa/enrollment/activate")
     public ResponseEntity<?> activateEnrollment(
@@ -76,7 +75,6 @@ public class EnrollmentController {
             data.put("periodSeconds", result.periodSeconds());
             data.put("expiresInSeconds", result.expiresInSeconds());
             data.put("totpEnabled", false);
-            data.put("backupCodes", result.backupCodes());
 
             return ResponseEntity.status(HttpStatus.CREATED)
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
@@ -134,7 +132,7 @@ public class EnrollmentController {
 
     // ===================== HỦY VÀ CÀI LẠI (nút "Hủy và cài lại") =====================
     // DELETE /api/web/admin/2fa/enrollment/pending     Header: Authorization: Bearer <accessToken>
-    // Xóa credential chưa xác nhận + mã dự phòng của lần cài dở. KHÔNG đụng 2FA đã bật.
+    // Xóa credential chưa xác nhận của lần cài dở. KHÔNG đụng 2FA đã bật.
     // Idempotent: luôn 200 nếu token hợp lệ.
     @DeleteMapping("/2fa/enrollment/pending")
     public ResponseEntity<?> cancelPending(

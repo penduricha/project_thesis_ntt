@@ -71,8 +71,6 @@
   --m2fa-title-size: 1.0625rem;
   --m2fa-text-size: 0.9375rem;   // 15px: cỡ chữ đoạn mô tả + dòng gợi ý (trước đây 14px)
   --m2fa-hint-gap: 0.5rem;       // khoảng cách giữa ô select và dòng gợi ý bên dưới
-  --m2fa-btn-h: calc(var(--m2fa-control-h) + 0.25rem); // chiều cao cặp nút footer (bước 2)
-  --m2fa-btn-radius: 0.3125rem;  // 5px: bo góc giống nút Hủy / Đăng xuất
   --bs-modal-margin: var(--m2fa-margin);
 
   /* ---------- Dialog ---------- */
@@ -242,104 +240,6 @@
     animation: m2fa-spin 0.7s linear infinite;
   }
 
-  /* ---------- Bước 2: cặp nút "Sao chép mã dự phòng" + "Đã lưu, đóng" ----------
-     Grid 2 cột bằng nhau (1fr 1fr) + align-items: stretch => 2 nút luôn CÙNG width và CÙNG height,
-     kể cả khi chữ của 1 nút xuống dòng. margin-inline: auto => cả cặp nằm giữa modal. */
-  .modal-footer.m2fa-footer-pair {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    justify-content: center;
-    gap: 0.75rem;
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 36rem; // 2 nút trải gần hết bề ngang modal để chữ nằm gọn 1 dòng
-    margin-inline: auto;
-  }
-
-  .m2fa-btn {
-    appearance: none;
-    -webkit-appearance: none;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: var(--m2fa-btn-h);
-    margin: 0;
-    padding: 0.375rem 1rem;
-    border: 1px solid transparent;
-    border-radius: var(--m2fa-btn-radius);
-    font-family: inherit;
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.3;
-    text-align: center;
-    text-wrap: balance; // nếu phải xuống dòng thì chia đều 2 dòng
-    cursor: pointer;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-
-    &:focus-visible {
-      outline: 2px solid var(--blue-color, #004B87);
-      outline-offset: 2px;
-    }
-  }
-
-  // Giống nút "Hủy": nền trắng, viền xanh nhạt 1px, chữ xanh đậm
-  .m2fa-btn--outline {
-    background-color: #fff;
-    border-color: color-mix(in srgb, var(--blue-color, #004B87) 45%, white);
-    color: #1c2b3a;
-
-    &:active {
-      background-color: #eef3f8;
-      border-color: var(--blue-color, #004B87);
-    }
-  }
-
-  // Giống nút "Đăng xuất": nền --blue-color, chữ trắng đậm
-  .m2fa-btn--solid {
-    background-color: var(--blue-color, #004B87);
-    border-color: var(--blue-color, #004B87);
-    color: #fff;
-
-    &:active {
-      background-color: #093b6a;
-      border-color: #093b6a;
-    }
-  }
-
-  // Hover chỉ cho thiết bị có chuột, tránh "kẹt hover" trên cảm ứng
-  @media (hover: hover) and (pointer: fine) {
-    .m2fa-btn--outline:hover {
-      background-color: #f4f7fb;
-      border-color: var(--blue-color, #004B87);
-    }
-    .m2fa-btn--solid:hover {
-      background-color: #093b6a;
-      border-color: #093b6a;
-    }
-  }
-
-  /* ---------- Bước 2: danh sách mã dự phòng (hiện sau khi bấm "Kích hoạt" thành công) ---------- */
-  .backup-codes {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem 1rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .backup-codes__item {
-    padding: 0.5rem 0.75rem;
-    background: #f1f5f9;
-    border: 1px solid #d5dde7;
-    text-align: center;
-    letter-spacing: 0.06em;
-    user-select: all;
-  }
-  // Footer bước 2 có 2 nút: xếp dọc full-width trên mobile
   .modal-footer .btn {
     min-height: var(--m2fa-control-h);
   }
@@ -365,21 +265,6 @@
      Breakpoints
      ====================================================================== */
 
-  /* ---------- Từ 520px: chữ trong nút luôn 1 dòng, 2 nút bằng nhau ---------- */
-  @media only screen and (min-width: 520px) {
-    .m2fa-btn {
-      white-space: nowrap;
-    }
-  }
-
-  /* ---------- Mobile (< 520px): 2 nút xếp dọc, mỗi nút full-width => vẫn bằng nhau ---------- */
-  @media only screen and (max-width: 519px) {
-    .modal-footer.m2fa-footer-pair {
-      grid-template-columns: 1fr;
-      max-width: none;
-    }
-  }
-
   /* ---------- Mobile nhỏ (iPhone SE, Android màn nhỏ) ---------- */
   @media only screen and (max-width: 360px) {
     --m2fa-margin: 0.5rem;
@@ -397,9 +282,6 @@
     }
     .btn-copy {
       padding: 0 0.625rem;
-    }
-    .backup-codes {
-      grid-template-columns: 1fr;
     }
   }
 
@@ -469,10 +351,6 @@
     }
     .btn-activate {
       min-height: var(--m2fa-control-h);
-    }
-    .modal-footer.m2fa-footer-pair {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      max-width: 36rem;
     }
   }
 }

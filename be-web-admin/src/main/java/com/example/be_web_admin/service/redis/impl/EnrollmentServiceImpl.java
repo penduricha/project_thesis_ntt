@@ -2,25 +2,19 @@ package com.example.be_web_admin.service.redis.impl;
 
 import com.example.be_web_admin.enums.AuthEvent;
 import com.example.be_web_admin.model.jpa.Admin;
-import com.example.be_web_admin.model.jpa.BackupCode;
 import com.example.be_web_admin.model.jpa.TotpCredential;
 import com.example.be_web_admin.model.redis.EnrollSession;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
-import com.example.be_web_admin.repository.jpa.BackupCodeRepository;
 import com.example.be_web_admin.repository.jpa.TotpCredentialRepository;
 import com.example.be_web_admin.repository.redis.EnrollSessionRepository;
 import com.example.be_web_admin.security.private_key.CryptoService;
 import com.example.be_web_admin.service.jpa.impl.AuthAuditService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -35,17 +29,9 @@ public class EnrollmentServiceImpl {
     /** cột secret_cipher là varbinary(64). */
     private static final int MAX_CIPHER_LENGTH = 64;
 
-    private static final int BACKUP_CODE_COUNT = 10;
-    private static final int BACKUP_CODE_LENGTH = 10;
-    private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // bỏ I, O, 0, 1
-
-    private final SecureRandom secureRandom = new SecureRandom();
-    private final BCryptPasswordEncoder backupCodeEncoder = new BCryptPasswordEncoder(10);
-
     private final EnrollSessionRepository enrollSessionRepository;
     private final AdminRepository adminRepository;
     private final TotpCredentialRepository totpCredentialRepository;
-    private final BackupCodeRepository backupCodeRepository;
     private final AuthAuditService auditService;
     private final EnrollmentConfirmServiceImpl confirmService;
     private final TransactionTemplate transactionTemplate;
@@ -54,7 +40,6 @@ public class EnrollmentServiceImpl {
     public EnrollmentServiceImpl(EnrollSessionRepository enrollSessionRepository,
                                  AdminRepository adminRepository,
                                  TotpCredentialRepository totpCredentialRepository,
-                                 BackupCodeRepository backupCodeRepository,
                                  AuthAuditService auditService,
                                  EnrollmentConfirmServiceImpl confirmService,
                                  TransactionTemplate transactionTemplate,
@@ -62,24 +47,18 @@ public class EnrollmentServiceImpl {
         this.enrollSessionRepository = enrollSessionRepository;
         this.adminRepository = adminRepository;
         this.totpCredentialRepository = totpCredentialRepository;
-        this.backupCodeRepository = backupCodeRepository;
         this.auditService = auditService;
         this.confirmService = confirmService;
         this.transactionTemplate = transactionTemplate;
         this.eventService = eventService;
     }
 
-    /** backupCodes là mã GỐC, chỉ hiển thị đúng một lần. */
     public record ActivationResult(Long adminId, Long credentialId, String algorithm, int digits,
-                                   int periodSeconds, long expiresInSeconds, List<String> backupCodes) {
+                                   int periodSeconds, long expiresInSeconds) {
     }
 
     /** Trạng thái 2FA cho trang thông tin admin. */
     public record TwoFaStatus(boolean totpEnabled, boolean pending, long expiresInSeconds, Integer periodSeconds) {
-    }
-
-    /** Mã dự phòng đã sinh: plain để hiển thị một lần, hash để lưu DB. */
-    private record GeneratedCode(String plain, String hash) {
     }
 
     public static class EnrollmentExpiredException extends RuntimeException {
@@ -123,11 +102,8 @@ public class EnrollmentServiceImpl {
                 ? EnrollSessionServiceImpl.DEFAULT_PERIOD_SECONDS
                 : pending.getPeriodSeconds());
 
-        // BCrypt tốn vài trăm ms: làm TRƯỚC khi mở transaction để không giữ kết nối DB.
-        List<GeneratedCode> codes = generateBackupCodes();
-
         ActivationResult result = transactionTemplate.execute(status ->
-                persist(adminId, sealed, period, codes));
+                persist(adminId, sealed, period));
 
         // Sau khi commit: việc phụ, lỗi cũng không ảnh hưởng kết quả.
         confirmService.resetAttempts(adminId);
@@ -137,19 +113,18 @@ public class EnrollmentServiceImpl {
             log.warn("Can't delete enroll session of admin {}: {}", adminId, e.getMessage());
         }
         auditService.log(adminId, AuthEvent.TOTP_ENROLL_ACTIVATED, true, ip, userAgent,
-                "period=" + period + "s, backupCodes=" + BACKUP_CODE_COUNT);
+                "period=" + period + "s");
         // Tab web khác của cùng admin cũng chuyển sang "Đang chờ xác nhận"
         eventService.publish(adminId, TwoFaEventServiceImpl.PENDING);
         return result;
     }
 
-    private ActivationResult persist(Long adminId, CryptoService.Sealed sealed, int period,
-                                     List<GeneratedCode> codes) {
+    private ActivationResult persist(Long adminId, CryptoService.Sealed sealed, int period) {
         Admin admin = adminRepository.findAdminByAdminId(adminId);
         if (admin == null) {
             throw new AdminNotFoundException(adminId);
         }
-        // Đã bật 2FA thì không được cài đè: sẽ phá bộ mã dự phòng và để lại 2 credential.
+        // Đã bật 2FA thì không được cài đè: sẽ để lại 2 credential. Muốn cài lại phải tắt 2FA trước.
         if (Boolean.TRUE.equals(admin.getTotpEnabled())) {
             throw new TotpAlreadyEnabledException();
         }
@@ -173,26 +148,13 @@ public class EnrollmentServiceImpl {
         admin.setUpdatedAt(Instant.now());
         adminRepository.save(admin);
 
-        backupCodeRepository.purgeByAdminId(adminId);
-        List<BackupCode> entities = new ArrayList<>(codes.size());
-        List<String> plainCodes = new ArrayList<>(codes.size());
-        for (GeneratedCode code : codes) {
-            BackupCode entity = new BackupCode();
-            entity.setAdmin(admin);
-            entity.setCodeHash(code.hash());
-            entity.setUsed(false);
-            entities.add(entity);
-            plainCodes.add(code.plain());
-        }
-        backupCodeRepository.saveAll(entities);
-
         return new ActivationResult(adminId, credential.getCredentialId(), credential.getAlgorithm(),
-                credential.getDigits(), period, confirmService.getConfirmWindow().getSeconds(), plainCodes);
+                credential.getDigits(), period, confirmService.getConfirmWindow().getSeconds());
     }
 
     // ------------------------------------------------------------------ hủy phần chờ xác nhận
 
-    /** "Hủy và cài lại": xóa credential chưa xác nhận (và mã dự phòng của lần cài dở). Không chạm 2FA đã bật. */
+    /** "Hủy và cài lại": xóa credential chưa xác nhận của lần cài dở. Không chạm 2FA đã bật. */
     public void cancelPending(Long adminId, String ip, String userAgent) {
         transactionTemplate.executeWithoutResult(status -> {
             Admin admin = adminRepository.findAdminByAdminId(adminId);
@@ -200,9 +162,6 @@ public class EnrollmentServiceImpl {
                 throw new AdminNotFoundException(adminId);
             }
             totpCredentialRepository.deletePendingByAdminId(adminId);
-            if (!Boolean.TRUE.equals(admin.getTotpEnabled())) {
-                backupCodeRepository.purgeByAdminId(adminId);
-            }
         });
 
         confirmService.resetAttempts(adminId);
@@ -235,22 +194,4 @@ public class EnrollmentServiceImpl {
     }
 
     // ------------------------------------------------------------------ hỗ trợ
-
-    private List<GeneratedCode> generateBackupCodes() {
-        List<GeneratedCode> codes = new ArrayList<>(BACKUP_CODE_COUNT);
-        for (int i = 0; i < BACKUP_CODE_COUNT; i++) {
-            String code = generateBackupCode();
-            codes.add(new GeneratedCode(code.substring(0, 5) + "-" + code.substring(5),
-                    backupCodeEncoder.encode(code)));
-        }
-        return codes;
-    }
-
-    private String generateBackupCode() {
-        StringBuilder sb = new StringBuilder(BACKUP_CODE_LENGTH);
-        for (int i = 0; i < BACKUP_CODE_LENGTH; i++) {
-            sb.append(CODE_ALPHABET.charAt(secureRandom.nextInt(CODE_ALPHABET.length())));
-        }
-        return sb.toString();
-    }
 }

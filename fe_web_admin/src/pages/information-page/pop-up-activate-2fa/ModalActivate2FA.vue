@@ -34,10 +34,6 @@ export default {
       secretKeyError: '',
       intervalSeconds: 30, // khớp ô chọn "Tần suất đổi mã" (15 | 30 | 45 | 60)
 
-      // Bước hiển thị: 'key' = khóa bí mật | 'backup' = 10 mã dự phòng (sau khi bấm Kích hoạt thành công)
-      step: 'key',
-      backupCodes: [],
-
       //btn activate
       textButtonActivate: 'Kích hoạt',
       disableButtonActivate: false,
@@ -84,8 +80,6 @@ export default {
 
     handleModalShow() {
       this.isModalOpen = true
-      this.step = 'key'
-      this.backupCodes = []
       this.requestSecretKey()
     },
 
@@ -98,9 +92,6 @@ export default {
         return
       }
       this.releaseSecretKey()
-      // Mã dự phòng chỉ hiển thị một lần: đóng modal là xóa khỏi bộ nhớ trình duyệt
-      this.backupCodes = []
-      this.step = 'key'
     },
 
     // Tắt tab: yêu cầu fetch keepalive vẫn được gửi dù trang đang đóng
@@ -212,6 +203,7 @@ export default {
       if (this.loadingButtonActivate || !this.secretKey) return // chặn bấm liên tục / chưa có khóa
 
       this.loadButtonActivate()
+      let activated = false
       try {
         const result = await this.enrollmentRepository
             .activateEnrollment(this.tokenLogin, this.intervalSeconds)
@@ -228,8 +220,7 @@ export default {
         this.isModalOpen = false
         this.startRequestId++
         this.secretKey = ''
-        this.backupCodes = result.data.backupCodes
-        this.step = 'backup'
+        activated = true
 
         this.$emit('activated', {
           expiresInSeconds: result.data.expiresInSeconds,
@@ -241,16 +232,12 @@ export default {
       } finally {
         this.stopLoadButtonActivate() // luôn mở lại tương tác dù thành công hay lỗi
       }
-    },
 
-    async copyBackupCodes() {
-      try {
-        if (!navigator.clipboard) throw new Error('Clipboard API unavailable')
-        await navigator.clipboard.writeText(this.backupCodes.join('\n'))
-        this.showFeedback(true, 'Đã sao chép mã dự phòng!')
-      } catch (error) {
-        console.error('Copy backup codes failed:', error)
-        this.showFeedback(false, 'Không thể sao chép, vui lòng chép thủ công.')
+      // Xong thì đóng modal: thẻ 2FA phía sau đã chuyển sang "Đang chờ xác nhận" và tự cập nhật bằng polling.
+      // Bấm đúng nút X (data-bs-dismiss) để Bootstrap tự đóng; phải chờ DOM bỏ `disabled` của nút đó.
+      if (activated) {
+        await this.$nextTick()
+        this.$refs.btnClose?.click()
       }
     },
 
@@ -283,15 +270,16 @@ export default {
           <h5 class="modal-title fw-bold" id="setup2FaModalLabel">
             <i class="fa-solid fa-key me-1" aria-hidden="true"></i> Cài đặt xác thực 2 lớp 2FA
           </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"
-                  :disabled="loadingButtonActivate"/>
+          <button ref="btnClose" type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                  aria-label="Đóng" :disabled="loadingButtonActivate"/>
         </div>
 
-        <!-- ===== Bước 1: khóa bí mật ===== -->
-        <div v-if="step === 'key'" class="modal-body border-radius-zero">
+        <!-- Khóa bí mật (không có mã dự phòng: quên khóa thì hủy và cài lại) -->
+        <div class="modal-body border-radius-zero">
           <!-- Đã bỏ class "small": cỡ chữ do biến --m2fa-text-size trong SCSS điều khiển theo thiết bị -->
           <p class="modal-2fa__desc text-muted">
             Sao chép chuỗi khóa bí mật dưới đây và dán vào ứng dụng di động <strong>Authenticator</strong> của để bắt đầu sinh mã 6 số.
+            Khóa chỉ hiển thị trong cửa sổ này; nếu quên, hãy hủy và cài lại.
           </p>
 
           <!-- Khóa Bí Mật (Secret Key) -->
@@ -350,7 +338,7 @@ export default {
         <!-- Footer Modal: không viền, chỉ có nút Kích hoạt.
              Nút là <button> thường (class "btn-activate"), KHÔNG dùng .btn của Bootstrap
              nên trạng thái loading/disabled hoàn toàn do method + SCSS riêng điều khiển. -->
-        <div v-if="step === 'key'" class="modal-footer border-0 bg-transparent justify-content-center border-radius-zero">
+        <div class="modal-footer border-0 bg-transparent justify-content-center border-radius-zero">
           <button
               type="button"
               class="btn-activate"
@@ -362,27 +350,6 @@ export default {
           >
             <span v-if="loadingButtonActivate" class="btn-activate__spinner" aria-hidden="true"></span>
             <span v-if="textButtonActivate">{{ textButtonActivate }}</span>
-          </button>
-        </div>
-
-        <!-- ===== Bước 2: mã dự phòng (chỉ hiển thị một lần) ===== -->
-        <div v-if="step === 'backup'" class="modal-body border-radius-zero">
-          <p class="modal-2fa__desc text-muted">
-            Đã tạo khóa. Hãy <strong>dán khóa vào ứng dụng Authenticator</strong> trên điện thoại và bấm
-            <strong>Activate</strong> để hoàn tất trong vòng 10 phút. Lưu 10 mã dự phòng dưới đây ở nơi an toàn:
-            chúng <strong>chỉ hiển thị một lần</strong> và dùng khi bạn mất điện thoại.
-          </p>
-          <ul class="backup-codes" aria-label="Mã dự phòng">
-            <li v-for="code in backupCodes" :key="code" class="backup-codes__item font-monospace">{{ code }}</li>
-          </ul>
-        </div>
-        <!-- 2 nút cùng width + height, căn giữa modal. KHÔNG dùng .btn của Bootstrap (xem .m2fa-btn trong SCSS) -->
-        <div v-if="step === 'backup'" class="modal-footer m2fa-footer-pair border-0 bg-transparent">
-          <button type="button" class="m2fa-btn m2fa-btn--outline" @click="copyBackupCodes">
-            Sao chép mã dự phòng
-          </button>
-          <button type="button" class="m2fa-btn m2fa-btn--solid" data-bs-dismiss="modal">
-            Đã lưu, đóng
           </button>
         </div>
       </div>

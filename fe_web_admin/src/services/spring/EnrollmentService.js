@@ -68,11 +68,11 @@ export class EnrollmentService {
 
     /**
      * Bấm "Kích hoạt" trong modal: ghi khóa xuống MariaDB ở trạng thái CHỜ XÁC NHẬN
-     * (totp_enabled vẫn false) và nhận 10 mã dự phòng (chỉ hiển thị một lần).
+     * (totp_enabled vẫn false).
      *
      * @param {number} [periodSeconds] chu kỳ admin đang chọn trong ô "Tần suất đổi mã"
      * @returns {Promise<import('axios').AxiosResponse|null>}
-     *   HTTP 201: data = { success, message, data: { credentialId, periodSeconds, expiresInSeconds, backupCodes[] } }
+     *   HTTP 201: data = { success, message, data: { credentialId, periodSeconds, expiresInSeconds } }
      *   400 / 401 / 409 (đã bật 2FA) / 410 (khóa chờ hết hạn 5 phút) -> error.response; mất mạng -> null
      */
     async postDataToActivateEnrollmentRequest(tokenLogin, periodSeconds) {

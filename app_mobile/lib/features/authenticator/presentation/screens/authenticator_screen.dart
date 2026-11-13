@@ -301,17 +301,11 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
             Expanded(
               child: accounts.isEmpty
                   ? _buildEmptyState()
-                  : ListView.separated(
+                  : ListView.builder(
                 keyboardDismissBehavior:
                 ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.zero,
                 itemCount: accounts.length,
-                separatorBuilder: (_, __) => const Divider(
-                  height: 1,
-                  thickness: 1,
-                  indent: 80,
-                  color: _dividerColor,
-                ),
                 itemBuilder: (context, index) {
                   final acc = accounts[index];
                   return _AccountTile(
@@ -420,7 +414,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 }
 
 // ============================================================================
-//  1 ACCOUNT ROW: avatar | name + email/adminId + 6-digit code + countdown ring | arrow >
+//  1 ACCOUNT ROW: avatar | name + email/adminId + 6-digit code + countdown ring
 // ============================================================================
 
 class _AccountTile extends StatelessWidget {
@@ -450,88 +444,97 @@ class _AccountTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap, // tap to copy code (change to open detail screen if needed)
+      onTap: onTap, // tap to copy code
+      // Thêm Padding ngoài cùng để tạo khoảng lề 16px cho đường viền dưới
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-        child: Row(
-          // center: arrow is centered in the row height
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Main content. Inner Row keeps avatar aligned to top as before.
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Color(0xFF004B87),
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          account.issuer,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black,
-                          ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          // Border bottom nằm trong Container sẽ bắt đầu từ lề trái 16px và kết thúc ở lề phải 16px
+          decoration: const BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: Color(0xFFEDEDED),
+                width: 1,
+              ),
+            ),
+          ),
+          // Padding dọc bên trong để giữ nguyên khoảng cách trên/dưới của nội dung
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Color(0xFF004B87),
+                        child: Icon(
+                          Icons.person_rounded,
+                          color: Colors.white,
+                          size: 28,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          account.account,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _formattedCode,
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w400,
-                                color: codeColor,
-                                letterSpacing: 1,
-                                // Tabular figures -> code doesn't "jump" when changing
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
+                              account.issuer,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            _CountdownRing(
-                              clock: clock,
-                              period: period,
-                              color: codeColor,
+                            const SizedBox(height: 2),
+                            Text(
+                              account.account,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _formattedCode,
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w400,
+                                    color: codeColor,
+                                    letterSpacing: 1,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                _CountdownRing(
+                                  clock: clock,
+                                  period: period,
+                                  color: codeColor,
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            // Gray right arrow (for thinner: Icons.arrow_forward_ios_rounded, size 16)
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: Colors.grey, size: 24),
-          ],
+          ),
         ),
       ),
     );
