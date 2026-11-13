@@ -114,19 +114,19 @@ class _AppMenuBarState extends State<AppMenuBar> {
                     },
                   ),
                   _MenuItem(
-                    icon: Icons.shield_outlined,
-                    label: '2-Step Verification',
-                    onTap: () {
-                      Navigator.pop(context); // Đóng drawer
-                      // TODO: Chuyển sang màn hình Xác thực 6 số
-                    },
-                  ),
-                  _MenuItem(
                     icon: Icons.settings_outlined,
                     label: 'Settings',
                     onTap: () {
                       Navigator.pop(context); // Đóng drawer
                       // TODO: Chuyển sang màn hình Cài đặt
+                    },
+                  ),
+                  _MenuItem(
+                    icon: Icons.feedback_outlined,
+                    label: 'Send Feedback',
+                    onTap: () {
+                      Navigator.pop(context); // Đóng drawer
+                      // TODO: Chuyển sang màn hình gửi phản hồi
                     },
                   ),
                 ],

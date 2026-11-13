@@ -43,31 +43,16 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   // đồng bộ theo giờ thật của máy. Tài khoản cùng chu kỳ dùng chung đồng hồ.
   final Map<int, AnimationController> _clocks = {};
 
-  final AccountStore _store = AccountStore();
+  late final EnrollmentAuth _auth;
   late final EnrollmentService _enrollment;
 
-  // Danh sách demo (SHA-1, 6 số, 30 giây) + tài khoản kích hoạt từ server (được lưu máy).
-  // (Không dùng const cho list vì cần thêm tài khoản mới)
-  final List<AuthAccount> _accounts = [
-    const AuthAccount(
-      id: '1',
-      issuer: 'PAM360',
-      account: 'tuquangnhat@company.com',
-      secret: 'JBSWY3DPEHPK3PXP',
-    ),
-    const AuthAccount(
-      id: '2',
-      issuer: 'Microsoft',
-      account: 'ben10siuuu41@outlook.com',
-      secret: 'GEZDGNBVGY3TQOJQ',
-    ),
-    const AuthAccount(
-      id: '3',
-      issuer: 'Google',
-      account: 'nhat.tu@gmail.com',
-      secret: 'MFRGGZDFMZTWQ2LK',
-    ),
-  ];
+  // Phiên đăng nhập hiện tại. Chỉ TOTP của _adminId mới được nạp và hiển thị.
+  // null = chưa nạp xong / chưa đăng nhập -> danh sách để trống.
+  String? _adminId;
+  AccountStore? _store; // key lưu riêng theo _adminId
+
+  // TOTP của admin đang đăng nhập (kích hoạt từ server, được lưu máy). Không còn dữ liệu demo.
+  final List<AuthAccount> _accounts = [];
 
   // Mã 6 số hiện tại của từng tài khoản (key = id), chỉ tính lại khi sang chu kỳ mới
   Map<String, String> _codes = {};
@@ -77,9 +62,8 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _enrollment = EnrollmentService(
-      auth: widget.auth ?? const SecureStorageEnrollmentAuth(),
-    );
+    _auth = widget.auth ?? const SecureStorageEnrollmentAuth();
+    _enrollment = EnrollmentService(auth: _auth);
 
     _codes = _generateCodes();
     _loadStoredAccounts();
@@ -154,10 +138,15 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     return result;
   }
 
+  // Chỉ TOTP của admin đang đăng nhập (account = adminId). Không bao giờ hiện mục của admin khác.
+  List<AuthAccount> get _ownAccounts =>
+      _accounts.where((a) => a.account == _adminId).toList();
+
   List<AuthAccount> get _filteredAccounts {
     final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) return _accounts;
-    return _accounts.where((a) {
+    final own = _ownAccounts;
+    if (query.isEmpty) return own;
+    return own.where((a) {
       return a.issuer.toLowerCase().contains(query) ||
           a.account.toLowerCase().contains(query);
     }).toList();
@@ -170,13 +159,30 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   // ---- Dữ liệu đã lưu ----
 
   Future<void> _loadStoredAccounts() async {
-    final stored = await _store.load();
-    if (!mounted || stored.isEmpty) return;
+    final profile = await _auth.profile();
+    if (!mounted) return;
+
+    // Chưa đăng nhập: không hiện gì cả
+    if (profile == null) {
+      setState(() {
+        _adminId = null;
+        _store = null;
+        _accounts.clear();
+        _codes = {};
+      });
+      return;
+    }
+
+    final store = AccountStore(adminId: profile.adminId);
+    final stored = await store.load(); // chỉ đọc key của admin này
+    if (!mounted) return;
+
     setState(() {
-      for (final acc in stored) {
-        _accounts.removeWhere((a) => a.id == acc.id);
-        _accounts.add(acc);
-      }
+      _adminId = profile.adminId;
+      _store = store;
+      _accounts
+        ..clear()
+        ..addAll(stored);
       _codes = _generateCodes();
     });
   }
@@ -187,6 +193,13 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   /// khóa (DB + Redis). Khớp thì 2FA được bật hoàn toàn và tài khoản được thêm vào danh sách.
   Future<void> _onAddAccount() async {
     FocusScope.of(context).unfocus(); // đóng bàn phím của ô tìm kiếm (nếu đang mở)
+
+    final store = _store;
+    final adminId = _adminId;
+    if (store == null || adminId == null) {
+      _showToast('Đang tải phiên đăng nhập, vui lòng thử lại');
+      return;
+    }
 
     // Các khóa đã có -> popup dùng để báo trùng
     final existingSecrets =
@@ -215,6 +228,12 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     final result = enrolled;
     if (secret == null || result == null || !mounted) return; // bấm Cancel
 
+    // Server xác nhận khóa này thuộc admin khác với phiên đang đăng nhập: không thêm vào danh sách
+    if (result.adminId != adminId) {
+      _showToast('Khóa không thuộc tài khoản đang đăng nhập');
+      return;
+    }
+
     // Tài khoản mới: tên quản trị viên + adminId (thay cho email), mã đổi theo chu kỳ đã chọn
     final account = AuthAccount(
       id: 'admin_${result.adminId}',
@@ -236,7 +255,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     });
 
     try {
-      await _store.save(_enrolledAccounts);
+      await store.save(_enrolledAccounts);
       if (mounted) _showToast('Kích hoạt thành công');
     } catch (_) {
       if (mounted) {
@@ -383,10 +402,18 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   }
 
   Widget _buildEmptyState() {
-    return const Center(
-      child: Text(
-        'Không tìm thấy tài khoản',
-        style: TextStyle(fontSize: 15, color: Colors.grey),
+    // Chưa có TOTP nào của admin này (khác với "tìm không ra" khi đang lọc)
+    final noAccountsYet = _ownAccounts.isEmpty;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Text(
+          noAccountsYet
+              ? 'Chưa có mã xác thực nào.\nBấm dấu + để thêm khóa bí mật.'
+              : 'Không tìm thấy tài khoản',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 15, color: Colors.grey),
+        ),
       ),
     );
   }
