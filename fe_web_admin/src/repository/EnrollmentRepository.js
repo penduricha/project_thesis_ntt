@@ -191,4 +191,70 @@ export class EnrollmentRepository {
         const response = await this.enrollmentService.deleteDataToCancelPendingRequest(tokenLogin);
         return response?.status === HTTP_OK;
     }
+
+    /**
+     * Lắng nghe server báo đổi trạng thái 2FA (SSE). Tự nối lại khi đứt, chờ tăng dần 1s -> 30s.
+     * Mỗi lần (nối lại) mở được luồng đều gọi onChange() một lần để Component hỏi lại trạng thái,
+     * phòng sự kiện xảy ra đúng lúc đang đứt kết nối.
+     *
+     * @param {TokenLogin} tokenLogin
+     * @param {{onChange: function(string|null): void,
+     *          onConnectionChange?: function(boolean): void}} handlers
+     *   onChange(status): status = 'PENDING' | 'ENABLED' | 'NOT_ENABLED' (null khi chỉ là "hỏi lại cho chắc")
+     * @returns {function(): void} hàm dừng: gọi khi Component bị gỡ
+     */
+    watchTwoFaStatus(tokenLogin, {onChange, onConnectionChange}) {
+        const controller = new AbortController();
+        const MIN_DELAY_MS = 1000;
+        const MAX_DELAY_MS = 30000;
+        const UNAUTHORIZED_DELAY_MS = 60000; // token hết hạn: chờ axios làm mới token ở nơi khác, đừng dồn dập
+
+        const sleep = (ms) => new Promise((resolve) => {
+            const timer = setTimeout(resolve, ms);
+            controller.signal.addEventListener('abort', () => {
+                clearTimeout(timer);
+                resolve();
+            }, {once: true});
+        });
+
+        const run = async () => {
+            let delay = MIN_DELAY_MS;
+            while (!controller.signal.aborted) {
+                let waitMs = delay;
+                try {
+                    const result = await this.enrollmentService.readStatusStream(tokenLogin, {
+                        signal: controller.signal,
+                        onOpen: () => {
+                            delay = MIN_DELAY_MS; // nối được rồi: lần đứt sau chờ lại từ 1s
+                            onConnectionChange?.(true);
+                            onChange(null);
+                        },
+                        onEvent: (event, data) => {
+                            if (event !== '2fa-status') return; // bỏ "ready" và sự kiện lạ
+                            let status = null;
+                            try {
+                                status = JSON.parse(data)?.status ?? null;
+                            } catch {
+                                // data hỏng: vẫn báo để Component hỏi lại server
+                            }
+                            onChange(status);
+                        },
+                    });
+                    if (!result.opened && result.status === HTTP_UNAUTHORIZED) {
+                        waitMs = UNAUTHORIZED_DELAY_MS;
+                    }
+                } catch (error) {
+                    if (controller.signal.aborted) break; // Component bị gỡ
+                    console.warn('2FA status stream interrupted:', error);
+                }
+                onConnectionChange?.(false);
+                if (controller.signal.aborted) break;
+                await sleep(waitMs);
+                delay = Math.min(delay * 2, MAX_DELAY_MS);
+            }
+        };
+
+        run();
+        return () => controller.abort();
+    }
 }

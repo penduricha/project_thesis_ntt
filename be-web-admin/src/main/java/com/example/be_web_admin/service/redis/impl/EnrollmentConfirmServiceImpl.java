@@ -44,6 +44,7 @@ public class EnrollmentConfirmServiceImpl {
     private final TotpProperties totpProperties;
     private final StringRedisTemplate redis;
     private final TransactionTemplate transactionTemplate;
+    private final TwoFaEventServiceImpl eventService;
 
     public EnrollmentConfirmServiceImpl(TotpCredentialRepository totpCredentialRepository,
                                         BackupCodeRepository backupCodeRepository,
@@ -52,7 +53,8 @@ public class EnrollmentConfirmServiceImpl {
                                         CryptoService cryptoService,
                                         TotpProperties totpProperties,
                                         StringRedisTemplate redis,
-                                        TransactionTemplate transactionTemplate) {
+                                        TransactionTemplate transactionTemplate,
+                                        TwoFaEventServiceImpl eventService) {
         this.totpCredentialRepository = totpCredentialRepository;
         this.backupCodeRepository = backupCodeRepository;
         this.adminRepository = adminRepository;
@@ -61,6 +63,7 @@ public class EnrollmentConfirmServiceImpl {
         this.totpProperties = totpProperties;
         this.redis = redis;
         this.transactionTemplate = transactionTemplate;
+        this.eventService = eventService;
     }
 
     /** Khớp đồng hồ "Còn 10:00" trên trang web (cấu hình app.totp.confirm-window-minutes). */
@@ -131,6 +134,8 @@ public class EnrollmentConfirmServiceImpl {
         resetAttempts(adminId);
         if (Boolean.TRUE.equals(changed)) {
             auditService.log(adminId, AuthEvent.TOTP_ENROLL_CONFIRMED, true, ip, userAgent, null);
+            // Đã commit: báo cho web (mọi tab) chuyển sang "Đã kích hoạt" mà không cần tải lại trang
+            eventService.publish(adminId, TwoFaEventServiceImpl.ENABLED);
         }
         return true;
     }
@@ -184,5 +189,7 @@ public class EnrollmentConfirmServiceImpl {
             }
         });
         resetAttempts(adminId);
+        // Quá hạn hoặc nhập sai quá số lần: web về "Chưa kích hoạt"
+        eventService.publish(adminId, TwoFaEventServiceImpl.NOT_ENABLED);
     }
 }

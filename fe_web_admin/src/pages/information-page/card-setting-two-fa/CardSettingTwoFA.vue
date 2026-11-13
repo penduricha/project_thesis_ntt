@@ -35,8 +35,10 @@ const TWO_FA_VIEW = Object.freeze({
   },
 });
 
-// Khi đang chờ: cứ mỗi N giây hỏi lại server để tự chuyển sang "Đã kích hoạt"
-const PENDING_POLL_SECONDS = 5;
+// Đang chờ mobile xác nhận: server đẩy sự kiện qua SSE nên web chuyển xanh ngay.
+// Polling chỉ còn là dự phòng: thưa (30s) khi SSE đang nối, dày (5s) khi SSE đứt.
+const PENDING_POLL_SECONDS_PUSH_OK = 30;
+const PENDING_POLL_SECONDS_PUSH_DOWN = 5;
 
 export default {
   name: "CardSettingTwoFA",
@@ -53,7 +55,6 @@ export default {
 
       twoFaStatus: null,           // null = đang tải
       pendingRemainingSeconds: 0,  // server gửi, FE đếm ngược
-
       isPageLocked: false,         // đang gọi API "Kích hoạt" trong modal: cấm tương tác cả web
       isResetDialogClosing: false, // đang chạy animation đóng dialog xác nhận hủy
       isResettingPending: false,   // đang gọi API "Hủy và cài lại"
@@ -97,13 +98,23 @@ export default {
     this.enrollmentRepository = new EnrollmentRepository();
     this.tokenLogin = new TokenLogin();
     this.isExpiringPending = false; // chặn xử lý "hết 10 phút" chạy chồng
+    this.isPushConnected = false;   // luồng SSE đang nối hay không (quyết định nhịp polling dự phòng)
+    this.stopWatchTwoFa = null;
   },
 
   async mounted() {
     await this.fetchTwoFaStatus();
+
+    // Lắng nghe server báo đổi trạng thái (mobile xác nhận, tab khác kích hoạt / hủy, quá hạn)
+    this.stopWatchTwoFa = this.enrollmentRepository.watchTwoFaStatus(this.tokenLogin, {
+      onChange: this.onTwoFaPushEvent,
+      onConnectionChange: (connected) => { this.isPushConnected = connected; },
+    });
   },
 
   beforeUnmount() {
+    this.stopWatchTwoFa?.();
+    this.stopWatchTwoFa = null;
     this.stopTwoFaTimer();
 
     // Dialog xác nhận hủy đang mở mà component bị gỡ thì đóng sạch để không kẹt backdrop / focus trap
@@ -131,11 +142,10 @@ export default {
 
         // Đang chờ mà server báo "không còn chờ" (quá hạn 10 phút phía server): dọn nốt dòng chờ ở MariaDB
         if (wasPending && result.status === TWO_FA_STATUS.NOT_ENABLED) {
-          await this.enrollmentRepository.cancelPendingEnrollment(this.tokenLogin);
+          this.enrollmentRepository.cancelPendingEnrollment(this.tokenLogin);
         }
       } catch (error) {
         console.error('Error to fetch 2FA status:', error);
-        //window.location.reload();
         if (this.isUnmounted || seq !== this.twoFaFetchSeq) return;
         // Lần tải đầu lỗi: coi như chưa bật. Đang poll lỗi thoáng qua: giữ nguyên.
         if (this.twoFaStatus === null) {
@@ -208,6 +218,15 @@ export default {
       }
     },
 
+    // ===== Sự kiện đẩy từ server (SSE) =====
+
+    // Chỉ dùng sự kiện như "tín hiệu": hỏi lại GET /2fa/status để lấy số liệu chuẩn (giây còn lại...).
+    // fetchTwoFaStatus đã có số thứ tự yêu cầu nên kết quả về muộn không ghi đè kết quả mới hơn.
+    onTwoFaPushEvent() {
+      if (this.isUnmounted || this.isPageLocked) return; // đang gọi "Kích hoạt": modal sẽ tự hỏi lại khi xong
+      this.fetchTwoFaStatus();
+    },
+
     // ===== Trạng thái + timer =====
 
     applyTwoFaStatus(result) {
@@ -246,7 +265,10 @@ export default {
       this.twoFaTickCount += 1;
 
       const justExpired = wasCounting && this.pendingRemainingSeconds === 0;
-      const isPollTurn = this.twoFaTickCount % PENDING_POLL_SECONDS === 0;
+      const pollEvery = this.isPushConnected
+          ? PENDING_POLL_SECONDS_PUSH_OK
+          : PENDING_POLL_SECONDS_PUSH_DOWN;
+      const isPollTurn = this.twoFaTickCount % pollEvery === 0;
 
       // Hết 10 phút mà mobile chưa xác nhận: HỦY phần chờ rồi về "Chưa kích hoạt".
       // Đến lượt poll: chỉ hỏi khi tab đang hiện.

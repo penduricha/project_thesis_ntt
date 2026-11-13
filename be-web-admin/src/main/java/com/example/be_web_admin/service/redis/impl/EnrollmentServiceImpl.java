@@ -49,6 +49,7 @@ public class EnrollmentServiceImpl {
     private final AuthAuditService auditService;
     private final EnrollmentConfirmServiceImpl confirmService;
     private final TransactionTemplate transactionTemplate;
+    private final TwoFaEventServiceImpl eventService;
 
     public EnrollmentServiceImpl(EnrollSessionRepository enrollSessionRepository,
                                  AdminRepository adminRepository,
@@ -56,7 +57,8 @@ public class EnrollmentServiceImpl {
                                  BackupCodeRepository backupCodeRepository,
                                  AuthAuditService auditService,
                                  EnrollmentConfirmServiceImpl confirmService,
-                                 TransactionTemplate transactionTemplate) {
+                                 TransactionTemplate transactionTemplate,
+                                 TwoFaEventServiceImpl eventService) {
         this.enrollSessionRepository = enrollSessionRepository;
         this.adminRepository = adminRepository;
         this.totpCredentialRepository = totpCredentialRepository;
@@ -64,6 +66,7 @@ public class EnrollmentServiceImpl {
         this.auditService = auditService;
         this.confirmService = confirmService;
         this.transactionTemplate = transactionTemplate;
+        this.eventService = eventService;
     }
 
     /** backupCodes là mã GỐC, chỉ hiển thị đúng một lần. */
@@ -135,6 +138,8 @@ public class EnrollmentServiceImpl {
         }
         auditService.log(adminId, AuthEvent.TOTP_ENROLL_ACTIVATED, true, ip, userAgent,
                 "period=" + period + "s, backupCodes=" + BACKUP_CODE_COUNT);
+        // Tab web khác của cùng admin cũng chuyển sang "Đang chờ xác nhận"
+        eventService.publish(adminId, TwoFaEventServiceImpl.PENDING);
         return result;
     }
 
@@ -203,6 +208,7 @@ public class EnrollmentServiceImpl {
         confirmService.resetAttempts(adminId);
         enrollSessionRepository.deleteById(adminId); // nếu còn khóa chờ ở Redis thì bỏ luôn
         auditService.log(adminId, AuthEvent.TOTP_ENROLL_CANCELLED, true, ip, userAgent, null);
+        eventService.publish(adminId, TwoFaEventServiceImpl.NOT_ENABLED);
     }
 
     // ------------------------------------------------------------------ trạng thái
