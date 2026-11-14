@@ -240,7 +240,16 @@ class EnrollmentService {
         onError: (err, handler) async {
           final req = err.requestOptions;
           if (err.response?.statusCode == 401 && req.extra['authRetried'] != true) {
-            final fresh = await _auth.refreshAccessToken();
+            // Request này gửi token CŨ nhưng máy đã có token mới hơn (lần làm mới trước đó đã lưu):
+            // dùng luôn token mới, KHÔNG làm mới lần nữa. Server xoay vòng refresh token, làm mới
+            // liên tiếp rất dễ bị từ chối.
+            final sent = req.headers['Authorization'];
+            final current = await _auth.accessToken();
+            final String? fresh = (current != null &&
+                    current.isNotEmpty &&
+                    'Bearer $current' != sent)
+                ? current
+                : await _auth.refreshAccessToken();
             if (fresh != null && fresh.isNotEmpty) {
               req.extra['authRetried'] = true;
               req.headers['Authorization'] = 'Bearer $fresh';
@@ -296,7 +305,8 @@ class EnrollmentService {
       throw const EnrollmentException('Invalid key format.');
     }
 
-    await _confirm(token, code);
+    // Token có thể vừa được làm mới ở bước pending: lấy lại token mới nhất cho bước confirm.
+    await _confirm((await _auth.accessToken()) ?? token, code);
 
     return EnrolledKey(
       adminId: profile.adminId,

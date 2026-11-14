@@ -42,6 +42,10 @@ public class AdminJwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION);
 
         return Jwts.builder()
+                // jti: iat/exp chỉ chính xác đến GIÂY, nên hai lần cấp token cho cùng admin trong cùng một giây
+                // (vd làm mới token hai lần liên tiếp) sẽ ra CHUỖI Y HỆT. addAdminAccessToken thấy token đã
+                // tồn tại, trả false, và refresh trả 401 "Can't create new tokens" -> app báo "Session expired".
+                .id(java.util.UUID.randomUUID().toString())
                 .subject(String.valueOf(adminId))
                 .issuedAt(now)
                 .expiration(expiryDate)
@@ -59,6 +63,7 @@ public class AdminJwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION);
 
         return Jwts.builder()
+                .id(java.util.UUID.randomUUID().toString()) // xem chú thích ở generateAccessToken
                 .subject(String.valueOf(adminId))
                 .issuedAt(now)
                 .expiration(expiryDate)
