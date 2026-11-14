@@ -87,7 +87,7 @@ spring:
       # CSDL có sẵn và do bạn quản lý bằng script SQL: không để Hibernate tự sửa schema.
       # "update" không sửa được cột ENUM/kiểu đã tồn tại, chỉ tạo cột mới và dễ gây lệch ngầm.
       # Dùng "none" cho đến khi mọi script ALTER đã chạy; sau đó thử "validate" để phát hiện lệch.
-      ddl-auto: none
+      ddl-auto: update
     # Tắt show-sql: trùng với org.hibernate.SQL và in ra console không qua logger.
     show-sql: false
     properties:

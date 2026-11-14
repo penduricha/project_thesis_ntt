@@ -18,7 +18,7 @@ import '../../presentation/screens/totp_generator.dart';
 //         Đúng -> confirmed = true và totp_enabled = true: 2FA bật hoàn toàn.
 //
 //  Khóa nhập sai => mã sai => 422. Mỗi lần gọi confirm đều bị đếm; quá 5 lần
-//  server xóa phần cài dở và admin phải bấm "Kích hoạt" lại trên web.
+//  server xóa phần cài dở và trả 429, admin phải bấm "Kích hoạt" lại trên web.
 // ============================================================================
 
 /// Địa chỉ Spring Boot. Đổi khi chạy:
@@ -222,23 +222,7 @@ class EnrollmentService {
         options: _bearer(token),
       );
     } on DioException catch (e) {
-      // Controller Java không bắt TooManyAttemptsException nên "sai quá số lần" cũng thành 500.
-      // Lúc đó server đã xóa phần cài dở -> hỏi lại pending sẽ thấy 404.
-      if (e.response?.statusCode == 500 && await _pendingIsGone(token)) {
-        throw const EnrollmentException(
-          'Too many wrong attempts. Tap "Activate 2FA" on the web to start again.',
-        );
-      }
       throw _map(e);
-    }
-  }
-
-  Future<bool> _pendingIsGone(String token) async {
-    try {
-      await _dio.get<Map<String, dynamic>>(_pendingPath, options: _bearer(token));
-      return false;
-    } on DioException catch (e) {
-      return e.response?.statusCode == 404;
     }
   }
 
@@ -261,6 +245,12 @@ class EnrollmentService {
     }
     if (status == 422) {
       return const EnrollmentException('Incorrect key. Check it and try again.');
+    }
+    if (status == 429) {
+      // Server đã xóa phần cài dở sau khi nhập sai quá số lần.
+      return const EnrollmentException(
+        'Too many wrong attempts. Tap "Activate 2FA" on the web to start again.',
+      );
     }
     if (status == 400) return const EnrollmentException('Invalid code.');
     return const EnrollmentException(_msgServer);
