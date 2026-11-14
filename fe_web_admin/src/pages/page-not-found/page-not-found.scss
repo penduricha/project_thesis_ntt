@@ -2,15 +2,19 @@
 //  TRANG 404 - Mobile first
 //  Mobile: < 768px | Tablet: 768px - 1023px | Desktop: >= 1024px
 //  (cùng mốc breakpoint với information-page.scss)
+//
+//  Desktop: kính lúp + text nằm ngang, căn trái (giống layout
+//  nội dung của trang quản trị hơn là 1 trang marketing).
+//  Mobile/Tablet: xếp dọc, căn giữa, giữ nguyên hành vi cũ.
 // =========================================================
 
 $bp-tablet: 768px;
 $bp-desktop: 1024px;
 
-// Màu đồng bộ với header/footer và nút của website
-// (lấy xấp xỉ từ giao diện, nếu khác thì chỉ cần đổi 4 biến này)
-$color-primary: #00508a;
-$color-accent: #c42323;
+// Đồng bộ với bảng màu thương hiệu dùng chung với app mobile (AppColors),
+// nếu web dùng mã khác thì chỉ cần đổi 4 biến này.
+$color-primary: #004B87;
+$color-accent: #C61F1F;
 $color-text: #1f2933;
 $color-muted: #5f6c7b;
 
@@ -22,12 +26,18 @@ $color-muted: #5f6c7b;
 
 @keyframes float-404 {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-10px); }
+  50%      { transform: translateY(-8px); }
 }
 
 @keyframes fade-up-404 {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+// Hiệu ứng "ping" lan toả quanh kính lúp — gợi cảm giác đang quét/tìm kiếm
+@keyframes ping-404 {
+  0%        { transform: scale(0.7); opacity: .45; }
+  80%, 100% { transform: scale(1.4); opacity: 0; }
 }
 
 // ---------- Trang ----------
@@ -37,12 +47,10 @@ $color-muted: #5f6c7b;
   min-height: 80dvh; // tránh bị thanh địa chỉ trên trình duyệt mobile che
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
-  padding: 2rem 1rem;
-  // nền nhẹ theo tông xanh thương hiệu
-  background: radial-gradient(circle at 50% 30%, rgba($color-primary, 0.07), transparent 65%);
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  background: #ffffff;
 
   // Mobile nhỏ (iPhone SE, Android màn nhỏ)
   @media only screen and (max-width: 360px) {
@@ -53,31 +61,37 @@ $color-muted: #5f6c7b;
     padding: 3rem 2rem;
   }
 
+  @include breakpoint-up($bp-desktop) {
+    padding: 4rem 2rem;
+  }
+
   // Điện thoại xoay ngang (chiều cao thấp) - đặt cuối để không bị breakpoint trên đè
   @media only screen and (max-height: 500px) and (orientation: landscape) {
     padding-block: 1.5rem;
   }
 
-  // ---------- Khối nội dung ----------
-  .box-text-404-not-found {
+  // ---------- Khối bọc: dọc (mobile/tablet) -> ngang (desktop) ----------
+  .wrap-404 {
     width: 100%;
-    max-width: 50rem;
+    max-width: 62rem;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    gap: 1rem;
+    gap: 2rem;
     text-align: center;
     animation: fade-up-404 0.5s ease-out both;
 
-    @include breakpoint-up($bp-tablet) {
-      gap: 1.25rem;
-    }
-
     @include breakpoint-up($bp-desktop) {
-      gap: 1.5rem;
+      flex-direction: row;
+      justify-content: center;
+      text-align: left;
+      gap: 4.5rem;
     }
+  }
+
+  .visual-404 {
+    flex: none;
   }
 
   // ---------- Số 404 ----------
@@ -91,37 +105,72 @@ $color-muted: #5f6c7b;
     user-select: none;
 
     .digit {
-      font-size: clamp(5rem, 4rem + 8vw, 11rem); // 80px -> 176px
+      font-size: clamp(4.5rem, 3.4rem + 7vw, 9rem); // ~72px -> 144px
       font-weight: 800;
       letter-spacing: -0.04em;
     }
 
     .digit-zero {
+      position: relative;
       display: inline-flex;
-      width: clamp(5rem, 4rem + 8vw, 11rem);
-      height: clamp(5rem, 4rem + 8vw, 11rem);
-      animation: float-404 3s ease-in-out infinite;
+      width: clamp(4.5rem, 3.4rem + 7vw, 9rem);
+      height: clamp(4.5rem, 3.4rem + 7vw, 9rem);
+      animation: float-404 3.2s ease-in-out infinite;
 
       svg {
+        position: relative;
+        z-index: 1;
         width: 100%;
         height: 100%;
+
+        .handle {
+          stroke: $color-accent;
+        }
+      }
+
+      // 2 vòng tròn mờ dần lan ra từ kính lúp, lệch nhịp nhau
+      &::before,
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 8%;
+        border-radius: 50%;
+        border: 2px solid $color-primary;
+        opacity: 0;
+        animation: ping-404 2.6s ease-out infinite;
+      }
+
+      &::after {
+        animation-delay: 1.3s;
       }
     }
   }
 
-  // ---------- Chữ ----------
+  // ---------- Khối chữ + nút ----------
+  .content-404 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.875rem;
+    max-width: 30rem;
+
+    @include breakpoint-up($bp-desktop) {
+      align-items: flex-start;
+    }
+  }
+
   h4 {
     margin: 0;
     color: $color-text;
     font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem); // 20px -> 28px
-    line-height: 1.4;
+    font-weight: 700;
+    line-height: 1.35;
     text-wrap: balance; // chia đều chữ giữa các dòng, tránh dòng cuối chỉ còn 1 từ
     overflow-wrap: anywhere;
   }
 
   .text-desc {
     margin: 0;
-    max-width: 34rem;
     color: $color-muted;
     font-size: 0.9375rem;
     line-height: 1.6;
@@ -132,13 +181,25 @@ $color-muted: #5f6c7b;
     }
   }
 
-  // ---------- Nút "Quay lại trang chủ" ----------
+  // ---------- Nút chính + link phụ ----------
+  .actions-404 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    margin-top: 0.5rem;
+
+    @include breakpoint-up($bp-desktop) {
+      align-items: flex-start;
+    }
+  }
+
   // Viết lồng trong .section-page-404 để thắng style riêng của ButtonRed.
   .style-btn-return-from-not-found {
     width: 100%;
     max-width: 20rem;
     height: 3rem; // đủ lớn để bấm bằng ngón tay (>= 44px)
-    margin-top: 0.5rem;
     font-size: 1rem;
     border-radius: 2px;
 
@@ -147,12 +208,32 @@ $color-muted: #5f6c7b;
       min-width: 14rem;
     }
   }
+
+  .link-go-back {
+    border: none;
+    background: none;
+    padding: 0.25rem 0;
+    color: $color-muted;
+    font-size: 0.875rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      color: $color-primary;
+    }
+  }
 }
 
 // Tôn trọng người dùng tắt hiệu ứng chuyển động
 @media (prefers-reduced-motion: reduce) {
-  .section-page-404 .box-text-404-not-found,
-  .section-page-404 .digit-zero {
-    animation: none;
+  .section-page-404 {
+    .wrap-404,
+    .digit-zero,
+    .digit-zero::before,
+    .digit-zero::after {
+      animation: none;
+    }
   }
 }
