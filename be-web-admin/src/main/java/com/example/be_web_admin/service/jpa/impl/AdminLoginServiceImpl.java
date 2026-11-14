@@ -119,6 +119,14 @@ public class AdminLoginServiceImpl {
         // Không ghi mã người dùng nhập vào log
         auditService.log(adminId, AuthEvent.TOTP_LOGIN_FAILED, false, ip, userAgent,
                 outcome.result() == TotpLoginVerifier.Result.REPLAYED ? "replayed code" : "wrong code");
+
+        // Lần sai thứ MAX_TOTP_FAILS: khóa NGAY (không đợi lần thử thứ MAX + 1) để web khóa form và đếm ngược.
+        // Đặt lại TTL đúng 5 phút kể từ lần sai cuối, nên thời gian khóa luôn đủ 5 phút
+        // (nếu giữ TTL tính từ lần sai đầu tiên thì có thể chỉ còn vài giây).
+        if (count != null && count >= MAX_TOTP_FAILS) {
+            redis.expire(failKey, TOTP_FAIL_WINDOW);
+            return LoginOutcome.locked(TOTP_FAIL_WINDOW.toSeconds());
+        }
         // INVALID và REPLAYED trả chung một thông báo để không lộ thêm thông tin
         return LoginOutcome.of(LoginStatus.TOTP_INVALID);
     }

@@ -20,11 +20,17 @@ const MESSAGE = {
   TOTP_REQUIRED: 'Tài khoản đã bật xác thực 2 lớp. Bắt buộc nhập khóa 6 số đang hiển thị trong ứng dụng Authenticator.',
   TOTP_FORMAT: 'Khóa xác thực gồm đúng 6 chữ số.',
   TOTP_INVALID: 'Mã xác thực không đúng hoặc đã hết hạn. Hãy nhập mã mới đang hiển thị trên ứng dụng.',
-  LOCKED: (seconds) => `Nhập sai quá nhiều lần. Vui lòng thử lại sau ${Math.max(1, Math.ceil(seconds / 60))} phút.`,
+  LOCKED: 'Nhập sai quá nhiều lần. Biểu mẫu tạm khóa, sẽ tự mở lại khi hết thời gian đếm ngược.',
 };
 
 /* Quá thời gian này mà server chưa trả lời thì mở khoá form, tránh bị treo vô hạn */
 const LOGIN_TIMEOUT_MS = 20000;
+
+/* Khóa form khi nhập sai khóa 6 số quá nhiều lần.
+   Thời gian chính xác do server trả về (retryAfterSeconds); con số này chỉ dùng khi server không gửi. */
+const LOCK_DEFAULT_SECONDS = 5 * 60;
+/* Lưu hạn khóa để tải lại trang (F5) không làm mất đếm ngược. Server vẫn là nơi quyết định cuối cùng. */
+const LOCK_STORAGE_KEY = 'login.totpLock';
 
 export default {
   name: "LoginPage",
@@ -39,15 +45,24 @@ export default {
     this.setTitlePage();
     this.saveRouterPath();
     this.getStatusCheckBoxRememberMe();
+    this.restoreLock();
   },
 
   mounted() {
+    document.addEventListener('visibilitychange', this.onLockVisibilityChange);
+
+    // Đang bị khóa thì các ô đang disabled, không focus.
     // Chỉ tự focus trên máy có chuột/bàn phím.
     // Trên điện thoại không tự focus để bàn phím ảo không bật lên bất ngờ.
     const isDesktopLike = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
-    if (isDesktopLike) {
+    if (isDesktopLike && !this.isLocked) {
       this.focusField(this.adminId ? 'password' : 'adminId');
     }
+  },
+
+  beforeUnmount() {
+    document.removeEventListener('visibilitychange', this.onLockVisibilityChange);
+    this.stopLockTimer();
   },
 
   data() {
@@ -72,10 +87,28 @@ export default {
       validateLogin: "",
       // true khi server báo sai mã/mật khẩu -> tô đỏ cả 2 ô
       loginFailed: false,
+
+      // Khóa form khi nhập sai khóa 6 số quá nhiều lần
+      lockUntil: 0,              // mốc thời gian (ms) mở khóa; 0 = không khóa
+      lockRemainingSeconds: 0,   // số giây còn lại, cập nhật mỗi giây
+      lockTimer: null,
     }
   },
 
   computed: {
+    isLocked() {
+      return this.lockRemainingSeconds > 0;
+    },
+    lockMessage() {
+      return MESSAGE.LOCKED;
+    },
+    // 04:59
+    lockCountdownLabel() {
+      const total = Math.max(0, this.lockRemainingSeconds);
+      const mm = String(Math.floor(total / 60)).padStart(2, '0');
+      const ss = String(total % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    },
     isCredentialError() {
       return this.loginFailed && !!this.validateLogin;
     },
@@ -238,9 +271,104 @@ export default {
       return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
     },
 
+    /* ------------------------------------------------------------
+       KHÓA FORM KHI NHẬP SAI KHÓA 6 SỐ QUÁ NHIỀU LẦN
+       Server trả LOCKED + retryAfterSeconds -> khóa cả form, đếm ngược,
+       hết giờ thì tự mở lại. Đếm theo mốc thời gian (không cộng dồn từng giây)
+       nên tab bị trình duyệt làm chậm vẫn đúng giờ.
+       ------------------------------------------------------------ */
+    startLock(seconds) {
+      const total = Math.max(1, Math.ceil(Number(seconds) || LOCK_DEFAULT_SECONDS));
+      this.lockUntil = Date.now() + total * 1000;
+      this.lockRemainingSeconds = total;
+      this.persistLock();
+      this.runLockTimer();
+    },
+
+    runLockTimer() {
+      this.stopLockTimer();
+      this.lockTimer = setInterval(this.onLockTick, 1000);
+    },
+
+    stopLockTimer() {
+      if (this.lockTimer !== null) {
+        clearInterval(this.lockTimer);
+        this.lockTimer = null;
+      }
+    },
+
+    onLockTick() {
+      const remaining = Math.ceil((this.lockUntil - Date.now()) / 1000);
+      if (remaining <= 0) {
+        this.releaseLock();
+      } else {
+        this.lockRemainingSeconds = remaining;
+      }
+    },
+
+    // Quay lại tab: cập nhật ngay, không chờ nhịp 1 giây kế tiếp
+    onLockVisibilityChange() {
+      if (document.visibilityState === 'visible' && this.lockUntil > 0) {
+        this.onLockTick();
+      }
+    },
+
+    // Hết giờ: đưa form về trạng thái bình thường để nhập lại
+    releaseLock() {
+      this.stopLockTimer();
+      this.lockUntil = 0;
+      this.lockRemainingSeconds = 0;
+      this.clearPersistedLock();
+
+      this.validateLogin = "";
+      this.errors.totp = "";
+      this.keyAuthenticator = "";
+      this.focusField('totp');
+    },
+
+    persistLock() {
+      try {
+        localStorage.setItem(LOCK_STORAGE_KEY, JSON.stringify({
+          adminId: this.adminId ? String(this.adminId) : null,
+          until: this.lockUntil,
+        }));
+      } catch (e) {
+        // Trình duyệt chặn lưu trữ: bỏ qua, đếm ngược vẫn chạy trong trang
+      }
+    },
+
+    clearPersistedLock() {
+      try {
+        localStorage.removeItem(LOCK_STORAGE_KEY);
+      } catch (e) {
+        // bỏ qua
+      }
+    },
+
+    // Tải lại trang giữa lúc đang khóa: dựng lại đếm ngược
+    restoreLock() {
+      try {
+        const raw = localStorage.getItem(LOCK_STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        const until = Number(saved?.until) || 0;
+        const remaining = Math.ceil((until - Date.now()) / 1000);
+        if (remaining > 0) {
+          if (!this.adminId && saved.adminId) this.adminId = saved.adminId;
+          this.lockUntil = until;
+          this.lockRemainingSeconds = remaining;
+          this.runLockTimer();
+        } else {
+          this.clearPersistedLock();
+        }
+      } catch (e) {
+        this.clearPersistedLock();
+      }
+    },
+
     async handleLoginEvent() {
-      // Chốt chặn: đang đăng nhập thì bỏ qua mọi lần bấm / Enter thêm
-      if (this.isSubmitting) return;
+      // Chốt chặn: đang đăng nhập hoặc đang bị khóa thì bỏ qua mọi lần bấm / Enter thêm
+      if (this.isSubmitting || this.isLocked) return;
 
       this.errors.adminId = "";
       this.errors.password = "";
@@ -286,8 +414,11 @@ export default {
             break;
 
           case REQUEST_STATUS.LOCKED:
-            this.validateLogin = MESSAGE.LOCKED(result.getRetryAfterSeconds());
+            // Khóa cả form + đếm ngược theo giây server trả về; hết giờ tự mở lại
             this.keyAuthenticator = "";
+            this.errors.totp = "";
+            this.validateLogin = "";
+            this.startLock(result.getRetryAfterSeconds());
             break;
 
           case REQUEST_STATUS.FAILED:
@@ -369,11 +500,12 @@ export default {
   <form class="container-page-login" novalidate @submit.prevent="handleLoginEvent">
     <Header/>
     <section class="container-form-login-page">
-      <div class="form-login" :class="{ 'is-loading': isSubmitting }" :aria-busy="isSubmitting">
+      <div class="form-login" :class="{ 'is-loading': isSubmitting, 'is-locked': isLocked }" :aria-busy="isSubmitting">
         <h4 class="title-login">ĐĂNG NHẬP</h4>
 
-        <!-- fieldset[disabled] khoá cùng lúc mọi ô nhập, checkbox và nút bên trong -->
-        <fieldset class="form-fieldset" :disabled="isSubmitting">
+        <!-- fieldset[disabled] khoá cùng lúc mọi ô nhập, checkbox và nút bên trong
+             (đang đăng nhập, hoặc đang bị khóa vì nhập sai khóa 6 số quá nhiều lần) -->
+        <fieldset class="form-fieldset" :disabled="isSubmitting || isLocked">
           <div class="form-fields">
 
             <!-- Mã quản trị viên -->
@@ -473,6 +605,14 @@ export default {
               </div>
             </Transition>
 
+            <!-- Tạm khóa: đếm ngược, hết giờ tự mở lại form -->
+            <Transition name="error-fade">
+              <div v-if="isLocked" class="form-error-banner form-lock-banner" role="alert">
+                <span>{{ lockMessage }}</span>
+                <strong class="lock-countdown" aria-hidden="true">{{ lockCountdownLabel }}</strong>
+              </div>
+            </Transition>
+
             <div class="box-remember-me">
               <input type="checkbox" id="rememberMe" v-model="rememberMe" class="style-checkbox"/>
               <label for="rememberMe">Ghi nhớ đăng nhập</label>
@@ -481,16 +621,16 @@ export default {
             <!-- Nếu ButtonRed render <button type="submit"> thì có thể xoá @click (form @submit đã gọi rồi) -->
             <ButtonRed class="btn-login btn-login-border-radius"
                        @click="handleLoginEvent()"
-                       :text-button="isSubmitting ? '' : 'Đăng nhập'"
+                       :text-button="isSubmitting ? '' : (isLocked ? 'Thử lại sau ' + lockCountdownLabel : 'Đăng nhập')"
                        :loading-button="isSubmitting"
-                       :disable-button="isSubmitting"
+                       :disable-button="isSubmitting || isLocked"
             />
           </div>
         </fieldset>
 
         <!-- Đọc trạng thái cho trình đọc màn hình -->
         <span class="visually-hidden" role="status" aria-live="polite">
-          {{ isSubmitting ? 'Đang đăng nhập...' : '' }}
+          {{ isSubmitting ? 'Đang đăng nhập...' : (isLocked ? 'Biểu mẫu đang tạm khóa do nhập sai quá nhiều lần.' : '') }}
         </span>
       </div>
     </section>

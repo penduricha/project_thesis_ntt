@@ -7,6 +7,8 @@ import '../../data/model/auth_account.dart';
 import '../../data/service/account_store.dart';
 import '../../data/service/enrollment_service.dart';
 import '../widgets/activate_key_dialog.dart';
+ // AppConfirmDialog + primaryRed
+import '../widgets/app_confirm_delete_dialog.dart';
 import '../widgets/ring_painter.dart';
 import 'totp_generator.dart';
 
@@ -33,7 +35,6 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   // ---- Colors ----
   static const Color _blueColor = Color(0xFF004B87); // "+" button top right
-  static const Color _dividerColor = Color(0xFFEDEDED);
   static const Color _searchFill = Color(0xFFEFEFEF);
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -56,6 +57,9 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
   // Current 6-digit code of each account (key = id), recalculated only on a new period
   Map<String, String> _codes = {};
+
+  // id of the row currently swiped open (showing the delete button). Only one at a time.
+  String? _openedId;
 
   @override
   void initState() {
@@ -264,6 +268,31 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     }
   }
 
+  /// Swipe left -> tap the red trash button -> confirm -> remove the key from this device.
+  Future<void> _onDeleteAccount(AuthAccount acc) async {
+    setState(() => _openedId = null);
+
+    final confirmed = await AppConfirmDeleteDialog.show(
+      context,
+      title: 'Delete authenticator?',
+      message: 'The key of "${acc.issuer}" will be removed from this device. '
+          'You will not be able to get verification codes until you add it again.',
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() {
+      _accounts.removeWhere((a) => a.id == acc.id);
+      _codes = _generateCodes();
+    });
+
+    try {
+      await _store?.save(_enrolledAccounts);
+      if (mounted) _showToast('Deleted');
+    } catch (_) {
+      if (mounted) _showToast('Failed to update the device storage');
+    }
+  }
+
   Future<void> _copyCode(String code) async {
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
@@ -315,7 +344,23 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
                     clock: _clockFor(acc.periodSeconds),
                     period: acc.periodSeconds,
                     codeColor: _blueColor,
-                    onTap: () => _copyCode(_codes[acc.id] ?? ''),
+                    isOpen: _openedId == acc.id,
+                    onOpenChanged: (open) => setState(() {
+                      if (open) {
+                        _openedId = acc.id;
+                      } else if (_openedId == acc.id) {
+                        _openedId = null;
+                      }
+                    }),
+                    onTap: () {
+                      // A row is open -> first tap only closes it
+                      if (_openedId != null) {
+                        setState(() => _openedId = null);
+                        return;
+                      }
+                      _copyCode(_codes[acc.id] ?? '');
+                    },
+                    onDelete: () => _onDeleteAccount(acc),
                   );
                 },
               ),
@@ -415,6 +460,8 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
 // ============================================================================
 //  1 ACCOUNT ROW: avatar | name + email/adminId + 6-digit code + countdown ring
+//  + swipe left to reveal a SQUARE red delete button
+//  + inset divider (starts at the text column, runs to the right screen edge)
 // ============================================================================
 
 class _AccountTile extends StatelessWidget {
@@ -425,7 +472,10 @@ class _AccountTile extends StatelessWidget {
     required this.clock,
     required this.period,
     required this.codeColor,
+    required this.isOpen,
+    required this.onOpenChanged,
     required this.onTap,
+    required this.onDelete,
   });
 
   final AuthAccount account;
@@ -433,7 +483,19 @@ class _AccountTile extends StatelessWidget {
   final Animation<double> clock;
   final int period;
   final Color codeColor;
+  final bool isOpen;
+  final ValueChanged<bool> onOpenChanged;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  static const double _sidePadding = 16;
+  static const double _avatarRadius = 24;
+  static const double _avatarGap = 16;
+
+  // Divider starts exactly under the text column (16 + 48 + 16 = 80),
+  // so it visually separates rows without cutting through the avatar.
+  static const double _dividerIndent =
+      _sidePadding + _avatarRadius * 2 + _avatarGap;
 
   // "940555" -> "940 555"
   String get _formattedCode {
@@ -443,91 +505,81 @@ class _AccountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap, // tap to copy code
-      // Thêm Padding ngoài cùng để tạo khoảng lề 16px cho đường viền dưới
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Container(
-          // Border bottom nằm trong Container sẽ bắt đầu từ lề trái 16px và kết thúc ở lề phải 16px
-          decoration: const BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: Color(0xFFEDEDED),
-                width: 1,
-              ),
-            ),
-          ),
-          // Padding dọc bên trong để giữ nguyên khoảng cách trên/dưới của nội dung
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _SwipeToDelete(
+          isOpen: isOpen,
+          onOpenChanged: onOpenChanged,
+          onTap: onTap,
+          onDelete: onDelete,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.fromLTRB(
+              _sidePadding,
+              14,
+              _sidePadding,
+              14,
+            ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const CircleAvatar(
+                  radius: _avatarRadius,
+                  backgroundColor: Color(0xFF004B87),
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: _avatarGap),
                 Expanded(
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Color(0xFF004B87),
-                        child: Icon(
-                          Icons.person_rounded,
-                          color: Colors.white,
-                          size: 28,
+                      Text(
+                        account.issuer,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              account.issuer,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              account.account,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  _formattedCode,
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w400,
-                                    color: codeColor,
-                                    letterSpacing: 1,
-                                    fontFeatures: const [
-                                      FontFeature.tabularFigures(),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                _CountdownRing(
-                                  clock: clock,
-                                  period: period,
-                                  color: codeColor,
-                                ),
+                      const SizedBox(height: 2),
+                      Text(
+                        account.account,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            _formattedCode,
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w400,
+                              color: codeColor,
+                              letterSpacing: 1,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 12),
+                          _CountdownRing(
+                            clock: clock,
+                            period: period,
+                            color: codeColor,
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -536,7 +588,145 @@ class _AccountTile extends StatelessWidget {
             ),
           ),
         ),
-      ),
+        // Inset divider: stays in place while the row slides.
+        const Padding(
+          padding: EdgeInsets.only(left: _dividerIndent),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: Color(0xFFEDEDED),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================================
+//  SWIPE LEFT -> REVEAL SQUARE DELETE BUTTON (no extra package needed)
+//  - Button side = row height  => always a perfect SQUARE, flush to the right edge.
+//  - Release past 50% (or fast fling) => snaps open; otherwise snaps closed.
+// ============================================================================
+
+class _SwipeToDelete extends StatefulWidget {
+  const _SwipeToDelete({
+    required this.child,
+    required this.isOpen,
+    required this.onOpenChanged,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final Widget child;
+  final bool isOpen; // controlled by parent so only one row stays open
+  final ValueChanged<bool> onOpenChanged;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  @override
+  State<_SwipeToDelete> createState() => _SwipeToDeleteState();
+}
+
+class _SwipeToDeleteState extends State<_SwipeToDelete>
+    with SingleTickerProviderStateMixin {
+  static const double _flingVelocity = 300;
+
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 200),
+  );
+
+  // Side length of the square button = height of the row (measured in layout).
+  double _side = 0;
+
+  @override
+  void didUpdateWidget(covariant _SwipeToDelete oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Another row was opened (or user tapped elsewhere) -> close this one.
+    if (oldWidget.isOpen && !widget.isOpen) {
+      _ctrl.animateTo(0, curve: Curves.easeOut);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (_side <= 0) return;
+    // Finger moves left (negative dx) -> reveal.
+    _ctrl.value = (_ctrl.value - d.primaryDelta! / _side).clamp(0.0, 1.0);
+  }
+
+  void _onDragEnd(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0;
+    final bool open;
+    if (v < -_flingVelocity) {
+      open = true;
+    } else if (v > _flingVelocity) {
+      open = false;
+    } else {
+      open = _ctrl.value > 0.5;
+    }
+    _ctrl.animateTo(open ? 1 : 0, curve: Curves.easeOut);
+    widget.onOpenChanged(open);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Background: square red delete button, aligned to the right edge.
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, box) {
+              _side = box.maxHeight;
+              return Align(
+                alignment: Alignment.centerRight,
+                child: SizedBox(
+                  width: _side,
+                  height: _side,
+                  child: Material(
+                    color: primaryRed, // square corners (no border radius)
+                    child: InkWell(
+                      onTap: widget.onDelete,
+                      child: const Center(
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Foreground: the row itself, slides left.
+        AnimatedBuilder(
+          animation: _ctrl,
+          builder: (context, child) => Transform.translate(
+            offset: Offset(-_ctrl.value * _side, 0),
+            child: child,
+          ),
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragUpdate: _onDragUpdate,
+            onHorizontalDragEnd: _onDragEnd,
+            child: Material(
+              color: Colors.white, // opaque: hides the red button when closed
+              child: InkWell(
+                onTap: widget.onTap, // tap to copy code
+                child: widget.child,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

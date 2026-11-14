@@ -270,6 +270,32 @@
   opacity: 0.6;
 }
 
+/* ---------- Tạm khóa: nhập sai khóa 6 số quá nhiều lần (đếm ngược rồi tự mở lại) ---------- */
+.form-login.is-locked .form-control:disabled,
+.form-login.is-locked .btn-login:disabled,
+.form-login.is-locked .box-remember-me label {
+  cursor: not-allowed;
+}
+
+.form-login.is-locked .form-floating {
+  opacity: 0.55;
+}
+
+.form-lock-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.form-lock-banner .lock-countdown {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--login-error);
+}
+
 /* Thanh tiến trình chạy trên mép xanh của khung form */
 .form-login.is-loading::before {
   content: '';
