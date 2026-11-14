@@ -268,17 +268,30 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     }
   }
 
-  /// Swipe left -> tap the red trash button -> confirm -> remove the key from this device.
+  /// Swipe left -> tap the red trash button -> confirm -> turn off 2FA on the server
+  /// (current TOTP code required) -> only then remove the key from this device.
   Future<void> _onDeleteAccount(AuthAccount acc) async {
     setState(() => _openedId = null);
 
     final confirmed = await AppConfirmDeleteDialog.show(
       context,
-      title: 'Delete authenticator?',
-      message: 'The key of "${acc.issuer}" will be removed from this device. '
-          'You will not be able to get verification codes until you add it again.',
+      title: 'Turn off 2FA?',
+      message: 'Two-factor authentication of "${acc.issuer}" will be turned off '
+          'and the key removed from this device. Web login will only need '
+          'Admin ID and password. You can turn it on again later.',
+      confirmLabel: 'Turn off',
     );
     if (!confirmed || !mounted) return;
+
+    // Server first. If it fails, keep the key on the device so the admin can try again.
+    // (Local-only item that was never activated on the server: nothing to call.)
+    if (acc.enrolled) {
+      final outcome = await _disableOnServer(acc);
+      if (outcome == null || !mounted) return; // error toast already shown
+      if (outcome == DisableOutcome.alreadyOff) {
+        _showToast('2FA was already off on the server');
+      }
+    }
 
     setState(() {
       _accounts.removeWhere((a) => a.id == acc.id);
@@ -287,9 +300,35 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
     try {
       await _store?.save(_enrolledAccounts);
-      if (mounted) _showToast('Deleted');
+      if (mounted) _showToast('2FA turned off');
     } catch (_) {
       if (mounted) _showToast('Failed to update the device storage');
+    }
+  }
+
+  /// Calls POST /2fa/disable with a spinner on top. Returns null (after a toast) on failure.
+  Future<DisableOutcome?> _disableOnServer(AuthAccount acc) async {
+    // ignore: unawaited_futures
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    );
+    try {
+      return await _enrollment.disable(
+        secret: acc.secret,
+        periodSeconds: acc.periodSeconds,
+        digits: acc.digits,
+        algorithm: acc.algorithm,
+      );
+    } on EnrollmentException catch (e) {
+      if (mounted) _showToast(e.message);
+      return null;
+    } finally {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
     }
   }
 

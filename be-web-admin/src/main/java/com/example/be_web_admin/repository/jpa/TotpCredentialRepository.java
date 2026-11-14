@@ -24,4 +24,11 @@ public interface TotpCredentialRepository extends JpaRepository<TotpCredential, 
 
     // Credential ĐÃ xác nhận, dùng ở bước đăng nhập 2FA.
     Optional<TotpCredential> findFirstByAdmin_AdminIdAndConfirmedTrueOrderByConfirmedAtDesc(Long adminId);
+
+    // Tắt 2FA: xóa MỌI credential của admin (đã xác nhận lẫn đang chờ) bằng một câu DELETE.
+    // Gọi bên trong transaction của TotpDisableServiceImpl, cùng lúc với đặt admin.totp_enabled = false.
+    @Transactional
+    @Modifying(flushAutomatically = true)
+    @Query("delete from TotpCredential c where c.admin.adminId = :adminId")
+    int deleteAllByAdminId(@Param("adminId") Long adminId);
 }

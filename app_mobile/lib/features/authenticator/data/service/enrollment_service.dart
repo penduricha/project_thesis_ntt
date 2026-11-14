@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../../../core/storage/auth_storage.dart';
 import '../../presentation/screens/totp_generator.dart';
 
 // ============================================================================
@@ -19,6 +22,11 @@ import '../../presentation/screens/totp_generator.dart';
 //
 //  Khóa nhập sai => mã sai => 422. Mỗi lần gọi confirm đều bị đếm; quá 5 lần
 //  server xóa phần cài dở và trả 429, admin phải bấm "Kích hoạt" lại trên web.
+//
+//  TẮT 2FA (nút xóa TOTP trong app):
+//    POST /api/admin/mobile/2fa/disable   { "code": "123456" }
+//    Mã 6 số sinh từ khóa đang lưu trong app. Server đúng mới xóa credential + totp_enabled = false.
+//    Chỉ khi server báo thành công (200) hoặc "chưa bật" (404) app mới được xóa khóa cục bộ.
 // ============================================================================
 
 /// Địa chỉ Spring Boot. Đổi khi chạy:
@@ -50,6 +58,10 @@ class AdminProfile {
 abstract class EnrollmentAuth {
   Future<String?> accessToken();
   Future<AdminProfile?> profile();
+
+  /// Đổi refresh token lấy cặp token mới (lưu lại vào máy) rồi trả access token mới.
+  /// null = không làm mới được (hết phiên, mạng lỗi...). Mặc định không hỗ trợ.
+  Future<String?> refreshAccessToken() async => null;
 }
 
 /// Bản mặc định: đọc từ flutter_secure_storage.
@@ -67,8 +79,79 @@ class SecureStorageEnrollmentAuth implements EnrollmentAuth {
   final String adminNameKey;
   final FlutterSecureStorage _storage;
 
+  /// Đường dẫn làm mới token của Spring: context-path /api + @RequestMapping("/mobile/admin").
+  static const String _refreshPath = '$kApiPrefix/mobile/admin/auth/login/auto/refresh-token';
+
+  /// Access token phía Java chỉ sống 5 phút. Còn dưới ngần này thì làm mới trước khi gọi API.
+  static const Duration _refreshMargin = Duration(seconds: 60);
+
+  // Một lần làm mới tại một thời điểm: server xoay vòng refresh token (token cũ bị xóa ngay),
+  // hai lần làm mới song song bằng cùng một refresh token thì lần sau chắc chắn bị từ chối.
+  static Future<String?>? _refreshing;
+
   @override
-  Future<String?> accessToken() => _storage.read(key: tokenKey);
+  Future<String?> accessToken() async {
+    final token = await _storage.read(key: tokenKey);
+    if (token == null || token.isEmpty) return token;
+    if (!_expiresSoon(token)) return token;
+    // Sắp / đã hết hạn: thử làm mới; không được thì vẫn trả token cũ để server quyết định (401).
+    return (await refreshAccessToken()) ?? token;
+  }
+
+  @override
+  Future<String?> refreshAccessToken() {
+    return _refreshing ??= _refresh().whenComplete(() => _refreshing = null);
+  }
+
+  Future<String?> _refresh() async {
+    try {
+      final authStorage = AuthStorage(storage: _storage);
+      final session = await authStorage.readSession();
+      if (session == null) return null;
+
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: kApiBaseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          headers: {'Accept': 'application/json'},
+          validateStatus: (s) => s != null && s < 500,
+        ),
+      );
+      final res = await dio.get<Map<String, dynamic>>(
+        _refreshPath,
+        options: Options(headers: {'Authorization': 'Bearer ${session.refreshToken}'}),
+      );
+      final data = res.data?['data'];
+      final access = data is Map ? data['accessToken'] : null;
+      final refresh = data is Map ? data['refreshToken'] : null;
+      if (res.statusCode != 200 || access is! String || refresh is! String) {
+        return null;
+      }
+      // Giữ nguyên adminId và tên hiển thị đã lưu, chỉ thay cặp token.
+      await authStorage.saveSession(
+        session.withTokens(accessToken: access, refreshToken: refresh),
+      );
+      return access;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Đọc `exp` trong JWT (không kiểm chữ ký, chỉ để biết còn hạn bao lâu). Đọc không được thì coi như còn hạn.
+  static bool _expiresSoon(String jwt) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length != 3) return false;
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final exp = (jsonDecode(payload) as Map<String, dynamic>)['exp'];
+      if (exp is! num) return false;
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000);
+      return DateTime.now().isAfter(expiresAt.subtract(_refreshMargin));
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   Future<AdminProfile?> profile() async {
@@ -113,6 +196,15 @@ class EnrollmentException implements Exception {
   String toString() => message;
 }
 
+/// Kết quả tắt 2FA trên server. Cả hai đều cho phép app xóa khóa cục bộ.
+enum DisableOutcome {
+  /// Server vừa tắt 2FA (200).
+  disabled,
+
+  /// Server vốn đã tắt (404): khóa trong app không còn tác dụng.
+  alreadyOff,
+}
+
 class _PendingParams {
   const _PendingParams({
     required this.algorithm,
@@ -140,13 +232,37 @@ class EnrollmentService {
                 receiveTimeout: const Duration(seconds: 10),
                 headers: {'Accept': 'application/json'},
               ),
-            );
+            ) {
+    // 401 (access token Java chỉ sống 5 phút) -> làm mới token rồi gửi lại ĐÚNG MỘT LẦN.
+    // An toàn cho cả confirm: server kiểm tra token trước khi đếm số lần nhập sai.
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onError: (err, handler) async {
+          final req = err.requestOptions;
+          if (err.response?.statusCode == 401 && req.extra['authRetried'] != true) {
+            final fresh = await _auth.refreshAccessToken();
+            if (fresh != null && fresh.isNotEmpty) {
+              req.extra['authRetried'] = true;
+              req.headers['Authorization'] = 'Bearer $fresh';
+              try {
+                return handler.resolve(await _dio.fetch<dynamic>(req));
+              } on DioException catch (e) {
+                return handler.next(e);
+              }
+            }
+          }
+          handler.next(err);
+        },
+      ),
+    );
+  }
 
   final EnrollmentAuth _auth;
   final Dio _dio;
 
   static const String _pendingPath = '$kApiPrefix/admin/mobile/2fa/enrollment/pending';
   static const String _confirmPath = '$kApiPrefix/admin/mobile/2fa/enrollment/confirm';
+  static const String _disablePath = '$kApiPrefix/admin/mobile/2fa/disable';
 
   static const String _msgSession = 'Session expired. Please sign in again.';
   static const String _msgNetwork = 'Cannot reach the server. Check your connection.';
@@ -224,6 +340,79 @@ class EnrollmentService {
     } on DioException catch (e) {
       throw _map(e);
     }
+  }
+
+  // ---- Tắt 2FA ----
+
+  /// Tắt 2FA trên server bằng mã TOTP hiện tại sinh từ [secret] đang lưu trong app.
+  /// Ném [EnrollmentException] nếu thất bại (khi đó KHÔNG được xóa khóa cục bộ).
+  /// Mỗi lần gọi = đúng MỘT request (không tự thử lại, vì server đếm từng lần sai).
+  Future<DisableOutcome> disable({
+    required String secret,
+    required int periodSeconds,
+    required int digits,
+    required TotpAlgorithm algorithm,
+  }) async {
+    final token = await _auth.accessToken();
+    if (token == null || token.isEmpty) {
+      throw const EnrollmentException(_msgSession);
+    }
+
+    final String code;
+    try {
+      code = TotpGenerator.generate(
+        secret,
+        period: periodSeconds,
+        digits: digits,
+        algorithm: algorithm,
+      );
+    } on FormatException {
+      throw const EnrollmentException('Invalid key format.');
+    }
+
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        _disablePath,
+        data: {'code': code},
+        options: _bearer(token),
+      );
+      return DisableOutcome.disabled;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return DisableOutcome.alreadyOff;
+      throw _mapDisable(e);
+    }
+  }
+
+  EnrollmentException _mapDisable(DioException e) {
+    final status = e.response?.statusCode;
+    if (status == null) return const EnrollmentException(_msgNetwork);
+    if (status == 401) return const EnrollmentException(_msgSession);
+    if (status == 422) {
+      final data = e.response?.data;
+      final code = (data is Map && data['data'] is Map)
+          ? (data['data'] as Map)['code']
+          : null;
+      if (code == 'TOTP_REPLAYED') {
+        return const EnrollmentException(
+          'This code was just used. Wait for the next code and try again.',
+        );
+      }
+      return const EnrollmentException(
+        'Code rejected. Check that this device time is correct and try again.',
+      );
+    }
+    if (status == 429) {
+      final data = e.response?.data;
+      final seconds = (data is Map && data['data'] is Map)
+          ? (data['data'] as Map)['retryAfterSeconds']
+          : null;
+      final minutes = seconds is num ? (seconds / 60).ceil() : 5;
+      return EnrollmentException(
+        'Too many wrong attempts. Try again in $minutes minute(s).',
+      );
+    }
+    if (status == 400) return const EnrollmentException('Invalid code.');
+    return const EnrollmentException(_msgServer);
   }
 
   Options _bearer(String token) =>
