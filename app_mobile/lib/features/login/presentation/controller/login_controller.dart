@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/device/device_info_service.dart';
 import '../../../../core/storage/auth_storage.dart';
+import '../../../authenticator/data/service/account_store.dart';
+import '../../../authenticator/presentation/screens/totp_generator.dart';
 import '../../data/model/admin_account.dart';
 import '../../data/model/login_result.dart';
 import '../../data/service/login_service.dart';
@@ -38,6 +40,7 @@ class LoginController extends ChangeNotifier {
         password: password,
         deviceName: await _deviceInfoService.getDeviceName(),
         platform: _deviceInfoService.platform,
+        totpCode: await _currentTotpCode(adminId),
       );
 
       final result = await _loginService.login(admin);
@@ -52,6 +55,25 @@ class LoginController extends ChangeNotifier {
     } finally {
       // Dù thành công hay thất bại đều mở khóa form.
       _setLoading(false);
+    }
+  }
+
+  /// Mã TOTP hiện tại từ khóa đã cài trên máy này cho adminId (nếu có).
+  /// Server bắt buộc mã khi tài khoản đã bật 2FA, và bỏ qua khi chưa bật.
+  /// Lỗi đọc kho an toàn / khóa hỏng: coi như không có khóa, để server trả TOTP_REQUIRED.
+  Future<String?> _currentTotpCode(int adminId) async {
+    try {
+      final accounts = await AccountStore(adminId: '$adminId').load();
+      if (accounts.isEmpty) return null;
+      final acc = accounts.first;
+      return TotpGenerator.generate(
+        acc.secret,
+        period: acc.periodSeconds,
+        digits: acc.digits,
+        algorithm: acc.algorithm,
+      );
+    } catch (_) {
+      return null;
     }
   }
 

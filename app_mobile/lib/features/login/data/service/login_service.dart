@@ -54,8 +54,32 @@ class LoginService {
       return _parseBlockedByOtherDevice(body);
     }
 
+    // Trường hợp 2a: mật khẩu đúng nhưng tài khoản đã bật 2FA mà mã không qua.
+    final twoFaMessage = _twoFaMessage(body);
+    if (twoFaMessage != null) return LoginRejected(twoFaMessage);
+
     // Trường hợp 2: sai Admin Id / mật khẩu hoặc server từ chối.
     return LoginRejected(_readString(body['message']) ?? _defaultRejectedMessage);
+  }
+
+  /// data.code do server trả (cùng quy ước với Web): TOTP_REQUIRED | TOTP_INVALID | LOCKED.
+  String? _twoFaMessage(Map<String, dynamic> body) {
+    final data = body['data'];
+    if (data is! Map<String, dynamic>) return null;
+    switch (data['code']) {
+      case 'TOTP_REQUIRED':
+        return 'Two-factor authentication is on for this account, '
+            'but this device has no key for it.';
+      case 'TOTP_INVALID':
+        return 'The code was rejected. The key on this device may be out of '
+            'date, or the code was just used. Wait a few seconds and try again.';
+      case 'LOCKED':
+        final secs = data['retryAfterSeconds'];
+        return secs is num
+            ? 'Too many wrong codes. Try again in ${secs.toInt()} seconds.'
+            : 'Too many wrong codes. Try again later.';
+    }
+    return null;
   }
 
   LoginResult _parseSuccess(Map<String, dynamic> body, int requestedAdminId) {

@@ -1,7 +1,11 @@
 package com.example.be_web_admin.controller.mobile;
 
+import com.example.be_web_admin.dto.AdminLoginDTO;
+import com.example.be_web_admin.dto.LoginOutcome;
+import com.example.be_web_admin.enums.LoginStatus;
 import com.example.be_web_admin.model.redis.SessionLoginMobile;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
+import com.example.be_web_admin.service.jpa.impl.AdminLoginServiceImpl;
 import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
 import com.example.be_web_admin.service.redis.SessionLoginMobileService;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
@@ -23,6 +27,9 @@ public class AdminControllerMgmtMobile {
 
     private final AdminServiceImpl adminService;
 
+    // Cùng một dịch vụ đăng nhập với Web: mật khẩu BCrypt + bắt buộc mã TOTP khi tài khoản đã bật 2FA.
+    private final AdminLoginServiceImpl adminLoginService;
+
     private final AdminTokenServiceImpl adminTokenService;
 
     private final SessionLoginMobileService sessionLoginMobileService;
@@ -30,10 +37,12 @@ public class AdminControllerMgmtMobile {
     private final AdminJwtTokenProvider adminJwtTokenProvider;
 
     public AdminControllerMgmtMobile(AdminServiceImpl adminService,
+                                     AdminLoginServiceImpl adminLoginService,
                                      AdminTokenServiceImpl adminTokenService,
                                      SessionLoginMobileService sessionLoginMobileService,
                                      AdminJwtTokenProvider adminJwtTokenProvider) {
         this.adminService = adminService;
+        this.adminLoginService = adminLoginService;
         this.adminTokenService = adminTokenService;
         this.sessionLoginMobileService = sessionLoginMobileService;
         this.adminJwtTokenProvider = adminJwtTokenProvider;
@@ -44,12 +53,15 @@ public class AdminControllerMgmtMobile {
     //    {
     //      "adminId": 2500021775,
     //      "password": "1234",
+    //      "totpCode": "123456",                       (không bắt buộc; app tự sinh từ khóa lưu trên máy)
     //      "deviceName": "Samsung Galaxy S26 Ultra",   (không bắt buộc)
     //      "platform": "ANDROID"                       (không bắt buộc)
     //    }
     //
     //    Thành công (HTTP 200): giống Web, kèm cặp token.
-    //    Sai mã / mật khẩu (HTTP 200, success=false): giữ nguyên kết quả của adminService.loginAdmin.
+    //    Sai mật khẩu (HTTP 200, success=false, data=null).
+    //    Tài khoản đã bật 2FA (giống Web, HTTP 200, success=false, data.code):
+    //      TOTP_REQUIRED (thiếu mã) | TOTP_INVALID (mã sai/hết hạn/đã dùng) | LOCKED (+ data.retryAfterSeconds)
     //
     //    Tài khoản đã đăng nhập ở thiết bị mobile khác (HTTP 409):
     //    {
@@ -77,16 +89,22 @@ public class AdminControllerMgmtMobile {
                     .body(errorBody("Mã quản trị viên hoặc mật khẩu không được để trống."));
         }
 
-        // 1. Xác thực mật khẩu trước, để người không có mật khẩu không dò được trạng thái phiên.
-        Object result = adminService.loginAdmin(adminId, password);
-        if (!isSuccess(result)) {
-            return ResponseEntity.ok(result);
+        // 1. Xác thực mật khẩu VÀ mã TOTP (nếu tài khoản đã bật 2FA) bằng cùng dịch vụ với Web.
+        //    Trước đây ở đây chỉ kiểm mật khẩu nên token cấp ra dùng được cả trên Web, bỏ qua 2FA.
+        //    Chưa bật 2FA thì totpCode bị bỏ qua. Mọi lỗi xác thực đều dừng ở đây, chưa chạm tới phiên mobile,
+        //    nên người chưa qua đủ các lớp xác thực không dò được trạng thái phiên.
+        AdminLoginDTO loginRequest = new AdminLoginDTO(adminId, password);
+        loginRequest.setTotpCode(toStringOrNull(adminRequestLogin.get("totpCode")));
+        LoginOutcome outcome = adminLoginService.login(
+                loginRequest, httpRequest.getRemoteAddr(), httpRequest.getHeader("User-Agent"));
+        if (outcome.status() != LoginStatus.OK) {
+            return ResponseEntity.ok(buildLoginFailure(outcome));
         }
 
         // 2. Đã có phiên mobile ở thiết bị khác thì thu hồi cặp token vừa cấp và cảnh báo.
         Optional<SessionLoginMobile> existingSession = sessionLoginMobileService.findByAdminId(adminId);
         if (existingSession.isPresent()) {
-            revokeIssuedTokens(result);
+            revokeIssuedTokens(outcome);
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(buildAlreadyLoggedInWarning(existingSession.get()));
         }
@@ -94,7 +112,7 @@ public class AdminControllerMgmtMobile {
         // 3. Chưa có phiên thì lưu phiên đăng nhập mobile.
         sessionLoginMobileService.createSession(adminId, deviceName, platform, httpRequest.getRemoteAddr());
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(buildLoginSuccess(adminId, outcome));
     }
 
     // ===================== LOGOUT =====================
@@ -266,29 +284,53 @@ public class AdminControllerMgmtMobile {
         return body;
     }
 
-    /** Giả định: adminService.loginAdmin trả Map có khoá "success" (giống mẫu JSON trong class Web). */
-    private boolean isSuccess(Object result) {
-        return result instanceof Map<?, ?> map && Boolean.TRUE.equals(map.get("success"));
+    /** Cùng dạng body với đăng nhập mobile cũ (có adminName) để app Flutter không phải đổi cách đọc. */
+    private Map<String, Object> buildLoginSuccess(Long adminId, LoginOutcome outcome) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("adminId", adminId);
+        data.put("adminName", adminService.getAdminNameByAdminId(adminId));
+        data.put("accessToken", outcome.accessToken());
+        data.put("refreshToken", outcome.refreshToken());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", true);
+        body.put("message", "Login successfully");
+        body.put("data", data);
+        return body;
     }
 
-    /** Giả định: cặp token nằm trong map "data" với khoá "accessToken" / "refreshToken" (giống khoá ở logout). */
-    private String extractToken(Object result, String key) {
-        if (result instanceof Map<?, ?> map && map.get("data") instanceof Map<?, ?> data) {
-            Object value = data.get(key);
-            return value == null ? null : value.toString();
-        }
-        return null;
-    }
-
-    private void revokeIssuedTokens(Object loginResult) {
-        try {
-            String accessToken = extractToken(loginResult, "accessToken");
-            String refreshToken = extractToken(loginResult, "refreshToken");
-            if (accessToken != null) {
-                adminTokenService.removeAdminAccessTokenByJwtToken(accessToken);
+    /** Giống buildLoginResponse của Web: data.code cho các lỗi 2FA, data=null cho sai mật khẩu. */
+    private Map<String, Object> buildLoginFailure(LoginOutcome outcome) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", false);
+        switch (outcome.status()) {
+            case TOTP_REQUIRED -> {
+                body.put("message", "Tài khoản đã bật xác thực 2 lớp, cần mã 6 số.");
+                body.put("data", Map.of("code", "TOTP_REQUIRED"));
             }
-            if (refreshToken != null) {
-                adminTokenService.removeAdminRefreshTokenByJwtToken(refreshToken);
+            case TOTP_INVALID -> {
+                body.put("message", "Mã xác thực không đúng hoặc đã hết hạn.");
+                body.put("data", Map.of("code", "TOTP_INVALID"));
+            }
+            case LOCKED -> {
+                body.put("message", "Nhập sai mã quá nhiều lần, vui lòng thử lại sau.");
+                body.put("data", Map.of("code", "LOCKED", "retryAfterSeconds", outcome.retryAfterSeconds()));
+            }
+            default -> { // BAD_CREDENTIALS
+                body.put("message", "Admin Id or password is wrong.");
+                body.put("data", null);
+            }
+        }
+        return body;
+    }
+
+    private void revokeIssuedTokens(LoginOutcome outcome) {
+        try {
+            if (outcome.accessToken() != null) {
+                adminTokenService.removeAdminAccessTokenByJwtToken(outcome.accessToken());
+            }
+            if (outcome.refreshToken() != null) {
+                adminTokenService.removeAdminRefreshTokenByJwtToken(outcome.refreshToken());
             }
         } catch (Exception e) {
             log.error("Can't revoke tokens issued for rejected mobile login: {}", e.getMessage());
