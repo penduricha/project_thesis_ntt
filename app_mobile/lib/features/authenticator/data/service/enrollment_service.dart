@@ -71,8 +71,8 @@ class SecureStorageEnrollmentAuth implements EnrollmentAuth {
     this.tokenKey = 'access_token',
     this.adminIdKey = 'admin_id',
     this.adminNameKey = 'admin_name',
-    FlutterSecureStorage storage = const FlutterSecureStorage(),
-  }) : _storage = storage;
+    this._storage = const FlutterSecureStorage(),
+  });
 
   final String tokenKey;
   final String adminIdKey;
