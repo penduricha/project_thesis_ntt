@@ -39,6 +39,9 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final String currentAdminId = '1'; // Giả lập ID tài khoản hiện tại là 1
 
+  // Chiều cao chung của nút +, ô nhập và nút gửi trong thanh nhập tin nhắn
+  static const double _inputHeight = 40;
+
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
@@ -375,6 +378,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
                     // Modal Reactions
                     ModalIconsReaction(
+                      // Tô nền reaction hiện tại của mình (nếu đã thả) để người dùng thấy đã chọn gì.
+                      selected: MessageReaction.values
+                          .where((r) => message.reactions.any(
+                              (x) => x.adminId == currentAdminId && x.emoji == r.value))
+                          .firstOrNull,
                       onReactionSelected: (selectedReaction) {
                         setState(() {
                           message.reactions
@@ -625,7 +633,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                               color: message.isMe
                                   ? Colors.white.withOpacity(0.2)
                                   : Colors.black.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(4),
+                              // Khối trích dẫn vuông góc (radius = 0): thanh trắng bên trái là hình chữ nhật thẳng.
+                              // Không đặt borderRadius ở đây: Flutter cũng không cho bo góc cùng border không đều.
                               border: Border(
                                 left: BorderSide(
                                   color: message.isMe ? Colors.white : AppColors.primaryBlue,
@@ -761,9 +770,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           Container(
             width: 3,
             height: 36,
-            decoration: BoxDecoration(
+            // Thanh dọc của khung preview trả lời: hình chữ nhật mảnh, không bo góc.
+            decoration: const BoxDecoration(
               color: AppColors.primaryBlue,
-              borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(width: 8),
@@ -826,53 +835,74 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           children: [
             // Hiển thị thanh preview trả lời nếu có tin nhắn đang reply
             _buildReplyPreview(),
-            // Khu vực nhập liệu chính
+            // Khu vực nhập liệu chính: [+]  (ô nhập)  [gửi]
+            // Cả ba phần tử cùng cao _inputHeight nên nằm thẳng hàng và cân xứng.
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               child: Row(
                 children: [
+                  // Nút + : hình tròn đúng bằng chiều cao ô nhập
                   Container(
+                    width: _inputHeight,
+                    height: _inputHeight,
                     decoration: const BoxDecoration(
                       color: AppColors.chatFieldFill,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.add, color: AppColors.primaryBlue),
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.add,
+                          color: AppColors.primaryBlue, size: 24),
                       onPressed: () {},
                     ),
                   ),
                   const SizedBox(width: 8),
+
+                  // Ô nhập: chỉ chứa văn bản, cao bằng nút + và nút gửi
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      height: _inputHeight,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
                         color: AppColors.chatFieldFill,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: AppColors.borderIos),
                       ),
+                      alignment: Alignment.center,
                       child: TextField(
                         controller: _messageController,
                         onChanged: (_) => setState(() {}),
                         onSubmitted: (_) => _handleSendMessage(),
+                        textAlignVertical: TextAlignVertical.center,
+                        style: const TextStyle(fontSize: 16),
                         decoration: const InputDecoration(
                           hintText: 'iMessage',
+                          hintStyle: TextStyle(color: AppColors.textInactive),
                           border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
+
+                  // Nút gửi: NẰM NGOÀI ô nhập, hình tròn đúng bằng chiều cao ô nhập.
+                  // Xanh khi có chữ, xám và không bấm được khi ô trống.
                   ValueListenableBuilder<TextEditingValue>(
                     valueListenable: _messageController,
                     builder: (context, value, child) {
                       final hasText = value.text.trim().isNotEmpty;
                       return Container(
+                        width: _inputHeight,
+                        height: _inputHeight,
                         decoration: BoxDecoration(
                           color:
                           hasText ? AppColors.primaryBlue : Colors.grey[300],
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
+                          padding: EdgeInsets.zero,
                           icon: const Icon(
                             Icons.send,
                             color: Colors.white,
