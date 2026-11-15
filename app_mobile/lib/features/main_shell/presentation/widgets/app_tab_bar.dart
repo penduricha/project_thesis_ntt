@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 // TODO: chỉnh lại 2 đường dẫn import cho đúng với cấu trúc thư mục của dự án
 import '../../../authenticator/presentation/screens/authenticator_screen.dart';
 import '../../../chat/presentation/screens/chat_list_screen.dart';
+import '../../../../core/constants/app_colors.dart';
 
 // ============================================================================
 //  DANH SÁCH TAB: nhãn + icon (thường / đang chọn)
@@ -75,9 +76,9 @@ class AppTabBar extends StatefulWidget {
 
 class AppTabBarState extends State<AppTabBar> {
   // ---- Màu sắc ----
-  static const Color _brandColor = Color(0xFF004B87); // tab đang chọn
-  static const Color _inactiveColor = Color(0xFF8E8E93); // tab chưa chọn
-  static const Color _borderColor = Color(0xFFEDEDED);
+  static const Color _brandColor = AppColors.primaryBlue; // tab đang chọn
+  static const Color _inactiveColor = AppColors.textInactive; // tab chưa chọn
+  static const Color _borderColor = AppColors.divider;
 
   late AppTab _currentTab;
 

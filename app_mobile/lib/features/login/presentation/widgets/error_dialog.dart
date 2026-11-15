@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/constants/app_colors.dart';
 
 /// Hiện popup lỗi dùng chung.
 ///
@@ -36,10 +37,10 @@ class ErrorDialog extends StatelessWidget {
   final String buttonText;
   final IconData icon;
 
-  static const Color danger = Color(0xFFC61F1F); // màu nút OK
-  static const Color _dangerSoft = Color(0x1AC61F1F); // danger ~10% opacity
-  static const Color _titleColor = Color(0xFF1F1F1F);
-  static const Color _messageColor = Color(0xFF6B6B6B);
+  static const Color danger = AppColors.primaryRed; // màu nút OK
+  static const Color _dangerSoft = AppColors.primaryRedSoft; // danger ~10% opacity
+  static const Color _titleColor = AppColors.textHeading;
+  static const Color _messageColor = AppColors.textSecondary;
 
   @override
   Widget build(BuildContext context) {

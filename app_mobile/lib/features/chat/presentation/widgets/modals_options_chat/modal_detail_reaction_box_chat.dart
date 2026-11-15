@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/model/reaction_admin.dart';
+import '../../../../../core/constants/app_colors.dart';
 
 class ModalDetailReactionBoxChat extends StatefulWidget {
   final List<ReactionAdmin> reactions;
@@ -122,7 +123,7 @@ class _ModalDetailReactionBoxChatState
               child: Text(
                 'Không có cảm xúc nào',
                 style: TextStyle(
-                  color: Color(0xFF8E8E93),
+                  color: AppColors.textInactive,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -141,7 +142,7 @@ class _ModalDetailReactionBoxChatState
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
                   color: isMe
-                      ? const Color(0xFFF0F6FF)
+                      ? AppColors.highlightBlue
                       : Colors.transparent,
                   child: Row(
                     children: [

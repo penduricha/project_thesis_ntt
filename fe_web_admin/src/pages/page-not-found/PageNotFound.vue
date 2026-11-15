@@ -12,6 +12,7 @@ export default {
   data() {
     return {
       textBtnReturn: 'Quay lại trang chủ',
+      textBtnBack: 'Quay lại trang trước',
     }
   },
 
@@ -23,6 +24,8 @@ export default {
 
   created() {
     this.saveRouterPath(this.getRoute());
+    // Nhãn nút phản ánh đúng nơi sẽ quay về (đã đăng nhập → trang chủ, chưa → trang đăng nhập)
+    this.textBtnReturn = this.resolveReturnTarget().text;
   },
 
   mounted() {
@@ -44,106 +47,84 @@ export default {
       routerManagement.savePathToSessionStorage(route);
     },
 
-    handleReturnFrom404Page() {
-      //Cach 1
-      //const pathReturn = '/';
-      // Delay the reload to ensure the navigation is completed
-      // Adjust the timeout as needed
-      // this.$router.replace({path: pathReturn}).then(() => {
-      //       setTimeout(() => {
-      //         window.location.reload();
-      //       }, 0.5);
-      //     })
-      //     .catch((error) => {
-      //       console.error('Error navigating:', error);
-      //       alert(error);
-      //     });
-      //Cach 2
+    // Quyết định nơi quay về. Giữ nguyên logic cũ: có path đã lưu + có id admin → trang thông tin, ngược lại → đăng nhập
+    resolveReturnTarget() {
       const routerManagement = new RouterMgmt();
       const adminLocalStorage = new AdminStorage();
-      const checkPath_And_ID =
+      const isLoggedIn =
           routerManagement.getPathFromLocalStorage() &&
           adminLocalStorage.getAdminIdToLocalStorage();
-      if(checkPath_And_ID) {
-        const pathReturn = '/information-admin';
-        this.$router.replace({path: pathReturn}).then(() => {
-
-        })
-            .catch((error) => {
-              console.error('Error navigating:', error);
-              alert(error);
-            });
-      } else {
-        const pathReturn = '/login';
-        this.$router.replace({path: pathReturn}).then(() => {
-          // setTimeout(() => {
-          //   window.location.reload();
-          // }, 10);
-        })
-            .catch((error) => {
-              console.error('Error navigating:', error);
-              alert(error);
-            });
-      }
-
+      return isLoggedIn
+          ? {path: '/information-admin', text: 'Quay lại trang chủ'}
+          : {path: '/login', text: 'Về trang đăng nhập'};
     },
 
-    // Nút phụ "quay lại trang trước" — chỉ lùi lịch sử trình duyệt, không đổi
-    // logic điều hướng chính. Nếu không còn lịch sử (vào thẳng link 404) thì
-    // rơi về đúng hành vi của nút chính cho an toàn.
-    goBack() {
-      if (window.history.length > 1) {
-        this.$router.go(-1);
+    handleReturnFrom404Page() {
+      // Đọc lại trạng thái đăng nhập tại thời điểm bấm nút
+      const {path} = this.resolveReturnTarget();
+      this.$router.replace({path}).catch((error) => {
+        // Chỉ ghi log, không dùng alert() để tránh chặn người dùng bằng hộp thoại
+        console.error('Error navigating:', error);
+      });
+    },
+
+    // vue-router 4 lưu history.state.back: có giá trị nghĩa là còn trang trước trong ứng dụng.
+    // Nếu người dùng vào thẳng link lỗi (không có trang trước) thì về trang chủ thay vì thoát khỏi website.
+    handleGoBack() {
+      if (window.history.state && window.history.state.back) {
+        this.$router.back();
       } else {
         this.handleReturnFrom404Page();
       }
     }
   },
 
-  computed: {},
+  computed: {
+    // Đường dẫn người dùng đã gõ (chỉ path, không hiển thị query string)
+    requestedPath() {
+      return this.$route.path || '';
+    },
+  },
 }
 </script>
 
 <template>
   <Header/>
-  <section class="section-page-404">
-    <div class="wrap-404">
+  <section class="section-page-404" aria-labelledby="title-404">
+    <div class="box-text-404-not-found">
 
-      <!-- Số 404 với kính lúp thay cho số 0 (chỉ trang trí) -->
-      <div class="visual-404" aria-hidden="true">
-        <div class="box-code-404">
-          <span class="digit">4</span>
-          <span class="digit digit-zero">
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="42" cy="42" r="30" fill="none" stroke="currentColor" stroke-width="10"/>
-              <line class="handle" x1="64" y1="64" x2="90" y2="90" stroke-width="12" stroke-linecap="round"/>
-              <path d="M30 42h24M42 30v24" stroke="currentColor" stroke-width="6" stroke-linecap="round" opacity=".35"/>
-            </svg>
-          </span>
-          <span class="digit">4</span>
-        </div>
+      <!-- Số 404, chữ "0" là kính lúp (chỉ trang trí) -->
+      <div class="box-code-404" aria-hidden="true">
+        <span class="digit">4</span>
+        <span class="digit-zero"></span>
+        <span class="digit">4</span>
       </div>
 
-      <div class="content-404">
-        <h4>Không tìm thấy trang</h4>
+      <div class="box-content-404">
+        <span class="badge-404">Lỗi 404</span>
+        <h1 id="title-404" class="title-404">Không tìm thấy trang bạn cần</h1>
         <p class="text-desc">
-          Trang bạn đang tìm kiếm có thể đã bị xoá, đổi tên hoặc tạm thời không truy cập được.
-          Vui lòng kiểm tra lại đường dẫn hoặc quay về trang chủ.
+          Đường dẫn có thể đã bị xoá, đổi tên hoặc bạn nhập chưa đúng.
+          Hãy thử quay lại trang trước hoặc về trang chủ.
         </p>
 
-        <div class="actions-404">
+        <p v-if="requestedPath" class="box-path-404">
+          <span class="label">Đường dẫn:</span>
+          <code :title="requestedPath">{{ requestedPath }}</code>
+        </p>
+
+        <div class="box-actions-404">
           <ButtonRed :disable-button="false"
                      :loading-button="false"
                      :text-button="textBtnReturn"
                      @click="handleReturnFrom404Page"
                      class="style-btn-return-from-not-found"
           />
-          <button type="button" class="link-go-back" @click="goBack">
-            Hoặc quay lại trang trước
+          <button type="button" class="btn-back-404" @click="handleGoBack">
+            {{ textBtnBack }}
           </button>
         </div>
       </div>
-
     </div>
   </section>
   <Footer/>

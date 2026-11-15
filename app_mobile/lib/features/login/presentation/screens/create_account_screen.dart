@@ -98,7 +98,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       size: 20,
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF9F9F9),
+                    fillColor: AppColors.fieldFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
@@ -131,7 +131,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       size: 20,
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF9F9F9),
+                    fillColor: AppColors.fieldFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
@@ -169,7 +169,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                             style: TextStyle(fontSize: 14),
                           ),
                           value: 'Male',
-                          activeColor: const Color(0xFF1D61E7),
+                          activeColor: AppColors.accentBlue,
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -216,7 +216,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       size: 20,
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF9F9F9),
+                    fillColor: AppColors.fieldFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
@@ -264,7 +264,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       },
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF9F9F9),
+                    fillColor: AppColors.fieldFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,

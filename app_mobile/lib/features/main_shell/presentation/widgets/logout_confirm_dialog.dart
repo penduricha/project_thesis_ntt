@@ -5,9 +5,10 @@ import '../../../../core/widgets/button_spinner.dart';
 import '../../../login/presentation/widgets/error_dialog.dart';
 import '../../data/model/logout_result.dart';
 import '../controller/logout_controller.dart';
+import '../../../../core/constants/app_colors.dart';
 
 // Màu đỏ của nút "Log out" (đồng bộ với nút OK của popup lỗi)
-const Color _logoutColor = Color(0xFFC61F1F);
+const Color _logoutColor = AppColors.primaryRed;
 
 /// Popup xác nhận đăng xuất. Tự gọi API khi bấm "Log out" và chỉ đóng với
 /// kết quả `true` khi server xác nhận thành công; bấm Cancel trả về `false`.
@@ -94,7 +95,7 @@ class _LogoutConfirmDialogState extends State<LogoutConfirmDialog> {
                     width: 60,
                     height: 60,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFFCE9E9),
+                      color: AppColors.dangerSoft,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -135,7 +136,7 @@ class _LogoutConfirmDialogState extends State<LogoutConfirmDialog> {
                             minimumSize: const Size(0, 48),
                             foregroundColor: Colors.black87,
                             side: const BorderSide(
-                              color: Color(0xFFBDBDBD),
+                              color: AppColors.borderStrong,
                               width: 1.2,
                             ),
                             shape: RoundedRectangleBorder(

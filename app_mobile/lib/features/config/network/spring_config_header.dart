@@ -5,19 +5,14 @@ import 'package:dio/dio.dart';
 import 'network_configuration.dart';
 
 /// Tạo các HTTP client (Dio) gọi RESTful API của Spring Boot.
+/// Mọi thông số (host, port, giao thức, timeout, Basic Auth) đọc từ .env
+/// thông qua [NetworkConfiguration].
 /// Tương đương SpringConfigHeader.js ở Web (Axios -> Dio).
 class SpringConfigHeader {
-  final NetworkConfiguration _networkConfiguration = NetworkConfiguration();
-
-  // Basic Auth (username/password). Chưa dùng .env nên đặt thẳng tại đây.
-  // Để rỗng nếu server không yêu cầu Basic Auth.
-  static const String _authUsername = '';
-  static const String _authPassword = '';
-
   Dio _createClient({Map<String, String>? extraHeaders}) {
     return Dio(
       BaseOptions(
-        baseUrl: _networkConfiguration.requestSpringBoot(),
+        baseUrl: NetworkConfiguration.requestSpringBoot(),
         connectTimeout: NetworkConfiguration.connectTimeout,
         sendTimeout: NetworkConfiguration.sendTimeout,
         receiveTimeout: NetworkConfiguration.receiveTimeout,
@@ -36,9 +31,15 @@ class SpringConfigHeader {
   /// Không có header xác thực (đăng nhập, gọi API công khai).
   Dio getApiClientNoHeaders() => _createClient();
 
-  /// Có username/password: Basic Auth gửi trong header Authorization.
+  /// Basic Auth (username/password lấy từ .env) gửi trong header Authorization.
+  /// Nếu .env không khai báo username/password thì không gắn header.
   Dio getApiClientWithBasicAuth() {
-    return _createClient(extraHeaders: {'Authorization': _basicAuthHeader()});
+    return _createClient(
+      extraHeaders: {
+        if (NetworkConfiguration.hasSpringBasicAuth)
+          'Authorization': _basicAuthHeader(),
+      },
+    );
   }
 
   /// Có JWT access token: Authorization: Bearer <token>.
@@ -48,13 +49,19 @@ class SpringConfigHeader {
     return _createClient(
       extraHeaders: {
         'Authorization': 'Bearer $token',
-        if (withBasicAuth) 'X-Client-Auth': _basicAuthHeader(),
+        if (withBasicAuth && NetworkConfiguration.hasSpringBasicAuth)
+          'X-Client-Auth': _basicAuthHeader(),
       },
     );
   }
 
   String _basicAuthHeader() {
-    final credentials = base64Encode(utf8.encode('$_authUsername:$_authPassword'));
+    final credentials = base64Encode(
+      utf8.encode(
+        '${NetworkConfiguration.springAuthUsername}:'
+            '${NetworkConfiguration.springAuthPassword}',
+      ),
+    );
     return 'Basic $credentials';
   }
 }

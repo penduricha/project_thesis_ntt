@@ -8,10 +8,10 @@ import '../widgets/error_dialog.dart';
 import 'create_account_screen.dart';
 
 // ---- Màu dùng chung cho màn hình Login ----
-const Color _fieldFill = Color(0xFFF9F9F9); // nền ô nhập
-const Color _fieldFillDisabled = Color(0xFFF1F1F1); // nền ô nhập khi bị khóa
-const Color _fieldBorder = Color(0xFFEDEDED); // viền nhạt khi bình thường
-const Color _errorColor = Color(0xFFC61F1F); // cùng đỏ với nút OK của popup
+const Color _fieldFill = AppColors.fieldFill; // nền ô nhập
+const Color _fieldFillDisabled = AppColors.fieldFillDisabled; // nền ô nhập khi bị khóa
+const Color _fieldBorder = AppColors.divider; // viền nhạt khi bình thường
+const Color _errorColor = AppColors.primaryRed; // cùng đỏ với nút OK của popup
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -23,8 +23,8 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   // ---- Màu sắc: lấy đúng theo AuthenticatorScreen ----
-  static const Color _blueColor = Color(0xFF004B87); // nút hành động góc phải
-  static const Color _searchFill = Color(0xFFEFEFEF);
+  static const Color _blueColor = AppColors.primaryBlue; // nút hành động góc phải
+  static const Color _searchFill = AppColors.searchFill;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
@@ -102,7 +102,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   separatorBuilder: (_, __) => const Divider(
                     height: 1,
                     indent: 76,
-                    color: Color(0xFFE5E5EA),
+                    color: AppColors.border,
                   ),
                   itemBuilder: (context, index) =>
                       _buildChatTile(context, chats[index]),
@@ -207,7 +207,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             onPressed: (context) {
               // Logic xóa
             },
-            backgroundColor: const Color(0xFFFF3B30),
+            backgroundColor: AppColors.badgeRed,
             foregroundColor: Colors.white,
             child: const Icon(Icons.delete_outline, size: 28),
           ),

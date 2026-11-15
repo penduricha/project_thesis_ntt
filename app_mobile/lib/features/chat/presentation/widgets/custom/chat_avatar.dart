@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/constants/app_colors.dart';
 
 /// Avatar chữ cái đầu cho danh sách chat.
 ///
@@ -14,7 +15,7 @@ class ChatAvatar extends StatelessWidget {
     this.radius = 24,
   });
 
-  static const Color _blue = Color(0xFF004B87);
+  static const Color _blue = AppColors.primaryBlue;
 
   final String name;
   final bool isUnread;

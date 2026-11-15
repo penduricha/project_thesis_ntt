@@ -7,6 +7,7 @@ import '../../data/model/auth_account.dart';
 import '../../data/service/account_store.dart';
 import '../../data/service/enrollment_service.dart';
 import '../widgets/activate_key_dialog.dart';
+import '../../../../core/constants/app_colors.dart';
  // AppConfirmDialog + primaryRed
 import '../widgets/app_confirm_delete_dialog.dart';
 import '../widgets/ring_painter.dart';
@@ -34,8 +35,8 @@ class AuthenticatorScreen extends StatefulWidget {
 class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   // ---- Colors ----
-  static const Color _blueColor = Color(0xFF004B87); // "+" button top right
-  static const Color _searchFill = Color(0xFFEFEFEF);
+  static const Color _blueColor = AppColors.primaryBlue; // "+" button top right
+  static const Color _searchFill = AppColors.searchFill;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
@@ -564,7 +565,7 @@ class _AccountTile extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: _avatarRadius,
-                  backgroundColor: Color(0xFF004B87),
+                  backgroundColor: AppColors.primaryBlue,
                   child: Icon(
                     Icons.person_rounded,
                     color: Colors.white,
@@ -633,7 +634,7 @@ class _AccountTile extends StatelessWidget {
           child: Divider(
             height: 1,
             thickness: 1,
-            color: Color(0xFFEDEDED),
+            color: AppColors.divider,
           ),
         ),
       ],
@@ -728,7 +729,7 @@ class _SwipeToDeleteState extends State<_SwipeToDelete>
                   width: _side,
                   height: _side,
                   child: Material(
-                    color: primaryRed, // square corners (no border radius)
+                    color: AppColors.primaryRed, // square corners (no border radius)
                     child: InkWell(
                       onTap: widget.onDelete,
                       child: const Center(

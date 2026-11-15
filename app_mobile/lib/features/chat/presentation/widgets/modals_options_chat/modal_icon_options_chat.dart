@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/constants/app_colors.dart';
 
 class ModalIconOptionsChat extends StatelessWidget {
   final VoidCallback? onReply;
@@ -50,7 +51,7 @@ class ModalIconOptionsChat extends StatelessWidget {
     return Container(
       width: 220,
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F7),
+        color: AppColors.modalFill,
         borderRadius: BorderRadius.circular(8),
         boxShadow: const [
           BoxShadow(

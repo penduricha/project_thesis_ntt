@@ -307,7 +307,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: const Color(0x99000000),
+      barrierColor: AppColors.overlayScrim,
       transitionDuration: const Duration(milliseconds: 150),
       pageBuilder: (context, animation, secondaryAnimation) {
         return Material(
@@ -336,7 +336,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       decoration: BoxDecoration(
                         color: message.isMe
                             ? AppColors.primaryBlue
-                            : const Color(0xFFE5E5EA),
+                            : AppColors.border,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -608,7 +608,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   decoration: BoxDecoration(
                     color: message.isMe
                         ? AppColors.primaryBlue
-                        : const Color(0xFFE5E5EA),
+                        : AppColors.border,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IntrinsicWidth(
@@ -751,9 +751,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: const BoxDecoration(
-        color: Color(0xFFF7F7F8),
+        color: AppColors.chatBarFill,
         border: Border(
-          top: BorderSide(color: Color(0xFFE5E5EA), width: 0.5),
+          top: BorderSide(color: AppColors.border, width: 0.5),
         ),
       ),
       child: Row(
@@ -833,7 +833,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 children: [
                   Container(
                     decoration: const BoxDecoration(
-                      color: Color(0xFFEFEFF0),
+                      color: AppColors.chatFieldFill,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
@@ -846,9 +846,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFEFF0),
+                        color: AppColors.chatFieldFill,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFD1D1D6)),
+                        border: Border.all(color: AppColors.borderIos),
                       ),
                       child: TextField(
                         controller: _messageController,

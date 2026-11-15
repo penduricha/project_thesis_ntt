@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../core/constants/app_colors.dart';
 
 /// Red used for destructive actions (delete button, swipe-to-delete background).
-const Color primaryRed = Color(0xFFC61F1F);
 
 /// Shared confirm dialog. Same look as the "Enter secret key" dialog:
 /// white rounded card | icon in a light-blue circle | bold centered title |
@@ -24,7 +24,7 @@ class AppConfirmDeleteDialog extends StatelessWidget {
     this.icon = Icons.delete_outline_rounded,
     this.cancelLabel = 'Cancel',
     this.confirmLabel = 'Delete',
-    this.confirmColor = primaryRed,
+    this.confirmColor = AppColors.primaryRed,
   });
 
   final String title;
@@ -37,11 +37,11 @@ class AppConfirmDeleteDialog extends StatelessWidget {
   final Color confirmColor;
 
   // ---- Style tokens (match the secret-key dialog) ----
-  static const Color _brandBlue = Color(0xFF004B87);
-  static const Color _iconCircle = Color(0xFFE6EEF5);
-  static const Color _titleColor = Color(0xFF222222);
-  static const Color _messageColor = Color(0xFF757575);
-  static const Color _cancelBorder = Color(0xFFCFCFCF);
+  static const Color _brandBlue = AppColors.primaryBlue;
+  static const Color _iconCircle = AppColors.primaryBlueSoft;
+  static const Color _titleColor = AppColors.textTitle;
+  static const Color _messageColor = AppColors.textMuted;
+  static const Color _cancelBorder = AppColors.borderCancel;
   static const double _radius = 20;
   static const double _buttonRadius = 12;
   static const double _buttonHeight = 46;
@@ -54,7 +54,7 @@ class AppConfirmDeleteDialog extends StatelessWidget {
         IconData icon = Icons.delete_outline_rounded,
         String cancelLabel = 'Cancel',
         String confirmLabel = 'Delete',
-        Color confirmColor = primaryRed,
+        Color confirmColor = AppColors.primaryRed,
       }) async {
     final result = await showDialog<bool>(
       context: context,

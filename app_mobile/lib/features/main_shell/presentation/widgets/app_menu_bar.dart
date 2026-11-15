@@ -22,7 +22,7 @@ class AppMenuBar extends StatefulWidget {
 
 class _AppMenuBarState extends State<AppMenuBar> {
   // Màu viền/đường kẻ trung tính (đồng bộ với viền ô nhập ở màn Login)
-  static const Color _dividerColor = Color(0xFFEDEDED);
+  static const Color _dividerColor = AppColors.divider;
 
   static const String _adminNamePath = '/admin/information/admin-name';
   static const String _fallbackName = 'Administrator';

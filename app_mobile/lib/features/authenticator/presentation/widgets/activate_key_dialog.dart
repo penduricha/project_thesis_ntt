@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../screens/totp_generator.dart';
+import '../../../../core/constants/app_colors.dart';
 
 // ============================================================================
 //  POPUP NHẬP KHÓA BÍ MẬT (Base32) + NÚT ACTIVATE
@@ -47,9 +48,9 @@ class ActivateKeyDialog extends StatefulWidget {
 }
 
 class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
-  static const Color _brandColor = Color(0xFF004B87); // nút Activate
-  static const Color _errorColor = Color(0xFFC61F1F);
-  static const Color _fieldFill = Color(0xFFEFEFEF);
+  static const Color _brandColor = AppColors.primaryBlue; // nút Activate
+  static const Color _errorColor = AppColors.primaryRed;
+  static const Color _fieldFill = AppColors.searchFill;
 
   // ---- Quy tắc khóa (khớp EncryptionUtil.generateSecretKey() bên Java) ----
   // Java: 20 byte ngẫu nhiên (160 bit) -> Base32 RFC 4648, KHÔNG padding '='.
@@ -214,7 +215,7 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
                     width: 60,
                     height: 60,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFE6EEF5),
+                      color: AppColors.primaryBlueSoft,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -319,7 +320,7 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(0, 48),
               foregroundColor: Colors.black87,
-              side: const BorderSide(color: Color(0xFFBDBDBD), width: 1.2),
+              side: const BorderSide(color: AppColors.borderStrong, width: 1.2),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -387,7 +388,7 @@ class _FieldError extends StatelessWidget {
 
   final String? message;
 
-  static const Color _errorColor = Color(0xFFC61F1F);
+  static const Color _errorColor = AppColors.primaryRed;
 
   @override
   Widget build(BuildContext context) {
