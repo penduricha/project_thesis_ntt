@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../config/network/spring_config_header.dart';
 import '../model/logout_result.dart';
 
-/// Gọi API đăng xuất của Spring Boot: POST /admin/mobile/auth/logout.
+/// Gọi API đăng xuất của Spring Boot: POST /api/mobile/admin/auth/logout.
 ///
 /// Server nhận cặp token trong body, hủy chúng ở Redis và xóa phiên đăng nhập mobile
 /// để thiết bị khác có thể đăng nhập. Client được cấu hình validateStatus < 500 nên

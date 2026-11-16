@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../../core/storage/auth_storage.dart';
+import '../../../config/network/network_configuration.dart';
 import '../../presentation/screens/totp_generator.dart';
 
 // ============================================================================
@@ -12,11 +13,11 @@ import '../../presentation/screens/totp_generator.dart';
 //  Web đã bấm "Kích hoạt" -> server ghi khóa (đã mã hóa AES-GCM) vào MariaDB với
 //  confirmed = false. Mobile làm 3 việc, theo đúng thứ tự:
 //
-//    1. GET  /api/mobile/admin /2fa/enrollment/pending
+//    1. GET  /api/mobile/admin/2fa/enrollment/pending
 //         -> { algorithm: "HmacSHA256", digits: 6, periodSeconds: 15|30|45|60, ... }
 //         Server KHÔNG trả khóa. Khóa chỉ có do người dùng nhập trong popup.
 //    2. Sinh mã từ (khóa người dùng nhập, thông số ở bước 1, giờ hiện tại).
-//    3. POST /api/mobile/admin /2fa/enrollment/confirm   { "code": "123456" }
+//    3. POST /api/mobile/admin/2fa/enrollment/confirm   { "code": "123456" }
 //         Server tự giải mã khóa của mình, tính mã, so khớp (lệch tối đa ±1 chu kỳ).
 //         Đúng -> confirmed = true và totp_enabled = true: 2FA bật hoàn toàn.
 //
@@ -24,22 +25,20 @@ import '../../presentation/screens/totp_generator.dart';
 //  server xóa phần cài dở và trả 429, admin phải bấm "Kích hoạt" lại trên web.
 //
 //  TẮT 2FA (nút xóa TOTP trong app):
-//    POST /api/mobile/admin /2fa/disable   { "code": "123456" }
+//    POST /api/mobile/admin/2fa/disable   { "code": "123456" }
 //    Mã 6 số sinh từ khóa đang lưu trong app. Server đúng mới xóa credential + totp_enabled = false.
 //    Chỉ khi server báo thành công (200) hoặc "chưa bật" (404) app mới được xóa khóa cục bộ.
 // ============================================================================
 
-/// Địa chỉ Spring Boot. Đổi khi chạy:
-///   flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8080
-/// Android emulator: 10.0.2.2 chính là localhost của máy tính.
-/// Máy thật: dùng IP LAN của máy chạy Spring (cùng Wi-Fi).
-const String kApiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080',
-);
-
-/// Context-path của Spring (comment bên Java ghi /api/...). Đổi nếu khác.
-const String kApiPrefix = '/api';
+// Địa chỉ Spring Boot lấy từ file .env qua [NetworkConfiguration.requestSpringBoot()]
+// (cùng nguồn với màn Login / Logout), nên chỉ cần đổi ở MỘT chỗ:
+//   SPRING_HOST        để trống = Android emulator dùng 10.0.2.2, nền tảng khác dùng localhost;
+//                      máy thật: IP LAN của máy chạy Spring (cùng Wi-Fi)
+//   SPRING_PORT        8080
+//   SPRING_API_PREFIX  /api/mobile  (= context-path /api của Spring + nhánh /mobile)
+// Các path bên dưới chỉ là phần đuôi "/admin/...", khớp @RequestMapping("/mobile/admin") bên Java.
+// Trước đây file này tự ghép --dart-define=API_BASE_URL + "/api/mobile/admin/...", lệch nguồn với
+// phần còn lại của app: đổi SPRING_HOST trong .env cho máy thật thì 2FA vẫn gọi vào 10.0.2.2.
 
 // ---------------------------------------------------------------------------
 //  Thông tin đăng nhập hiện tại của app  (NỐI VÀO MÀN LOGIN CỦA BẠN)
@@ -79,8 +78,8 @@ class SecureStorageEnrollmentAuth implements EnrollmentAuth {
   final String adminNameKey;
   final FlutterSecureStorage _storage;
 
-  /// Đường dẫn làm mới token của Spring: context-path /api + @RequestMapping("/mobile/admin").
-  static const String _refreshPath = '$kApiPrefix/mobile/admin/auth/login/auto/refresh-token';
+  /// Đường dẫn làm mới token của Spring (đầy đủ: /api/mobile/admin/auth/login/auto/refresh-token).
+  static const String _refreshPath = '/admin/auth/login/auto/refresh-token';
 
   /// Access token phía Java chỉ sống 5 phút. Còn dưới ngần này thì làm mới trước khi gọi API.
   static const Duration _refreshMargin = Duration(seconds: 60);
@@ -111,7 +110,7 @@ class SecureStorageEnrollmentAuth implements EnrollmentAuth {
 
       final dio = Dio(
         BaseOptions(
-          baseUrl: kApiBaseUrl,
+          baseUrl: NetworkConfiguration.requestSpringBoot(),
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
           headers: {'Accept': 'application/json'},
@@ -227,7 +226,7 @@ class EnrollmentService {
         _dio = dio ??
             Dio(
               BaseOptions(
-                baseUrl: kApiBaseUrl,
+                baseUrl: NetworkConfiguration.requestSpringBoot(),
                 connectTimeout: const Duration(seconds: 10),
                 receiveTimeout: const Duration(seconds: 10),
                 headers: {'Accept': 'application/json'},
@@ -269,9 +268,10 @@ class EnrollmentService {
   final EnrollmentAuth _auth;
   final Dio _dio;
 
-  static const String _pendingPath = '$kApiPrefix/mobile/admin/2fa/enrollment/pending';
-  static const String _confirmPath = '$kApiPrefix/mobile/admin/2fa/enrollment/confirm';
-  static const String _disablePath = '$kApiPrefix/mobile/admin/2fa/disable';
+  // Đầy đủ: /api/mobile/admin/2fa/... (phần /api/mobile nằm trong baseUrl).
+  static const String _pendingPath = '/admin/2fa/enrollment/pending';
+  static const String _confirmPath = '/admin/2fa/enrollment/confirm';
+  static const String _disablePath = '/admin/2fa/disable';
 
   static const String _msgSession = 'Session expired. Please sign in again.';
   static const String _msgNetwork = 'Cannot reach the server. Check your connection.';

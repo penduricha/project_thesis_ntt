@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
@@ -24,6 +23,7 @@ class _AppMenuBarState extends State<AppMenuBar> {
   // Màu viền/đường kẻ trung tính (đồng bộ với viền ô nhập ở màn Login)
   static const Color _dividerColor = AppColors.divider;
 
+  // Đầy đủ: GET /api/mobile/admin/information/admin-name (Bearer access token).
   static const String _adminNamePath = '/admin/information/admin-name';
   static const String _fallbackName = 'Administrator';
 
@@ -43,7 +43,7 @@ class _AppMenuBarState extends State<AppMenuBar> {
 
   /// Tên đã lưu lúc đăng nhập thì dùng luôn, KHÔNG gọi API.
   /// Chỉ khi chưa có tên (phiên cũ lưu trước khi có tính năng này) mới gọi
-  /// GET /admin/information/admin-name một lần rồi lưu lại cho các lần sau.
+  /// GET /api/mobile/admin/information/admin-name một lần rồi lưu lại cho các lần sau.
   Future<void> _loadAdminName() async {
     final name = await _resolveAdminName();
     if (!mounted) return;
@@ -59,7 +59,7 @@ class _AppMenuBarState extends State<AppMenuBar> {
       final storedName = session.adminName;
       if (storedName != null && storedName.isNotEmpty) return storedName;
 
-      final fetchedName = await _fetchAdminName(session.adminId);
+      final fetchedName = await _fetchAdminName(session.accessToken);
       if (fetchedName == null) return _fallbackName; // lỗi: lần sau sẽ thử lại
       await authStorage.saveAdminName(fetchedName);
       return fetchedName;
@@ -68,15 +68,17 @@ class _AppMenuBarState extends State<AppMenuBar> {
     }
   }
 
-  /// Server trả chữ thuần. Trả null nếu lỗi mạng / server / tên rỗng.
-  Future<String?> _fetchAdminName(int adminId) async {
-    final response = await SpringConfigHeader().getApiClientNoHeaders().get<String>(
-      _adminNamePath,
-      queryParameters: {'adminId': adminId},
-      options: Options(responseType: ResponseType.plain),
-    );
-    final name = response.data?.trim();
-    return response.statusCode == 200 && name != null && name.isNotEmpty ? name : null;
+  /// Server trả { success, message, data: { adminName } }; adminId lấy từ access token nên không gửi kèm.
+  /// Trả null nếu lỗi mạng / token hết hạn (401) / server / tên rỗng.
+  Future<String?> _fetchAdminName(String accessToken) async {
+    final response = await SpringConfigHeader()
+        .getApiClientWithHeadersToken(accessToken)
+        .get<Map<String, dynamic>>(_adminNamePath);
+    final data = response.data?['data'];
+    final name = data is Map ? data['adminName'] : null;
+    if (response.statusCode != 200 || name is! String) return null;
+    final trimmed = name.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   @override

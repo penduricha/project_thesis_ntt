@@ -38,7 +38,7 @@ public class TotpDisableControllerMobile {
         this.adminTokenService = adminTokenService;
     }
 
-    // POST /api/admin/mobile/2fa/disable     Header: Authorization: Bearer <accessToken>
+    // POST /api/mobile/admin/2fa/disable     Header: Authorization: Bearer <accessToken>
     // Body: { "code": "123456" }  (mã TOTP hiện tại sinh từ khóa đang lưu trong app)
     // 200: 2FA đã tắt (đã xóa credential, totp_enabled = false) | 400: không đủ 6 số | 401 token sai
     // 404: admin chưa bật 2FA (app coi như đã tắt, được xóa khóa cục bộ)

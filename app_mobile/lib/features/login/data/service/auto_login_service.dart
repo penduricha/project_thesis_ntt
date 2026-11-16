@@ -5,8 +5,8 @@ import '../../../config/network/spring_config_header.dart';
 import '../model/auto_login_result.dart';
 
 /// Gọi 2 API auto login của Spring Boot (token gửi trong header Bearer):
-///  - GET /admin/auth/login/auto/access-token
-///  - GET /admin/auth/login/auto/refresh-token
+///  - GET /api/mobile/admin/auth/login/auto/access-token
+///  - GET /api/mobile/admin/auth/login/auto/refresh-token
 ///
 /// adminId không cần gửi: server lấy từ chính token. Client có validateStatus < 500
 /// nên 401 được đọc như phản hồi bình thường thay vì ném lỗi.

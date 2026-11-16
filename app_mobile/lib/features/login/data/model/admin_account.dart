@@ -1,4 +1,4 @@
-/// Dữ liệu gửi lên API đăng nhập mobile (POST /admin/mobile/auth/login).
+/// Dữ liệu gửi lên API đăng nhập mobile (POST /api/mobile/admin/auth/login).
 ///
 /// Chỉ là dữ liệu, không còn tài khoản cứng: việc kiểm tra Admin Id + mật khẩu
 /// do server (Spring Boot) thực hiện.

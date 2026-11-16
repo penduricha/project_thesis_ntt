@@ -38,7 +38,7 @@ public class EnrollmentConfirmControllerMobile {
         this.adminTokenService = adminTokenService;
     }
 
-    // GET /api/admin/mobile/2fa/enrollment/pending      Header: Authorization: Bearer <accessToken>
+    // GET /api/mobile/admin/2fa/enrollment/pending      Header: Authorization: Bearer <accessToken>
     // 200: { success, message, data: { algorithm, digits, periodSeconds, expiresInSeconds } }   (không có khóa)
     // 401 token sai | 404: web chưa bấm "Kích hoạt" (app nên chờ và hỏi lại) | 410: quá thời hạn xác nhận | 500
     @GetMapping("/pending")
@@ -63,7 +63,7 @@ public class EnrollmentConfirmControllerMobile {
         }
     }
 
-    // POST /api/admin/mobile/2fa/enrollment/confirm     Body: { "code": "123456" }
+    // POST /api/mobile/admin/2fa/enrollment/confirm     Body: { "code": "123456" }
     // 200: 2FA bật hoàn toàn | 422: mã sai | 400: không đủ 6 số | 401 token sai
     // 404 / 410: như trên | 429: nhập sai quá số lần, phần cài dở đã bị xóa, phải cài lại trên web | 500
     @PostMapping("/confirm")

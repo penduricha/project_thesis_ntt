@@ -258,7 +258,49 @@ public class AdminControllerMgmtMobile {
         return ResponseEntity.ok(responseSuccess);
     }
 
+    // ===================== TÊN QUẢN TRỊ VIÊN (menu của app) =====================
+    //    GET /api/mobile/admin/information/admin-name     Header: Authorization: Bearer <accessToken>
+    //    adminId lấy từ chính access token (app không gửi lên), nên không ai tra được tên của admin khác.
+    //    200: { success: true, message, data: { adminName } } | 401: token sai / hết hạn / đã bị thu hồi
+    //    404: không còn admin này
+    //    Trước đây app gọi đường dẫn này nhưng Spring chưa có endpoint nên luôn nhận 404.
+    @GetMapping("/information/admin-name")
+    public ResponseEntity<?> getAdminNameMobile(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long adminId = resolveAdminIdFromAccessToken(authHeader);
+        if (adminId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(errorBody("Token is missing, invalid or expired."));
+        }
+
+        String adminName = adminService.getAdminNameByAdminId(adminId);
+        if (adminName == null || adminName.isBlank()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorBody("Admin not found."));
+        }
+
+        Map<String, Object> responseSuccess = new HashMap<>();
+        responseSuccess.put("success", true);
+        responseSuccess.put("message", "Admin name found successfully.");
+        responseSuccess.put("data", Map.of("adminName", adminName));
+        return ResponseEntity.ok(responseSuccess);
+    }
+
     // ===================== HÀM HỖ TRỢ =====================
+
+    /** Cùng cách kiểm tra access token với các controller 2FA mobile. null = token không dùng được. */
+    private Long resolveAdminIdFromAccessToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        String jwtToken = authHeader.substring(7);
+        try {
+            if (!adminJwtTokenProvider.validateToken(jwtToken)) return null;
+            if (!adminTokenService.findAdminAccessTokenByJwtToken(jwtToken)) return null;
+            return adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
+        } catch (Exception e) {
+            log.warn("Can't read adminId from access token: {}", e.getMessage());
+            return null;
+        }
+    }
 
     private Map<String, Object> buildAlreadyLoggedInWarning(SessionLoginMobile session) {
         Map<String, Object> data = new HashMap<>();

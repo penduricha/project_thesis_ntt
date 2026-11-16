@@ -15,7 +15,7 @@ import java.util.Locale;
 /**
  * Xử lý lỗi "java.io.IOException: Broken pipe" khi trình duyệt đã đóng kết nối trước khi server ghi xong.
  *
- * Hay gặp nhất ở luồng SSE (GET /web/admin/2fa/events): người dùng tải lại trang, đổi trang hoặc Vue hủy
+ * Hay gặp nhất ở luồng SSE (GET /api/web/admin/2fa/events): người dùng tải lại trang, đổi trang hoặc Vue hủy
  * fetch (AbortController) đúng lúc Spring đang đẩy header / sự kiện "ready" xuống. Đây KHÔNG phải lỗi
  * của server, nên chỉ ghi log mức DEBUG và không ghi gì vào response (kết nối đã chết, không còn ai đọc).
  *
