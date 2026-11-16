@@ -7,6 +7,7 @@ import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 import AdminStorage from "@/local_storage/AdminStorage.js";
 import {AdminAccount} from "@/model/AdminAccount.js";
 import AdminRepository, {REQUEST_STATUS} from "@/repository/AdminRepository.js";
+import {silentRefresher} from "@/services/auth/SilentTokenRefresher.js";
 import Footer from "@/components/footer/Footer.vue";
 import Header from "@/components/header/Header.vue";
 
@@ -17,8 +18,8 @@ const MESSAGE = {
   WRONG_CREDENTIALS: 'Mã quản trị viên hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.',
   SERVER_ERROR: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng rồi thử lại.',
   NAVIGATE_ERROR: 'Đăng nhập thành công nhưng không thể chuyển trang. Vui lòng tải lại trang.',
-  TOTP_REQUIRED: 'Tài khoản đã bật xác thực 2 lớp. Bắt buộc nhập khóa 6 số đang hiển thị trong ứng dụng Authenticator.',
-  TOTP_FORMAT: 'Khóa xác thực gồm đúng 6 chữ số.',
+  TOTP_REQUIRED: 'Tài khoản đã bật xác thực 2 lớp. Nhập mã 6 số đang hiển thị trong ứng dụng Authenticator.',
+  TOTP_FORMAT: 'Mã xác thực gồm đúng 6 chữ số.',
   TOTP_INVALID: 'Mã xác thực không đúng hoặc đã hết hạn. Hãy nhập mã mới đang hiển thị trên ứng dụng.',
   LOCKED: 'Nhập sai quá nhiều lần. Biểu mẫu tạm khóa, sẽ tự mở lại khi hết thời gian đếm ngược.',
 };
@@ -50,6 +51,7 @@ export default {
 
   mounted() {
     document.addEventListener('visibilitychange', this.onLockVisibilityChange);
+    this.isInitializing = false; // khởi tạo xong -> mở form (nếu không bị khóa)
 
     // Đang bị khóa thì các ô đang disabled, không focus.
     // Chỉ tự focus trên máy có chuột/bàn phím.
@@ -76,6 +78,9 @@ export default {
       // true từ lúc bấm đăng nhập đến lúc có kết quả: khoá cả form + hiện hiệu ứng load
       isSubmitting: false,
 
+      // true từ lúc created đến hết mounted: form bị khoá cho tới khi trang khởi tạo xong
+      isInitializing: true,
+
       // lỗi theo từng ô nhập (hiện ngay dưới ô)
       errors: {
         adminId: "",
@@ -98,6 +103,10 @@ export default {
   computed: {
     isLocked() {
       return this.lockRemainingSeconds > 0;
+    },
+    // Một nguồn duy nhất quyết định form có bị khoá hay không
+    isFormDisabled() {
+      return this.isInitializing || this.isSubmitting || this.isLocked;
     },
     lockMessage() {
       return MESSAGE.LOCKED;
@@ -254,6 +263,11 @@ export default {
       const firstPathAfterLogin = "/information-admin";
       routerManagement.savePathToLocalStorage(firstPathAfterLogin);
 
+      // Đăng nhập xong KHÔNG tải lại trang nên main.js không tự bật bộ làm mới ngầm (nó chỉ bật lúc khởi động
+      // khi đã đăng nhập). Không bật ở đây thì access token (5 phút) hết hạn mà không ai làm mới, và người dùng
+      // gặp "Phiên đăng nhập đã hết hạn" đúng lúc đang lấy khóa bí mật 2FA. start() chạy nhiều lần vẫn an toàn.
+      silentRefresher.start();
+
       try {
         await this.$router.push({path: firstPathAfterLogin});
       } catch (error) {
@@ -368,7 +382,7 @@ export default {
 
     async handleLoginEvent() {
       // Chốt chặn: đang đăng nhập hoặc đang bị khóa thì bỏ qua mọi lần bấm / Enter thêm
-      if (this.isSubmitting || this.isLocked) return;
+      if (this.isFormDisabled) return;
 
       this.errors.adminId = "";
       this.errors.password = "";
@@ -501,11 +515,32 @@ export default {
     <Header/>
     <section class="container-form-login-page">
       <div class="form-login" :class="{ 'is-loading': isSubmitting, 'is-locked': isLocked }" :aria-busy="isSubmitting">
-        <h4 class="title-login">ĐĂNG NHẬP</h4>
 
-        <!-- fieldset[disabled] khoá cùng lúc mọi ô nhập, checkbox và nút bên trong
-             (đang đăng nhập, hoặc đang bị khóa vì nhập sai khóa 6 số quá nhiều lần) -->
-        <fieldset class="form-fieldset" :disabled="isSubmitting || isLocked">
+        <header class="login-heading">
+          <h1 class="title-login">Đăng nhập</h1>
+          <p class="subtitle-login">Dành cho quản trị viên hệ thống</p>
+        </header>
+
+        <!-- Lỗi chung (sai tài khoản/mật khẩu, lỗi mạng...): đặt TRÊN các ô nhập để người dùng thấy ngay -->
+        <Transition name="error-fade">
+          <div v-if="validateLogin" class="form-banner is-error" role="alert">
+            <span class="form-banner__icon" aria-hidden="true">!</span>
+            <p class="form-banner__text">{{ validateLogin }}</p>
+          </div>
+        </Transition>
+
+        <!-- Tạm khóa: đếm ngược, hết giờ tự mở lại form -->
+        <Transition name="error-fade">
+          <div v-if="isLocked" class="form-banner is-locked" role="alert">
+            <span class="form-banner__icon" aria-hidden="true">!</span>
+            <p class="form-banner__text">{{ lockMessage }}</p>
+            <strong class="lock-countdown" aria-hidden="true">{{ lockCountdownLabel }}</strong>
+          </div>
+        </Transition>
+
+        <!-- fieldset[disabled] khoá cùng lúc mọi ô nhập, checkbox và nút bên trong:
+             lúc khởi tạo trang, lúc đang gọi API, và lúc đang bị khóa vì nhập sai quá nhiều lần -->
+        <fieldset class="form-fieldset" :disabled="isFormDisabled">
           <div class="form-fields">
 
             <!-- Mã quản trị viên -->
@@ -516,7 +551,7 @@ export default {
                 <input type="text" class="form-control border-radius-zero"
                        id="floatingInputAdminId"
                        ref="inputAdminId"
-                       placeholder="Mã quản trị viên (nhập số)"
+                       placeholder="Mã quản trị viên"
                        inputmode="numeric"
                        autocomplete="username"
                        maxlength="10"
@@ -524,10 +559,10 @@ export default {
                        :aria-describedby="errors.adminId ? 'errorAdminId' : null"
                        @input="setInputAdminId"
                        v-model="adminId">
-                <label for="floatingInputAdminId">Mã quản trị viên (nhập số)</label>
+                <label for="floatingInputAdminId">Mã quản trị viên</label>
               </div>
               <Transition name="error-fade">
-                <p v-if="errors.adminId" id="errorAdminId" class="field-error" role="alert">
+                <p v-if="errors.adminId" id="errorAdminId" class="field-message is-error" role="alert">
                   {{ errors.adminId }}
                 </p>
               </Transition>
@@ -566,52 +601,40 @@ export default {
                 </button>
               </div>
               <Transition name="error-fade">
-                <p v-if="errors.password" id="errorPassword" class="field-error" role="alert">
+                <p v-if="errors.password" id="errorPassword" class="field-message is-error" role="alert">
                   {{ errors.password }}
                 </p>
               </Transition>
             </div>
 
-            <!-- Khóa 6 số xác thực: luôn hiện.
+            <!-- Mã xác thực 6 số: nhãn ngắn, hướng dẫn đưa xuống dòng gợi ý (không nhồi vào nhãn).
                  Đã cài 2FA -> bắt buộc nhập (server kiểm tra). Chưa cài 2FA -> để trống vẫn đăng nhập được. -->
             <div class="field-group">
               <div ref="boxTotp"
                    class="form-floating style-input-login"
                    :class="{ 'has-error': !!errors.totp }">
-                <input type="text" class="form-control border-radius-zero"
+                <input type="text" class="form-control border-radius-zero input-totp"
                        id="floatingInputKeyAuthenticator"
                        ref="inputTotp"
-                       placeholder="Khóa 6 số xác thực (để trống nếu chưa cài 2FA)"
+                       placeholder="Mã xác thực 6 số"
                        inputmode="numeric"
                        autocomplete="one-time-code"
                        maxlength="6"
                        :aria-invalid="!!errors.totp"
-                       :aria-describedby="errors.totp ? 'errorTotp' : null"
+                       :aria-describedby="errors.totp ? 'errorTotp' : 'hintTotp'"
                        @input="setInputKeyAuthenticator"
                        v-model="keyAuthenticator">
-                <label for="floatingInputKeyAuthenticator">Khóa 6 số xác thực (để trống nếu chưa cài 2FA)</label>
+                <label for="floatingInputKeyAuthenticator">Mã xác thực 6 số</label>
               </div>
+              <p v-if="!errors.totp" id="hintTotp" class="field-message">
+                Để trống nếu tài khoản chưa bật xác thực 2 lớp (2FA).
+              </p>
               <Transition name="error-fade">
-                <p v-if="errors.totp" id="errorTotp" class="field-error" role="alert">
+                <p v-if="errors.totp" id="errorTotp" class="field-message is-error" role="alert">
                   {{ errors.totp }}
                 </p>
               </Transition>
             </div>
-
-            <!-- Lỗi chung của form -->
-            <Transition name="error-fade">
-              <div v-if="validateLogin" class="form-error-banner" role="alert">
-                {{ validateLogin }}
-              </div>
-            </Transition>
-
-            <!-- Tạm khóa: đếm ngược, hết giờ tự mở lại form -->
-            <Transition name="error-fade">
-              <div v-if="isLocked" class="form-error-banner form-lock-banner" role="alert">
-                <span>{{ lockMessage }}</span>
-                <strong class="lock-countdown" aria-hidden="true">{{ lockCountdownLabel }}</strong>
-              </div>
-            </Transition>
 
             <div class="box-remember-me">
               <input type="checkbox" id="rememberMe" v-model="rememberMe" class="style-checkbox"/>
@@ -623,7 +646,7 @@ export default {
                        @click="handleLoginEvent()"
                        :text-button="isSubmitting ? '' : (isLocked ? 'Thử lại sau ' + lockCountdownLabel : 'Đăng nhập')"
                        :loading-button="isSubmitting"
-                       :disable-button="isSubmitting || isLocked"
+                       :disable-button="isFormDisabled"
             />
           </div>
         </fieldset>
@@ -636,7 +659,6 @@ export default {
     </section>
     <Footer/>
   </form>
-
 </template>
 
 <style scoped lang="scss">
@@ -652,4 +674,4 @@ export default {
 .btn-login-border-radius {
   border-radius: 4px;
 }
-</style>
+</style>

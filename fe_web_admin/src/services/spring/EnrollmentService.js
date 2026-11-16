@@ -1,5 +1,6 @@
 import {TokenLogin} from "@/model/TokenLogin.js";
 import SpringConfigHeader from "@/services/spring/SpringConfigHeader.js";
+import {retryOn401, silentRefresher} from "@/services/auth/SilentTokenRefresher.js";
 
 // Khớp các controller Spring Boot: EnrollSessionControllerWeb + EnrollmentController.
 // (Tiền tố /web do baseURL của SpringConfigHeader đã gắn, giống đường dẫn ENROLLMENT đang chạy được.)
@@ -163,12 +164,19 @@ export class EnrollmentService {
         }
 
         const baseUrl = this.springConfigHeader.getAPIClientNoHeaders().defaults.baseURL ?? '';
-        const response = await fetch(`${baseUrl}${ENDPOINTS.EVENTS}`, {
+
+        // Nối lại sau khi đứt thường rơi vào lúc access token (5 phút) vừa hết hạn: làm mới ngầm trước,
+        // rồi nếu vẫn 401 thì làm mới + gửi lại đúng một lần. Mỗi lần gửi đọc token mới nhất trong storage.
+        await silentRefresher.ensureFresh();
+        const response = await retryOn401(() => fetch(`${baseUrl}${ENDPOINTS.EVENTS}`, {
             method: 'GET',
-            headers: {Authorization: `Bearer ${accessToken}`, Accept: 'text/event-stream'},
+            headers: {
+                Authorization: `Bearer ${tokenLogin.getAccessTokenFromStorage() ?? accessToken}`,
+                Accept: 'text/event-stream',
+            },
             cache: 'no-store',
             signal,
-        });
+        }), tokenLogin);
         if (!response.ok || !response.body) {
             return {opened: false, status: response.status};
         }
@@ -216,9 +224,9 @@ export class EnrollmentService {
         return dataLines.length === 0 && event === 'message' ? null : {event, data: dataLines.join('\n')};
     }
 
-    // Client gắn sẵn "Authorization: Bearer <access token mới nhất trong storage>"
+    // Client gắn "Authorization: Bearer <access token mới nhất trong storage>" ở MỖI request,
+    // tự làm mới ngầm khi token sắp / đã hết hạn và tự gửi lại một lần khi gặp 401.
     #getAuthorizedClient(tokenLogin) {
-        return this.springConfigHeader
-            .getAPIClientWithHeadersToken(tokenLogin.getAccessTokenFromStorage());
+        return this.springConfigHeader.getAuthorizedAPIClient(tokenLogin);
     }
 }

@@ -3,6 +3,7 @@ import './card-account.scss';
 import '@/assets/style/theme-color.scss';
 import AdminRepository from "@/repository/AdminRepository.js";
 import { broadcastLogout } from '@/assets/auth-sync.js';
+import { silentRefresher } from '@/services/auth/SilentTokenRefresher.js';
 
 import MgmtDateTimeFormat from "@/assets/manage-components/MgmtDateTimeFormat.js";
 
@@ -181,6 +182,7 @@ export default {
         let status = await adminRepository.getResponseFromLogoutRequest();
 
         if (status === "OK") {
+          silentRefresher.stop(); // đã đăng xuất: dừng làm mới ngầm (không còn token để làm mới)
           broadcastLogout(); // <-- báo các tab khác
           this.$refs.logoutDialog?.close();
           await this.$router.replace({ path: pathLogin });

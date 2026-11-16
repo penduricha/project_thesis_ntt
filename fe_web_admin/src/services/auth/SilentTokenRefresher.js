@@ -44,6 +44,11 @@ class SilentTokenRefresher {
     this.onSessionExpired = onSessionExpired
   }
 
+  /** Đã init xong (main.js chạy trước khi bất kỳ trang nào gọi API) -> mới dùng được refreshNow / ensureFresh. */
+  isReady() {
+    return Boolean(this.tokenLogin && this.adminService)
+  }
+
   /** Bắt đầu chạy ngầm. Idempotent: gọi nhiều lần vẫn chỉ đăng ký 1 bộ listener. */
   start() {
     if (this.started || !this.tokenLogin) return
@@ -108,14 +113,26 @@ class SilentTokenRefresher {
    * Làm mới ngay. Nhiều nơi gọi cùng lúc vẫn chỉ chạy 1 lần.
    * @param staleToken access token vừa bị server từ chối (401). Nếu storage đã có token KHÁC
    *                   (tab khác làm mới rồi) thì dùng luôn, không gọi server nữa.
+   * @param options.notifyExpired false = refresh token bị từ chối thì chỉ trả false, KHÔNG tự chuyển về
+   *                   trang đăng nhập (dùng lúc khởi động app, nơi main.js tự chọn route theo kết quả).
    * @returns {Promise<boolean>} true = đã có access token mới dùng được
    */
-  refreshNow(staleToken = null) {
+  refreshNow(staleToken = null, { notifyExpired = true } = {}) {
     if (!this.inflight) {
-      this.inflight = this.runExclusive(() => this.doRefresh(staleToken))
+      this.inflight = this.runExclusive(() => this.doRefresh(staleToken, notifyExpired))
           .finally(() => { this.inflight = null })
     }
     return this.inflight
+  }
+
+  /**
+   * Gọi TRƯỚC mỗi request cần đăng nhập: access token sắp hết hạn (hoặc đã hết) thì làm mới ngầm rồi
+   * mới cho request đi, để người dùng không bao giờ thấy "Phiên đăng nhập đã hết hạn" chỉ vì đứng yên vài phút.
+   * Chưa init / chưa có token / token còn dài hạn thì trả true ngay, không tốn gì.
+   */
+  async ensureFresh() {
+    if (!this.isReady() || !this.isDue()) return true
+    return this.refreshNow()
   }
 
   /** Web Locks: chỉ 1 tab được gọi refresh tại một thời điểm (refresh token có thể bị xoay vòng). */
@@ -123,7 +140,7 @@ class SilentTokenRefresher {
     return navigator.locks ? navigator.locks.request(LOCK_NAME, fn) : fn()
   }
 
-  async doRefresh(staleToken) {
+  async doRefresh(staleToken, notifyExpired = true) {
     const storedAccess = this.tokenLogin.getAccessTokenFromStorage()
     const storedRefresh = this.tokenLogin.getRefreshTokenFromStorage()
 
@@ -139,15 +156,17 @@ class SilentTokenRefresher {
     }
 
     if (!storedRefresh) {
-      this.expire()
+      this.expire(notifyExpired)
       return false
     }
 
     try {
-      // Dùng lại đúng hàm auto login ở main.js: gửi refresh token, nhận cặp token mới
-      const ok = Boolean(await this.adminService.getDataToAutoLoginAccessToken(this.tokenLogin))
+      // Gọi THẲNG endpoint refresh-token và lưu cặp token mới (xoay vòng).
+      // Bản cũ gọi hàm auto login bằng access token: khi access token còn hạn server trả 200 mà KHÔNG cấp
+      // token mới, nên "làm mới chủ động" thực ra không làm mới gì, chỉ đến khi token hết hạn mới đổi được.
+      const ok = Boolean(await this.adminService.getDataToRenewTokens(this.tokenLogin))
       if (!ok) {
-        this.expire() // server từ chối refresh token (hết hạn / bị thu hồi) -> phải đăng nhập lại
+        this.expire(notifyExpired) // server từ chối refresh token (hết hạn / bị thu hồi) -> phải đăng nhập lại
         return false
       }
       this.afterSuccess()
@@ -168,9 +187,9 @@ class SilentTokenRefresher {
     this.schedule()
   }
 
-  expire() {
+  expire(notify = true) {
     this.stop()
-    this.onSessionExpired?.()
+    if (notify) this.onSessionExpired?.()
   }
 }
 

@@ -5,12 +5,14 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+@Slf4j
 @Component
 public class AdminJwtTokenProvider {
 
@@ -97,11 +99,12 @@ public class AdminJwtTokenProvider {
                     .parseSignedClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
-            // Token đã hết hạn
-            System.err.println("JWT Token đã hết hạn: " + e.getMessage());
+            // Token đã hết hạn: tình huống bình thường (access token chỉ sống 5 phút, client sẽ làm mới ngầm),
+            // nên chỉ ghi DEBUG thay vì in đỏ ra stderr mỗi request.
+            log.debug("JWT token expired: {}", e.getMessage());
         } catch (JwtException | IllegalArgumentException e) {
-            // Token bị chỉnh sửa, sai chữ ký hoặc không đúng định dạng
-            System.err.println("JWT Token không hợp lệ: " + e.getMessage());
+            // Token bị chỉnh sửa, sai chữ ký hoặc không đúng định dạng: đáng chú ý hơn
+            log.warn("JWT token invalid: {}", e.getMessage());
         }
         return false;
     }

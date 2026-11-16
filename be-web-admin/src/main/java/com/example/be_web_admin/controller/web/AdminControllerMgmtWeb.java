@@ -197,18 +197,31 @@ public class AdminControllerMgmtWeb {
         // 5. Trích xuất adminId từ Token hợp lệ
         Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
 
-        // 6. Trả về Response thành công (HTTP 200 OK)
-        Map<String, Object> responseSuccess = new HashMap<>();
-
-        // Delete refresh token old and create 2 new tokens.
-        if(adminTokenService.removeAdminRefreshTokenByJwtToken(jwtToken)) {
-            Map<String, Object> tokenNew = adminTokenService.createTokenAdmin(adminId);
-            if(!tokenNew.isEmpty()) {
-                responseSuccess.put("success", true);
-                responseSuccess.put("message", "Auto login successfully.");
-                responseSuccess.put("data", tokenNew);
-            }
+        // 6. Xoay vòng token: xóa refresh token cũ, tạo cặp token mới.
+        //    Lỗi ở bước nào cũng trả 401 kèm thông báo (giống bản mobile). Bản cũ trả 200 với thân rỗng,
+        //    khiến Vue đọc data.accessToken bị TypeError rồi xóa phiên đăng nhập oan.
+        if (!adminTokenService.removeAdminRefreshTokenByJwtToken(jwtToken)) {
+            Map<String, Object> responseRemoveFailed = new HashMap<>();
+            responseRemoveFailed.put("success", false);
+            responseRemoveFailed.put("message", "Can't remove old refresh token.");
+            responseRemoveFailed.put("data", null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseRemoveFailed);
         }
+
+        Map<String, Object> tokenNew = adminTokenService.createTokenAdmin(adminId);
+        if (tokenNew == null || tokenNew.isEmpty()) {
+            Map<String, Object> responseCreateFailed = new HashMap<>();
+            responseCreateFailed.put("success", false);
+            responseCreateFailed.put("message", "Can't create new tokens.");
+            responseCreateFailed.put("data", null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseCreateFailed);
+        }
+
+        // 7. Trả về Response thành công (HTTP 200 OK)
+        Map<String, Object> responseSuccess = new HashMap<>();
+        responseSuccess.put("success", true);
+        responseSuccess.put("message", "Auto login successfully.");
+        responseSuccess.put("data", tokenNew);
         return ResponseEntity.ok(responseSuccess);
     }
 

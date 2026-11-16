@@ -1,27 +1,290 @@
-chmod +x set_up_moodle_503.sh && ./set_up_moodle_503.sh
+================================================================================
+        HƯỚNG DẪN CÀI ĐẶT MOODLE 5.03 (cấu trúc mới: webroot = public/)
+        Hệ điều hành: Linux (Ubuntu/Debian) — PHP built-in server
+================================================================================
 
+NỘI DUNG
+  1. Yêu cầu hệ thống
+  2. Chuẩn bị database
+  3. Tải mã nguồn Moodle
+  4. Cài đặt bằng CLI
+  5. Chạy server PHP built-in
+  6. Tạo tài khoản test
+  7. Chạy cron
+  8. Sửa theme boost (drawers.php) & purge cache
+  9. Biến môi trường tiện dụng
+ 10. Tài khoản mặc định
+ 11. Lỗi thường gặp
 
-php -S localhost:8000 -t public router.php
+--------------------------------------------------------------------------------
+1. YÊU CẦU HỆ THỐNG
+--------------------------------------------------------------------------------
+  - PHP >= 8.1 (khuyến nghị 8.2/8.3) kèm extensions:
+      php-cli php-mbstring php-xml php-curl php-zip php-gd php-intl
+      php-mysql php-soap php-opcache
+  - MariaDB >= 10.4 hoặc MySQL >= 8.0 (hoặc PostgreSQL)
+  - git
+  - Quyền ghi vào thư mục cài đặt + moodledata
 
-php -S localhost:8000 -t public
+  Kiểm tra:
+      php -v
+      php -m
+      git --version
 
-Chạy thêm cron: php admin/cli/cron.php hoặc sudo -u www-data php admin/cli/cron.php
-Chạy thêm 
-export usr="/media/Lenovo/D/php/moodle-latest-502/moodle"
-echo 'export usr="/media/Lenovo/D/php/moodle-latest-502/moodle"' >> ~/.bashrc
-source ~/.bashrc
+--------------------------------------------------------------------------------
+2. CHUẨN BỊ DATABASE
+--------------------------------------------------------------------------------
+  Đăng nhập MariaDB/MySQL:
 
-TK:
-21107601 Iuh@1234
-21107602 Iuh@1234
+      sudo mysql
 
-public/question/format/xml
+  Chạy SQL:
 
-// Must run
-php admin/cli/cron.php
+      CREATE DATABASE moodle
+        DEFAULT CHARACTER SET utf8mb4
+        COLLATE utf8mb4_unicode_ci;
 
-Note: Sửa file drawers.php 
+      CREATE USER 'moodle'@'localhost' IDENTIFIED BY 'moodle_pass';
+      GRANT ALL PRIVILEGES ON moodle.* TO 'moodle'@'localhost';
+      FLUSH PRIVILEGES;
+      EXIT;
 
-public/theme/boost/layout/drawers.php
+--------------------------------------------------------------------------------
+3. TẢI MÃ NGUỒN MOODLE
+--------------------------------------------------------------------------------
+  Di chuyển tới thư mục muốn cài, ví dụ:
 
-Save: php admin/cli/purge_caches.php
+      cd /media/Lenovo/D/php/moodle-latest-502
+      # (hoặc thư mục bất kỳ bạn chọn)
+
+  Clone Moodle 5.03 (branch MOODLE_503_STABLE):
+
+      git clone --depth 1 -b MOODLE_503_STABLE \
+          https://github.com/moodle/moodle.git moodle
+
+  Nếu chưa có branch 5.03 trên GitHub, dùng branch gần nhất:
+      MOODLE_500_STABLE   (Moodle 5.0)
+      MOODLE_404_STABLE   (Moodle 4.4)
+
+  Vào thư mục:
+
+      cd moodle
+
+  Cấu trúc quan trọng:
+      moodle/
+        ├── public/                <-- WEBROOT (document root)
+        │     ├── index.php
+        │     ├── theme/boost/layout/drawers.php
+        │     └── question/format/xml/
+        ├── admin/cli/             <-- CÁC LỆNH CLI (cron, install, purge...)
+        │     ├── install.php
+        │     ├── cron.php
+        │     └── purge_caches.php
+        ├── config.php             (sinh ra sau khi cài)
+        ├── router.php             (dùng cho php -S)
+        └── version.php
+
+--------------------------------------------------------------------------------
+4. CÀI ĐẶT BẰNG CLI
+--------------------------------------------------------------------------------
+  Tạo thư mục moodledata (ngoài webroot, KHÔNG public):
+
+      mkdir -p moodledata
+      chmod 0777 moodledata
+
+  Chạy cài đặt:
+
+      php admin/cli/install.php \
+          --wwwroot="http://localhost:8000" \
+          --dataroot="$(pwd)/moodledata" \
+          --dbtype="mariadb" \
+          --dbhost="127.0.0.1" \
+          --dbname="moodle" \
+          --dbuser="moodle" \
+          --dbpass="moodle_pass" \
+          --fullname="Moodle Site" \
+          --shortname="moodle" \
+          --adminuser="admin" \
+          --adminpass="Admin@1234" \
+          --adminemail="admin@example.com" \
+          --non-interactive \
+          --agree-license
+
+  Sau khi xong sẽ có file: moodle/config.php
+
+--------------------------------------------------------------------------------
+5. CHẠY SERVER PHP BUILT-IN
+--------------------------------------------------------------------------------
+  Cách 1 — có router (khuyến nghị, Moodle 4.3+ đã có router.php):
+
+      cd /duong/dan/moodle
+      php -S localhost:8000 -t public router.php
+
+  Cách 2 — không dùng router:
+
+      php -S localhost:8000 -t public
+
+  Mở trình duyệt:
+
+      http://localhost:8000
+
+--------------------------------------------------------------------------------
+6. TẠO TÀI KHOẢN TEST
+--------------------------------------------------------------------------------
+  Cách A — dùng UI:
+      Site administration > Users > Add a new user
+      Điền username, password, email...
+
+  Cách B — dùng CLI (tạo nhanh nhiều user):
+
+      cd /duong/dan/moodle
+      cat > /tmp/create_users.php <<'PHP'
+      <?php
+      define('CLI_SCRIPT', true);
+      require(__DIR__ . '/../../config.php');
+      require_once($CFG->libdir . '/clilib.php');
+      require_once($CFG->dirroot . '/user/lib.php');
+
+      $users = [
+          ['username' => '21107601', 'password' => 'Iuh@1234'],
+          ['username' => '21107602', 'password' => 'Iuh@1234'],
+      ];
+      foreach ($users as $u) {
+          if ($DB->record_exists('user', ['username' => $u['username'], 'deleted' => 0])) {
+              cli_writeln("[skip] {$u['username']} đã tồn tại");
+              continue;
+          }
+          $user = (object)[
+              'username'   => $u['username'],
+              'password'   => $u['password'],
+              'firstname'  => 'User',
+              'lastname'   => $u['username'],
+              'email'      => $u['username'] . '@example.com',
+              'auth'       => 'manual',
+              'confirmed'  => 1,
+              'mnethostid' => $CFG->mnet_localhost_id,
+          ];
+          user_create_user($user, true, false);
+          cli_writeln("[ok] tạo {$u['username']} / {$u['password']}");
+      }
+      PHP
+
+  Chạy (đặt file tạm vào đúng vị trí để __DIR__ trỏ đúng):
+
+      # Cách đơn giản hơn — đặt file trong thư mục moodle/
+      nano create_users.php       # dán nội dung trên, sửa require thành:
+                                  # require(__DIR__ . '/config.php');
+      php create_users.php
+      rm create_users.php
+
+--------------------------------------------------------------------------------
+7. CHẠY CRON
+--------------------------------------------------------------------------------
+  Cron là BẮT BUỘC để Moodle hoạt động (email, thông báo, dọn dẹp...).
+
+  Chạy thủ công:
+
+      php admin/cli/cron.php
+
+  Nếu chạy web server bằng www-data:
+
+      sudo -u www-data php admin/cli/cron.php
+
+  Thêm vào crontab (chạy mỗi phút):
+
+      crontab -e
+      # Thêm dòng:
+      * * * * * /usr/bin/php /duong/dan/moodle/admin/cli/cron.php >/dev/null 2>&1
+
+  Hoặc với www-data:
+
+      * * * * * sudo -u www-data /usr/bin/php /duong/dan/moodle/admin/cli/cron.php >/dev/null 2>&1
+
+--------------------------------------------------------------------------------
+8. SỬA THEME BOOST & PURGE CACHE
+--------------------------------------------------------------------------------
+  File hay phải chỉnh (drawers – menu trượt):
+
+      public/theme/boost/layout/drawers.php
+
+  Sau MỖI lần sửa file .php hoặc .mustache trong theme, PHẢI purge cache:
+
+      php admin/cli/purge_caches.php
+
+  Ngoài ra có thể purge từ UI:
+      Site administration > Development > Purge all caches
+
+  Question format XML nằm tại:
+      public/question/format/xml/
+
+  (Không cần chỉnh gì thêm — chỉ cần biết đường dẫn khi debug.)
+
+--------------------------------------------------------------------------------
+9. BIẾN MÔI TRƯỜNG TIỆN DỤNG
+--------------------------------------------------------------------------------
+  Thêm biến $usr trỏ tới thư mục Moodle để dùng nhanh:
+
+      echo 'export usr="/media/Lenovo/D/php/moodle-latest-502/moodle"' >> ~/.bashrc
+      source ~/.bashrc
+
+  Sử dụng:
+
+      cd $usr
+      php admin/cli/cron.php
+      php admin/cli/purge_caches.php
+      php -S localhost:8000 -t public router.php
+
+--------------------------------------------------------------------------------
+10. TÀI KHOẢN MẶC ĐỊNH
+--------------------------------------------------------------------------------
+  Admin:
+      Username: admin
+      Password: Admin@1234
+      Email:    admin@example.com
+
+  User test:
+      Username: 21107601     Password: Iuh@1234
+      Username: 21107602     Password: Iuh@1234
+
+--------------------------------------------------------------------------------
+11. LỖI THƯỜNG GẶP
+--------------------------------------------------------------------------------
+  [1] "Database connection failed"
+      → Kiểm tra DB_USER/DB_PASS trong config.php
+      → Kiểm tra MariaDB đang chạy: sudo systemctl status mariadb
+
+  [2] "Dataroot is not writable"
+      → chmod -R 0777 moodledata
+      → hoặc chown -R www-data:www-data moodledata
+
+  [3] "Site not found" khi mở localhost:8000
+      → Kiểm tra --wwwroot lúc cài phải KHỚP với URL đang mở
+      → Nếu cài sai, sửa $CFG->wwwroot trong config.php
+
+  [4] "Invalid login" với user mới tạo
+      → Đảm bảo 'confirmed' => 1 và 'auth' => 'manual'
+      → Hoặc vào UI: Site admin > Users > Browse list > chọn user > Confirm
+
+  [5] Sau khi sửa theme không thấy thay đổi
+      → php admin/cli/purge_caches.php
+      → Hard reload trình duyệt (Ctrl+Shift+R)
+
+  [6] Cron báo lỗi "cannot write to dataroot"
+      → Phân quyền moodledata cho user chạy cron (www-data hoặc user hiện tại)
+
+  [7] `php -S` báo "router.php not found"
+      → Dùng `php -S localhost:8000 -t public` (không router)
+
+--------------------------------------------------------------------------------
+KẾT THÚC
+--------------------------------------------------------------------------------
+  Tóm tắt nhanh các lệnh cần chạy hàng ngày:
+
+      cd $usr
+      php -S localhost:8000 -t public router.php     # bật server
+      php admin/cli/cron.php                          # cron thủ công
+      php admin/cli/purge_caches.php                  # sau khi sửa theme
+
+  Truy cập: http://localhost:8000
+
+================================================================================
