@@ -1,0 +1,68 @@
+[
+  {
+    "id": 2,
+    "has_error": true,
+    "error_type": "spelling",
+    "explanation": "Sai chính tả, phải là 'received'.",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    }
+  },
+  {
+    "id": 3,
+    "has_error": true,
+    "error_type": "logic",
+    "explanation": "Đáp án A không phù hợp ngữ cảnh, nên là 'will launch'.",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "launch",
+      "B": "launched",
+      "C": "launching",
+      "D": "launches",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "will launch",
+      "B": "launched",
+      "C": "launching",
+      "D": "launches",
+      "correct": "A"
+    }
+  },
+  {
+    "id": 4,
+    "has_error": true,
+    "error_type": "logic",
+    "explanation": "Đáp án A không đúng ngữ pháp, nên là 'does'.",
+    "original": {
+      "sentence": "He _____ homework every day.",
+      "A": "do",
+      "B": "did",
+      "C": "go",
+      "D": "went",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "He _____ homework every day.",
+      "A": "does",
+      "B": "did",
+      "C": "go",
+      "D": "went",
+      "correct": "A"
+    }
+  }
+]

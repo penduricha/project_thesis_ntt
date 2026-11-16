@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/admin/mobile/2fa/enrollment")
+@RequestMapping("/mobile/admin/2fa/enrollment")
 public class EnrollmentConfirmControllerMobile {
 
     private final EnrollmentConfirmServiceImpl confirmService;

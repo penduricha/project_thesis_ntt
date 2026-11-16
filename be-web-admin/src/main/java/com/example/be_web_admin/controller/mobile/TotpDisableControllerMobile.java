@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/admin/mobile/2fa")
+@RequestMapping("/mobile/admin/2fa")
 public class TotpDisableControllerMobile {
 
     private final TotpDisableServiceImpl disableService;

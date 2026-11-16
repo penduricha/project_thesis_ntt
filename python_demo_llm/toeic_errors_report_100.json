@@ -1,0 +1,2092 @@
+[
+  {
+    "id": 1,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 2,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "D"
+    },
+    "explanation": "Đáp án 'C' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 3,
+    "has_error": true,
+    "error_type": "grammar",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit their timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'A' không phù hợp ngữ cảnh câu, cần 'their' để chỉ sở hữu."
+  },
+  {
+    "id": 4,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking for a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 5,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager reviewed the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 6,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 7,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 8,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 9,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 10,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 11,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 12,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "D"
+    },
+    "explanation": "Đáp án 'C' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 13,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'A' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 14,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 15,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 16,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 17,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 18,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 19,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 20,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 21,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 22,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "D"
+    },
+    "explanation": "Đáp án 'C' không phù hợp với ngữ cảnh câu hỏi."
+  },
+  {
+    "id": 23,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'A' không phù hợp với ngữ cảnh câu hỏi."
+  },
+  {
+    "id": 24,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Không có lỗi."
+  },
+  {
+    "id": 25,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Không có lỗi."
+  },
+  {
+    "id": 26,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 27,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 28,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 29,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 30,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 31,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 32,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "D"
+    },
+    "explanation": "Đáp án 'C' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 33,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'A' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 34,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 35,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 36,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 37,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 38,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 39,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 40,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 41,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 42,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "D"
+    },
+    "explanation": "Đáp án 'C' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 43,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'A' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 44,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 45,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 46,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 47,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 48,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 49,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 50,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 51,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 52,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "D"
+    },
+    "explanation": "Đáp án 'C' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 53,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'A' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 54,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 55,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 56,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 57,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 58,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 59,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 60,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 61,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 62,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "D"
+    },
+    "explanation": "Đáp án 'C' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 63,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'A' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 64,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 65,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 66,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 67,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 68,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 69,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 70,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 71,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 72,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "launch",
+      "D": "launching",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'reviewed' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 73,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'they' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 74,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 75,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 76,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 77,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 78,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 79,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 80,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 81,
+    "has_error": true,
+    "error_type": "spelling",
+    "original": {
+      "sentence": "We recieved your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "We received your application on Monday.",
+      "A": "recieved",
+      "B": "received",
+      "C": "receiving",
+      "D": "receive",
+      "correct": "B"
+    },
+    "explanation": "Sai chính tả: 'recieved' -> 'received'"
+  },
+  {
+    "id": 82,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The marketing team will launch the new campaign next Monday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "D"
+    },
+    "explanation": "Đáp án 'C' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 83,
+    "has_error": true,
+    "error_type": "wrong_answer",
+    "original": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "A"
+    },
+    "fixed": {
+      "sentence": "All employees must submit _____ timesheets by Friday.",
+      "A": "they",
+      "B": "them",
+      "C": "their",
+      "D": "theirs",
+      "correct": "C"
+    },
+    "explanation": "Đáp án 'A' không phù hợp với ngữ cảnh câu."
+  },
+  {
+    "id": 84,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "fixed": {
+      "sentence": "The company is looking _____ a candidate who can speak three languages.",
+      "A": "at",
+      "B": "for",
+      "C": "in",
+      "D": "on",
+      "correct": "B"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 85,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 86,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 87,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 88,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 89,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 90,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 96,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 97,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 98,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 99,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  },
+  {
+    "id": 100,
+    "has_error": false,
+    "error_type": "none",
+    "original": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "fixed": {
+      "sentence": "The manager _____ the report yesterday.",
+      "A": "review",
+      "B": "reviews",
+      "C": "reviewed",
+      "D": "reviewing",
+      "correct": "C"
+    },
+    "explanation": "Câu hoàn toàn chính xác."
+  }
+]

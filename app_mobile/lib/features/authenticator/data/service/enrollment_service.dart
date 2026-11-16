@@ -12,11 +12,11 @@ import '../../presentation/screens/totp_generator.dart';
 //  Web đã bấm "Kích hoạt" -> server ghi khóa (đã mã hóa AES-GCM) vào MariaDB với
 //  confirmed = false. Mobile làm 3 việc, theo đúng thứ tự:
 //
-//    1. GET  /api/admin/mobile/2fa/enrollment/pending
+//    1. GET  /api/mobile/admin /2fa/enrollment/pending
 //         -> { algorithm: "HmacSHA256", digits: 6, periodSeconds: 15|30|45|60, ... }
 //         Server KHÔNG trả khóa. Khóa chỉ có do người dùng nhập trong popup.
 //    2. Sinh mã từ (khóa người dùng nhập, thông số ở bước 1, giờ hiện tại).
-//    3. POST /api/admin/mobile/2fa/enrollment/confirm   { "code": "123456" }
+//    3. POST /api/mobile/admin /2fa/enrollment/confirm   { "code": "123456" }
 //         Server tự giải mã khóa của mình, tính mã, so khớp (lệch tối đa ±1 chu kỳ).
 //         Đúng -> confirmed = true và totp_enabled = true: 2FA bật hoàn toàn.
 //
@@ -24,7 +24,7 @@ import '../../presentation/screens/totp_generator.dart';
 //  server xóa phần cài dở và trả 429, admin phải bấm "Kích hoạt" lại trên web.
 //
 //  TẮT 2FA (nút xóa TOTP trong app):
-//    POST /api/admin/mobile/2fa/disable   { "code": "123456" }
+//    POST /api/mobile/admin /2fa/disable   { "code": "123456" }
 //    Mã 6 số sinh từ khóa đang lưu trong app. Server đúng mới xóa credential + totp_enabled = false.
 //    Chỉ khi server báo thành công (200) hoặc "chưa bật" (404) app mới được xóa khóa cục bộ.
 // ============================================================================
@@ -269,9 +269,9 @@ class EnrollmentService {
   final EnrollmentAuth _auth;
   final Dio _dio;
 
-  static const String _pendingPath = '$kApiPrefix/admin/mobile/2fa/enrollment/pending';
-  static const String _confirmPath = '$kApiPrefix/admin/mobile/2fa/enrollment/confirm';
-  static const String _disablePath = '$kApiPrefix/admin/mobile/2fa/disable';
+  static const String _pendingPath = '$kApiPrefix/mobile/admin/2fa/enrollment/pending';
+  static const String _confirmPath = '$kApiPrefix/mobile/admin/2fa/enrollment/confirm';
+  static const String _disablePath = '$kApiPrefix/mobile/admin/2fa/disable';
 
   static const String _msgSession = 'Session expired. Please sign in again.';
   static const String _msgNetwork = 'Cannot reach the server. Check your connection.';
