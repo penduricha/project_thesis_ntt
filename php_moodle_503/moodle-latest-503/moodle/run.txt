@@ -281,6 +281,7 @@ KẾT THÚC
   Tóm tắt nhanh các lệnh cần chạy hàng ngày:
 
       cd $usr
+      php -S localhost:8000 -t public 
       php -S localhost:8000 -t public router.php     # bật server
       php admin/cli/cron.php                          # cron thủ công
       php admin/cli/purge_caches.php                  # sau khi sửa theme

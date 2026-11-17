@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import com.example.be_web_admin.model.redis.SessionLoginMobile;
 import com.example.be_web_admin.repository.redis.SessionLoginMobileRepository;
 import com.example.be_web_admin.service.redis.SessionLoginMobileService;
-import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -24,7 +23,7 @@ public class SessionLoginMobileServiceImpl implements SessionLoginMobileService 
     }
 
     @Override
-    public SessionLoginMobile createSession(Long adminId, String deviceName, String platform, String ip) {
+    public void createSession(Long adminId, String deviceName, String platform, String ip) {
         Instant now = Instant.now();
         SessionLoginMobile session = new SessionLoginMobile(
                 adminId,
@@ -34,7 +33,7 @@ public class SessionLoginMobileServiceImpl implements SessionLoginMobileService 
                 now,
                 now
         );
-        return sessionLoginMobileRepository.save(session);
+        sessionLoginMobileRepository.save(session);
     }
 
     @Override
@@ -48,12 +47,11 @@ public class SessionLoginMobileServiceImpl implements SessionLoginMobileService 
     }
 
     @Override
-    public boolean removeByAdminId(Long adminId) {
+    public void removeByAdminId(Long adminId) {
         if (!sessionLoginMobileRepository.existsById(adminId)) {
-            return false;
+            return;
         }
         sessionLoginMobileRepository.deleteById(adminId);
-        return true;
     }
 
     @Override

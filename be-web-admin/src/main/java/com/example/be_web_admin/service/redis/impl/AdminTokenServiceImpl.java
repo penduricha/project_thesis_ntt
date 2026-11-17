@@ -81,14 +81,12 @@ public class AdminTokenServiceImpl implements AdminTokenService {
     }
 
     @Override
-    public boolean removeAdminAccessTokenByJwtToken(String jwtToken) throws RedisBusyException {
+    public void removeAdminAccessTokenByJwtToken(String jwtToken) throws RedisBusyException {
         AdminAccessToken adminAccessTokenFound = adminAccessTokenRepository
                 .findAdminAccessTokenByJwtToken(jwtToken);
         if(adminAccessTokenFound != null) {
             adminAccessTokenRepository.delete(adminAccessTokenFound);
-            return true;
         }
-        return false;
     }
 
     @Override

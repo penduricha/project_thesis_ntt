@@ -18,7 +18,7 @@ public interface AdminTokenService {
 
     public boolean removeAdminRefreshTokenByJwtToken(String jwtToken) throws RedisBusyException;
 
-    public boolean removeAdminAccessTokenByJwtToken(String jwtToken) throws RedisBusyException;
+    public void removeAdminAccessTokenByJwtToken(String jwtToken) throws RedisBusyException;
 
     public Map<String, Object> createTokenAdmin(Long adminId) throws RedisBusyException;
 }

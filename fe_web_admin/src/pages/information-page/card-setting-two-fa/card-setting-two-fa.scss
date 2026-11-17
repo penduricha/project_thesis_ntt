@@ -17,6 +17,8 @@ $bp-desktop: 1024px;
 
 // ---------- Khung thẻ (giống .info-card ở information-page.scss) ----------
 .two-fa-card {
+  --_primary: var(--primary, #00508a);
+
   width: 100%;
   max-width: 75rem;
   box-sizing: border-box;
@@ -28,6 +30,7 @@ $bp-desktop: 1024px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
+  border-top: 3px solid var(--_primary);
 
   @include up($bp-tablet) {
     padding: var(--space-4);
