@@ -1,6 +1,7 @@
 package com.example.be_web_admin.model.jpa;
 
 import com.example.be_web_admin.enums.AccountStatus;
+import com.example.be_web_admin.enums.Role;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -48,6 +49,10 @@ public class Admin implements Serializable {
     // Số CCCD/CMND: mỗi người một số nên phải duy nhất.
     @Column(length = 12, name = "id_card", unique = true)
     private String idCard;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 12, name = "role", nullable = false)
+    private Role role = Role.ADMIN;
 
     @Column(name = "gender")
     private Boolean gender;
