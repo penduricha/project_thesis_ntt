@@ -119,3 +119,33 @@ logging:
     # Cần debug thì đặt trong application-dev.yml (profile dev), không đặt ở file chung.
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
+
+# ===================== CHAT GIỮA CÁC ADMIN (chỉ văn bản) =====================
+# Mọi con số của module chat (xem ChatProperties). Giá trị bên dưới là mặc định, xóa dòng nào thì dùng mặc định trong mã.
+chat:
+  ws:
+    # Origin được phép bắt tay WebSocket (Flutter web 5375, Vue admin 5374). Ứng dụng mobile gốc không gửi Origin nên luôn qua.
+    allowed-origins:
+      - http://localhost:5375
+      - http://localhost:5374
+    ticket-ttl-seconds: 30        # hạn của vé mở WebSocket (dùng một lần)
+    ping-interval-seconds: 25     # chu kỳ ping đề xuất cho client
+    idle-timeout-seconds: 50      # đóng kết nối im lặng quá lâu (nhỏ hơn mốc 60s của Nginx)
+    max-connections-per-admin: 5  # web + điện thoại + dự phòng
+    send-time-limit-ms: 5000
+    send-buffer-bytes: 65536
+  message:
+    max-length: 2000              # ký tự Unicode
+  group:
+    min-members: 3                # gồm cả chủ nhóm
+    max-members: 50
+    max-name-length: 100
+  page:
+    default-size: 30
+    max-size: 100
+  rate:
+    messages: 20                  # tin mỗi window-seconds
+    window-seconds: 10
+    tickets-per-minute: 10
+    searches-per10-seconds: 20
+    new-conversations-per-minute: 10

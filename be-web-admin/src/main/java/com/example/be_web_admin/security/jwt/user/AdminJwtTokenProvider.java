@@ -108,4 +108,31 @@ public class AdminJwtTokenProvider {
         }
         return false;
     }
+
+    /**
+     * 5. (Dùng cho chat) Xác thực ACCESS token chỉ bằng chữ ký + hạn + token_type, trả adminId, hoặc null nếu không hợp lệ.
+     * Hàm bổ sung, KHÔNG đổi hành vi của các hàm ở trên. Cố ý không đối chiếu AdminAccessToken trên Redis (hạn 10 giây,
+     * lệch với JWT 5 phút) nên chat không bị đăng xuất oan.
+     */
+    public Long parseAccessTokenAdminId(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            if (!"ACCESS".equals(claims.get("token_type", String.class))) {
+                return null;
+            }
+            return Long.parseLong(claims.getSubject());
+        } catch (ExpiredJwtException e) {
+            log.debug("Chat: access token hết hạn: {}", e.getMessage());
+        } catch (JwtException | IllegalArgumentException e) {
+            log.warn("Chat: access token không hợp lệ: {}", e.getMessage());
+        }
+        return null;
+    }
 }

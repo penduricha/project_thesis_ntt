@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/storage/auth_storage.dart';
+import '../../../chat/application/chat_controller.dart';
 import '../../data/model/logout_result.dart';
 import '../../data/service/logout_service.dart';
 
@@ -62,6 +63,12 @@ class LogoutController extends ChangeNotifier {
       await _authStorage.clearSession();
     } catch (error) {
       debugPrint('Cannot clear local session: $error');
+    }
+    // Ngắt chat của phiên cũ (đóng WebSocket, xóa dữ liệu trong bộ nhớ) để tài khoản sau không thấy tin của tài khoản trước.
+    try {
+      await ChatController.instance.stop();
+    } catch (error) {
+      debugPrint('Cannot stop chat: $error');
     }
   }
 

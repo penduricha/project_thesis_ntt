@@ -9,9 +9,15 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 
 @SpringBootApplication
-@EnableJpaRepositories(basePackages = "com.example.be_web_admin.repository.jpa")
+@EnableJpaRepositories(basePackages = {
+		"com.example.be_web_admin.repository.jpa",
+		"com.example.be_web_admin.chat.repository"
+})
 @EnableRedisRepositories(basePackages = "com.example.be_web_admin.repository.redis")
-@EntityScan(basePackages = "com.example.be_web_admin.model.jpa")
+@EntityScan(basePackages = {
+		"com.example.be_web_admin.model.jpa",
+		"com.example.be_web_admin.chat.model"
+})
 public class BeWebAdminApplication {
 
 	public static void main(String[] args) throws RuntimeException {

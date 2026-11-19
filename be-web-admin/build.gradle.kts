@@ -23,6 +23,8 @@ dependencies {
 	// Web & Security
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-security")
+	// WebSocket cho chat (kênh báo sự kiện realtime)
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
 	// RabbitMQ & Spring AMQP
 	implementation("org.springframework.boot:spring-boot-starter-amqp")
 	//implementation("org.springframework.boot:spring-boot-persistence")

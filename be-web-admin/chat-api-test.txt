@@ -1,0 +1,74 @@
+CHAT GIỮA CÁC ADMIN (chỉ văn bản) - cách thử nhanh bằng curl, không cần app
+
+Chuẩn bị
+  1) Chạy sql/2026-11-18-chat-tables.sql trên MariaDB (một lần, trước lần khởi động đầu có chat).
+  2) Khởi động Spring Boot (cần Redis đang chạy: vé WebSocket và giới hạn tốc độ dùng Redis).
+  3) Có sẵn 3 tài khoản admin ACTIVE trở lên (nhóm cần tối thiểu 3 người kể cả người tạo).
+  4) Lấy access token (sống 5 phút) của từng tài khoản bằng luồng đăng nhập hiện có, rồi:
+       export A="<accessToken admin A>"  B="<accessToken admin B>"  C="<accessToken admin C>"
+       export API=http://localhost:8080/api/mobile/chat
+
+Tìm admin (không gồm chính mình, chỉ tài khoản ACTIVE)
+  curl -s -H "Authorization: Bearer $A" "$API/admins?q=nguyen&limit=10"
+
+Chat 1-1 (201 lần đầu, 200 nếu đã có; chưa có tin nào thì danh sách của người kia chưa hiện)
+  curl -s -X POST -H "Authorization: Bearer $A" -H "Content-Type: application/json" \
+       -d '{"peerId": <adminId của B>}' "$API/conversations/direct"
+
+Gửi tin (clientMsgId là UUID do client sinh; gửi lại cùng UUID thì trả 200 tin cũ, không tạo tin trùng)
+  curl -s -X POST -H "Authorization: Bearer $A" -H "Content-Type: application/json" \
+       -d '{"clientMsgId":"11111111-1111-4111-8111-111111111111","content":"Xin chào"}' \
+       "$API/conversations/<id>/messages"
+
+Tải tin (mới nhất trước; before = id tin cũ nhất đang có)
+  curl -s -H "Authorization: Bearer $B" "$API/conversations/<id>/messages?limit=30"
+  curl -s -H "Authorization: Bearer $B" "$API/conversations/<id>/messages?before=<messageId>&limit=30"
+
+Đánh dấu đã đọc / xem danh sách có số chưa đọc
+  curl -s -X POST -H "Authorization: Bearer $B" -H "Content-Type: application/json" \
+       -d '{"lastReadMessageId": <messageId>}' "$API/conversations/<id>/read"
+  curl -s -H "Authorization: Bearer $B" "$API/conversations"
+
+Xóa tin cho mọi người (chỉ người gửi; xóa cứng, không để dấu vết)
+  curl -s -X DELETE -H "Authorization: Bearer $A" "$API/conversations/<id>/messages/<messageId>"
+  -> 204. Người khác xóa: 403 NOT_SENDER. Tin không còn: 404 NOT_FOUND.
+
+Nhóm
+  Tạo (memberIds KHÔNG gồm người tạo; ít nhất 2 người => tổng từ 3):
+    curl -s -X POST -H "Authorization: Bearer $A" -H "Content-Type: application/json" \
+         -d '{"name":"Nhóm thử","memberIds":[<idB>,<idC>]}' "$API/conversations/group"
+  Chi tiết + thành viên:
+    curl -s -H "Authorization: Bearer $A" "$API/conversations/<id>"
+  Kick (chỉ chủ nhóm; nhóm đúng 3 người thì 409 GROUP_MIN_SIZE):
+    curl -s -X DELETE -H "Authorization: Bearer $A" "$API/conversations/<id>/members/<idC>"
+  Giải tán (chỉ chủ nhóm; xóa cả tin nhắn):
+    curl -s -X DELETE -H "Authorization: Bearer $A" "$API/conversations/<id>"   -> 204
+
+WebSocket (chỉ để báo sự kiện; mọi thao tác ghi đi qua REST ở trên)
+  1) Xin vé một lần (sống 30 giây):
+       curl -s -X POST -H "Authorization: Bearer $B" "$API/ws-ticket"     -> {"ticket":"...","expiresInSec":30}
+  2) Mở kết nối (ví dụ websocat):
+       websocat "ws://localhost:8080/api/mobile/chat/ws?ticket=<ticket>"
+     Nhận khung {"type":"ready",...}. Gửi {"type":"ping","data":{"t":1}} sẽ nhận {"type":"pong",...}.
+  3) Dùng tài khoản khác gửi tin / xóa tin / tạo nhóm / kick và xem sự kiện:
+       message.new, message.deleted, conversation.created, conversation.dissolved, member.removed, conversation.read
+  Vé dùng lại lần hai => bắt tay trả 401.
+
+Mã lỗi thường gặp (body luôn là {"code":"...","message":"..."})
+  400 EMPTY_CONTENT, CONTENT_TOO_LONG, INVALID_CLIENT_MSG_ID, VALIDATION_FAILED, CANNOT_CHAT_SELF,
+      GROUP_MIN_SIZE (tạo nhóm < 3 người), GROUP_MAX_SIZE, UNKNOWN_MEMBER, TARGET_IS_OWNER, NOT_A_MEMBER, NOT_A_GROUP
+  401 UNAUTHORIZED (thiếu hoặc token hết hạn)     403 NOT_OWNER, NOT_SENDER
+  404 NOT_FOUND (không có hoặc không phải thành viên), PEER_NOT_FOUND
+  409 GROUP_MIN_SIZE (kick làm nhóm < 3)           429 RATE_LIMITED (kèm header Retry-After)
+  503 REALTIME_UNAVAILABLE (Redis lỗi khi xin vé)
+
+Nginx (khi chạy sau reverse proxy) cần cho phép nâng cấp WebSocket ở đường dẫn chat:
+  location /api/mobile/chat/ws {
+      proxy_pass http://<spring>;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      proxy_set_header Host $host;
+      proxy_read_timeout 120s;
+  }
+  Server đóng kết nối im lặng sau 50 giây (client ping mỗi 25 giây), nên proxy_read_timeout >= 60s là đủ.

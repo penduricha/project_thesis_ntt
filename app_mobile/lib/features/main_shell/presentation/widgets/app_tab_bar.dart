@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 // TODO: chỉnh lại 2 đường dẫn import cho đúng với cấu trúc thư mục của dự án
 import '../../../authenticator/presentation/screens/authenticator_screen.dart';
+import '../../../chat/application/chat_controller.dart';
 import '../../../chat/presentation/screens/chat_list_screen.dart';
 import '../../../../core/constants/app_colors.dart';
 
@@ -98,6 +99,8 @@ class AppTabBarState extends State<AppTabBar> {
     super.initState();
     _currentTab = widget.initialTab;
     _visited.add(_currentTab);
+    // Chat: nối WebSocket + tải danh sách ngay khi vào app để tin mới và số chưa đọc luôn cập nhật.
+    ChatController.instance.start();
   }
 
   // ---- Hành động ----
