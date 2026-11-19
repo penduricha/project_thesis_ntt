@@ -106,7 +106,7 @@ export class AdminService {
         } catch (error) {
             if (error.response?.status !== HTTP_UNAUTHORIZED) {
                 console.error('Auto login error:', error);
-                this.#clearSession(tokenLogin);
+                // Không cấp quyền vào app, nhưng lỗi kết nối không chứng minh phiên đã hết hạn.
                 return false;
             }
         }
@@ -136,8 +136,8 @@ export class AdminService {
                 .get(ENDPOINTS.AUTO_LOGIN_REFRESH_TOKEN);
         } catch (error) {
             const status = error.response?.status;
-            if (status && status < 500) {
-                this.#clearSession(tokenLogin); // 401...: refresh token không còn dùng được
+            if (status === HTTP_UNAUTHORIZED) {
+                this.#clearSession(tokenLogin); // 401: refresh token không còn dùng được
                 return false;
             }
             throw error; // mất mạng / 5xx: không đăng xuất

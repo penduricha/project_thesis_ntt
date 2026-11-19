@@ -59,6 +59,7 @@ export default {
       isResetDialogClosing: false, // đang chạy animation đóng dialog xác nhận hủy
       isResettingPending: false,   // đang gọi API "Hủy và cài lại"
       twoFaActionError: null,
+      statusUnavailable: false,
       twoFaTimer: null,
       twoFaTickCount: 0,
       twoFaFetchSeq: 0,            // bỏ phản hồi cũ khi có nhiều request chồng nhau
@@ -97,12 +98,12 @@ export default {
     // Không đặt trong data(): chỉ là đối tượng gọi API / cờ nội bộ, Vue không cần theo dõi
     this.enrollmentRepository = new EnrollmentRepository();
     this.tokenLogin = new TokenLogin();
-    this.isExpiringPending = false; // chặn xử lý "hết 10 phút" chạy chồng
     this.stopWatchTwoFa = null;
   },
 
   async mounted() {
     await this.fetchTwoFaStatus();
+    if (this.isUnmounted) return;
 
     // Quay lại tab / cửa sổ (vừa xác nhận xong trên điện thoại): hỏi ngay, không chờ nhịp polling kế tiếp
     document.addEventListener('visibilitychange', this.onVisibilityChange);
@@ -115,6 +116,7 @@ export default {
   },
 
   beforeUnmount() {
+    this.isUnmounted = true;
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
     window.removeEventListener('focus', this.onWindowFocus);
     this.stopWatchTwoFa?.();
@@ -126,9 +128,6 @@ export default {
     if (resetDialog?.open) resetDialog.close();
   },
 
-  unmounted() {
-    this.isUnmounted = true;
-  },
 
   methods: {
     // ===== API =====
@@ -141,20 +140,13 @@ export default {
         if (this.isUnmounted || seq !== this.twoFaFetchSeq) return;
         if (!result.success) throw new Error(result.message);
 
-        const wasPending = this.twoFaStatus === TWO_FA_STATUS.PENDING;
+        this.statusUnavailable = false;
         this.applyTwoFaStatus(result);
-
-        // Đang chờ mà server báo "không còn chờ" (quá hạn 10 phút phía server): dọn nốt dòng chờ ở MariaDB
-        if (wasPending && result.status === TWO_FA_STATUS.NOT_ENABLED) {
-          this.enrollmentRepository.cancelPendingEnrollment(this.tokenLogin);
-        }
       } catch (error) {
         console.error('Error to fetch 2FA status:', error);
         if (this.isUnmounted || seq !== this.twoFaFetchSeq) return;
-        // Lần tải đầu lỗi: coi như chưa bật. Đang poll lỗi thoáng qua: giữ nguyên.
-        if (this.twoFaStatus === null) {
-          this.twoFaStatus = TWO_FA_STATUS.NOT_ENABLED;
-        }
+        // Giữ nguyên trạng thái gần nhất; lỗi mạng không có nghĩa là 2FA đang tắt.
+        this.statusUnavailable = true;
       }
     },
 
@@ -205,7 +197,7 @@ export default {
         if (this.isUnmounted) return;
 
         if (cancelled) {
-          this.applyTwoFaStatus({ status: TWO_FA_STATUS.NOT_ENABLED });
+          await this.fetchTwoFaStatus();
         } else {
           this.twoFaActionError = 'Không thể hủy yêu cầu hiện tại. Vui lòng thử lại.';
         }
@@ -283,35 +275,9 @@ export default {
       const justExpired = wasCounting && this.pendingRemainingSeconds === 0;
       const isPollTurn = this.twoFaTickCount % PENDING_POLL_SECONDS === 0;
 
-      // Hết 10 phút mà mobile chưa xác nhận: HỦY phần chờ rồi về "Chưa kích hoạt".
-      // Đến lượt poll (mỗi 3 giây): chỉ hỏi khi tab đang hiện; tab hiện lại thì onVisibilityChange hỏi bù.
-      if (justExpired) {
-        this.handlePendingExpired();
-      } else if (isPollTurn && !document.hidden) {
+      // Đồng hồ chỉ để hiển thị. Server quyết định enrollment đã hết hạn hay đã xác nhận.
+      if ((justExpired || isPollTurn) && !document.hidden) {
         this.fetchTwoFaStatus();
-      }
-    },
-
-    // Hết giờ chờ xác nhận -> xóa credential chưa xác nhận ở server -> quay về NOT_ENABLED (khung đỏ)
-    async handlePendingExpired() {
-      if (this.isExpiringPending) return;
-      this.isExpiringPending = true;
-      this.stopTwoFaTimer(); // dừng đếm / poll trong lúc xử lý
-
-      try {
-        // Hỏi lần cuối: mobile có thể vừa xác nhận đúng lúc đồng hồ về 0
-        const latest = await this.enrollmentRepository.getTwoFaStatus(this.tokenLogin);
-        if (this.isUnmounted) return;
-        if (latest.success && latest.status === TWO_FA_STATUS.ENABLED) {
-          this.applyTwoFaStatus(latest);
-          return;
-        }
-
-        await this.enrollmentRepository.cancelPendingEnrollment(this.tokenLogin);
-        if (this.isUnmounted) return;
-        this.applyTwoFaStatus({ status: TWO_FA_STATUS.NOT_ENABLED });
-      } finally {
-        this.isExpiringPending = false;
       }
     },
   },
@@ -332,7 +298,11 @@ export default {
     </div>
 
     <!-- Đang tải: chưa biết trạng thái thì không hiện đỏ/vàng/xanh -->
-    <div v-if="isTwoFaLoading" class="two_fa two_fa--loading" role="status" aria-busy="true">
+    <div v-if="statusUnavailable && isTwoFaLoading" class="two_fa" role="status">
+      <p>Chưa đọc được trạng thái xác thực hai yếu tố.</p>
+      <button type="button" class="two_fa__btn-reset" @click="fetchTwoFaStatus">Thử lại</button>
+    </div>
+    <div v-else-if="isTwoFaLoading" class="two_fa two_fa--loading" role="status" aria-busy="true">
       <span class="two_fa__spinner" aria-hidden="true"></span>
       <p class="two_fa__desc">Đang kiểm tra trạng thái bảo mật…</p>
     </div>
@@ -390,9 +360,10 @@ export default {
             <template v-if="pendingRemainingSeconds > 0">
               Còn <span class="two_fa__countdown">{{ pendingCountdownLabel }}</span> để hoàn tất.
             </template>
-            Trong lúc chờ, đăng nhập chưa yêu cầu mã xác thực.
+            <template v-if="!statusUnavailable && pendingRemainingSeconds > 0">Trong lúc chờ, đăng nhập chưa yêu cầu mã xác thực.</template>
           </p>
 
+          <p v-if="statusUnavailable" class="two_fa__hint" role="status">Chưa thể cập nhật. Đây là trạng thái gần nhất.</p>
           <p v-if="twoFaActionError" class="two_fa__error" role="alert">{{ twoFaActionError }}</p>
         </div>
       </div>
