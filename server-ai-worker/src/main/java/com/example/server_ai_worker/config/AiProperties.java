@@ -363,6 +363,7 @@ public class AiProperties {
     public static class Demo {
         private long createdBy = 1L;
         private boolean seedIssueTypes = true;
+        private int evalConcurrency = 2;
 
         public boolean isSeedIssueTypes() {
             return seedIssueTypes;
@@ -370,6 +371,14 @@ public class AiProperties {
 
         public void setSeedIssueTypes(boolean seedIssueTypes) {
             this.seedIssueTypes = seedIssueTypes;
+        }
+
+        public int getEvalConcurrency() {
+            return evalConcurrency;
+        }
+
+        public void setEvalConcurrency(int evalConcurrency) {
+            this.evalConcurrency = evalConcurrency;
         }
 
         public long getCreatedBy() {

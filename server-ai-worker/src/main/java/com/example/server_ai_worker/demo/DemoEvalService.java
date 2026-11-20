@@ -1,5 +1,6 @@
 package com.example.server_ai_worker.demo;
 
+import com.example.server_ai_worker.config.AiProperties;
 import com.example.server_ai_worker.enums.AiErrorCode;
 import com.example.server_ai_worker.enums.SuggestionSeverity;
 import com.example.server_ai_worker.model.jpa.AiSuggestion;
@@ -30,9 +31,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Module đánh giá DEMO (không tích hợp vào pipeline production):
@@ -66,12 +69,8 @@ public class DemoEvalService {
     private final NodePool nodePool;
     private final RulePreflightChecker preflight;
     private final ObjectMapper json;
+    private final AiProperties props;
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "demo-eval-runner");
-        t.setDaemon(true);
-        return t;
-    });
     private final Map<Long, AtomicBoolean> stopFlags = new ConcurrentHashMap<>();
 
     public DemoEvalService(DemoQuestionRepository questions,
@@ -82,7 +81,8 @@ public class DemoEvalService {
                            AiResultParser parser,
                            NodePool nodePool,
                            RulePreflightChecker preflight,
-                           ObjectMapper json) {
+                           ObjectMapper json,
+                           AiProperties props) {
         this.questions = questions;
         this.runs = runs;
         this.items = items;
@@ -92,19 +92,21 @@ public class DemoEvalService {
         this.nodePool = nodePool;
         this.preflight = preflight;
         this.json = json;
+        this.props = props;
     }
 
     @PreDestroy
     void shutdown() {
+        // Bật cờ dừng cho mọi run đang chạy; pool worker của từng run sẽ tự thoát ở vòng kế tiếp.
         stopFlags.values().forEach(f -> f.set(true));
-        executor.shutdownNow();
     }
 
     public record StartResult(DemoEvalRun run, String message) {
     }
 
-    /** Tạo một lần chạy mới. Ném IllegalStateException nếu đã có run đang chạy. */
-    @Transactional
+    /** Tạo một lần chạy mới. Ném IllegalStateException nếu đã có run đang chạy.
+     *  Không ôm @Transactional: thread demo-eval-runner khởi động ngay sau saveAndFlush,
+     *  các lệnh repo không ôm transaction chung thì tự commit — worker chắc chắn nhìn thấy run. */
     public DemoEvalRun start(String mode, Integer limit) {
         String m = mode == null ? "rule" : mode.trim().toLowerCase();
         if (!m.equals("rule") && !m.equals("ai")) {
@@ -121,11 +123,17 @@ public class DemoEvalService {
             throw new IllegalStateException("Bảng ntt_demo_questions trống — chưa seed câu hỏi demo.");
         }
         int total = limit == null ? (int) available : Math.max(1, Math.min(limit, (int) available));
+        int concurrency = Math.max(1, Math.min(4, props.getDemo().getEvalConcurrency()));
         DemoEvalRun run = new DemoEvalRun(m, total);
         run = runs.saveAndFlush(run);
         stopFlags.put(run.getId(), new AtomicBoolean(false));
         final long runId = run.getId();
-        executor.submit(() -> execute(runId, m, total));
+        final int workers = concurrency;
+        // Mỗi run dùng pool riêng (daemon), worker gọi song song qua NodePool;
+        // mỗi câu vẫn giữ nguyên lease/release semantics của pipeline question_check.
+        Thread t = new Thread(() -> execute(runId, m, total, workers), "demo-eval-runner");
+        t.setDaemon(true);
+        t.start();
         return run;
     }
 
@@ -151,79 +159,196 @@ public class DemoEvalService {
     // ------------------------------------------------------------------
     // Vòng đời một run
     // ------------------------------------------------------------------
-    private void execute(long runId, String mode, int limit) {
+    /** Trạng thái dùng chung của một run đa luồng (claim câu hỏi nguyên tử, counters đồng bộ). */
+    private static final class EvalContext {
+        final DemoEvalRun run;
+        final List<DemoQuestion> all;
+        final int target;
+        final AtomicInteger cursor = new AtomicInteger();
+        final AtomicInteger processed = new AtomicInteger();
+        final AtomicInteger correct = new AtomicInteger();
+        final AtomicInteger errors = new AtomicInteger();
+        // Đếm số câu liên tiếp lỗi LLM_UNREACHABLE (mọi slot đều bận/tắt) — đủ ngưỡng thì hủy run.
+        final AtomicInteger consecutiveNoNode = new AtomicInteger();
+        final AtomicBoolean abort = new AtomicBoolean();
+        final Object lock = new Object();
+        String notes; // guarded by lock
+
+        EvalContext(DemoEvalRun run, List<DemoQuestion> all, int target) {
+            this.run = run;
+            this.all = all;
+            this.target = target;
+        }
+    }
+
+    private void execute(long runId, String mode, int limit, int concurrency) {
         DemoEvalRun run = runs.findById(runId).orElse(null);
         if (run == null) {
             return;
         }
-        int processed = 0;
-        int correct = 0;
-        int errors = 0;
-        int consecutiveNoNode = 0;
         try {
-            List<DemoQuestion> all = questions.findAllByOrderByExtIdAsc();
-            for (DemoQuestion q : all) {
-                if (processed >= limit) {
-                    break;
-                }
-                AtomicBoolean stop = stopFlags.get(runId);
-                if (stop != null && stop.get()) {
-                    run.setStatus("stopped");
-                    break;
-                }
-                EvalOutcome out = "ai".equals(mode) ? evalWithAi(runId, q) : evalWithRules(q);
-                if (out.noNode()) {
-                    consecutiveNoNode++;
-                    if (consecutiveNoNode >= MAX_CONSECUTIVE_NO_NODE) {
-                        run.setStatus("failed");
-                        run.setNotes("Không nhận được node Colab sau " + MAX_CONSECUTIVE_NO_NODE
-                                + " lần liên tiếp — run hủy. Kiểm tra kết nối các node ở trang node-colab.");
-                        break;
-                    }
-                    sleepQuiet(2000);
-                    continue; // không tăng processed, thử lại câu này
-                }
-                consecutiveNoNode = 0;
-
-                DemoEvalItem item = new DemoEvalItem(runId, q.getId(), q.getExtId(),
-                        q.getSubjectCode(), q.getGoldIssueType());
-                item.setPredictedLabel(out.predictedLabel());
-                item.setRawPredictedIssue(out.rawIssue());
-                item.setSuggestionCount(out.suggestionCount());
-                item.setTopSeverity(out.topSeverity());
-                item.setLatencyMs(out.latencyMs());
-                item.setModelName(out.modelName());
-                item.setNodeName(out.nodeName());
-                item.setErrorCode(out.errorCode());
-                boolean ok = out.errorCode() == null && out.predictedLabel().equals(q.getGoldIssueType());
-                item.setPredictionCorrect(ok);
-                items.save(item);
-
-                processed++;
-                if (ok) {
-                    correct++;
-                }
-                if (out.errorCode() != null) {
-                    errors++;
-                }
-                run.setProcessedCount(processed);
-                run.setCorrectCount(correct);
-                run.setErrorCount(errors);
+            executeInner(runId, run, mode, limit, concurrency);
+        } catch (Exception e) {
+            // Không để run kẹt vĩnh viễn ở trạng thái running khi lỗi trước/sau vòng chấm.
+            try {
+                run.setStatus("failed");
+                run.setNotes("Lỗi nội bộ khi chạy đánh giá: " + e.getMessage());
+                run.setFinishedAt(Instant.now());
                 runs.save(run);
+            } catch (Exception ignored) {
+                // DB không phản hồi — log không cứu được gì; trạng thái run giữ nguyên
             }
-            if (!"stopped".equals(run.getStatus()) && !"failed".equals(run.getStatus())) {
+            stopFlags.remove(runId);
+        }
+    }
+
+    private void executeInner(long runId, DemoEvalRun run, String mode, int limit, int concurrency) {
+        List<DemoQuestion> all = questions.findAllByOrderByExtIdAsc();
+        EvalContext ctx = new EvalContext(run, all, Math.min(limit, all.size()));
+        // Pool riêng cho run này; worker claim câu hỏi qua cursor nguyên tử — không câu nào bị chấm trùng.
+        ExecutorService pool = Executors.newFixedThreadPool(concurrency, r -> {
+            Thread t = new Thread(r, "demo-eval-worker");
+            t.setDaemon(true);
+            return t;
+        });
+        CountDownLatch latch = new CountDownLatch(concurrency);
+        for (int w = 0; w < concurrency; w++) {
+            pool.submit(() -> {
+                try {
+                    workerLoop(runId, ctx, mode);
+                } catch (Exception e) {
+                    synchronized (ctx.lock) {
+                        if (ctx.notes == null) {
+                            ctx.notes = "Lỗi nội bộ khi chạy đánh giá: " + e.getMessage();
+                        }
+                        ctx.abort.set(true);
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            synchronized (ctx.lock) {
+                ctx.notes = "Run bị ngắt (shutdown).";
+                ctx.abort.set(true);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        AtomicBoolean stop = stopFlags.get(runId);
+        boolean stopped = stop != null && stop.get();
+        synchronized (ctx.lock) {
+            if (ctx.abort.get()) {
+                run.setStatus("failed");
+                run.setNotes(ctx.notes != null ? ctx.notes
+                        : "Không nhận được node Colab sau " + MAX_CONSECUTIVE_NO_NODE
+                        + " câu liên tiếp — run hủy. Kiểm tra kết nối các node ở trang node-colab.");
+            } else if (stopped) {
+                run.setStatus("stopped");
+            } else if (!"stopped".equals(run.getStatus()) && !"failed".equals(run.getStatus())) {
                 run.setStatus("done");
             }
-        } catch (Exception e) {
-            run.setStatus("failed");
-            run.setNotes("Lỗi nội bộ khi chạy đánh giá: " + e.getMessage());
-        } finally {
+        }
+        try {
             run.setFinishedAt(Instant.now());
             if ("done".equals(run.getStatus()) || "stopped".equals(run.getStatus()) || "failed".equals(run.getStatus())) {
                 persistMetrics(run);
             }
             runs.save(run);
+        } finally {
             stopFlags.remove(runId);
+        }
+    }
+
+    private void workerLoop(long runId, EvalContext ctx, String mode) {
+        AtomicBoolean stop = stopFlags.get(runId);
+        for (;;) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
+            if (stop != null && stop.get()) {
+                return;
+            }
+            if (ctx.abort.get()) {
+                return;
+            }
+            int i = ctx.cursor.getAndIncrement();
+            if (i >= ctx.target) {
+                return;
+            }
+            DemoQuestion q = ctx.all.get(i);
+            EvalOutcome out = evaluateWithNoNodeRetry(runId, ctx, q, mode);
+            if (out == null) {
+                return; // run đang bị dừng/hủy — không ghi item cho câu chưa được chấm
+            }
+            recordOutcome(runId, ctx, q, out);
+        }
+    }
+
+    /**
+     * Chấm một câu với retry ngắn khi tạm thời không có node rảnh.
+     * Sau ~10 giây vẫn không lấy được node, ghi nhận câu đó là lỗi kỹ thuật LLM_UNREACHABLE
+     * (loại khỏi accuracy/confusion như mọi error_code) thay vì treo cả run.
+     */
+    private EvalOutcome evaluateWithNoNodeRetry(long runId, EvalContext ctx, DemoQuestion q, String mode) {
+        int streak = 0;
+        for (;;) {
+            if (Thread.currentThread().isInterrupted() || ctx.abort.get()) {
+                return null;
+            }
+            EvalOutcome out = "ai".equals(mode) ? evalWithAi(runId, q) : evalWithRules(q);
+            if (!out.noNode()) {
+                return out;
+            }
+            if (++streak > 5) { // ~10–40s chờ (acquire 2s × 2 lượt + nghỉ 2s × 5), vẫn không có node
+                return EvalOutcome.error(AiErrorCode.LLM_UNREACHABLE.name(), 0);
+            }
+            sleepQuiet(2000);
+        }
+    }
+
+    private void recordOutcome(long runId, EvalContext ctx, DemoQuestion q, EvalOutcome out) {
+        synchronized (ctx.lock) {
+            DemoEvalItem item = new DemoEvalItem(runId, q.getId(), q.getExtId(),
+                    q.getSubjectCode(), q.getGoldIssueType());
+            item.setPredictedLabel(out.predictedLabel());
+            item.setRawPredictedIssue(out.rawIssue());
+            item.setSuggestionCount(out.suggestionCount());
+            item.setTopSeverity(out.topSeverity());
+            item.setLatencyMs(out.latencyMs());
+            item.setModelName(out.modelName());
+            item.setNodeName(out.nodeName());
+            item.setErrorCode(out.errorCode());
+            boolean ok = out.errorCode() == null && out.predictedLabel().equals(q.getGoldIssueType());
+            item.setPredictionCorrect(ok);
+            items.save(item);
+
+            int processed = ctx.processed.incrementAndGet();
+            if (ok) {
+                ctx.correct.incrementAndGet();
+            }
+            boolean noNode = AiErrorCode.LLM_UNREACHABLE.name().equals(out.errorCode());
+            if (out.errorCode() != null) {
+                ctx.errors.incrementAndGet();
+            }
+            if (noNode) {
+                if (ctx.consecutiveNoNode.incrementAndGet() >= MAX_CONSECUTIVE_NO_NODE
+                        && ctx.abort.compareAndSet(false, true)) {
+                    ctx.notes = "Không nhận được node Colab sau " + MAX_CONSECUTIVE_NO_NODE
+                            + " câu liên tiếp — run hủy. Kiểm tra kết nối các node ở trang node-colab.";
+                }
+            } else {
+                ctx.consecutiveNoNode.set(0);
+            }
+            ctx.run.setProcessedCount(processed);
+            ctx.run.setCorrectCount(ctx.correct.get());
+            ctx.run.setErrorCount(ctx.errors.get());
+            runs.save(ctx.run);
         }
     }
 

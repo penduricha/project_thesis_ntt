@@ -26,9 +26,15 @@ API base URL nếu cần trỏ sang máy khác (mặc định `http://localhost:
 | `rule` | `RulePreflightChecker` (tất định: stem trống / lộ đáp án / phương án trống / trùng phương án → `logic`|`distractor`) | ~1000 câu trong vài giây | không |
 | `ai` | Tiền kiểm `RulePreflightChecker` + gọi Ollama qua `NodePool` (giống hệt pipeline `question_check`, gồm `few_cot` prompt, parse `AiResultParser`) | vài giây–vài phút / câu | ≥ 1 node Colab đang bật (trang `node-colab.html`) |
 
+Runner chạy **song song** (mặc định 2 worker, cấu hình `ai.demo.eval-concurrency` hoặc
+`AI_DEMO_EVAL_CONCURRENCY`, tối đa 4): mỗi worker tự lấy câu hỏi qua `AtomicInteger` cursor
+(không câu nào bị chấm trùng), giữ nguyên semantics lease/release của `NodePool`. Khuyến nghị
+bằng `OLLAMA_NUM_PARALLEL` trên Colab (2 với num_ctx 8192 trên T4 16GB).
+
 Dừng run: `POST /api/web/ai/demo/runs/{id}/stop` (cooperative giữa hai câu). Tối đa 2 lần
 thử AI cho một câu; lỗi node (`LLM_UNREACHABLE/TIMEOUT/UNAUTHORIZED/HTTP_5XX`) bị loại khỏi
-pool cho câu đó; 5 lần liên tiếp không lấy được node → run `failed`.
+pool cho câu đó; câu lỗi ghi nhận là `error` và loại khỏi metrics; 5 câu liên tiếp
+`LLM_UNREACHABLE` → run `failed`.
 
 ## Predict label — quy tắc gán nhãn
 
