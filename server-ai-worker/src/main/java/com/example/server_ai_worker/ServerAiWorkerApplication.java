@@ -13,8 +13,14 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * <p>Redis cache/state dùng StringRedisTemplate trực tiếp (tránh tạo Set keyspace thừa từ @RedisHash).
  */
 @SpringBootApplication
-@EnableJpaRepositories(basePackages = "com.example.server_ai_worker.repository.jpa")
-@EntityScan(basePackages = "com.example.server_ai_worker.model.jpa")
+@EnableJpaRepositories(basePackages = {
+        "com.example.server_ai_worker.repository.jpa",
+        "com.example.server_ai_worker.demo"   // demo-only: bảng ntt_demo_* (xem demo/README.md)
+})
+@EntityScan(basePackages = {
+        "com.example.server_ai_worker.model.jpa",
+        "com.example.server_ai_worker.demo"   // demo-only: entity của module đánh giá demo
+})
 public class ServerAiWorkerApplication {
     //http://localhost:8082/api/node-colab.html
     public static void main(String[] args) {
