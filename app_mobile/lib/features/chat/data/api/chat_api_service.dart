@@ -47,11 +47,13 @@ class ChatApiService {
   }
 
   /// 2. Tìm admin (không gồm chính mình).
-  Future<List<ChatAdminBrief>> searchAdmins(String query, {int limit = 20}) async {
+  Future<List<ChatAdminBrief>> searchAdmins(String query, {int limit = 50}) async {
+    // Từ khóa trống: không gửi q, server trả danh sách admin khác (để màn chọn người có sẵn danh sách).
+    final trimmed = query.trim();
     final response = await _call(
       'GET',
       '$_base/admins',
-      query: {'q': query, 'limit': limit},
+      query: {if (trimmed.isNotEmpty) 'q': trimmed, 'limit': limit},
     );
     _expectStatus(response, const {200});
     return [

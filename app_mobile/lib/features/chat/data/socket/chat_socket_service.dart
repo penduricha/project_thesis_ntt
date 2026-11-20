@@ -52,7 +52,7 @@ class ChatSocketService {
   Stream<ChatEvent> get events => _events.stream;
 
   final ValueNotifier<ChatSocketStatus> status =
-      ValueNotifier<ChatSocketStatus>(ChatSocketStatus.stopped);
+  ValueNotifier<ChatSocketStatus>(ChatSocketStatus.stopped);
 
   /// Gọi khi server đóng với mã 4001 (đăng xuất, đăng nhập nơi khác, tài khoản bị khóa).
   VoidCallback? onSessionRevoked;
@@ -138,7 +138,7 @@ class ChatSocketService {
 
       _channel = channel;
       _subscription = channel.stream.listen(
-        (dynamic data) => _onData(generation, data),
+            (dynamic data) => _onData(generation, data),
         onError: (Object error) => _onClosed(generation),
         onDone: () => _onClosed(generation),
         cancelOnError: true,
@@ -146,13 +146,14 @@ class ChatSocketService {
       // Giữ trạng thái "connecting" cho tới khi nhận khung "ready" của server.
     } on ChatApiException catch (e) {
       if (!_isCurrent(generation)) return;
+      debugPrint('Chat WS: xin vé thất bại: $e');
       if (e.isUnauthorized) onUnauthorized?.call();
       _scheduleReconnect();
-    } catch (e) {
+    } catch (e, stack) {
       // Bắt tay bị từ chối (401, 429, 503), mất mạng, hay lỗi lúc mở.
       if (channel != null) _closeQuietly(channel);
       if (!_isCurrent(generation)) return;
-      debugPrint('Chat WS: không nối được: $e');
+      debugPrint('Chat WS: không nối được: $e\n$stack');
       _scheduleReconnect();
     }
   }

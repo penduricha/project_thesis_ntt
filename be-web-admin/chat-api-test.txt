@@ -3,13 +3,15 @@ CHAT GIỮA CÁC ADMIN (chỉ văn bản) - cách thử nhanh bằng curl, khôn
 Chuẩn bị
   1) Chạy sql/2026-11-18-chat-tables.sql trên MariaDB (một lần, trước lần khởi động đầu có chat).
   2) Khởi động Spring Boot (cần Redis đang chạy: vé WebSocket và giới hạn tốc độ dùng Redis).
-  3) Có sẵn 3 tài khoản admin ACTIVE trở lên (nhóm cần tối thiểu 3 người kể cả người tạo).
+  3) Có sẵn 3 tài khoản admin trở lên, không bị LOCKED/DISABLED (nhóm cần tối thiểu 3 người kể cả người tạo).
+     Tài khoản PENDING (mặc định của hệ thống hiện có) vẫn tìm và nhắn tin được.
   4) Lấy access token (sống 5 phút) của từng tài khoản bằng luồng đăng nhập hiện có, rồi:
        export A="<accessToken admin A>"  B="<accessToken admin B>"  C="<accessToken admin C>"
        export API=http://localhost:8080/api/mobile/chat
 
-Tìm admin (không gồm chính mình, chỉ tài khoản ACTIVE)
+Tìm admin (không gồm chính mình, không gồm tài khoản LOCKED/DISABLED; q để trống = liệt kê tất cả, tối đa 50)
   curl -s -H "Authorization: Bearer $A" "$API/admins?q=nguyen&limit=10"
+  curl -s -H "Authorization: Bearer $A" "$API/admins?limit=50"
 
 Chat 1-1 (201 lần đầu, 200 nếu đã có; chưa có tin nào thì danh sách của người kia chưa hiện)
   curl -s -X POST -H "Authorization: Bearer $A" -H "Content-Type: application/json" \

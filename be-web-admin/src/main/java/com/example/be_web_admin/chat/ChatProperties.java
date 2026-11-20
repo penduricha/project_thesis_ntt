@@ -28,8 +28,13 @@ public class ChatProperties {
     @Getter
     @Setter
     public static class Ws {
-        /** Origin được phép bắt tay WebSocket. Ứng dụng mobile gốc không gửi Origin nên luôn được qua. */
-        private List<String> allowedOrigins = new ArrayList<>(List.of("http://localhost:5375", "http://localhost:5374"));
+        /**
+         * Mẫu Origin được phép bắt tay WebSocket (hỗ trợ ký tự * ở cổng, ví dụ http://localhost:*). Ứng dụng mobile gốc
+         * không gửi Origin nên luôn được qua. Flutter web khi chạy thử dùng cổng ngẫu nhiên nên cần mẫu, không liệt kê
+         * từng cổng cố định. Môi trường thật: thêm đúng tên miền https của trang web admin vào đây.
+         */
+        private List<String> allowedOriginPatterns =
+                new ArrayList<>(List.of("http://localhost:*", "http://127.0.0.1:*"));
         private int ticketTtlSeconds = 30;
         private int pingIntervalSeconds = 25;
         /** Đóng phiên nếu không thấy khung nào quá thời gian này (nhỏ hơn mốc 60 giây của Nginx). */

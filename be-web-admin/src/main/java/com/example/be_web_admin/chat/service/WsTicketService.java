@@ -5,17 +5,19 @@ import com.example.be_web_admin.chat.dto.WsTicketDto;
 import com.example.be_web_admin.chat.exception.ChatException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 /**
  * Vé một lần để mở WebSocket. Flutter web không đặt được header Authorization khi mở WebSocket, và đưa JWT lên URL
  * sẽ lọt vào log Nginx, nên client xin vé qua REST (có Bearer) rồi mở ws://...?ticket=VÉ.
- * Vé là 32 byte ngẫu nhiên (SecureRandom), lưu Redis 30 giây, lấy ra bằng GETDEL nên chỉ dùng được một lần.
+ * Vé là 32 byte ngẫu nhiên (SecureRandom), lưu Redis 30 giây, lấy ra rồi xóa trong một bước nguyên tử nên chỉ dùng được một lần.
  */
 @Slf4j
 @Service
@@ -23,6 +25,15 @@ public class WsTicketService {
 
     private static final String KEY_PREFIX = "chat:ws-ticket:";
     private static final int TICKET_BYTES = 32;
+
+    /**
+     * Lấy giá trị và xóa khóa trong MỘT bước nguyên tử bằng Lua (chạy được trên mọi bản Redis từ 2.6). Cố ý không dùng
+     * lệnh GETDEL: lệnh đó chỉ có từ Redis 6.2, trên bản cũ hơn (vd redis-server 6.0 của Ubuntu 22.04, hay Redis 5 trên
+     * Windows) nó báo "unknown command" nên bước bắt tay WebSocket luôn bị 503 dù xin vé vẫn thành công.
+     */
+    private static final DefaultRedisScript<String> GET_AND_DELETE = new DefaultRedisScript<>(
+            "local v = redis.call('GET', KEYS[1]) if v then redis.call('DEL', KEYS[1]) end return v",
+            String.class);
 
     private final StringRedisTemplate redis;
     private final ChatProperties properties;
@@ -52,7 +63,7 @@ public class WsTicketService {
     }
 
     /**
-     * Lấy vé và xóa trong một lệnh (GETDEL). Trả rỗng nếu vé sai, đã dùng hoặc hết hạn.
+     * Lấy vé và xóa trong một bước nguyên tử (script Lua). Trả rỗng nếu vé sai, đã dùng hoặc hết hạn.
      * Redis lỗi thì ném ChatException 503 để bước bắt tay trả đúng mã.
      */
     public Optional<Long> consume(String ticket) {
@@ -60,7 +71,7 @@ public class WsTicketService {
             return Optional.empty();
         }
         try {
-            String value = redis.opsForValue().getAndDelete(KEY_PREFIX + ticket);
+            String value = redis.execute(GET_AND_DELETE, List.of(KEY_PREFIX + ticket));
             if (value == null) {
                 return Optional.empty();
             }

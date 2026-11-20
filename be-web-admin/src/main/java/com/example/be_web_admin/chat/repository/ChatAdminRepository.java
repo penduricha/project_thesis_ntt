@@ -33,13 +33,17 @@ public interface ChatAdminRepository extends Repository<Admin, Long> {
     long countById(@Param("id") Long id);
 
     /**
-     * Tìm theo tên (chứa) hoặc theo mã (bắt đầu bằng), không gồm chính mình và các tài khoản chưa kích hoạt, bị khóa hoặc vô hiệu hóa.
-     * "namePattern" đã được service đổi sang chữ thường (so khớp với lower(adminName)).
+     * Tìm theo tên (chứa) hoặc theo mã (bắt đầu bằng), không gồm chính mình và các tài khoản bị khóa (LOCKED) hoặc vô hiệu
+     * hóa (DISABLED). Cố ý KHÔNG yêu cầu ACTIVE: hệ thống hiện có không nơi nào đặt trạng thái ACTIVE, mọi admin mới đều giữ
+     * mặc định PENDING (hoặc null với dòng cũ), nên bắt buộc ACTIVE sẽ làm danh sách luôn rỗng.
+     * "namePattern" đã được service đổi sang chữ thường (so khớp với lower(adminName)); "%" nghĩa là lấy tất cả.
      * "pattern" do service dựng sẵn, đã escape bằng ký tự '!' (không dùng '\' vì MariaDB coi '\' trong chuỗi là escape).
      */
     @Query("select a.adminId as adminId, a.adminName as adminName from Admin a "
             + "where a.adminId <> :me "
-            + "and (a.accountStatus is null or a.accountStatus = com.example.be_web_admin.enums.AccountStatus.ACTIVE) "
+            + "and (a.accountStatus is null or a.accountStatus not in ("
+            + "com.example.be_web_admin.enums.AccountStatus.LOCKED, "
+            + "com.example.be_web_admin.enums.AccountStatus.DISABLED)) "
             + "and (lower(a.adminName) like :namePattern escape '!' "
             + "or cast(a.adminId as string) like :idPattern escape '!') "
             + "order by a.adminName asc, a.adminId asc")

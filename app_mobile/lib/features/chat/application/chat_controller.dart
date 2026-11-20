@@ -60,6 +60,9 @@ class ChatController extends ChangeNotifier {
 
   static const int _pageSize = 30;
   static const Duration _reconnectBannerDelay = Duration(seconds: 3);
+
+  /// Khi WebSocket chưa nối được, cứ chừng này giây lại hỏi REST một lần để vẫn nhận được tin mới (dự phòng).
+  static const Duration _pollInterval = Duration(seconds: 8);
   static const Duration _markReadDebounce = Duration(milliseconds: 500);
   static const Duration _listRefreshDebounce = Duration(milliseconds: 300);
 
@@ -108,6 +111,8 @@ class ChatController extends ChangeNotifier {
   Timer? _bannerTimer;
   Timer? _markReadTimer;
   Timer? _listRefreshTimer;
+  Timer? _pollTimer;
+  bool _polling = false;
   final Set<int> _markReadPending = <int>{};
 
   // ------------------------------------------------------------------ đọc trạng thái
@@ -209,6 +214,8 @@ class ChatController extends ChangeNotifier {
     _bannerTimer?.cancel();
     _markReadTimer?.cancel();
     _listRefreshTimer?.cancel();
+    _stopPolling();
+    _polling = false;
     _bannerTimer = null;
     _markReadTimer = null;
     _listRefreshTimer = null;
@@ -255,6 +262,7 @@ class ChatController extends ChangeNotifier {
     if (status == ChatSocketStatus.connected) {
       _bannerTimer?.cancel();
       _bannerTimer = null;
+      _stopPolling(); // kênh thời gian thực đã sống, server tự đẩy sự kiện
       if (_showReconnecting) {
         _showReconnecting = false;
         notifyListeners();
@@ -264,9 +272,12 @@ class ChatController extends ChangeNotifier {
     if (!_running || status == ChatSocketStatus.stopped) {
       _bannerTimer?.cancel();
       _bannerTimer = null;
+      _stopPolling();
       return;
     }
-    // Chưa nối được: chỉ hiện dải "Đang kết nối lại..." khi mất quá 3 giây.
+    // Chưa nối được WebSocket: vẫn hỏi REST định kỳ để chat dùng được (chậm vài giây) thay vì đứng yên.
+    _startPolling();
+    // Chỉ hiện dải "Đang kết nối lại..." khi mất quá 3 giây.
     _bannerTimer ??= Timer(_reconnectBannerDelay, () {
       _bannerTimer = null;
       if (_running && _socket.status.value != ChatSocketStatus.connected) {
@@ -274,6 +285,35 @@ class ChatController extends ChangeNotifier {
         notifyListeners();
       }
     });
+  }
+
+  void _startPolling() {
+    _pollTimer ??= Timer.periodic(_pollInterval, (_) => unawaited(_pollOnce()));
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
+  /// Một lượt hỏi REST khi WebSocket đang đứt: tải lại danh sách và cửa sổ tin của cuộc đang mở, không hiện vòng
+  /// quay hay thông báo lỗi (lỗi mạng sẽ tự thử lại ở lượt sau). Không chạy chồng nhau.
+  Future<void> _pollOnce() async {
+    if (_polling || !_running || !_appResumed || _authLost) return;
+    if (_socket.status.value == ChatSocketStatus.connected) {
+      _stopPolling();
+      return;
+    }
+    _polling = true;
+    try {
+      await refreshConversations();
+      final open = _openId;
+      if (_running && open != null && _indexOf(open) >= 0) {
+        await _loadLatest(open, reconcile: true, silent: true);
+      }
+    } finally {
+      _polling = false;
+    }
   }
 
   void _onSessionRevoked() {
@@ -488,9 +528,12 @@ class ChatController extends ChangeNotifier {
   }
 
   /// Tải lại cửa sổ tin mới nhất. [reconcile] true (sau khi nối lại) thì đối chiếu với tin đang giữ theo mục 11.
-  Future<void> _loadLatest(int conversationId, {required bool reconcile}) async {
-    _loadingLatest.add(conversationId);
-    notifyListeners();
+  /// [silent] true (lượt hỏi định kỳ khi WebSocket đứt): không bật cờ đang tải, không đánh dấu lỗi, không phát thông báo.
+  Future<void> _loadLatest(int conversationId, {required bool reconcile, bool silent = false}) async {
+    if (!silent) {
+      _loadingLatest.add(conversationId);
+      notifyListeners();
+    }
     try {
       final page = await _api.listMessages(conversationId, limit: _pageSize);
       if (!_running) return;
@@ -554,17 +597,17 @@ class ChatController extends ChangeNotifier {
       if (_openId == conversationId) _maybeMarkRead(conversationId);
     } on ChatApiException catch (e) {
       _noteApiError(e);
-      _loadFailed.add(conversationId);
+      if (!silent) _loadFailed.add(conversationId);
       if (e.isNotFound) {
         _handleConversationNotFound(conversationId);
-      } else if (_openId == conversationId) {
+      } else if (!silent && _openId == conversationId) {
         _emit(ChatNotice(ChatNoticeKind.error, e.userMessage, conversationId: conversationId));
       }
     } catch (_) {
       // Phản hồi không đọc được: coi như lần tải thất bại (màn hình hiện nút thử lại), không để lỗi lọt ra ngoài.
-      _loadFailed.add(conversationId);
+      if (!silent) _loadFailed.add(conversationId);
     } finally {
-      _loadingLatest.remove(conversationId);
+      if (!silent) _loadingLatest.remove(conversationId);
       if (_running) notifyListeners();
     }
   }

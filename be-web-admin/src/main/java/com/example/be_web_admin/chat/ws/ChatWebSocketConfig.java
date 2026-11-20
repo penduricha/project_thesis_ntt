@@ -10,7 +10,7 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 
 /**
  * Đăng ký WebSocket tại /mobile/chat/ws (URL đầy đủ là /api/mobile/chat/ws vì context-path là /api).
- * Origin được phép lấy từ chat.ws.allowed-origins; client không gửi Origin (ứng dụng mobile gốc) thì được qua,
+ * Origin được phép lấy từ chat.ws.allowed-origin-patterns; client không gửi Origin (ứng dụng mobile gốc) thì được qua,
  * lớp bảo vệ chính là vé một lần ở ChatHandshakeInterceptor.
  */
 @Configuration
@@ -33,7 +33,7 @@ public class ChatWebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(handler, PATH)
                 .addInterceptors(interceptor)
-                .setAllowedOrigins(properties.getWs().getAllowedOrigins().toArray(new String[0]));
+                .setAllowedOriginPatterns(properties.getWs().getAllowedOriginPatterns().toArray(new String[0]));
     }
 
     /** Giới hạn bộ đệm khung của container: khung client chỉ là ping vài chục byte, không cần 8 KB mặc định trở lên. */

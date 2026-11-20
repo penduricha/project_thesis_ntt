@@ -10,7 +10,8 @@ import '../widgets/custom/chat_avatar.dart';
 import '../widgets/custom/chat_status_banner.dart';
 import 'chat_detail_screen.dart';
 
-/// Chọn người để bắt đầu chat: tìm admin theo tên hoặc mã (debounce 300 ms), chọn nhiều người.
+/// Chọn người để bắt đầu chat: mở màn là hiện sẵn danh sách admin khác; gõ để lọc theo tên hoặc mã (debounce 300 ms);
+/// chọn nhiều người.
 ///  - Chọn 1 người: "Nhắn tin" mở chat 1-1 (không có tính năng kết bạn).
 ///  - Chọn từ 2 người trở lên: "Tạo nhóm" hỏi tên nhóm (tổng cả bạn phải từ 3 người).
 class NewChatScreen extends StatefulWidget {
@@ -32,13 +33,23 @@ class _NewChatScreenState extends State<NewChatScreen> {
 
   Timer? _debounceTimer;
   int _searchToken = 0;
-  bool _searching = false;
+  bool _searching = true; // mở màn là tải ngay danh sách admin khác
   String? _searchError;
   List<ChatAdminBrief> _results = const <ChatAdminBrief>[];
 
   // Giữ thứ tự chọn; khóa là adminId.
   final Map<int, ChatAdminBrief> _selected = <int, ChatAdminBrief>{};
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Từ khóa trống = liệt kê admin khác, không bắt người dùng gõ trước. Hoãn tới sau khung hình đầu vì _runSearch gọi
+    // setState (không gọi giữa lúc đang dựng).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _runSearch('');
+    });
+  }
 
   @override
   void dispose() {
@@ -50,15 +61,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
   void _onQueryChanged(String value) {
     _debounceTimer?.cancel();
     final query = value.trim();
-    if (query.isEmpty) {
-      _searchToken++; // bỏ kết quả đang bay
-      setState(() {
-        _results = const <ChatAdminBrief>[];
-        _searching = false;
-        _searchError = null;
-      });
-      return;
-    }
+    // Xóa hết chữ thì quay về danh sách đầy đủ (cũng qua debounce để không gọi liên tục khi gõ/xóa nhanh).
     _debounceTimer = Timer(_debounce, () => _runSearch(query));
   }
 
@@ -300,7 +303,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            hasQuery ? 'Không tìm thấy admin nào.' : 'Nhập tên hoặc mã để tìm người cần nhắn tin.',
+            hasQuery ? 'Không tìm thấy admin nào.' : 'Chưa có admin nào khác để nhắn tin.',
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 15, color: AppColors.textMuted),
           ),

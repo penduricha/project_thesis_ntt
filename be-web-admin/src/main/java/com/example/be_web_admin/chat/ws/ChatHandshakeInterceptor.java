@@ -20,7 +20,7 @@ import java.util.Optional;
 /**
  * Chạy TRƯỚC khi nâng cấp kết nối: lấy vé bằng GETDEL (dùng một lần), kiểm tra số kết nối của admin, gắn adminId vào
  * thuộc tính phiên. Sai thì trả 401, 429 hoặc 503 và KHÔNG nâng cấp (không mở kết nối rồi mới đóng).
- * Kiểm tra Origin do chính đăng ký trong ChatWebSocketConfig.setAllowedOrigins đảm nhiệm (trả 403).
+ * Kiểm tra Origin do chính đăng ký trong ChatWebSocketConfig.setAllowedOriginPatterns đảm nhiệm (trả 403).
  */
 @Slf4j
 @Component
@@ -53,14 +53,19 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
         try {
             adminId = ticketService.consume(ticket);
         } catch (ChatException e) {
+            log.warn("Chat WS: từ chối bắt tay 503 (Redis không đọc được vé): {}", e.getMessage());
             response.setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
             return false;
         }
         if (adminId.isEmpty()) {
+            log.info("Chat WS: từ chối bắt tay 401 (vé sai, đã dùng hoặc hết hạn), Origin={}",
+                    http.getHeader("Origin"));
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
         }
         if (registry.count(adminId.get()) >= properties.getWs().getMaxConnectionsPerAdmin()) {
+            log.info("Chat WS: từ chối bắt tay 429 (admin {} đã đủ {} kết nối)", adminId.get(),
+                    properties.getWs().getMaxConnectionsPerAdmin());
             response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
             return false;
         }
