@@ -1,0 +1,62 @@
+From: arena-agent <arena-agent@example.com>
+Subject: [PATCH] fix(auth): vá logic TOTP + đăng nhập/đăng xuất (Spring Boot, Vue, Flutter)
+
+Vá các lỗi được mô tả trong docs/nghiep-vu/05-va-loi-totp-dang-nhap-dang-xuat.md.
+Áp dụng cùng lúc, theo thứ tự file 01 -> 04.
+
+QUAN TRỌNG: nhánh của bạn phải chứa đúng base 2fe2bf49c0f87ade460c24a32a3ac9306bc13d1d
+(một số file Vue dùng CRLF, nên patch phải khớp cả ký tự xuống dòng).
+
+Phần 2b: be-web-admin/.env.example (JWT_SECRET, TOTP_MASTER_KEY_V2, CORS)
+
+Cách áp dụng:
+  git apply --check <file>.patch   # kiểm tra trước
+  git apply <file>.patch
+
+Tạo .env từ mẫu rồi điền giá trị thật. Thiếu JWT_SECRET thì ứng dụng KHÔNG khởi động (JwtSecretGuard).
+
+Hướng dẫn nhanh:
+  git apply --check --whitespace=nowarn <file>.patch
+  git apply --whitespace=nowarn <file>.patch
+  (cảnh báo "trailing whitespace" là bình thường: 6 tệp Vue dùng CRLF, patch giữ nguyên \r)
+  git apply -R ... để gỡ. git apply KHÔNG tạo commit, tự git add/commit sau khi áp.
+Base bắt buộc: 2fe2bf49c0f87ade460c24a32a3ac9306bc13d1d
+
+---
+diff --git a/be-web-admin/.env.example b/be-web-admin/.env.example
+new file mode 100644
+index 000000000..ea3e3e9f8
+--- /dev/null
++++ b/be-web-admin/.env.example
+@@ -0,0 +1,31 @@
++# ===================== CẤU HÌNH MẪU cho be-web-admin =====================
++# Sao chép file này thành .env (đã bị .gitignore, KHÔNG commit) rồi điền giá trị thật.
++# Spring Boot đọc file này nhờ: spring.config.import = optional:file:.env[.properties]
++
++# ---------- Hạ tầng ----------
++IP_ADDRESS=127.0.0.1
++REDIS_PORT=6379
++REDIS_USERNAME=default
++REDIS_PASSWORD=
++REDIS_DBS=0
++MARIADB_PORT=3306
++MARIADB_DBS=ntt_thesis
++MARIADB_USERNAME=ntt
++MARIADB_PASSWORD=
++
++# ---------- Khóa mã hóa TOTP ----------
++# Base64 của 32 byte ngẫu nhiên:  openssl rand -base64 32
++TOTP_MASTER_KEY_V2=
++# Chỉ dùng một lần khi di chuyển dữ liệu cũ; để trống sau khi xong.
++TOTP_LEGACY_MASTER_SECRET=
++
++# ---------- JWT ----------
++# BẮT BUỘC khi chạy thật. >= 32 ký tự.  openssl rand -base64 48
++# Trước đây khóa này hard-code trong AdminJwtTokenProvider (ai đọc repo cũng tự ký được token ADMIN).
++# Ứng dụng SẼ KHÔNG KHỞI ĐỘNG nếu vẫn dùng khóa mặc định mà profile không phải dev/test/local
++# (xem security/JwtSecretGuard.java).
++JWT_SECRET=
++
++# ---------- CORS (web quản trị) ----------
++# Nhiều origin thì phân tách bằng dấu phẩy. Không dùng "*" vì allowCredentials = true.
++APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173

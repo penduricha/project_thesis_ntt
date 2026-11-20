@@ -1,0 +1,799 @@
+From: arena-agent <arena-agent@example.com>
+Subject: [PATCH] fix(auth): vá logic TOTP + đăng nhập/đăng xuất (Spring Boot, Vue, Flutter)
+
+Vá các lỗi được mô tả trong docs/nghiep-vu/05-va-loi-totp-dang-nhap-dang-xuat.md.
+Áp dụng cùng lúc, theo thứ tự file 01 -> 04.
+
+QUAN TRỌNG: nhánh của bạn phải chứa đúng base 2fe2bf49c0f87ade460c24a32a3ac9306bc13d1d
+(một số file Vue dùng CRLF, nên patch phải khớp cả ký tự xuống dòng).
+
+Phần 2a: script SQL mở rộng CSDL (tuỳ chọn)
+
+Cách áp dụng:
+  git apply --check <file>.patch   # kiểm tra trước
+  git apply <file>.patch
+
+4 tệp be-web-admin/sql/2026-11-19-0{1..4}.sql.
+git apply chỉ ghi tệp vào đĩa; PHẢI tự chạy script trên MariaDB theo đúng thứ tự 01 -> 02 -> 03 -> 04.
+
+Hướng dẫn nhanh:
+  git apply --check --whitespace=nowarn <file>.patch
+  git apply --whitespace=nowarn <file>.patch
+  (cảnh báo "trailing whitespace" là bình thường: 6 tệp Vue dùng CRLF, patch giữ nguyên \r)
+  git apply -R ... để gỡ. git apply KHÔNG tạo commit, tự git add/commit sau khi áp.
+Base bắt buộc: 2fe2bf49c0f87ade460c24a32a3ac9306bc13d1d
+
+---
+diff --git a/be-web-admin/sql/2026-11-19-01-auth-drift-fix.sql b/be-web-admin/sql/2026-11-19-01-auth-drift-fix.sql
+new file mode 100644
+index 000000000..b1cfb4389
+--- /dev/null
++++ b/be-web-admin/sql/2026-11-19-01-auth-drift-fix.sql
+@@ -0,0 +1,100 @@
++-- ============================================================================================
++-- 01 - ĐỒNG BỘ 7 BẢNG XÁC THỰC HIỆN CÓ TRƯỚC KHI THÊM 14 BẢNG NGHIỆP VỤ
++--
++-- Mục đích: đưa schema thực tế (do spring.jpa.hibernate.ddl-auto = update sinh ra, không
++-- kiểm soát được) về đúng trạng thái mô tả trong ER v4, đồng thời vá vài điểm lệch đã phát
++-- hiện khi đối chiếu code Java với sơ đồ.
++--
++-- Chạy 1 lần, theo thứ tự 01 -> 02 -> 03. Sau khi chạy xong cả 3 file:
++--   đổi spring.jpa.hibernate.ddl-auto: update  ->  validate
++-- (xem docs/nghiep-vu/02-ke-hoach-mo-rong-csdl.md, mục 6)
++--
++-- Toàn bộ dùng utf8mb4 + InnoDB, thời gian lưu UTC (datetime(6)).
++-- ============================================================================================
++
++SET NAMES utf8mb4;
++
++-- --------------------------------------------------------------------------------------------
++-- 1.1 ntt_admins: thêm cột role (có trong ER v4 và trong Admin.java, nhưng chưa có migration)
++--
++-- LƯU Ý KIỂU DỮ LIỆU:
++--   ER v4 ghi  role enum('admin','lecturer')   (chữ thường)
++--   Admin.java dùng @Enumerated(EnumType.STRING) + enum Role { ADMIN, LECTURER }
++--   => Hibernate ghi chuỗi 'ADMIN' / 'LECTURER' (CHỮ HOA). Nếu cột là enum chữ thường thì
++--      mọi INSERT/UPDATE admin sẽ lỗi "Data truncated for column 'role'".
++--   Quyết định ở đây: GIỮ CHỮ HOA (theo code, không phải migrate dữ liệu đang chạy).
++--   => Phải sửa lại ER v4 cho khớp, hoặc thêm AttributeConverter nếu muốn giữ chữ thường.
++-- --------------------------------------------------------------------------------------------
++ALTER TABLE ntt_admins
++    ADD COLUMN IF NOT EXISTS role ENUM ('ADMIN', 'LECTURER') NOT NULL DEFAULT 'ADMIN';
++
++-- Cùng vấn đề với account_status: ER ghi enum('active','disabled','locked','pending'),
++-- code ghi AccountStatus.ACTIVE/LOCKED/DISABLED/PENDING (chữ hoa). Giữ chữ hoa.
++ALTER TABLE ntt_admins
++    MODIFY COLUMN account_status ENUM ('PENDING', 'ACTIVE', 'LOCKED', 'DISABLED') NOT NULL DEFAULT 'PENDING';
++
++-- Đăng nhập / phân quyền tra cứu theo role + trạng thái
++ALTER TABLE ntt_admins
++    ADD INDEX IF NOT EXISTS ix_admin_role_status (role, account_status);
++
++-- --------------------------------------------------------------------------------------------
++-- 1.2 ntt_auth_audit_logs: nới event_type lên VARCHAR(40)
++--
++-- File 2026-11-14-totp-disable-events.sql đã đổi ENUM -> VARCHAR(30). Nếu CHƯA chạy file đó
++-- thì câu dưới đây làm luôn. Để 40 ký tự vì sắp tới còn thêm sự kiện nghiệp vụ câu hỏi/AI.
++-- --------------------------------------------------------------------------------------------
++ALTER TABLE ntt_auth_audit_logs
++    MODIFY COLUMN event_type VARCHAR(40) NULL;
++
++-- Truy vấn "lịch sử đăng nhập của 1 admin" và "thống kê theo loại sự kiện"
++ALTER TABLE ntt_auth_audit_logs
++    ADD INDEX IF NOT EXISTS ix_audit_admin_time (admin_id, created_at);
++ALTER TABLE ntt_auth_audit_logs
++    ADD INDEX IF NOT EXISTS ix_audit_event_time (event_type, created_at);
++
++-- --------------------------------------------------------------------------------------------
++-- 1.3 ntt_totp_credentials: bỏ UNIQUE không cần thiết trên iv, thêm index phục vụ đăng nhập
++--
++-- iv là 12 byte ngẫu nhiên: trùng IV gần như không xảy ra, nhưng UNIQUE biến một va chạm
++-- cực hiếm thành lỗi INSERT (500) thay vì chỉ là chuyện mật mã học. AES-GCM an toàn khi
++-- IV trùng chỉ trong CÙNG một khóa; ở đây mỗi bản ghi có salt riêng nên khóa khác nhau.
++-- (Nếu index không tồn tại, câu lệnh báo lỗi - khi đó bỏ qua, không ảnh hưởng gì.)
++-- --------------------------------------------------------------------------------------------
++-- ALTER TABLE ntt_totp_credentials DROP INDEX iv;
++
++ALTER TABLE ntt_totp_credentials
++    ADD INDEX IF NOT EXISTS ix_totp_admin_confirmed (admin_id, confirmed, confirmed_at);
++
++-- --------------------------------------------------------------------------------------------
++-- 1.4 ntt_backup_codes: mã dự phòng (bảng đã có từ trước nhưng CHƯA có luồng nghiệp vụ nào dùng)
++--     Index để tra "mã chưa dùng của admin này".
++-- --------------------------------------------------------------------------------------------
++ALTER TABLE ntt_backup_codes
++    ADD INDEX IF NOT EXISTS ix_backup_admin_used (admin_id, used);
++
++-- --------------------------------------------------------------------------------------------
++-- 1.5 ntt_mobile_devices: tra theo admin + trạng thái
++-- --------------------------------------------------------------------------------------------
++ALTER TABLE ntt_mobile_devices
++    ADD INDEX IF NOT EXISTS ix_device_admin_status (admin_id, status);
++
++-- --------------------------------------------------------------------------------------------
++-- 1.6 ntt_web_sessions: tra phiên còn sống theo admin
++-- --------------------------------------------------------------------------------------------
++ALTER TABLE ntt_web_sessions
++    ADD INDEX IF NOT EXISTS ix_session_admin_status (admin_id, status, expires_at);
++
++-- --------------------------------------------------------------------------------------------
++-- 1.7 ntt_courses: cột course_id hiện KHÔNG có AUTO_INCREMENT (do ứng dụng cấp mã) - giữ nguyên.
++--     Chỉ thêm index tra cứu theo khoa/ngành phục vụ màn hình quản trị sau này.
++-- --------------------------------------------------------------------------------------------
++ALTER TABLE ntt_courses
++    ADD INDEX IF NOT EXISTS ix_course_faculty_major (faculty, major);
++
++-- --------------------------------------------------------------------------------------------
++-- KIỂM TRA SAU KHI CHẠY
++-- --------------------------------------------------------------------------------------------
++-- SHOW COLUMNS FROM ntt_admins LIKE 'role';
++-- SHOW COLUMNS FROM ntt_admins LIKE 'account_status';
++-- SHOW COLUMNS FROM ntt_auth_audit_logs LIKE 'event_type';
++-- SHOW INDEX FROM ntt_totp_credentials;
+diff --git a/be-web-admin/sql/2026-11-19-02-business-tables.sql b/be-web-admin/sql/2026-11-19-02-business-tables.sql
+new file mode 100644
+index 000000000..8005d51ee
+--- /dev/null
++++ b/be-web-admin/sql/2026-11-19-02-business-tables.sql
+@@ -0,0 +1,419 @@
++-- ============================================================================================
++-- 02 - 14 BẢNG NGHIỆP VỤ MỚI (ngân hàng câu hỏi + AI + Moodle + thực nghiệm)
++--
++-- Nguồn: CSDL_ER_Diagram_v4 (drawio v4, 21 bảng = 7 bảng xác thực giữ nguyên + 14 bảng mới).
++-- File này là BẢN HIỆN THỰC HOÁ của sơ đồ đó, đã sửa các điểm sơ đồ còn để trống:
++--
++--   (a) Cột sinh (STORED GENERATED) có biểu thức cụ thể:
++--       parent_key, active_flag, default_key, annotator_key
++--   (b) Trigger đặt validation_status = 'stale' khi nội dung câu hỏi đổi
++--   (c) CHECK constraint (MariaDB >= 10.2 mới enforce; 10.6 dùng được)
++--   (d) Enum đã điền đủ thay cho "..." trong sơ đồ
++--
++-- QUY ƯỚC THỐNG NHẤT (áp dụng cho cả file 03):
++--   - PK/FK bigint  = BIGINT (không phải bigint(20) - độ rộng hiển thị đã bỏ từ MariaDB 11)
++--   - Thời gian     = datetime(6), LUÔN theo UTC (hibernate.jdbc.time_zone=UTC)
++--   - Chuỗi tiếng Việt = utf8mb4_unicode_ci
++--   - ON DELETE RESTRICT mặc định; chỉ 2 chỗ CASCADE (suggestions->tasks, exchange_items->exchanges)
++--   - status/nghiệp vụ lưu CHỮ THƯỜNG (khác 7 bảng cũ đang dùng chữ HOA - xem ghi chú cuối file)
++--   - Không có cột updated_at tự động; ứng dụng ghi tường minh (dễ kiểm soát hơn ON UPDATE)
++--
++-- THỨ TỰ TẠO BẢNG: cha trước, con sau (FK phụ thuộc).
++-- ============================================================================================
++
++SET NAMES utf8mb4;
++
++-- --------------------------------------------------------------------------------------------
++-- NHÓM 1: DANH MỤC (môn học, chủ đề, loại lỗi)
++-- --------------------------------------------------------------------------------------------
++
++-- 2.1 Môn học / học phần
++CREATE TABLE IF NOT EXISTS ntt_subjects
++(
++    subject_id   BIGINT       NOT NULL AUTO_INCREMENT,
++    subject_code VARCHAR(30)  NOT NULL COMMENT 'Mã môn, vd: ITE302c',
++    subject_name VARCHAR(200) NOT NULL,
++    description  VARCHAR(500) NULL,
++    is_active    BIT(1)       NOT NULL DEFAULT b'1',
++    created_by   BIGINT       NULL COMMENT 'FK -> ntt_admins.admin_id (không khai báo FK cứng: xóa admin không được kéo sập môn học)',
++    created_at   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    updated_at   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    PRIMARY KEY (subject_id),
++    UNIQUE KEY uq_subject_code (subject_code),
++    KEY ix_subject_active (is_active, subject_name),
++    CONSTRAINT chk_subject_not_blank CHECK (TRIM(subject_code) <> '' AND TRIM(subject_name) <> '')
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- 2.2 Chủ đề phân cấp (cây) trong phạm vi 1 môn
++--     parent_key: cột sinh để mô phỏng UNIQUE có điều kiện ở cấp gốc
++--     (parent_id NULL -> parent_key = 0, nhờ vậy UNIQUE (subject_id, parent_key, topic_name)
++--      vẫn chặn được 2 chủ đề gốc trùng tên trong cùng môn)
++CREATE TABLE IF NOT EXISTS ntt_topics
++(
++    topic_id    BIGINT       NOT NULL AUTO_INCREMENT,
++    subject_id  BIGINT       NOT NULL,
++    parent_id   BIGINT       NULL,
++    topic_name  VARCHAR(150) NOT NULL,
++    sort_order  INT          NOT NULL DEFAULT 0,
++    created_at  DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    parent_key  BIGINT AS (IFNULL(parent_id, 0)) STORED,
++    PRIMARY KEY (topic_id),
++    UNIQUE KEY uq_topic (subject_id, parent_key, topic_name),
++    -- đích của FK ghép (subject_id, parent_id) ở bảng con: ép cha và con cùng môn
++    UNIQUE KEY uq_topic_scope (subject_id, topic_id),
++    KEY ix_topic_subject (subject_id, sort_order),
++    CONSTRAINT fk_topic_subject FOREIGN KEY (subject_id) REFERENCES ntt_subjects (subject_id),
++    CONSTRAINT fk_topic_parent FOREIGN KEY (subject_id, parent_id)
++        REFERENCES ntt_topics (subject_id, topic_id),
++    CONSTRAINT chk_topic_not_blank CHECK (TRIM(topic_name) <> ''),
++    CONSTRAINT chk_topic_no_self_parent CHECK (parent_id IS NULL OR parent_id <> topic_id)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++-- Lưu ý: chống CHU TRÌNH (A->B->C->A) không làm được bằng CHECK/FK. Kiểm ở TopicService
++-- bằng CTE đệ quy khi đổi parent_id (xem docs/nghiep-vu/02-ke-hoach-mo-rong-csdl.md mục 7).
++
++-- 2.3 Loại lỗi (danh mục dùng chung cho AI và nhãn thực nghiệm)
++--     Đồng bộ với enum error_type trong notebook Qwen: spelling / logic / presentation / none
++--     (+ 2 giá trị mở rộng: distractor = phương án nhiễu kém, style = diễn đạt chưa rõ)
++CREATE TABLE IF NOT EXISTS ntt_issue_types
++(
++    issue_type   VARCHAR(20)  NOT NULL,
++    label_vi     VARCHAR(100) NOT NULL,
++    is_evaluated BIT(1)       NOT NULL DEFAULT b'1' COMMENT 'Có nằm trong bộ nhãn dùng để tính P/R/F1 hay không',
++    sort_order   INT          NOT NULL DEFAULT 0,
++    PRIMARY KEY (issue_type)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++INSERT INTO ntt_issue_types (issue_type, label_vi, is_evaluated, sort_order)
++VALUES ('spelling', 'Lỗi chính tả', 1, 10),
++       ('grammar', 'Lỗi ngữ pháp', 1, 20),
++       ('presentation', 'Trình bày / diễn đạt chưa rõ', 1, 30),
++       ('logic', 'Logic câu dẫn - đáp án không khớp', 1, 40),
++       ('distractor', 'Phương án nhiễu kém', 1, 50),
++       ('style', 'Văn phong / nhất quán thuật ngữ', 1, 60),
++       ('none', 'Không phát hiện lỗi (đã duyệt mẫu)', 0, 900)
++ON DUPLICATE KEY UPDATE label_vi = VALUES(label_vi),
++                        is_evaluated = VALUES(is_evaluated),
++                        sort_order = VALUES(sort_order);
++-- 'none' có is_evaluated = 0: dùng để ghi nhận "người gán đã xem và kết luận không lỗi",
++-- không được tính như một nhãn lỗi khi tính Precision/Recall.
++
++-- --------------------------------------------------------------------------------------------
++-- NHÓM 2: CÂU HỎI VÀ LỊCH SỬ SỬA
++-- --------------------------------------------------------------------------------------------
++
++-- 2.4 Câu hỏi trắc nghiệm 1 đáp án đúng, 4 phương án A-D (đúng phạm vi đề cương 1.6)
++CREATE TABLE IF NOT EXISTS ntt_questions
++(
++    question_id       BIGINT       NOT NULL AUTO_INCREMENT,
++    subject_id        BIGINT       NOT NULL,
++    topic_id          BIGINT       NULL,
++    title             VARCHAR(255) NULL COMMENT 'Tiêu đề ngắn để tra cứu, không bắt buộc',
++    stem              TEXT         NOT NULL COMMENT 'Nội dung câu dẫn, có thể chứa "_____"',
++    option_a          TEXT         NOT NULL,
++    option_b          TEXT         NOT NULL,
++    option_c          TEXT         NOT NULL,
++    option_d          TEXT         NOT NULL,
++    correct_label     ENUM ('A','B','C','D') NOT NULL,
++    content_format    ENUM ('plain','html') NOT NULL DEFAULT 'plain',
++    general_feedback  TEXT         NULL COMMENT 'Lời giải / nhận xét chung hiển thị cho người học',
++    difficulty        TINYINT      NULL COMMENT '1..5; NULL = chưa đánh giá',
++    status            ENUM ('active','archived') NOT NULL DEFAULT 'active',
++    validation_status ENUM ('not_checked','clean','has_issues','failed','stale') NOT NULL DEFAULT 'not_checked',
++    last_validated_at DATETIME(6)  NULL,
++    source            ENUM ('manual','moodle_import','eval') NOT NULL DEFAULT 'manual',
++    content_hash      CHAR(64)     NOT NULL COMMENT 'SHA-256 của nội dung chuẩn hoá; dùng để cảnh báo trùng',
++    version           INT          NOT NULL DEFAULT 0 COMMENT 'Khoá lạc quan @Version của Hibernate',
++    created_by        BIGINT       NULL,
++    updated_by        BIGINT       NULL,
++    created_at        DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    updated_at        DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    PRIMARY KEY (question_id),
++    -- đích của FK ghép (subject_id, topic_id) ở bảng con: ép câu hỏi và chủ đề cùng môn
++    UNIQUE KEY uq_question_scope (subject_id, question_id),
++    KEY ix_q_scope (subject_id, topic_id, status),
++    KEY ix_q_hash (subject_id, content_hash),
++    KEY ix_q_validation (subject_id, validation_status),
++    FULLTEXT KEY ft_q_text (stem, option_a, option_b, option_c, option_d),
++    CONSTRAINT fk_q_subject FOREIGN KEY (subject_id) REFERENCES ntt_subjects (subject_id),
++    CONSTRAINT fk_q_topic FOREIGN KEY (subject_id, topic_id)
++        REFERENCES ntt_topics (subject_id, topic_id),
++    CONSTRAINT chk_q_difficulty CHECK (difficulty IS NULL OR difficulty BETWEEN 1 AND 5),
++    CONSTRAINT chk_q_not_blank CHECK (
++        TRIM(stem) <> '' AND TRIM(option_a) <> '' AND TRIM(option_b) <> ''
++            AND TRIM(option_c) <> '' AND TRIM(option_d) <> ''),
++    CONSTRAINT chk_q_hash_len CHECK (CHAR_LENGTH(content_hash) = 64)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++-- content_hash CHỈ index, KHÔNG unique: trùng nội dung là cảnh báo cho người biên soạn
++-- (UC05/UC06 hiển thị "câu hỏi tương tự"), không phải lỗi chặn lưu.
++
++-- 2.5 Lịch sử phiên bản của câu hỏi (append-only, mỗi lần sửa 1 dòng)
++CREATE TABLE IF NOT EXISTS ntt_question_revisions
++(
++    revision_id   BIGINT       NOT NULL AUTO_INCREMENT,
++    question_id   BIGINT       NOT NULL,
++    rev_no        INT          NOT NULL COMMENT 'Bắt đầu từ 1, tăng dần theo từng câu hỏi',
++    snapshot_json JSON         NOT NULL COMMENT 'Toàn bộ nội dung câu hỏi tại thời điểm rev_no',
++    change_source ENUM ('create','manual','ai_suggestion','moodle_import','archive','restore') NOT NULL,
++    change_note   VARCHAR(255) NULL,
++    changed_by    BIGINT       NULL,
++    changed_at    DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    PRIMARY KEY (revision_id),
++    UNIQUE KEY uq_rev (question_id, rev_no),
++    -- đích của FK ghép (question_id, question_revision_id) ở bảng AI/Moodle/đề xuất
++    UNIQUE KEY uq_rev_scope (question_id, revision_id),
++    KEY ix_rev_question_time (question_id, changed_at),
++    CONSTRAINT fk_rev_question FOREIGN KEY (question_id) REFERENCES ntt_questions (question_id)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- --------------------------------------------------------------------------------------------
++-- NHÓM 3: AI (task bất đồng bộ + đề xuất do AI sinh ra)
++-- --------------------------------------------------------------------------------------------
++
++-- 2.6 Tác vụ AI (hàng đợi bền, trạng thái sống ở đây - Redis chỉ là hàng đợi tạm)
++CREATE TABLE IF NOT EXISTS ntt_ai_tasks
++(
++    task_id              CHAR(36)     NOT NULL COMMENT 'UUID do Server 1 sinh',
++    task_type            ENUM ('question_check','nl_search') NOT NULL,
++    question_id          BIGINT       NULL,
++    question_revision_id BIGINT       NULL COMMENT 'Task gắn với 1 revision cụ thể, không gắn "câu hỏi hiện tại"',
++    status               ENUM ('pending','running','succeeded','failed','cancelled') NOT NULL DEFAULT 'pending',
++    attempt_count        TINYINT      NOT NULL DEFAULT 1,
++    error_code           VARCHAR(50)  NULL,
++    error_message        VARCHAR(500) NULL,
++    input_json           JSON         NOT NULL COMMENT 'Bản sao nội dung câu hỏi lấy từ snapshot_json của đúng revision',
++    result_json          JSON         NULL COMMENT 'Chỉ có khi JSON hợp lệ',
++    raw_response         LONGTEXT     NULL COMMENT 'Phản hồi thô, lưu cả khi JSON hỏng; projection không kéo cột này',
++    is_json_valid        BIT(1)       NULL,
++    model_name           VARCHAR(100) NULL,
++    model_digest         CHAR(64)     NULL,
++    runtime_version      VARCHAR(30)  NULL,
++    prompt_version       VARCHAR(30)  NULL,
++    params_json          JSON         NULL COMMENT 'num_ctx, temperature, seed, num_predict...',
++    usage_json           JSON         NULL,
++    inference_ms         INT          NULL,
++    eval_run_id          BIGINT       NULL COMMENT 'NULL = task chạy thật; khác NULL = thuộc module thực nghiệm',
++    created_by           BIGINT       NULL,
++    created_at           DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    started_at           DATETIME(6)  NULL,
++    finished_at          DATETIME(6)  NULL,
++    -- Cột SINH: = 1 khi task còn sống (pending/running), NULL khi đã kết thúc.
++    -- Nhờ NULL mà UNIQUE bên dưới chỉ chặn "2 task sống cùng lúc cho 1 câu + 1 loại",
++    -- còn các task đã kết thúc (NULL) được phép trùng nhau vô hạn => chạy lại bao nhiêu lần cũng được.
++    active_flag          TINYINT AS (IF(status IN ('pending','running'), 1, NULL)) STORED,
++    PRIMARY KEY (task_id),
++    UNIQUE KEY uq_one_active_task (question_id, task_type, active_flag),
++    KEY ix_task_status_created (status, created_at) COMMENT 'Job quét task kẹt running',
++    KEY ix_task_question (question_id, created_at),
++    KEY ix_task_eval_run (eval_run_id),
++    CONSTRAINT fk_task_question FOREIGN KEY (question_id) REFERENCES ntt_questions (question_id),
++    CONSTRAINT fk_task_revision FOREIGN KEY (question_id, question_revision_id)
++        REFERENCES ntt_question_revisions (question_id, revision_id),
++    CONSTRAINT chk_task_attempt CHECK (attempt_count BETWEEN 1 AND 5),
++    CONSTRAINT chk_task_failed_needs_code CHECK (status <> 'failed' OR error_code IS NOT NULL),
++    CONSTRAINT chk_task_finished CHECK (
++        status IN ('pending','running') OR finished_at IS NOT NULL),
++    CONSTRAINT chk_task_question_check CHECK (
++        (task_type = 'question_check' AND question_id IS NOT NULL AND question_revision_id IS NOT NULL)
++            OR (task_type = 'nl_search' AND question_id IS NULL AND question_revision_id IS NULL))
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++-- active_flag là CỘT SINH (insertable=false, updatable=false ở entity): ứng dụng KHÔNG ghi cột này.
++-- MariaDB không cho CHECK tham chiếu cột sinh => mọi ràng buộc về status phải viết ở service.
++-- Task 'nl_search' có question_id NULL nên UNIQUE không chặn được (UNIQUE cho phép nhiều NULL);
++-- chống bấm liên tục bằng khoá Redis ai:rl:{admin_id}, đúng như tài liệu Spring Boot mục 11.5.
++
++-- 2.7 Đề xuất của AI cho 1 task (mỗi đề xuất = 1 dòng, bất biến sau khi chèn)
++CREATE TABLE IF NOT EXISTS ntt_ai_suggestions
++(
++    suggestion_id       BIGINT       NOT NULL AUTO_INCREMENT,
++    task_id             CHAR(36)     NOT NULL,
++    seq_no              SMALLINT     NOT NULL COMMENT 'Bắt đầu từ 1',
++    issue_type          VARCHAR(20)  NOT NULL,
++    severity            ENUM ('low','medium','high') NOT NULL DEFAULT 'medium',
++    target_field        ENUM ('question','stem','option_a','option_b','option_c','option_d') NOT NULL,
++    original_text       TEXT         NULL COMMENT 'Đoạn văn bản gốc mà AI chỉ ra',
++    span_start          INT          NULL COMMENT 'Vị trí tính bằng indexOf ở server, NULL nếu không tìm thấy',
++    span_end            INT          NULL,
++    explanation         TEXT         NOT NULL,
++    proposed_text       TEXT         NULL,
++    suggested_difficulty TINYINT     NULL,
++    decision            ENUM ('pending','accepted','rejected','stale') NOT NULL DEFAULT 'pending',
++    decided_by          BIGINT       NULL,
++    decided_at          DATETIME(6)  NULL,
++    reject_reason       VARCHAR(255) NULL,
++    final_text          TEXT         NULL COMMENT 'Nội dung người duyệt chốt trước khi áp dụng',
++    applied_revision_id BIGINT       NULL,
++    created_at          DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    PRIMARY KEY (suggestion_id),
++    UNIQUE KEY uq_sugg_seq (task_id, seq_no),
++    KEY ix_sugg_task_decision (task_id, decision),
++    KEY ix_sugg_issue (issue_type),
++    CONSTRAINT fk_sugg_task FOREIGN KEY (task_id) REFERENCES ntt_ai_tasks (task_id) ON DELETE CASCADE,
++    CONSTRAINT fk_sugg_issue FOREIGN KEY (issue_type) REFERENCES ntt_issue_types (issue_type),
++    CONSTRAINT fk_sugg_revision FOREIGN KEY (applied_revision_id)
++        REFERENCES ntt_question_revisions (revision_id),
++    CONSTRAINT chk_sugg_span CHECK (
++        (span_start IS NULL AND span_end IS NULL)
++            OR (span_start >= 0 AND span_end > span_start)),
++    CONSTRAINT chk_sugg_difficulty CHECK (suggested_difficulty IS NULL OR suggested_difficulty BETWEEN 1 AND 5),
++    CONSTRAINT chk_sugg_decided CHECK (
++        decision IN ('pending','stale') OR (decided_by IS NOT NULL AND decided_at IS NOT NULL))
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++-- target_field KHÔNG có 'correct_label': theo đề cương 3.3, AI không được đổi đáp án đúng.
++-- Bất biến này được thực thi ngay ở tầng dữ liệu, không chỉ ở service.
++
++-- --------------------------------------------------------------------------------------------
++-- NHÓM 4: MOODLE (cấu hình kết nối + nhật ký xuất/nhập)
++-- --------------------------------------------------------------------------------------------
++
++-- 2.8 Hồ sơ cấu hình Moodle (mỗi lần xuất/nhập dùng 1 hồ sơ)
++CREATE TABLE IF NOT EXISTS ntt_moodle_profiles
++(
++    profile_id      BIGINT       NOT NULL AUTO_INCREMENT,
++    profile_name    VARCHAR(100) NOT NULL,
++    moodle_base_url VARCHAR(255) NULL,
++    category_prefix VARCHAR(255) NULL,
++    answer_numbering ENUM ('none','abc','ABCD','123') NOT NULL DEFAULT 'none',
++    shuffle_answers BIT(1)       NOT NULL DEFAULT b'1',
++    default_grade   DECIMAL(6,3) NOT NULL DEFAULT 1.000,
++    is_default      BIT(1)       NOT NULL DEFAULT b'0',
++    default_key     TINYINT AS (IF(is_default = 1, 1, NULL)) STORED,
++    created_by      BIGINT       NULL,
++    created_at      DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    updated_at      DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    PRIMARY KEY (profile_id),
++    UNIQUE KEY uq_profile_name (profile_name),
++    UNIQUE KEY uq_single_default_profile (default_key) COMMENT 'Tối đa 1 hồ sơ mặc định',
++    CONSTRAINT chk_profile_grade CHECK (default_grade > 0)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- 2.9 Nhật ký 1 lần xuất hoặc nhập tệp Moodle XML
++CREATE TABLE IF NOT EXISTS ntt_moodle_exchanges
++(
++    exchange_id   BIGINT       NOT NULL AUTO_INCREMENT,
++    direction     ENUM ('export','import') NOT NULL,
++    status        ENUM ('pending','succeeded','partial','failed') NOT NULL DEFAULT 'pending',
++    profile_id    BIGINT       NULL,
++    file_name     VARCHAR(255) NULL,
++    file_size     BIGINT       NULL,
++    file_sha256   CHAR(64)     NULL,
++    storage_ref   VARCHAR(500) NULL COMMENT 'Đường dẫn/khóa lưu tệp, KHÔNG lưu nội dung vào DB',
++    moodle_check  ENUM ('unknown','ok','failed') NOT NULL DEFAULT 'unknown' COMMENT 'Kết quả nhập thử vào Moodle thật',
++    error_message VARCHAR(500) NULL,
++    created_by    BIGINT       NULL,
++    created_at    DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    finished_at   DATETIME(6)  NULL,
++    PRIMARY KEY (exchange_id),
++    KEY ix_exchange_created (created_at),
++    KEY ix_exchange_status (status, created_at),
++    CONSTRAINT fk_exchange_profile FOREIGN KEY (profile_id) REFERENCES ntt_moodle_profiles (profile_id),
++    CONSTRAINT chk_exchange_finished CHECK (status = 'pending' OR finished_at IS NOT NULL)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- 2.10 Chi tiết từng câu hỏi trong 1 lần xuất/nhập
++CREATE TABLE IF NOT EXISTS ntt_moodle_exchange_items
++(
++    item_id              BIGINT       NOT NULL AUTO_INCREMENT,
++    exchange_id          BIGINT       NOT NULL,
++    seq_no               INT          NOT NULL,
++    question_id          BIGINT       NULL,
++    question_revision_id BIGINT       NULL,
++    source_name          VARCHAR(255) NULL COMMENT 'Tên câu hỏi trong tệp Moodle (khi nhập)',
++    item_status          ENUM ('ok','skipped','failed') NOT NULL DEFAULT 'ok',
++    error_code           VARCHAR(50)  NULL,
++    error_message        VARCHAR(500) NULL,
++    PRIMARY KEY (item_id),
++    UNIQUE KEY uq_exchange_item_seq (exchange_id, seq_no),
++    UNIQUE KEY uq_exchange_question (exchange_id, question_id),
++    KEY ix_exchange_item_question (question_id),
++    CONSTRAINT fk_item_exchange FOREIGN KEY (exchange_id) REFERENCES ntt_moodle_exchanges (exchange_id) ON DELETE CASCADE,
++    CONSTRAINT fk_item_question FOREIGN KEY (question_id) REFERENCES ntt_questions (question_id),
++    CONSTRAINT fk_item_revision FOREIGN KEY (question_id, question_revision_id)
++        REFERENCES ntt_question_revisions (question_id, revision_id),
++    CONSTRAINT chk_item_revision_needs_question CHECK (
++        question_revision_id IS NULL OR question_id IS NOT NULL)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- --------------------------------------------------------------------------------------------
++-- TRIGGER: khi nội dung câu hỏi đổi, kết quả kiểm định cũ không còn giá trị
++--
++-- Đây là phần ER v4 ghi "TRG trg_question_bu_stale" nhưng CHƯA có thân trigger (đề án
++-- mục 11.7 cũng ghi "thân trigger chưa thấy"). Bản dưới đây là đề xuất cụ thể.
++--
++-- TẠI SAO KHÔNG dùng ON UPDATE CURRENT_TIMESTAMP: để trigger tự quyết định "đổi nội dung"
++-- (so sánh từng cột văn bản), không dựa vào updated_at - vì chính việc AI ghi
++-- validation_status cũng làm updated_at đổi, sẽ tạo vòng lặp stale vĩnh viễn.
++-- --------------------------------------------------------------------------------------------
++DROP TRIGGER IF EXISTS trg_question_bu_stale;
++
++DELIMITER $$
++CREATE TRIGGER trg_question_bu_stale
++    BEFORE UPDATE
++    ON ntt_questions
++    FOR EACH ROW
++BEGIN
++    IF (NOT (NEW.stem <=> OLD.stem)
++        OR NOT (NEW.option_a <=> OLD.option_a)
++        OR NOT (NEW.option_b <=> OLD.option_b)
++        OR NOT (NEW.option_c <=> OLD.option_c)
++        OR NOT (NEW.option_d <=> OLD.option_d)
++        OR NOT (NEW.correct_label <=> OLD.correct_label)
++        OR NOT (NEW.difficulty <=> OLD.difficulty))
++        AND NEW.validation_status = OLD.validation_status THEN
++        -- Người/AI sửa nội dung mà không chủ động đổi trạng thái => kết quả cũ (clean/has_issues)
++        -- trở thành stale. Nếu caller CỐ Ý đặt not_checked/clean mới, tôn trọng ý caller.
++        SET NEW.validation_status = 'stale';
++    END IF;
++END$$
++DELIMITER ;
++
++-- Đánh dấu các đề xuất còn pending của câu hỏi đó thành stale.
++-- Chạy AFTER UPDATE của ntt_questions nên nhìn thấy trạng thái cuối cùng.
++DROP TRIGGER IF EXISTS trg_question_au_stale_suggestions;
++
++DELIMITER $$
++CREATE TRIGGER trg_question_au_stale_suggestions
++    AFTER UPDATE
++    ON ntt_questions
++    FOR EACH ROW
++BEGIN
++    IF NEW.validation_status = 'stale' AND OLD.validation_status <> 'stale' THEN
++        UPDATE ntt_ai_suggestions s
++            JOIN ntt_ai_tasks t ON t.task_id = s.task_id
++        SET s.decision = 'stale'
++        WHERE t.question_id = NEW.question_id
++          AND s.decision = 'pending';
++    END IF;
++END$$
++DELIMITER ;
++
++-- --------------------------------------------------------------------------------------------
++-- GHI CHÚ QUAN TRỌNG: CHỮ HOA / CHỮ THƯỜNG
++--
++-- 7 bảng cũ dùng chữ HOA (ADMIN, ACTIVE, ...) vì @Enumerated(STRING) trên enum Java viết hoa.
++-- 14 bảng mới ở trên dùng chữ THƯỜNG (active, clean, ...) theo đúng ER v4.
++-- Hai quy ước cùng tồn tại trong 1 schema là chấp nhận được NHƯNG phải thống nhất ở tầng
++-- Java: enum nghiệp vụ mới viết thường (hoặc dùng AttributeConverter).
++-- Khuyến nghị: viết hoa toàn bộ enum ở Java rồi để CHECK/ENUM trong DB theo chữ thường →
++-- SAI. Chọn MỘT: hoặc sửa ER thành chữ HOA, hoặc thêm converter.
++-- Xem docs/nghiep-vu/02-ke-hoach-mo-rong-csdl.md mục 7 "quy ước enum".
++-- --------------------------------------------------------------------------------------------
+diff --git a/be-web-admin/sql/2026-11-19-03-eval-tables.sql b/be-web-admin/sql/2026-11-19-03-eval-tables.sql
+new file mode 100644
+index 000000000..d2e5a678f
+--- /dev/null
++++ b/be-web-admin/sql/2026-11-19-03-eval-tables.sql
+@@ -0,0 +1,155 @@
++-- ============================================================================================
++-- 03 - MODULE THỰC NGHIỆM (Chương 4.3) - TÙY CHỌN
++--
++-- 4 bảng này chỉ phục vụ đo chất lượng AI (Precision / Recall / F1 / kappa). Chạy script này
++-- TRƯỚC khi chạy các kịch bản E1-E8; hệ thống chạy thật hoàn toàn không cần (eval_run_id = NULL).
++--
++-- Điểm khác biệt so với 02: mọi bảng đều có "split" DEV/TEST và FK ghép ép item, run,
++-- prediction không được lẫn split với nhau. Đây là cơ chế chống rò rỉ dữ liệu
++-- (train/test leakage) - nếu vô tình trộn, mọi con số ở Chương 4 mất giá trị.
++-- ============================================================================================
++
++SET NAMES utf8mb4;
++
++-- 3.1 Một lần chạy thực nghiệm (tương ứng 1 kịch bản E1..E8)
++CREATE TABLE IF NOT EXISTS ntt_eval_runs
++(
++    run_id          BIGINT       NOT NULL AUTO_INCREMENT,
++    run_label       VARCHAR(100) NOT NULL COMMENT 'vd: E4_fewshot_cot_k5_seed0',
++    scenario        ENUM ('E1','E2','E3','E4','E5','E6','E7','E8') NOT NULL,
++    dataset_version VARCHAR(20)  NOT NULL COMMENT 'vd: 2026-11-ds300',
++    split           ENUM ('dev','test') NOT NULL,
++    method          ENUM ('rule_based','llm') NOT NULL,
++    model_name      VARCHAR(100) NULL,
++    model_digest    CHAR(64)     NULL COMMENT 'SHA-256 tệp GGUF, ghi lại để tái lập',
++    runtime_version VARCHAR(30)  NULL COMMENT 'Phiên bản Ollama',
++    gpu_type        VARCHAR(50)  NULL COMMENT 'vd: Tesla T4 16GB',
++    prompt_version  VARCHAR(30)  NULL,
++    params_json     JSON         NULL COMMENT 'temperature, seed, num_ctx, num_predict',
++    seed            INT          NULL,
++    started_at      DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    finished_at     DATETIME(6)  NULL,
++    note            VARCHAR(500) NULL,
++    created_by      BIGINT       NULL,
++    PRIMARY KEY (run_id),
++    UNIQUE KEY uq_run_label (run_label),
++    -- đích của FK ghép (run_id, split) từ eval_predictions
++    UNIQUE KEY uq_run_scope (run_id, split),
++    KEY ix_run_scenario (scenario, split),
++    CONSTRAINT chk_run_llm_fields CHECK (
++        method = 'rule_based'
++            OR (model_name IS NOT NULL AND model_digest IS NOT NULL
++            AND runtime_version IS NOT NULL AND gpu_type IS NOT NULL)),
++    CONSTRAINT chk_run_finished CHECK (finished_at IS NULL OR finished_at >= started_at)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- 3.2 Một mẫu trong bộ dữ liệu 300 câu (real = lấy từ giảng viên, injected = chèn lỗi có kiểm soát)
++CREATE TABLE IF NOT EXISTS ntt_eval_items
++(
++    item_id               BIGINT       NOT NULL AUTO_INCREMENT,
++    dataset_version       VARCHAR(20)  NOT NULL,
++    question_id           BIGINT       NOT NULL,
++    split                 ENUM ('dev','test') NOT NULL,
++    origin                ENUM ('real','injected') NOT NULL DEFAULT 'real',
++    injected_from_item_id BIGINT       NULL COMMENT 'Mẫu gốc đã dùng để chèn lỗi (nếu origin = injected)',
++    gold_status           ENUM ('unlabeled','clean','has_errors') NOT NULL DEFAULT 'unlabeled',
++    created_at            DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    PRIMARY KEY (item_id),
++    UNIQUE KEY uq_eval_dataset_question (dataset_version, question_id),
++    -- đích của FK ghép (split, item_id) từ eval_predictions và (split, injected_from_item_id)
++    UNIQUE KEY uq_eval_scope (split, item_id),
++    KEY ix_eval_split_gold (split, gold_status),
++    CONSTRAINT fk_eval_item_question FOREIGN KEY (question_id) REFERENCES ntt_questions (question_id),
++    CONSTRAINT fk_eval_item_injected FOREIGN KEY (split, injected_from_item_id)
++        REFERENCES ntt_eval_items (split, item_id)
++        COMMENT 'Chống rò rỉ: mẫu chèn lỗi ở TEST không được sinh từ mẫu DEV (và ngược lại)',
++    CONSTRAINT chk_eval_injected CHECK (
++        (origin = 'injected' AND injected_from_item_id IS NOT NULL)
++            OR (origin = 'real' AND injected_from_item_id IS NULL))
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- 3.3 Nhãn do người gán (stage = annotator) và nhãn chốt cuối (stage = gold)
++CREATE TABLE IF NOT EXISTS ntt_eval_labels
++(
++    label_id        BIGINT       NOT NULL AUTO_INCREMENT,
++    item_id         BIGINT       NOT NULL,
++    stage           ENUM ('annotator','gold') NOT NULL,
++    annotator_code  VARCHAR(30)  NULL COMMENT 'Mã người gán (A1, A2) - KHÔNG lưu danh tính thật',
++    issue_type      VARCHAR(20)  NOT NULL,
++    note            VARCHAR(500) NULL,
++    created_at      DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    annotator_key   VARCHAR(30)  AS (IFNULL(annotator_code, 'gold')) STORED,
++    PRIMARY KEY (label_id),
++    UNIQUE KEY uq_label (item_id, stage, annotator_key, issue_type),
++    KEY ix_label_item (item_id),
++    CONSTRAINT fk_label_item FOREIGN KEY (item_id) REFERENCES ntt_eval_items (item_id),
++    CONSTRAINT fk_label_issue FOREIGN KEY (issue_type) REFERENCES ntt_issue_types (issue_type),
++    CONSTRAINT chk_label_gold_no_annotator CHECK (stage <> 'gold' OR annotator_code IS NULL),
++    CONSTRAINT chk_label_none_only_annotator CHECK (issue_type <> 'none' OR stage = 'annotator')
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- 3.4 Dự đoán của hệ thống cho 1 mẫu trong 1 run (đơn vị để tính TP/FP/FN)
++CREATE TABLE IF NOT EXISTS ntt_eval_predictions
++(
++    prediction_id BIGINT      NOT NULL AUTO_INCREMENT,
++    run_id        BIGINT      NOT NULL,
++    item_id       BIGINT      NOT NULL,
++    split         ENUM ('dev','test') NOT NULL,
++    issue_type    VARCHAR(20) NOT NULL,
++    suggestion_id BIGINT      NULL COMMENT 'Trỏ về đề xuất thật nếu run chạy qua hệ thống, không phải qua script',
++    created_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
++    PRIMARY KEY (prediction_id),
++    UNIQUE KEY uq_pred (run_id, item_id, issue_type),
++    KEY ix_pred_item (item_id),
++    CONSTRAINT fk_pred_run FOREIGN KEY (run_id, split) REFERENCES ntt_eval_runs (run_id, split)
++        COMMENT 'FK ghép: run TEST chỉ nhận item TEST',
++    CONSTRAINT fk_pred_item FOREIGN KEY (split, item_id) REFERENCES ntt_eval_items (split, item_id),
++    CONSTRAINT fk_pred_issue FOREIGN KEY (issue_type) REFERENCES ntt_issue_types (issue_type),
++    CONSTRAINT fk_pred_suggestion FOREIGN KEY (suggestion_id) REFERENCES ntt_ai_suggestions (suggestion_id)
++) ENGINE = InnoDB
++  DEFAULT CHARSET = utf8mb4
++  COLLATE = utf8mb4_unicode_ci;
++
++-- --------------------------------------------------------------------------------------------
++-- LIÊN KẾT CHÉO giữa module thực nghiệm và module chạy thật
++-- (file 02 đã tạo ntt_ai_tasks.eval_run_id nhưng chưa khai báo FK vì eval_runs tạo sau)
++-- --------------------------------------------------------------------------------------------
++ALTER TABLE ntt_ai_tasks
++    ADD CONSTRAINT fk_task_eval_run FOREIGN KEY (eval_run_id) REFERENCES ntt_eval_runs (run_id);
++
++-- --------------------------------------------------------------------------------------------
++-- VIEW hỗ trợ tính chỉ số (tuỳ chọn, dùng cho phần phân tích Chương 4)
++-- Đếm TP/FP/FN theo nhóm lỗi dựa trên nhãn gold và dự đoán.
++-- --------------------------------------------------------------------------------------------
++CREATE OR REPLACE VIEW vw_eval_confusion AS
++SELECT r.run_id,
++       r.run_label,
++       r.split,
++       it.issue_type,
++       SUM(CASE WHEN l.item_id IS NOT NULL AND p.item_id IS NOT NULL THEN 1 ELSE 0 END) AS tp,
++       SUM(CASE WHEN l.item_id IS NULL AND p.item_id IS NOT NULL THEN 1 ELSE 0 END)     AS fp,
++       SUM(CASE WHEN l.item_id IS NOT NULL AND p.item_id IS NULL THEN 1 ELSE 0 END)     AS fn
++FROM ntt_eval_runs r
++         CROSS JOIN ntt_issue_types it
++         LEFT JOIN ntt_eval_predictions p
++                   ON p.run_id = r.run_id AND p.issue_type = it.issue_type
++         LEFT JOIN ntt_eval_labels l
++                   ON l.item_id = p.item_id AND l.issue_type = it.issue_type AND l.stage = 'gold'
++WHERE it.is_evaluated = b'1'
++GROUP BY r.run_id, r.run_label, r.split, it.issue_type;
++-- Lưu ý: view này chỉ đếm trên các cặp (item, issue_type) CÓ xuất hiện ở predictions.
++-- Để tính FN đầy đủ (nhãn có nhưng không dự đoán gì) cần thêm nhánh UNION hoặc tính ở service
++-- - xem docs/nghiep-vu/03-luong-nghiep-vu.md, mục "Công thức chỉ số".
++
++-- --------------------------------------------------------------------------------------------
++-- KIỂM TRA
++-- --------------------------------------------------------------------------------------------
++-- SELECT COUNT(*) FROM information_schema.tables
++--  WHERE table_schema = DATABASE() AND table_name LIKE 'ntt_%';   -- kỳ vọng: 22 (21 bảng + 1 view không tính)
++-- SELECT * FROM ntt_issue_types ORDER BY sort_order;
+diff --git a/be-web-admin/sql/2026-11-19-04-grants.sql b/be-web-admin/sql/2026-11-19-04-grants.sql
+new file mode 100644
+index 000000000..f5ea28577
+--- /dev/null
++++ b/be-web-admin/sql/2026-11-19-04-grants.sql
+@@ -0,0 +1,75 @@
++-- ============================================================================================
++-- 04 - CẤP QUYỀN DB CHO 2 SERVER (TÙY CHỌN NHƯNG RẤT NÊN LÀM)
++--
++-- Mục tiêu: biến "Server 2 không được ghi bảng câu hỏi" từ QUY ƯỚC thành RÀNG BUỘC KỸ THUẬT.
++-- Nếu worker viết sai code (hoặc bị lỗi), MariaDB sẽ từ chối thay vì ghi bẩn dữ liệu.
++--
++-- Đây là bằng chứng rất mạnh khi bảo vệ: có thể chạy câu lệnh cuối file để chứng minh
++-- user ntt_s2 KHÔNG thể UPDATE ntt_questions.
++-- ============================================================================================
++
++-- --------------------------------------------------------------------------------------------
++-- 1. Server 1 (be-web-admin): toàn quyền DML trên schema
++-- --------------------------------------------------------------------------------------------
++CREATE USER IF NOT EXISTS 'ntt_s1'@'%' IDENTIFIED BY 'CHANGE_ME_S1_PASSWORD';
++GRANT SELECT, INSERT, UPDATE, DELETE ON ntt.* TO 'ntt_s1'@'%';
++
++-- Lưu ý: KHÔNG cấp CREATE/ALTER/DROP. Schema chỉ được thay đổi bằng script trong
++-- be-web-admin/sql/ chạy bởi tài khoản quản trị, không phải tài khoản ứng dụng.
++-- Nhờ vậy spring.jpa.hibernate.ddl-auto = update sẽ THẤT BẠI (đúng ý muốn) và buộc phải
++-- chuyển sang none/validate.
++
++-- --------------------------------------------------------------------------------------------
++-- 2. Server 2 (be-ai-worker): chỉ 3 bảng
++-- --------------------------------------------------------------------------------------------
++CREATE USER IF NOT EXISTS 'ntt_s2'@'%' IDENTIFIED BY 'CHANGE_ME_S2_PASSWORD';
++
++-- 2.1 Đọc task (để claim + đọc input) và đọc danh mục loại lỗi
++GRANT SELECT ON ntt.ntt_ai_tasks TO 'ntt_s2'@'%';
++GRANT SELECT ON ntt.ntt_issue_types TO 'ntt_s2'@'%';
++
++-- 2.2 Chỉ được UPDATE 16 CỘT THỰC THI của ntt_ai_tasks (tài liệu Spring Boot mục 9/11.2).
++--     Nhờ cấp theo cột, worker không thể ghi question_id, input_json, created_by, eval_run_id.
++GRANT UPDATE (status, attempt_count, started_at, finished_at, error_code, error_message,
++              result_json, raw_response, is_json_valid, model_name, model_digest,
++              runtime_version, prompt_version, params_json, usage_json, inference_ms)
++    ON ntt.ntt_ai_tasks TO 'ntt_s2'@'%';
++
++-- 2.3 Đề xuất: chỉ INSERT + SELECT (KHÔNG update — quyết định duyệt thuộc Server 1)
++GRANT SELECT, INSERT ON ntt.ntt_ai_suggestions TO 'ntt_s2'@'%';
++
++-- 2.4 Cố tình KHÔNG cấp gì cho: ntt_questions, ntt_question_revisions, ntt_subjects, ntt_topics,
++--     ntt_moodle_*, ntt_eval_*, và 7 bảng xác thực.
++
++FLUSH PRIVILEGES;
++
++-- --------------------------------------------------------------------------------------------
++-- 3. KIỂM CHỨNG (chạy khi bảo vệ — rất thuyết phục)
++-- --------------------------------------------------------------------------------------------
++-- 3.1 Xem quyền thực tế của worker:
++--     SHOW GRANTS FOR 'ntt_s2'@'%';
++--
++-- 3.2 Thử ghi vào bảng câu hỏi bằng tài khoản worker (PHẢI bị từ chối):
++--     mariadb -u ntt_s2 -p ntt -e "UPDATE ntt_questions SET stem='hack' WHERE question_id=1;"
++--     -> ERROR 1142 (42000): UPDATE command denied to user 'ntt_s2'@'...' for table 'ntt_questions'
++--
++-- 3.3 Thử UPDATE một cột Server 1 sở hữu (PHẢI bị từ chối):
++--     mariadb -u ntt_s2 -p ntt -e "UPDATE ntt_ai_tasks SET question_id=999 WHERE task_id='...';"
++--     -> ERROR 1143: UPDATE command denied ... for column 'question_id'
++--
++-- 3.4 Thử UPDATE cột được phép (PHẢI thành công):
++--     mariadb -u ntt_s2 -p ntt -e "UPDATE ntt_ai_tasks SET inference_ms=1234 WHERE task_id='...';"
++--
++-- --------------------------------------------------------------------------------------------
++-- GHI CHÚ VỀ GRANT THEO CỘT
++-- --------------------------------------------------------------------------------------------
++-- MariaDB hỗ trợ GRANT UPDATE(col1, col2, ...) và đã hỗ trợ từ lâu. Nếu phiên bản đang dùng từ chối
++-- cú pháp nhiều cột, dùng phương án B:
++--
++--   GRANT UPDATE ON ntt.ntt_ai_tasks TO 'ntt_s2'@'%';
++--
++-- và chấp nhận rằng việc giới hạn cột được bảo đảm bởi:
++--   (a) entity AiTask khai báo updatable=false cho các cột của Server 1,
++--   (b) @DynamicUpdate chỉ sinh UPDATE cho cột đã đổi,
++--   (c) các @Modifying query trong AiTaskRepository chỉ liệt kê cột thực thi.
++-- Tức là vẫn còn 3 lớp bảo vệ, chỉ mất lớp DB.

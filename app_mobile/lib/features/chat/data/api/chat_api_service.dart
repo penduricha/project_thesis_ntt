@@ -125,10 +125,10 @@ class ChatApiService {
 
   /// 10. Gửi tin. Gửi lại cùng [clientMsgId] thì server trả tin cũ (200), không tạo tin trùng.
   Future<ChatMessage> sendMessage(
-    int id, {
-    required String clientMsgId,
-    required String content,
-  }) async {
+      int id, {
+        required String clientMsgId,
+        required String content,
+      }) async {
     final response = await _call(
       'POST',
       '$_base/conversations/$id/messages',
@@ -162,12 +162,12 @@ class ChatApiService {
   // ------------------------------------------------------------------ nền
 
   Future<Response<dynamic>> _call(
-    String method,
-    String path, {
-    Object? body,
-    Map<String, dynamic>? query,
-  }) async {
-    final token = await _auth.accessToken();
+      String method,
+      String path, {
+        Object? body,
+        Map<String, dynamic>? query,
+      }) async {
+    final token = await _readToken();
     if (token == null || token.isEmpty) {
       throw const ChatApiException(
         statusCode: 401,
@@ -189,20 +189,35 @@ class ChatApiService {
   /// Nếu máy đã có token mới hơn token vừa bị từ chối (lần làm mới trước đó đã lưu) thì dùng luôn, KHÔNG làm mới
   /// thêm lần nữa: làm mới liên tiếp rất dễ bị server từ chối.
   Future<String?> _tokenAfterUnauthorized(String sentToken) async {
-    final current = await _auth.accessToken();
+    final current = await _readToken();
     if (current != null && current.isNotEmpty && current != sentToken) {
       return current;
     }
-    return _auth.refreshAccessToken();
+    try {
+      return await _auth.refreshAccessToken();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Đọc access token. Kho lưu trữ bảo mật có thể ném lỗi (trên web: "OperationError" khi dữ liệu đã mã hóa trong
+  /// trình duyệt không còn giải mã được, ví dụ khóa mã hóa bị xóa hoặc đổi). Coi như chưa có phiên để app hiện
+  /// "Phiên đăng nhập đã hết hạn" với nút đăng nhập lại, thay vì lỗi lạ khó hiểu.
+  Future<String?> _readToken() async {
+    try {
+      return await _auth.accessToken();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<Response<dynamic>> _send(
-    String method,
-    String path,
-    String token,
-    Object? body,
-    Map<String, dynamic>? query,
-  ) async {
+      String method,
+      String path,
+      String token,
+      Object? body,
+      Map<String, dynamic>? query,
+      ) async {
     try {
       return await _dio.request<dynamic>(
         path,
@@ -232,8 +247,11 @@ class ChatApiService {
     String? code;
     String message = '';
     if (data is Map) {
-      code = data['code'] as String?;
-      message = (data['message'] as String?) ?? '';
+      // Thân lỗi có thể đến từ lớp khác (proxy, trang lỗi mặc định của Spring) nên không giả định kiểu trường.
+      final rawCode = data['code'];
+      final rawMessage = data['message'];
+      code = rawCode is String ? rawCode : null;
+      message = rawMessage is String ? rawMessage : '';
     }
     int? retryAfter;
     final header = response.headers.value('retry-after');

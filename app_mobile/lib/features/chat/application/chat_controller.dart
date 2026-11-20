@@ -122,9 +122,9 @@ class ChatController extends ChangeNotifier {
 
   /// Danh sách hiển thị ở tab Chat: nhóm luôn hiện, cuộc 1-1 chỉ hiện khi đã có ít nhất một tin.
   List<ChatConversation> get visibleConversations => [
-        for (final c in _conversations)
-          if (c.isGroup || c.lastMessage != null) c,
-      ];
+    for (final c in _conversations)
+      if (c.isGroup || c.lastMessage != null) c,
+  ];
 
   bool get listLoading => _listLoading;
   bool get listLoaded => _listLoaded;
@@ -161,7 +161,17 @@ class ChatController extends ChangeNotifier {
 
   /// Gọi sau khi đăng nhập thành công hoặc khi mở app mà đã có phiên. Gọi lại nhiều lần an toàn.
   Future<void> start() async {
-    final session = AuthStorage.cachedSession ?? await AuthStorage().readSession();
+    AuthSession? session;
+    try {
+      session = AuthStorage.cachedSession ?? await AuthStorage().readSession();
+    } catch (e) {
+      // Kho lưu trữ bảo mật không đọc được (trên web: OperationError khi dữ liệu mã hóa cũ không giải mã được).
+      // Báo "phiên hết hạn" để người dùng đăng nhập lại; không để lỗi lọt ra thành lỗi chưa bắt.
+      debugPrint('Chat: không đọc được phiên đăng nhập: $e');
+      _authLost = true;
+      notifyListeners();
+      return;
+    }
     if (session == null) return;
     if (_running && _myId == session.adminId) return;
     if (_running) await stop(); // đổi tài khoản trên cùng máy: bỏ sạch trạng thái của người trước
@@ -308,10 +318,16 @@ class ChatController extends ChangeNotifier {
       _listError = null;
       _authLost = false;
     } on ChatApiException catch (e) {
+      debugPrint('Chat: tải danh sách lỗi: $e');
       _noteApiError(e);
       _listError = e.userMessage;
-    } catch (_) {
-      _listError = 'Không tải được danh sách. Kéo để thử lại.';
+    } catch (e, stack) {
+      // Lỗi ngoài dự kiến (không phải lỗi HTTP/mạng đã được gói): ghi log, và khi chạy debug hiện luôn nguyên nhân
+      // trên màn hình để dễ tìm. Bản release chỉ hiện câu chung.
+      debugPrint('Chat: tải danh sách lỗi ngoài dự kiến: $e\n$stack');
+      _listError = kDebugMode
+          ? 'Không tải được danh sách. Kéo để thử lại.\n[$e]'
+          : 'Không tải được danh sách. Kéo để thử lại.';
     } finally {
       _listRefreshesInFlight--;
       if (_listRefreshesInFlight <= 0) {
@@ -950,7 +966,7 @@ class ChatController extends ChangeNotifier {
       ];
       final pending = <ChatMessage>[
         for (final m in list)
-          // Tin tạm cùng clientMsgId được thay bằng tin server.
+        // Tin tạm cùng clientMsgId được thay bằng tin server.
           if (m.id == null && m.clientMsgId != message.clientMsgId) m,
       ];
       if (!server.any((m) => m.id == messageId)) {

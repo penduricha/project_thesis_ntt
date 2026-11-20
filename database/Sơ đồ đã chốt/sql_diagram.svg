@@ -1,0 +1,1673 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3410" height="3702" viewBox="0 0 3410 3702" font-family="Helvetica, Arial, Liberation Sans, sans-serif" xmlns:c2pa="http://c2pa.org/manifest">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<rect x="1430.0" y="70.0" width="803.5" height="189.0" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<text x="1440.0" y="90.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Chú thích</text>
+<text x="1440.0" y="109.2" font-size="12" text-anchor="start" fill="#000000">PK: khoá chính | FK: khoá ngoại | UQ: duy nhất | AI: AUTO_INCREMENT | GEN: cột sinh (STORED)</text>
+<text x="1440.0" y="128.2" font-size="12" text-anchor="start" fill="#000000">Null: Y = cho phép NULL, N = NOT NULL.  CHK: ràng buộc CHECK | IX: chỉ mục | TRG: trigger</text>
+<text x="1440.0" y="147.2" font-size="12" text-anchor="start" fill="#000000">Đầu đường nối: một vạch = phía một (bảng cha, PK); chân chim = phía nhiều (bảng con, FK);</text>
+<text x="1440.0" y="166.2" font-size="12" text-anchor="start" fill="#000000">vòng tròn + vạch = 0..1 (FK cho phép NULL hoặc quan hệ một–một). Tên khoá ngoại ghi trên đường nối;</text>
+<text x="1440.0" y="185.2" font-size="12" text-anchor="start" fill="#000000">FK ghép ghi các cột trong ngoặc, ép bản ghi con và cha cùng phạm vi (cùng môn, cùng câu hỏi, cùng split DEV/TEST).</text>
+<text x="1440.0" y="204.2" font-size="12" text-anchor="start" fill="#000000">Ô nét đứt “→ ntt_x” = FK tới bảng ở nhóm khác, vẽ rút gọn để tránh đường chéo (13 đầu nối).</text>
+<text x="1440.0" y="223.2" font-size="12" text-anchor="start" fill="#000000">Bảng và đường nét đứt = module thực nghiệm (tùy chọn). Toàn bộ 38 quan hệ: 7 (bảng cũ) + 18 đường nối + 13 đầu nối.</text>
+<text x="1440.0" y="242.2" font-size="12" text-anchor="start" fill="#000000">Mọi bảng ENGINE=InnoDB, utf8mb4; datetime(6) lưu UTC; ON DELETE RESTRICT, trừ 2 CASCADE (suggestions → tasks, items → exchanges).</text>
+<rect x="280.0" y="586.0" width="270.0" height="216.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="280.0" y="586.0" width="270.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="280.0" y1="614.0" x2="550.0" y2="614.0" stroke="#000000" stroke-width="1"/>
+<rect x="280.0" y="586.0" width="270.0" height="216.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="286.0" y="604.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_courses</text>
+<text x="284.0" y="628.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="330.0" y="628.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="427.4" y="628.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="528.0" y="628.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="280.0" y1="634.0" x2="550.0" y2="634.0" stroke="#000000" stroke-width="1"/>
+<text x="284.0" y="650.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="330.0" y="650.2" font-size="12" text-anchor="start" fill="#000000">course_id</text>
+<text x="427.4" y="650.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="528.0" y="650.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="670.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="670.2" font-size="12" text-anchor="start" fill="#000000">training_system</text>
+<text x="427.4" y="670.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="528.0" y="670.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="690.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="690.2" font-size="12" text-anchor="start" fill="#000000">branch</text>
+<text x="427.4" y="690.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="528.0" y="690.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="710.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="710.2" font-size="12" text-anchor="start" fill="#000000">industry</text>
+<text x="427.4" y="710.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="528.0" y="710.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="730.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="730.2" font-size="12" text-anchor="start" fill="#000000">faculty</text>
+<text x="427.4" y="730.2" font-size="12" text-anchor="start" fill="#000000">varchar(50)</text>
+<text x="528.0" y="730.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="750.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="750.2" font-size="12" text-anchor="start" fill="#000000">major</text>
+<text x="427.4" y="750.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="528.0" y="750.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="770.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="770.2" font-size="12" text-anchor="start" fill="#000000">type_of_training</text>
+<text x="427.4" y="770.2" font-size="12" text-anchor="start" fill="#000000">varchar(50)</text>
+<text x="528.0" y="770.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="790.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="790.2" font-size="12" text-anchor="start" fill="#000000">year_opening</text>
+<text x="427.4" y="790.2" font-size="12" text-anchor="start" fill="#000000">int(11)</text>
+<text x="528.0" y="790.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<rect x="760.0" y="566.0" width="460.0" height="356.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="760.0" y="566.0" width="460.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="760.0" y1="594.0" x2="1220.0" y2="594.0" stroke="#000000" stroke-width="1"/>
+<rect x="760.0" y="566.0" width="460.0" height="356.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="766.0" y="584.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_admins</text>
+<text x="764.0" y="608.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="810.0" y="608.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="942.8" y="608.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="1198.0" y="608.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="760.0" y1="614.0" x2="1220.0" y2="614.0" stroke="#000000" stroke-width="1"/>
+<text x="764.0" y="630.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="810.0" y="630.2" font-size="12" text-anchor="start" fill="#000000">admin_id</text>
+<text x="942.8" y="630.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="1198.0" y="630.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="764.0" y="650.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="810.0" y="650.2" font-size="12" text-anchor="start" fill="#000000">course_id</text>
+<text x="942.8" y="650.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="1198.0" y="650.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="670.2" font-size="12" text-anchor="start" fill="#000000">UQ</text>
+<text x="810.0" y="670.2" font-size="12" text-anchor="start" fill="#000000">id_card</text>
+<text x="942.8" y="670.2" font-size="12" text-anchor="start" fill="#000000">varchar(12)</text>
+<text x="1198.0" y="670.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="690.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="690.2" font-size="12" text-anchor="start" fill="#000000">password</text>
+<text x="942.8" y="690.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="1198.0" y="690.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="710.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="710.2" font-size="12" text-anchor="start" fill="#000000">admin_name</text>
+<text x="942.8" y="710.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="1198.0" y="710.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="730.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="730.2" font-size="12" text-anchor="start" fill="#000000">address</text>
+<text x="942.8" y="730.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="1198.0" y="730.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="750.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="750.2" font-size="12" text-anchor="start" fill="#000000">gender</text>
+<text x="942.8" y="750.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="1198.0" y="750.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="770.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="770.2" font-size="12" text-anchor="start" fill="#000000">date_of_birth_admin</text>
+<text x="942.8" y="770.2" font-size="12" text-anchor="start" fill="#000000">date</text>
+<text x="1198.0" y="770.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="790.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="790.2" font-size="12" text-anchor="start" fill="#000000">role</text>
+<text x="942.8" y="790.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;admin&#x27;,&#x27;lecturer&#x27;)</text>
+<text x="1198.0" y="790.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="810.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="810.2" font-size="12" text-anchor="start" fill="#000000">totp_enabled</text>
+<text x="942.8" y="810.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="1198.0" y="810.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="830.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="830.2" font-size="12" text-anchor="start" fill="#000000">account_status</text>
+<text x="942.8" y="830.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;active&#x27;,&#x27;disabled&#x27;,&#x27;locked&#x27;,&#x27;pending&#x27;)</text>
+<text x="1198.0" y="830.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="850.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="850.2" font-size="12" text-anchor="start" fill="#000000">password_changed_at</text>
+<text x="942.8" y="850.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1198.0" y="850.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="870.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="870.2" font-size="12" text-anchor="start" fill="#000000">last_login_at</text>
+<text x="942.8" y="870.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1198.0" y="870.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="890.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="890.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="942.8" y="890.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1198.0" y="890.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="910.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="910.2" font-size="12" text-anchor="start" fill="#000000">updated_at</text>
+<text x="942.8" y="910.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1198.0" y="910.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<rect x="2110.0" y="586.0" width="380.0" height="336.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="2110.0" y="586.0" width="380.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="2110.0" y1="614.0" x2="2490.0" y2="614.0" stroke="#000000" stroke-width="1"/>
+<rect x="2110.0" y="586.0" width="380.0" height="336.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="2116.0" y="604.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_mobile_devices</text>
+<text x="2114.0" y="628.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="2160.0" y="628.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="2252.7" y="628.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="2468.0" y="628.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="2110.0" y1="634.0" x2="2490.0" y2="634.0" stroke="#000000" stroke-width="1"/>
+<text x="2114.0" y="650.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="2160.0" y="650.2" font-size="12" text-anchor="start" fill="#000000">device_id</text>
+<text x="2252.7" y="650.2" font-size="12" text-anchor="start" fill="#000000">bigint(20) AI</text>
+<text x="2468.0" y="650.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2114.0" y="670.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="2160.0" y="670.2" font-size="12" text-anchor="start" fill="#000000">admin_id</text>
+<text x="2252.7" y="670.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="2468.0" y="670.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="690.2" font-size="12" text-anchor="start" fill="#000000">UQ</text>
+<text x="2160.0" y="690.2" font-size="12" text-anchor="start" fill="#000000">device_uuid</text>
+<text x="2252.7" y="690.2" font-size="12" text-anchor="start" fill="#000000">varchar(64)</text>
+<text x="2468.0" y="690.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="710.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="710.2" font-size="12" text-anchor="start" fill="#000000">device_name</text>
+<text x="2252.7" y="710.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="2468.0" y="710.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="730.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="730.2" font-size="12" text-anchor="start" fill="#000000">platform</text>
+<text x="2252.7" y="730.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;android&#x27;,&#x27;ios&#x27;)</text>
+<text x="2468.0" y="730.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="750.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="750.2" font-size="12" text-anchor="start" fill="#000000">os_version</text>
+<text x="2252.7" y="750.2" font-size="12" text-anchor="start" fill="#000000">varchar(50)</text>
+<text x="2468.0" y="750.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="770.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="770.2" font-size="12" text-anchor="start" fill="#000000">app_version</text>
+<text x="2252.7" y="770.2" font-size="12" text-anchor="start" fill="#000000">varchar(20)</text>
+<text x="2468.0" y="770.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="790.2" font-size="12" text-anchor="start" fill="#000000">UQ</text>
+<text x="2160.0" y="790.2" font-size="12" text-anchor="start" fill="#000000">public_key</text>
+<text x="2252.7" y="790.2" font-size="12" text-anchor="start" fill="#000000">varchar(512)</text>
+<text x="2468.0" y="790.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="810.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="810.2" font-size="12" text-anchor="start" fill="#000000">status</text>
+<text x="2252.7" y="810.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;active&#x27;,&#x27;pending&#x27;,&#x27;revoked&#x27;)</text>
+<text x="2468.0" y="810.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="830.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="830.2" font-size="12" text-anchor="start" fill="#000000">last_ip</text>
+<text x="2252.7" y="830.2" font-size="12" text-anchor="start" fill="#000000">varchar(45)</text>
+<text x="2468.0" y="830.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="850.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="850.2" font-size="12" text-anchor="start" fill="#000000">last_seen_at</text>
+<text x="2252.7" y="850.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2468.0" y="850.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="870.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="870.2" font-size="12" text-anchor="start" fill="#000000">registered_at</text>
+<text x="2252.7" y="870.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2468.0" y="870.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="890.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="890.2" font-size="12" text-anchor="start" fill="#000000">revoked_at</text>
+<text x="2252.7" y="890.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2468.0" y="890.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2114.0" y="910.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2160.0" y="910.2" font-size="12" text-anchor="start" fill="#000000">revoke_reason</text>
+<text x="2252.7" y="910.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="2468.0" y="910.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<rect x="760.0" y="300.0" width="270.0" height="176.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="760.0" y="300.0" width="270.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="760.0" y1="328.0" x2="1030.0" y2="328.0" stroke="#000000" stroke-width="1"/>
+<rect x="760.0" y="300.0" width="270.0" height="176.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="766.0" y="318.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_backup_codes</text>
+<text x="764.0" y="342.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="810.0" y="342.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="902.7" y="342.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="1008.0" y="342.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="760.0" y1="348.0" x2="1030.0" y2="348.0" stroke="#000000" stroke-width="1"/>
+<text x="764.0" y="364.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="810.0" y="364.2" font-size="12" text-anchor="start" fill="#000000">code_id</text>
+<text x="902.7" y="364.2" font-size="12" text-anchor="start" fill="#000000">bigint(20) AI</text>
+<text x="1008.0" y="364.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="764.0" y="384.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="810.0" y="384.2" font-size="12" text-anchor="start" fill="#000000">admin_id</text>
+<text x="902.7" y="384.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="1008.0" y="384.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="404.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="404.2" font-size="12" text-anchor="start" fill="#000000">code_hash</text>
+<text x="902.7" y="404.2" font-size="12" text-anchor="start" fill="#000000">char(60)</text>
+<text x="1008.0" y="404.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="424.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="424.2" font-size="12" text-anchor="start" fill="#000000">used</text>
+<text x="902.7" y="424.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="1008.0" y="424.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="444.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="444.2" font-size="12" text-anchor="start" fill="#000000">used_at</text>
+<text x="902.7" y="444.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1008.0" y="444.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="764.0" y="464.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="810.0" y="464.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="902.7" y="464.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1008.0" y="464.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<rect x="1430.0" y="546.0" width="470.0" height="276.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="1430.0" y="546.0" width="470.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="1430.0" y1="574.0" x2="1900.0" y2="574.0" stroke="#000000" stroke-width="1"/>
+<rect x="1430.0" y="546.0" width="470.0" height="276.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="1436.0" y="564.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_web_sessions</text>
+<text x="1434.0" y="588.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="1480.0" y="588.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="1598.1" y="588.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="1878.0" y="588.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="1430.0" y1="594.0" x2="1900.0" y2="594.0" stroke="#000000" stroke-width="1"/>
+<text x="1434.0" y="610.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="1480.0" y="610.2" font-size="12" text-anchor="start" fill="#000000">session_id</text>
+<text x="1598.1" y="610.2" font-size="12" text-anchor="start" fill="#000000">char(36)</text>
+<text x="1878.0" y="610.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1434.0" y="630.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1480.0" y="630.2" font-size="12" text-anchor="start" fill="#000000">admin_id</text>
+<text x="1598.1" y="630.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="1878.0" y="630.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="650.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1480.0" y="650.2" font-size="12" text-anchor="start" fill="#000000">device_id</text>
+<text x="1598.1" y="650.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="1878.0" y="650.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="670.2" font-size="12" text-anchor="start" fill="#000000">UQ</text>
+<text x="1480.0" y="670.2" font-size="12" text-anchor="start" fill="#000000">refresh_token_hash</text>
+<text x="1598.1" y="670.2" font-size="12" text-anchor="start" fill="#000000">char(64)</text>
+<text x="1878.0" y="670.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="690.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1480.0" y="690.2" font-size="12" text-anchor="start" fill="#000000">ip_address</text>
+<text x="1598.1" y="690.2" font-size="12" text-anchor="start" fill="#000000">varchar(45)</text>
+<text x="1878.0" y="690.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="710.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1480.0" y="710.2" font-size="12" text-anchor="start" fill="#000000">user_agent</text>
+<text x="1598.1" y="710.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="1878.0" y="710.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="730.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1480.0" y="730.2" font-size="12" text-anchor="start" fill="#000000">status</text>
+<text x="1598.1" y="730.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;active&#x27;,&#x27;expired&#x27;,&#x27;logged_out&#x27;,&#x27;revoked&#x27;)</text>
+<text x="1878.0" y="730.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="750.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1480.0" y="750.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="1598.1" y="750.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1878.0" y="750.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="770.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1480.0" y="770.2" font-size="12" text-anchor="start" fill="#000000">expires_at</text>
+<text x="1598.1" y="770.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1878.0" y="770.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="790.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1480.0" y="790.2" font-size="12" text-anchor="start" fill="#000000">revoked_at</text>
+<text x="1598.1" y="790.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1878.0" y="790.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="810.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1480.0" y="810.2" font-size="12" text-anchor="start" fill="#000000">revoke_reason</text>
+<text x="1598.1" y="810.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="1878.0" y="810.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<rect x="1430.0" y="1012.0" width="280.0" height="316.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="1430.0" y="1012.0" width="280.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="1430.0" y1="1040.0" x2="1710.0" y2="1040.0" stroke="#000000" stroke-width="1"/>
+<rect x="1430.0" y="1012.0" width="280.0" height="316.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="1436.0" y="1030.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_totp_credentials</text>
+<text x="1434.0" y="1054.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="1486.0" y="1054.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="1582.8" y="1054.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="1688.0" y="1054.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="1430.0" y1="1060.0" x2="1710.0" y2="1060.0" stroke="#000000" stroke-width="1"/>
+<text x="1434.0" y="1076.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="1486.0" y="1076.2" font-size="12" text-anchor="start" fill="#000000">credential_id</text>
+<text x="1582.8" y="1076.2" font-size="12" text-anchor="start" fill="#000000">bigint(20) AI</text>
+<text x="1688.0" y="1076.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1434.0" y="1096.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1486.0" y="1096.2" font-size="12" text-anchor="start" fill="#000000">admin_id</text>
+<text x="1582.8" y="1096.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="1688.0" y="1096.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1116.2" font-size="12" text-anchor="start" fill="#000000">FK, UQ</text>
+<text x="1486.0" y="1116.2" font-size="12" text-anchor="start" fill="#000000">device_id</text>
+<text x="1582.8" y="1116.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="1688.0" y="1116.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1136.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1136.2" font-size="12" text-anchor="start" fill="#000000">secret_cipher</text>
+<text x="1582.8" y="1136.2" font-size="12" text-anchor="start" fill="#000000">varbinary(64)</text>
+<text x="1688.0" y="1136.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1156.2" font-size="12" text-anchor="start" fill="#000000">UQ</text>
+<text x="1486.0" y="1156.2" font-size="12" text-anchor="start" fill="#000000">iv</text>
+<text x="1582.8" y="1156.2" font-size="12" text-anchor="start" fill="#000000">varbinary(12)</text>
+<text x="1688.0" y="1156.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1176.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1176.2" font-size="12" text-anchor="start" fill="#000000">kdf_salt</text>
+<text x="1582.8" y="1176.2" font-size="12" text-anchor="start" fill="#000000">varbinary(16)</text>
+<text x="1688.0" y="1176.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1196.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1196.2" font-size="12" text-anchor="start" fill="#000000">key_version</text>
+<text x="1582.8" y="1196.2" font-size="12" text-anchor="start" fill="#000000">int(11)</text>
+<text x="1688.0" y="1196.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1216.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1216.2" font-size="12" text-anchor="start" fill="#000000">algorithm</text>
+<text x="1582.8" y="1216.2" font-size="12" text-anchor="start" fill="#000000">varchar(20)</text>
+<text x="1688.0" y="1216.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1236.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1236.2" font-size="12" text-anchor="start" fill="#000000">digits</text>
+<text x="1582.8" y="1236.2" font-size="12" text-anchor="start" fill="#000000">tinyint(4)</text>
+<text x="1688.0" y="1236.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1256.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1256.2" font-size="12" text-anchor="start" fill="#000000">period_seconds</text>
+<text x="1582.8" y="1256.2" font-size="12" text-anchor="start" fill="#000000">smallint(6)</text>
+<text x="1688.0" y="1256.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1276.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1276.2" font-size="12" text-anchor="start" fill="#000000">confirmed</text>
+<text x="1582.8" y="1276.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="1688.0" y="1276.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1296.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1296.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="1582.8" y="1296.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1688.0" y="1296.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1434.0" y="1316.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1486.0" y="1316.2" font-size="12" text-anchor="start" fill="#000000">confirmed_at</text>
+<text x="1582.8" y="1316.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1688.0" y="1316.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<rect x="280.0" y="912.0" width="290.0" height="284.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="280.0" y="912.0" width="290.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="280.0" y1="940.0" x2="570.0" y2="940.0" stroke="#000000" stroke-width="1"/>
+<rect x="280.0" y="912.0" width="290.0" height="284.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="286.0" y="930.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_auth_audit_logs</text>
+<text x="284.0" y="954.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="330.0" y="954.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="422.7" y="954.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="548.0" y="954.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="280.0" y1="960.0" x2="570.0" y2="960.0" stroke="#000000" stroke-width="1"/>
+<text x="284.0" y="976.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="330.0" y="976.2" font-size="12" text-anchor="start" fill="#000000">log_id</text>
+<text x="422.7" y="976.2" font-size="12" text-anchor="start" fill="#000000">bigint(20) AI</text>
+<text x="548.0" y="976.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="996.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="996.2" font-size="12" text-anchor="start" fill="#000000">admin_id</text>
+<text x="422.7" y="996.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="548.0" y="996.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="1016.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1016.2" font-size="12" text-anchor="start" fill="#000000">device_id</text>
+<text x="422.7" y="1016.2" font-size="12" text-anchor="start" fill="#000000">bigint(20)</text>
+<text x="548.0" y="1016.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="1036.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1036.2" font-size="12" text-anchor="start" fill="#000000">event_type</text>
+<text x="422.7" y="1036.2" font-size="12" text-anchor="start" fill="#000000">enum(19 giá trị)</text>
+<text x="548.0" y="1036.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="1056.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1056.2" font-size="12" text-anchor="start" fill="#000000">success</text>
+<text x="422.7" y="1056.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="548.0" y="1056.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="1076.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1076.2" font-size="12" text-anchor="start" fill="#000000">ip_address</text>
+<text x="422.7" y="1076.2" font-size="12" text-anchor="start" fill="#000000">varchar(45)</text>
+<text x="548.0" y="1076.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="1096.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1096.2" font-size="12" text-anchor="start" fill="#000000">user_agent</text>
+<text x="422.7" y="1096.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="548.0" y="1096.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="1116.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1116.2" font-size="12" text-anchor="start" fill="#000000">detail</text>
+<text x="422.7" y="1116.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="548.0" y="1116.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="1136.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1136.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="422.7" y="1136.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="548.0" y="1136.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<line x1="280.0" y1="1146.0" x2="570.0" y2="1146.0" stroke="#000000" stroke-width="1"/>
+<text x="288.0" y="1162.8" font-size="11" text-anchor="start" fill="#000000">Không có FK vật lý: admin_id, device_id là tham chiếu</text>
+<text x="288.0" y="1176.8" font-size="11" text-anchor="start" fill="#000000">logic (giữ log khi xoá tài khoản/thiết bị).</text>
+<text x="288.0" y="1190.8" font-size="11" text-anchor="start" fill="#000000">IX idx_audit_admin_time (admin_id, created_at)</text>
+<rect x="280.0" y="1598.0" width="270.0" height="236.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="280.0" y="1598.0" width="270.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="280.0" y1="1626.0" x2="550.0" y2="1626.0" stroke="#000000" stroke-width="1"/>
+<rect x="280.0" y="1598.0" width="270.0" height="236.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="286.0" y="1616.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_subjects</text>
+<text x="284.0" y="1640.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="330.0" y="1640.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="422.7" y="1640.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="528.0" y="1640.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="280.0" y1="1646.0" x2="550.0" y2="1646.0" stroke="#000000" stroke-width="1"/>
+<text x="284.0" y="1662.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="330.0" y="1662.2" font-size="12" text-anchor="start" fill="#000000">subject_id</text>
+<text x="422.7" y="1662.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="528.0" y="1662.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="1682.2" font-size="12" text-anchor="start" fill="#000000">UQ</text>
+<text x="330.0" y="1682.2" font-size="12" text-anchor="start" fill="#000000">subject_code</text>
+<text x="422.7" y="1682.2" font-size="12" text-anchor="start" fill="#000000">varchar(30)</text>
+<text x="528.0" y="1682.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="1702.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1702.2" font-size="12" text-anchor="start" fill="#000000">subject_name</text>
+<text x="422.7" y="1702.2" font-size="12" text-anchor="start" fill="#000000">varchar(200)</text>
+<text x="528.0" y="1702.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="1722.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1722.2" font-size="12" text-anchor="start" fill="#000000">description</text>
+<text x="422.7" y="1722.2" font-size="12" text-anchor="start" fill="#000000">varchar(500)</text>
+<text x="528.0" y="1722.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="1742.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1742.2" font-size="12" text-anchor="start" fill="#000000">is_active</text>
+<text x="422.7" y="1742.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="528.0" y="1742.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="1762.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="1762.2" font-size="12" text-anchor="start" fill="#000000">created_by</text>
+<text x="422.7" y="1762.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="528.0" y="1762.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="1782.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1782.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="422.7" y="1782.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="528.0" y="1782.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="1802.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="1802.2" font-size="12" text-anchor="start" fill="#000000">updated_at</text>
+<text x="422.7" y="1802.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="528.0" y="1802.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="280.0" y1="1812.0" x2="550.0" y2="1812.0" stroke="#000000" stroke-width="1"/>
+<text x="288.0" y="1828.8" font-size="11" text-anchor="start" fill="#000000">CHK mã môn, tên môn không rỗng</text>
+<rect x="280.0" y="1954.0" width="270.0" height="258.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="280.0" y="1954.0" width="270.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="280.0" y1="1982.0" x2="550.0" y2="1982.0" stroke="#000000" stroke-width="1"/>
+<rect x="280.0" y="1954.0" width="270.0" height="258.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="286.0" y="1972.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_topics</text>
+<text x="284.0" y="1996.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="330.0" y="1996.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="422.7" y="1996.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="528.0" y="1996.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="280.0" y1="2002.0" x2="550.0" y2="2002.0" stroke="#000000" stroke-width="1"/>
+<text x="284.0" y="2018.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="330.0" y="2018.2" font-size="12" text-anchor="start" fill="#000000">topic_id</text>
+<text x="422.7" y="2018.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="528.0" y="2018.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2038.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="2038.2" font-size="12" text-anchor="start" fill="#000000">subject_id</text>
+<text x="422.7" y="2038.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="528.0" y="2038.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2058.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="2058.2" font-size="12" text-anchor="start" fill="#000000">parent_id</text>
+<text x="422.7" y="2058.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="528.0" y="2058.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2078.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2078.2" font-size="12" text-anchor="start" fill="#000000">topic_name</text>
+<text x="422.7" y="2078.2" font-size="12" text-anchor="start" fill="#000000">varchar(150)</text>
+<text x="528.0" y="2078.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2098.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2098.2" font-size="12" text-anchor="start" fill="#000000">sort_order</text>
+<text x="422.7" y="2098.2" font-size="12" text-anchor="start" fill="#000000">int</text>
+<text x="528.0" y="2098.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2118.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2118.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="422.7" y="2118.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="528.0" y="2118.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2138.2" font-size="12" text-anchor="start" fill="#000000">GEN</text>
+<text x="330.0" y="2138.2" font-size="12" text-anchor="start" fill="#000000">parent_key</text>
+<text x="422.7" y="2138.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="528.0" y="2138.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="280.0" y1="2148.0" x2="550.0" y2="2148.0" stroke="#000000" stroke-width="1"/>
+<text x="288.0" y="2164.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_topic (subject_id, parent_key, topic_name)</text>
+<text x="288.0" y="2178.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_topic_scope (subject_id, topic_id) – đích</text>
+<text x="288.0" y="2192.8" font-size="11" text-anchor="start" fill="#000000">của FK ghép</text>
+<text x="288.0" y="2206.8" font-size="11" text-anchor="start" fill="#000000">Chu trình cha–con: kiểm ở Service (CTE đệ quy)</text>
+<rect x="2730.0" y="2336.0" width="270.0" height="136.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="2730.0" y="2336.0" width="270.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="2730.0" y1="2364.0" x2="3000.0" y2="2364.0" stroke="#000000" stroke-width="1"/>
+<rect x="2730.0" y="2336.0" width="270.0" height="136.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="2736.0" y="2354.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_issue_types</text>
+<text x="2734.0" y="2378.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="2780.0" y="2378.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="2872.7" y="2378.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="2978.0" y="2378.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="2730.0" y1="2384.0" x2="3000.0" y2="2384.0" stroke="#000000" stroke-width="1"/>
+<text x="2734.0" y="2400.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="2780.0" y="2400.2" font-size="12" text-anchor="start" fill="#000000">issue_type</text>
+<text x="2872.7" y="2400.2" font-size="12" text-anchor="start" fill="#000000">varchar(20)</text>
+<text x="2978.0" y="2400.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="2420.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="2420.2" font-size="12" text-anchor="start" fill="#000000">label_vi</text>
+<text x="2872.7" y="2420.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="2978.0" y="2420.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="2440.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="2440.2" font-size="12" text-anchor="start" fill="#000000">is_evaluated</text>
+<text x="2872.7" y="2440.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="2978.0" y="2440.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="2730.0" y1="2450.0" x2="3000.0" y2="2450.0" stroke="#000000" stroke-width="1"/>
+<text x="2738.0" y="2466.8" font-size="11" text-anchor="start" fill="#000000">Dữ liệu gốc: 6 dòng (seed)</text>
+<rect x="1010.0" y="1578.0" width="500.0" height="592.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="1010.0" y="1578.0" width="500.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="1010.0" y1="1606.0" x2="1510.0" y2="1606.0" stroke="#000000" stroke-width="1"/>
+<rect x="1010.0" y="1578.0" width="500.0" height="592.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="1016.0" y="1596.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_questions</text>
+<text x="1014.0" y="1620.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="1060.0" y="1620.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="1167.4" y="1620.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="1488.0" y="1620.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="1010.0" y1="1626.0" x2="1510.0" y2="1626.0" stroke="#000000" stroke-width="1"/>
+<text x="1014.0" y="1642.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="1060.0" y="1642.2" font-size="12" text-anchor="start" fill="#000000">question_id</text>
+<text x="1167.4" y="1642.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="1488.0" y="1642.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1662.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1060.0" y="1662.2" font-size="12" text-anchor="start" fill="#000000">subject_id</text>
+<text x="1167.4" y="1662.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="1488.0" y="1662.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1682.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1060.0" y="1682.2" font-size="12" text-anchor="start" fill="#000000">topic_id</text>
+<text x="1167.4" y="1682.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="1488.0" y="1682.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="1702.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1702.2" font-size="12" text-anchor="start" fill="#000000">title</text>
+<text x="1167.4" y="1702.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="1488.0" y="1702.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="1722.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1722.2" font-size="12" text-anchor="start" fill="#000000">stem</text>
+<text x="1167.4" y="1722.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="1488.0" y="1722.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1742.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1742.2" font-size="12" text-anchor="start" fill="#000000">option_a</text>
+<text x="1167.4" y="1742.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="1488.0" y="1742.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1762.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1762.2" font-size="12" text-anchor="start" fill="#000000">option_b</text>
+<text x="1167.4" y="1762.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="1488.0" y="1762.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1782.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1782.2" font-size="12" text-anchor="start" fill="#000000">option_c</text>
+<text x="1167.4" y="1782.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="1488.0" y="1782.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1802.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1802.2" font-size="12" text-anchor="start" fill="#000000">option_d</text>
+<text x="1167.4" y="1802.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="1488.0" y="1802.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1822.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1822.2" font-size="12" text-anchor="start" fill="#000000">correct_label</text>
+<text x="1167.4" y="1822.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;A&#x27;,&#x27;B&#x27;,&#x27;C&#x27;,&#x27;D&#x27;)</text>
+<text x="1488.0" y="1822.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1842.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1842.2" font-size="12" text-anchor="start" fill="#000000">content_format</text>
+<text x="1167.4" y="1842.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;plain&#x27;,&#x27;html&#x27;)</text>
+<text x="1488.0" y="1842.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1862.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1862.2" font-size="12" text-anchor="start" fill="#000000">general_feedback</text>
+<text x="1167.4" y="1862.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="1488.0" y="1862.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="1882.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1882.2" font-size="12" text-anchor="start" fill="#000000">difficulty</text>
+<text x="1167.4" y="1882.2" font-size="12" text-anchor="start" fill="#000000">tinyint</text>
+<text x="1488.0" y="1882.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="1902.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1902.2" font-size="12" text-anchor="start" fill="#000000">status</text>
+<text x="1167.4" y="1902.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;active&#x27;,&#x27;archived&#x27;)</text>
+<text x="1488.0" y="1902.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1922.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1922.2" font-size="12" text-anchor="start" fill="#000000">validation_status</text>
+<text x="1167.4" y="1922.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;not_checked&#x27;,&#x27;clean&#x27;,&#x27;has_issues&#x27;,&#x27;failed&#x27;,&#x27;stale&#x27;)</text>
+<text x="1488.0" y="1922.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1942.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1942.2" font-size="12" text-anchor="start" fill="#000000">last_validated_at</text>
+<text x="1167.4" y="1942.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1488.0" y="1942.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="1962.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1962.2" font-size="12" text-anchor="start" fill="#000000">source</text>
+<text x="1167.4" y="1962.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;manual&#x27;,&#x27;moodle_import&#x27;,&#x27;eval&#x27;)</text>
+<text x="1488.0" y="1962.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="1982.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="1982.2" font-size="12" text-anchor="start" fill="#000000">content_hash</text>
+<text x="1167.4" y="1982.2" font-size="12" text-anchor="start" fill="#000000">char(64)</text>
+<text x="1488.0" y="1982.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2002.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="2002.2" font-size="12" text-anchor="start" fill="#000000">version</text>
+<text x="1167.4" y="2002.2" font-size="12" text-anchor="start" fill="#000000">int</text>
+<text x="1488.0" y="2002.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2022.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1060.0" y="2022.2" font-size="12" text-anchor="start" fill="#000000">created_by</text>
+<text x="1167.4" y="2022.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="1488.0" y="2022.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2042.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1060.0" y="2042.2" font-size="12" text-anchor="start" fill="#000000">updated_by</text>
+<text x="1167.4" y="2042.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="1488.0" y="2042.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="2062.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="2062.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="1167.4" y="2062.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1488.0" y="2062.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2082.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="2082.2" font-size="12" text-anchor="start" fill="#000000">updated_at</text>
+<text x="1167.4" y="2082.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1488.0" y="2082.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="1010.0" y1="2092.0" x2="1510.0" y2="2092.0" stroke="#000000" stroke-width="1"/>
+<text x="1018.0" y="2108.8" font-size="11" text-anchor="start" fill="#000000">IX ix_q_scope (subject_id, topic_id, status)</text>
+<text x="1018.0" y="2122.8" font-size="11" text-anchor="start" fill="#000000">IX ix_q_hash (subject_id, content_hash) – cảnh báo trùng, không unique</text>
+<text x="1018.0" y="2136.8" font-size="11" text-anchor="start" fill="#000000">FULLTEXT ft_q_text (stem, option_a..option_d)</text>
+<text x="1018.0" y="2150.8" font-size="11" text-anchor="start" fill="#000000">CHK difficulty 1..5; stem và 4 phương án không rỗng; hash = 64 ký tự</text>
+<text x="1018.0" y="2164.8" font-size="11" text-anchor="start" fill="#000000">TRG trg_question_bu_stale, trg_question_au_stale_suggestions</text>
+<rect x="1010.0" y="2310.0" width="590.0" height="250.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="1010.0" y="2310.0" width="590.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="1010.0" y1="2338.0" x2="1600.0" y2="2338.0" stroke="#000000" stroke-width="1"/>
+<rect x="1010.0" y="2310.0" width="590.0" height="250.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="1016.0" y="2328.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_question_revisions</text>
+<text x="1014.0" y="2352.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="1060.0" y="2352.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="1154.1" y="2352.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="1578.0" y="2352.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="1010.0" y1="2358.0" x2="1600.0" y2="2358.0" stroke="#000000" stroke-width="1"/>
+<text x="1014.0" y="2374.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="1060.0" y="2374.2" font-size="12" text-anchor="start" fill="#000000">revision_id</text>
+<text x="1154.1" y="2374.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="1578.0" y="2374.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2394.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1060.0" y="2394.2" font-size="12" text-anchor="start" fill="#000000">question_id</text>
+<text x="1154.1" y="2394.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="1578.0" y="2394.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2414.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="2414.2" font-size="12" text-anchor="start" fill="#000000">rev_no</text>
+<text x="1154.1" y="2414.2" font-size="12" text-anchor="start" fill="#000000">int</text>
+<text x="1578.0" y="2414.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2434.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="2434.2" font-size="12" text-anchor="start" fill="#000000">snapshot_json</text>
+<text x="1154.1" y="2434.2" font-size="12" text-anchor="start" fill="#000000">json</text>
+<text x="1578.0" y="2434.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2454.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="2454.2" font-size="12" text-anchor="start" fill="#000000">change_source</text>
+<text x="1154.1" y="2454.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;create&#x27;,&#x27;manual&#x27;,&#x27;ai_suggestion&#x27;,&#x27;moodle_import&#x27;,&#x27;archive&#x27;,&#x27;restore&#x27;)</text>
+<text x="1578.0" y="2454.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2474.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="2474.2" font-size="12" text-anchor="start" fill="#000000">change_note</text>
+<text x="1154.1" y="2474.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="1578.0" y="2474.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="2494.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1060.0" y="2494.2" font-size="12" text-anchor="start" fill="#000000">changed_by</text>
+<text x="1154.1" y="2494.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="1578.0" y="2494.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="2514.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="2514.2" font-size="12" text-anchor="start" fill="#000000">changed_at</text>
+<text x="1154.1" y="2514.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1578.0" y="2514.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="1010.0" y1="2524.0" x2="1600.0" y2="2524.0" stroke="#000000" stroke-width="1"/>
+<text x="1018.0" y="2540.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_rev (question_id, rev_no)</text>
+<text x="1018.0" y="2554.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_rev_scope (question_id, revision_id) – đích của FK ghép</text>
+<rect x="1010.0" y="2930.0" width="420.0" height="444.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="1010.0" y="2930.0" width="420.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="1010.0" y1="2958.0" x2="1430.0" y2="2958.0" stroke="#000000" stroke-width="1"/>
+<rect x="1010.0" y="2930.0" width="420.0" height="444.0" fill="none" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1016.0" y="2948.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_eval_runs  (tùy chọn)</text>
+<text x="1014.0" y="2972.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="1060.0" y="2972.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="1157.4" y="2972.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="1408.0" y="2972.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="1010.0" y1="2978.0" x2="1430.0" y2="2978.0" stroke="#000000" stroke-width="1"/>
+<text x="1014.0" y="2994.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="1060.0" y="2994.2" font-size="12" text-anchor="start" fill="#000000">run_id</text>
+<text x="1157.4" y="2994.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="1408.0" y="2994.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="3014.2" font-size="12" text-anchor="start" fill="#000000">UQ</text>
+<text x="1060.0" y="3014.2" font-size="12" text-anchor="start" fill="#000000">run_label</text>
+<text x="1157.4" y="3014.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="1408.0" y="3014.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="3034.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3034.2" font-size="12" text-anchor="start" fill="#000000">scenario</text>
+<text x="1157.4" y="3034.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;E1&#x27;,&#x27;E2&#x27;,&#x27;E3&#x27;,&#x27;E4&#x27;,&#x27;E5&#x27;,&#x27;E6&#x27;,&#x27;E7&#x27;,&#x27;E8&#x27;)</text>
+<text x="1408.0" y="3034.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="3054.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3054.2" font-size="12" text-anchor="start" fill="#000000">dataset_version</text>
+<text x="1157.4" y="3054.2" font-size="12" text-anchor="start" fill="#000000">varchar(20)</text>
+<text x="1408.0" y="3054.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="3074.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3074.2" font-size="12" text-anchor="start" fill="#000000">split</text>
+<text x="1157.4" y="3074.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;dev&#x27;,&#x27;test&#x27;)</text>
+<text x="1408.0" y="3074.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="3094.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3094.2" font-size="12" text-anchor="start" fill="#000000">method</text>
+<text x="1157.4" y="3094.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;rule_based&#x27;,&#x27;llm&#x27;)</text>
+<text x="1408.0" y="3094.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="3114.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3114.2" font-size="12" text-anchor="start" fill="#000000">model_name</text>
+<text x="1157.4" y="3114.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="1408.0" y="3114.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3134.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3134.2" font-size="12" text-anchor="start" fill="#000000">model_digest</text>
+<text x="1157.4" y="3134.2" font-size="12" text-anchor="start" fill="#000000">char(64)</text>
+<text x="1408.0" y="3134.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3154.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3154.2" font-size="12" text-anchor="start" fill="#000000">runtime_version</text>
+<text x="1157.4" y="3154.2" font-size="12" text-anchor="start" fill="#000000">varchar(30)</text>
+<text x="1408.0" y="3154.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3174.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3174.2" font-size="12" text-anchor="start" fill="#000000">gpu_type</text>
+<text x="1157.4" y="3174.2" font-size="12" text-anchor="start" fill="#000000">varchar(50)</text>
+<text x="1408.0" y="3174.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3194.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3194.2" font-size="12" text-anchor="start" fill="#000000">prompt_version</text>
+<text x="1157.4" y="3194.2" font-size="12" text-anchor="start" fill="#000000">varchar(30)</text>
+<text x="1408.0" y="3194.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3214.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3214.2" font-size="12" text-anchor="start" fill="#000000">params_json</text>
+<text x="1157.4" y="3214.2" font-size="12" text-anchor="start" fill="#000000">json</text>
+<text x="1408.0" y="3214.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3234.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3234.2" font-size="12" text-anchor="start" fill="#000000">seed</text>
+<text x="1157.4" y="3234.2" font-size="12" text-anchor="start" fill="#000000">int</text>
+<text x="1408.0" y="3234.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3254.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3254.2" font-size="12" text-anchor="start" fill="#000000">started_at</text>
+<text x="1157.4" y="3254.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1408.0" y="3254.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1014.0" y="3274.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3274.2" font-size="12" text-anchor="start" fill="#000000">finished_at</text>
+<text x="1157.4" y="3274.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="1408.0" y="3274.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3294.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1060.0" y="3294.2" font-size="12" text-anchor="start" fill="#000000">note</text>
+<text x="1157.4" y="3294.2" font-size="12" text-anchor="start" fill="#000000">varchar(500)</text>
+<text x="1408.0" y="3294.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1014.0" y="3314.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1060.0" y="3314.2" font-size="12" text-anchor="start" fill="#000000">created_by</text>
+<text x="1157.4" y="3314.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="1408.0" y="3314.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="1010.0" y1="3324.0" x2="1430.0" y2="3324.0" stroke="#000000" stroke-width="1"/>
+<text x="1018.0" y="3340.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_run_scope (run_id, split) – đích của FK ghép</text>
+<text x="1018.0" y="3354.8" font-size="11" text-anchor="start" fill="#000000">CHK method = &#x27;llm&#x27; → model_name, model_digest, runtime_version, gpu_type</text>
+<text x="1018.0" y="3368.8" font-size="11" text-anchor="start" fill="#000000">NOT NULL</text>
+<rect x="1900.0" y="1538.0" width="520.0" height="618.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="1900.0" y="1538.0" width="520.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="1900.0" y1="1566.0" x2="2420.0" y2="1566.0" stroke="#000000" stroke-width="1"/>
+<rect x="1900.0" y="1538.0" width="520.0" height="618.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="1906.0" y="1556.5" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_ai_tasks</text>
+<text x="1904.0" y="1580.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="1950.0" y="1580.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="2071.4" y="1580.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="2398.0" y="1580.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="1900.0" y1="1586.0" x2="2420.0" y2="1586.0" stroke="#000000" stroke-width="1"/>
+<text x="1904.0" y="1602.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="1950.0" y="1602.2" font-size="12" text-anchor="start" fill="#000000">task_id</text>
+<text x="2071.4" y="1602.2" font-size="12" text-anchor="start" fill="#000000">char(36)</text>
+<text x="2398.0" y="1602.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="1622.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1622.2" font-size="12" text-anchor="start" fill="#000000">task_type</text>
+<text x="2071.4" y="1622.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;question_check&#x27;,&#x27;nl_search&#x27;)</text>
+<text x="2398.0" y="1622.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="1642.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="1642.2" font-size="12" text-anchor="start" fill="#000000">question_id</text>
+<text x="2071.4" y="1642.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2398.0" y="1642.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1662.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="1662.2" font-size="12" text-anchor="start" fill="#000000">question_revision_id</text>
+<text x="2071.4" y="1662.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2398.0" y="1662.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1682.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1682.2" font-size="12" text-anchor="start" fill="#000000">status</text>
+<text x="2071.4" y="1682.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;pending&#x27;,&#x27;running&#x27;,&#x27;succeeded&#x27;,&#x27;failed&#x27;,&#x27;cancelled&#x27;)</text>
+<text x="2398.0" y="1682.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="1702.2" font-size="12" text-anchor="start" fill="#000000">GEN</text>
+<text x="1950.0" y="1702.2" font-size="12" text-anchor="start" fill="#000000">active_flag</text>
+<text x="2071.4" y="1702.2" font-size="12" text-anchor="start" fill="#000000">tinyint</text>
+<text x="2398.0" y="1702.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="1722.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1722.2" font-size="12" text-anchor="start" fill="#000000">attempt_count</text>
+<text x="2071.4" y="1722.2" font-size="12" text-anchor="start" fill="#000000">tinyint</text>
+<text x="2398.0" y="1722.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="1742.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1742.2" font-size="12" text-anchor="start" fill="#000000">error_code</text>
+<text x="2071.4" y="1742.2" font-size="12" text-anchor="start" fill="#000000">varchar(50)</text>
+<text x="2398.0" y="1742.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1762.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1762.2" font-size="12" text-anchor="start" fill="#000000">error_message</text>
+<text x="2071.4" y="1762.2" font-size="12" text-anchor="start" fill="#000000">varchar(500)</text>
+<text x="2398.0" y="1762.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1782.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1782.2" font-size="12" text-anchor="start" fill="#000000">input_json</text>
+<text x="2071.4" y="1782.2" font-size="12" text-anchor="start" fill="#000000">json</text>
+<text x="2398.0" y="1782.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="1802.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1802.2" font-size="12" text-anchor="start" fill="#000000">result_json</text>
+<text x="2071.4" y="1802.2" font-size="12" text-anchor="start" fill="#000000">json</text>
+<text x="2398.0" y="1802.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1822.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1822.2" font-size="12" text-anchor="start" fill="#000000">raw_response</text>
+<text x="2071.4" y="1822.2" font-size="12" text-anchor="start" fill="#000000">longtext</text>
+<text x="2398.0" y="1822.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1842.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1842.2" font-size="12" text-anchor="start" fill="#000000">is_json_valid</text>
+<text x="2071.4" y="1842.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="2398.0" y="1842.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1862.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1862.2" font-size="12" text-anchor="start" fill="#000000">model_name</text>
+<text x="2071.4" y="1862.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="2398.0" y="1862.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1882.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1882.2" font-size="12" text-anchor="start" fill="#000000">model_digest</text>
+<text x="2071.4" y="1882.2" font-size="12" text-anchor="start" fill="#000000">char(64)</text>
+<text x="2398.0" y="1882.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1902.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1902.2" font-size="12" text-anchor="start" fill="#000000">runtime_version</text>
+<text x="2071.4" y="1902.2" font-size="12" text-anchor="start" fill="#000000">varchar(30)</text>
+<text x="2398.0" y="1902.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1922.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1922.2" font-size="12" text-anchor="start" fill="#000000">prompt_version</text>
+<text x="2071.4" y="1922.2" font-size="12" text-anchor="start" fill="#000000">varchar(30)</text>
+<text x="2398.0" y="1922.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1942.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1942.2" font-size="12" text-anchor="start" fill="#000000">params_json</text>
+<text x="2071.4" y="1942.2" font-size="12" text-anchor="start" fill="#000000">json</text>
+<text x="2398.0" y="1942.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1962.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1962.2" font-size="12" text-anchor="start" fill="#000000">usage_json</text>
+<text x="2071.4" y="1962.2" font-size="12" text-anchor="start" fill="#000000">json</text>
+<text x="2398.0" y="1962.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="1982.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="1982.2" font-size="12" text-anchor="start" fill="#000000">inference_ms</text>
+<text x="2071.4" y="1982.2" font-size="12" text-anchor="start" fill="#000000">int</text>
+<text x="2398.0" y="1982.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2002.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="2002.2" font-size="12" text-anchor="start" fill="#000000">created_by</text>
+<text x="2071.4" y="2002.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2398.0" y="2002.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2022.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2022.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="2071.4" y="2022.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2398.0" y="2022.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2042.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2042.2" font-size="12" text-anchor="start" fill="#000000">started_at</text>
+<text x="2071.4" y="2042.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2398.0" y="2042.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2062.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2062.2" font-size="12" text-anchor="start" fill="#000000">finished_at</text>
+<text x="2071.4" y="2062.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2398.0" y="2062.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2082.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="2082.2" font-size="12" text-anchor="start" fill="#000000">eval_run_id</text>
+<text x="2071.4" y="2082.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2398.0" y="2082.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<line x1="1900.0" y1="2092.0" x2="2420.0" y2="2092.0" stroke="#000000" stroke-width="1"/>
+<text x="1908.0" y="2108.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_one_active_task (question_id, task_type, active_flag)</text>
+<text x="1908.0" y="2122.8" font-size="11" text-anchor="start" fill="#000000">CHK question_check → question_id + revision NOT NULL; nl_search → cả hai NULL</text>
+<text x="1908.0" y="2136.8" font-size="11" text-anchor="start" fill="#000000">CHK attempt_count 1..5; failed → error_code; đã kết thúc → finished_at</text>
+<text x="1908.0" y="2150.8" font-size="11" text-anchor="start" fill="#000000">IX (status, created_at) – job quét task kẹt &#x27;running&#x27;</text>
+<rect x="1900.0" y="2276.0" width="560.0" height="484.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="1900.0" y="2276.0" width="560.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="1900.0" y1="2304.0" x2="2460.0" y2="2304.0" stroke="#000000" stroke-width="1"/>
+<rect x="1900.0" y="2276.0" width="560.0" height="484.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="1906.0" y="2294.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_ai_suggestions</text>
+<text x="1904.0" y="2318.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="1950.0" y="2318.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="2067.2" y="2318.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="2438.0" y="2318.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="1900.0" y1="2324.0" x2="2460.0" y2="2324.0" stroke="#000000" stroke-width="1"/>
+<text x="1904.0" y="2340.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="1950.0" y="2340.2" font-size="12" text-anchor="start" fill="#000000">suggestion_id</text>
+<text x="2067.2" y="2340.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="2438.0" y="2340.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2360.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="2360.2" font-size="12" text-anchor="start" fill="#000000">task_id</text>
+<text x="2067.2" y="2360.2" font-size="12" text-anchor="start" fill="#000000">char(36)</text>
+<text x="2438.0" y="2360.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2380.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2380.2" font-size="12" text-anchor="start" fill="#000000">seq_no</text>
+<text x="2067.2" y="2380.2" font-size="12" text-anchor="start" fill="#000000">smallint</text>
+<text x="2438.0" y="2380.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2400.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="2400.2" font-size="12" text-anchor="start" fill="#000000">issue_type</text>
+<text x="2067.2" y="2400.2" font-size="12" text-anchor="start" fill="#000000">varchar(20)</text>
+<text x="2438.0" y="2400.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2420.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2420.2" font-size="12" text-anchor="start" fill="#000000">severity</text>
+<text x="2067.2" y="2420.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;low&#x27;,&#x27;medium&#x27;,&#x27;high&#x27;)</text>
+<text x="2438.0" y="2420.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2440.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2440.2" font-size="12" text-anchor="start" fill="#000000">target_field</text>
+<text x="2067.2" y="2440.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;question&#x27;,&#x27;stem&#x27;,&#x27;option_a&#x27;,&#x27;option_b&#x27;,&#x27;option_c&#x27;,&#x27;option_d&#x27;)</text>
+<text x="2438.0" y="2440.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2460.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2460.2" font-size="12" text-anchor="start" fill="#000000">original_text</text>
+<text x="2067.2" y="2460.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="2438.0" y="2460.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2480.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2480.2" font-size="12" text-anchor="start" fill="#000000">span_start</text>
+<text x="2067.2" y="2480.2" font-size="12" text-anchor="start" fill="#000000">int</text>
+<text x="2438.0" y="2480.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2500.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2500.2" font-size="12" text-anchor="start" fill="#000000">span_end</text>
+<text x="2067.2" y="2500.2" font-size="12" text-anchor="start" fill="#000000">int</text>
+<text x="2438.0" y="2500.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2520.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2520.2" font-size="12" text-anchor="start" fill="#000000">explanation</text>
+<text x="2067.2" y="2520.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="2438.0" y="2520.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2540.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2540.2" font-size="12" text-anchor="start" fill="#000000">proposed_text</text>
+<text x="2067.2" y="2540.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="2438.0" y="2540.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2560.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2560.2" font-size="12" text-anchor="start" fill="#000000">suggested_difficulty</text>
+<text x="2067.2" y="2560.2" font-size="12" text-anchor="start" fill="#000000">tinyint</text>
+<text x="2438.0" y="2560.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2580.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2580.2" font-size="12" text-anchor="start" fill="#000000">decision</text>
+<text x="2067.2" y="2580.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;pending&#x27;,&#x27;accepted&#x27;,&#x27;rejected&#x27;,&#x27;stale&#x27;)</text>
+<text x="2438.0" y="2580.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2600.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="2600.2" font-size="12" text-anchor="start" fill="#000000">decided_by</text>
+<text x="2067.2" y="2600.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2438.0" y="2600.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2620.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2620.2" font-size="12" text-anchor="start" fill="#000000">decided_at</text>
+<text x="2067.2" y="2620.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2438.0" y="2620.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2640.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2640.2" font-size="12" text-anchor="start" fill="#000000">reject_reason</text>
+<text x="2067.2" y="2640.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="2438.0" y="2640.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2660.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2660.2" font-size="12" text-anchor="start" fill="#000000">final_text</text>
+<text x="2067.2" y="2660.2" font-size="12" text-anchor="start" fill="#000000">text</text>
+<text x="2438.0" y="2660.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2680.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="2680.2" font-size="12" text-anchor="start" fill="#000000">applied_revision_id</text>
+<text x="2067.2" y="2680.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2438.0" y="2680.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="2700.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="2700.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="2067.2" y="2700.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2438.0" y="2700.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="1900.0" y1="2710.0" x2="2460.0" y2="2710.0" stroke="#000000" stroke-width="1"/>
+<text x="1908.0" y="2726.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_sugg_seq (task_id, seq_no)</text>
+<text x="1908.0" y="2740.8" font-size="11" text-anchor="start" fill="#000000">CHK span hợp lệ; suggested_difficulty 1..5</text>
+<text x="1908.0" y="2754.8" font-size="11" text-anchor="start" fill="#000000">CHK accepted/rejected → decided_by, decided_at NOT NULL</text>
+<rect x="280.0" y="3106.0" width="390.0" height="316.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="280.0" y="3106.0" width="390.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="280.0" y1="3134.0" x2="670.0" y2="3134.0" stroke="#000000" stroke-width="1"/>
+<rect x="280.0" y="3106.0" width="390.0" height="316.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="286.0" y="3124.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_moodle_profiles</text>
+<text x="284.0" y="3148.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="330.0" y="3148.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="444.1" y="3148.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="648.0" y="3148.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="280.0" y1="3154.0" x2="670.0" y2="3154.0" stroke="#000000" stroke-width="1"/>
+<text x="284.0" y="3170.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="330.0" y="3170.2" font-size="12" text-anchor="start" fill="#000000">profile_id</text>
+<text x="444.1" y="3170.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="648.0" y="3170.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3190.2" font-size="12" text-anchor="start" fill="#000000">UQ</text>
+<text x="330.0" y="3190.2" font-size="12" text-anchor="start" fill="#000000">profile_name</text>
+<text x="444.1" y="3190.2" font-size="12" text-anchor="start" fill="#000000">varchar(100)</text>
+<text x="648.0" y="3190.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3210.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="3210.2" font-size="12" text-anchor="start" fill="#000000">moodle_base_url</text>
+<text x="444.1" y="3210.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="648.0" y="3210.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="3230.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="3230.2" font-size="12" text-anchor="start" fill="#000000">category_prefix</text>
+<text x="444.1" y="3230.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="648.0" y="3230.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="3250.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="3250.2" font-size="12" text-anchor="start" fill="#000000">answer_numbering</text>
+<text x="444.1" y="3250.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;none&#x27;,&#x27;abc&#x27;,&#x27;ABCD&#x27;,&#x27;123&#x27;)</text>
+<text x="648.0" y="3250.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3270.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="3270.2" font-size="12" text-anchor="start" fill="#000000">shuffle_answers</text>
+<text x="444.1" y="3270.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="648.0" y="3270.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3290.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="3290.2" font-size="12" text-anchor="start" fill="#000000">default_grade</text>
+<text x="444.1" y="3290.2" font-size="12" text-anchor="start" fill="#000000">decimal(6,3)</text>
+<text x="648.0" y="3290.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3310.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="3310.2" font-size="12" text-anchor="start" fill="#000000">is_default</text>
+<text x="444.1" y="3310.2" font-size="12" text-anchor="start" fill="#000000">bit(1)</text>
+<text x="648.0" y="3310.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3330.2" font-size="12" text-anchor="start" fill="#000000">GEN</text>
+<text x="330.0" y="3330.2" font-size="12" text-anchor="start" fill="#000000">default_key</text>
+<text x="444.1" y="3330.2" font-size="12" text-anchor="start" fill="#000000">tinyint</text>
+<text x="648.0" y="3330.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3350.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="3350.2" font-size="12" text-anchor="start" fill="#000000">created_by</text>
+<text x="444.1" y="3350.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="648.0" y="3350.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3370.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="3370.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="444.1" y="3370.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="648.0" y="3370.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="3390.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="3390.2" font-size="12" text-anchor="start" fill="#000000">updated_at</text>
+<text x="444.1" y="3390.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="648.0" y="3390.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="280.0" y1="3400.0" x2="670.0" y2="3400.0" stroke="#000000" stroke-width="1"/>
+<text x="288.0" y="3416.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_single_default_profile (default_key) – tối đa 1 mặc định</text>
+<rect x="280.0" y="2650.0" width="430.0" height="336.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="280.0" y="2650.0" width="430.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="280.0" y1="2678.0" x2="710.0" y2="2678.0" stroke="#000000" stroke-width="1"/>
+<rect x="280.0" y="2650.0" width="430.0" height="336.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="286.0" y="2668.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_moodle_exchanges</text>
+<text x="284.0" y="2692.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="330.0" y="2692.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="422.7" y="2692.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="688.0" y="2692.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="280.0" y1="2698.0" x2="710.0" y2="2698.0" stroke="#000000" stroke-width="1"/>
+<text x="284.0" y="2714.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="330.0" y="2714.2" font-size="12" text-anchor="start" fill="#000000">exchange_id</text>
+<text x="422.7" y="2714.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="688.0" y="2714.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2734.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2734.2" font-size="12" text-anchor="start" fill="#000000">direction</text>
+<text x="422.7" y="2734.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;export&#x27;,&#x27;import&#x27;)</text>
+<text x="688.0" y="2734.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2754.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2754.2" font-size="12" text-anchor="start" fill="#000000">status</text>
+<text x="422.7" y="2754.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;pending&#x27;,&#x27;succeeded&#x27;,&#x27;partial&#x27;,&#x27;failed&#x27;)</text>
+<text x="688.0" y="2754.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2774.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="2774.2" font-size="12" text-anchor="start" fill="#000000">profile_id</text>
+<text x="422.7" y="2774.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="688.0" y="2774.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2794.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2794.2" font-size="12" text-anchor="start" fill="#000000">file_name</text>
+<text x="422.7" y="2794.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="688.0" y="2794.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2814.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2814.2" font-size="12" text-anchor="start" fill="#000000">file_size</text>
+<text x="422.7" y="2814.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="688.0" y="2814.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2834.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2834.2" font-size="12" text-anchor="start" fill="#000000">file_sha256</text>
+<text x="422.7" y="2834.2" font-size="12" text-anchor="start" fill="#000000">char(64)</text>
+<text x="688.0" y="2834.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2854.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2854.2" font-size="12" text-anchor="start" fill="#000000">storage_ref</text>
+<text x="422.7" y="2854.2" font-size="12" text-anchor="start" fill="#000000">varchar(500)</text>
+<text x="688.0" y="2854.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2874.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2874.2" font-size="12" text-anchor="start" fill="#000000">moodle_check</text>
+<text x="422.7" y="2874.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;unknown&#x27;,&#x27;ok&#x27;,&#x27;failed&#x27;)</text>
+<text x="688.0" y="2874.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2894.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2894.2" font-size="12" text-anchor="start" fill="#000000">error_message</text>
+<text x="422.7" y="2894.2" font-size="12" text-anchor="start" fill="#000000">varchar(500)</text>
+<text x="688.0" y="2894.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2914.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="2914.2" font-size="12" text-anchor="start" fill="#000000">created_by</text>
+<text x="422.7" y="2914.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="688.0" y="2914.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2934.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2934.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="422.7" y="2934.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="688.0" y="2934.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2954.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2954.2" font-size="12" text-anchor="start" fill="#000000">finished_at</text>
+<text x="422.7" y="2954.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="688.0" y="2954.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<line x1="280.0" y1="2964.0" x2="710.0" y2="2964.0" stroke="#000000" stroke-width="1"/>
+<text x="288.0" y="2980.8" font-size="11" text-anchor="start" fill="#000000">CHK status ≠ pending → finished_at NOT NULL</text>
+<rect x="280.0" y="2250.0" width="370.0" height="270.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="280.0" y="2250.0" width="370.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="280.0" y1="2278.0" x2="650.0" y2="2278.0" stroke="#000000" stroke-width="1"/>
+<rect x="280.0" y="2250.0" width="370.0" height="270.0" fill="none" stroke="#000000" stroke-width="1"/>
+<text x="286.0" y="2268.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_moodle_exchange_items</text>
+<text x="284.0" y="2292.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="330.0" y="2292.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="451.4" y="2292.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="628.0" y="2292.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="280.0" y1="2298.0" x2="650.0" y2="2298.0" stroke="#000000" stroke-width="1"/>
+<text x="284.0" y="2314.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="330.0" y="2314.2" font-size="12" text-anchor="start" fill="#000000">item_id</text>
+<text x="451.4" y="2314.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="628.0" y="2314.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2334.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="2334.2" font-size="12" text-anchor="start" fill="#000000">exchange_id</text>
+<text x="451.4" y="2334.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="628.0" y="2334.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2354.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2354.2" font-size="12" text-anchor="start" fill="#000000">seq_no</text>
+<text x="451.4" y="2354.2" font-size="12" text-anchor="start" fill="#000000">int</text>
+<text x="628.0" y="2354.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2374.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="2374.2" font-size="12" text-anchor="start" fill="#000000">question_id</text>
+<text x="451.4" y="2374.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="628.0" y="2374.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2394.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="330.0" y="2394.2" font-size="12" text-anchor="start" fill="#000000">question_revision_id</text>
+<text x="451.4" y="2394.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="628.0" y="2394.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2414.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2414.2" font-size="12" text-anchor="start" fill="#000000">source_name</text>
+<text x="451.4" y="2414.2" font-size="12" text-anchor="start" fill="#000000">varchar(255)</text>
+<text x="628.0" y="2414.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2434.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2434.2" font-size="12" text-anchor="start" fill="#000000">item_status</text>
+<text x="451.4" y="2434.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;ok&#x27;,&#x27;skipped&#x27;,&#x27;failed&#x27;)</text>
+<text x="628.0" y="2434.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="284.0" y="2454.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2454.2" font-size="12" text-anchor="start" fill="#000000">error_code</text>
+<text x="451.4" y="2454.2" font-size="12" text-anchor="start" fill="#000000">varchar(50)</text>
+<text x="628.0" y="2454.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="284.0" y="2474.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="330.0" y="2474.2" font-size="12" text-anchor="start" fill="#000000">error_message</text>
+<text x="451.4" y="2474.2" font-size="12" text-anchor="start" fill="#000000">varchar(500)</text>
+<text x="628.0" y="2474.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<line x1="280.0" y1="2484.0" x2="650.0" y2="2484.0" stroke="#000000" stroke-width="1"/>
+<text x="288.0" y="2500.8" font-size="11" text-anchor="start" fill="#000000">UQ (exchange_id, seq_no); UQ (exchange_id, question_id)</text>
+<text x="288.0" y="2514.8" font-size="11" text-anchor="start" fill="#000000">CHK có revision → có question_id</text>
+<rect x="2730.0" y="2950.0" width="430.0" height="278.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="2730.0" y="2950.0" width="430.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="2730.0" y1="2978.0" x2="3160.0" y2="2978.0" stroke="#000000" stroke-width="1"/>
+<rect x="2730.0" y="2950.0" width="430.0" height="278.0" fill="none" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="2736.0" y="2968.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_eval_items  (tùy chọn)</text>
+<text x="2734.0" y="2992.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="2780.0" y="2992.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="2909.4" y="2992.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="3138.0" y="2992.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="2730.0" y1="2998.0" x2="3160.0" y2="2998.0" stroke="#000000" stroke-width="1"/>
+<text x="2734.0" y="3014.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="2780.0" y="3014.2" font-size="12" text-anchor="start" fill="#000000">item_id</text>
+<text x="2909.4" y="3014.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="3138.0" y="3014.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3034.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3034.2" font-size="12" text-anchor="start" fill="#000000">dataset_version</text>
+<text x="2909.4" y="3034.2" font-size="12" text-anchor="start" fill="#000000">varchar(20)</text>
+<text x="3138.0" y="3034.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3054.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="2780.0" y="3054.2" font-size="12" text-anchor="start" fill="#000000">question_id</text>
+<text x="2909.4" y="3054.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="3138.0" y="3054.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3074.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3074.2" font-size="12" text-anchor="start" fill="#000000">split</text>
+<text x="2909.4" y="3074.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;dev&#x27;,&#x27;test&#x27;)</text>
+<text x="3138.0" y="3074.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3094.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3094.2" font-size="12" text-anchor="start" fill="#000000">origin</text>
+<text x="2909.4" y="3094.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;real&#x27;,&#x27;injected&#x27;)</text>
+<text x="3138.0" y="3094.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3114.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="2780.0" y="3114.2" font-size="12" text-anchor="start" fill="#000000">injected_from_item_id</text>
+<text x="2909.4" y="3114.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="3138.0" y="3114.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2734.0" y="3134.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3134.2" font-size="12" text-anchor="start" fill="#000000">gold_status</text>
+<text x="2909.4" y="3134.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;unlabeled&#x27;,&#x27;clean&#x27;,&#x27;has_errors&#x27;)</text>
+<text x="3138.0" y="3134.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3154.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3154.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="2909.4" y="3154.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="3138.0" y="3154.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="2730.0" y1="3164.0" x2="3160.0" y2="3164.0" stroke="#000000" stroke-width="1"/>
+<text x="2738.0" y="3180.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_eval_scope (split, item_id) – đích của FK ghép</text>
+<text x="2738.0" y="3194.8" font-size="11" text-anchor="start" fill="#000000">UQ (dataset_version, question_id)</text>
+<text x="2738.0" y="3208.8" font-size="11" text-anchor="start" fill="#000000">FK ghép (split, injected_from_item_id): chống rò rỉ DEV↔TEST</text>
+<text x="2738.0" y="3222.8" font-size="11" text-anchor="start" fill="#000000">CHK injected ⇔ có injected_from_item_id</text>
+<rect x="2730.0" y="3358.0" width="330.0" height="264.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="2730.0" y="3358.0" width="330.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="2730.0" y1="3386.0" x2="3060.0" y2="3386.0" stroke="#000000" stroke-width="1"/>
+<rect x="2730.0" y="3358.0" width="330.0" height="264.0" fill="none" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="2736.0" y="3376.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_eval_labels  (tùy chọn)</text>
+<text x="2734.0" y="3400.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="2780.0" y="3400.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="2875.4" y="3400.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="3038.0" y="3400.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="2730.0" y1="3406.0" x2="3060.0" y2="3406.0" stroke="#000000" stroke-width="1"/>
+<text x="2734.0" y="3422.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="2780.0" y="3422.2" font-size="12" text-anchor="start" fill="#000000">label_id</text>
+<text x="2875.4" y="3422.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="3038.0" y="3422.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3442.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="2780.0" y="3442.2" font-size="12" text-anchor="start" fill="#000000">item_id</text>
+<text x="2875.4" y="3442.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="3038.0" y="3442.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3462.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3462.2" font-size="12" text-anchor="start" fill="#000000">stage</text>
+<text x="2875.4" y="3462.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;annotator&#x27;,&#x27;gold&#x27;)</text>
+<text x="3038.0" y="3462.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3482.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3482.2" font-size="12" text-anchor="start" fill="#000000">annotator_code</text>
+<text x="2875.4" y="3482.2" font-size="12" text-anchor="start" fill="#000000">varchar(30)</text>
+<text x="3038.0" y="3482.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2734.0" y="3502.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="2780.0" y="3502.2" font-size="12" text-anchor="start" fill="#000000">issue_type</text>
+<text x="2875.4" y="3502.2" font-size="12" text-anchor="start" fill="#000000">varchar(20)</text>
+<text x="3038.0" y="3502.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3522.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3522.2" font-size="12" text-anchor="start" fill="#000000">note</text>
+<text x="2875.4" y="3522.2" font-size="12" text-anchor="start" fill="#000000">varchar(500)</text>
+<text x="3038.0" y="3522.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="2734.0" y="3542.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="2780.0" y="3542.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="2875.4" y="3542.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="3038.0" y="3542.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="2734.0" y="3562.2" font-size="12" text-anchor="start" fill="#000000">GEN</text>
+<text x="2780.0" y="3562.2" font-size="12" text-anchor="start" fill="#000000">annotator_key</text>
+<text x="2875.4" y="3562.2" font-size="12" text-anchor="start" fill="#000000">varchar(30)</text>
+<text x="3038.0" y="3562.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="2730.0" y1="3572.0" x2="3060.0" y2="3572.0" stroke="#000000" stroke-width="1"/>
+<text x="2738.0" y="3588.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_label (item_id, stage, annotator_key, issue_type)</text>
+<text x="2738.0" y="3602.8" font-size="11" text-anchor="start" fill="#000000">CHK gold ⇔ annotator_code NULL</text>
+<text x="2738.0" y="3616.8" font-size="11" text-anchor="start" fill="#000000">CHK issue_type &#x27;none&#x27; chỉ dùng ở stage annotator</text>
+<rect x="1900.0" y="2910.0" width="290.0" height="244.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="1900.0" y="2910.0" width="290.0" height="28.0" fill="#D9D9D9" stroke="none" stroke-width="1"/>
+<line x1="1900.0" y1="2938.0" x2="2190.0" y2="2938.0" stroke="#000000" stroke-width="1"/>
+<rect x="1900.0" y="2910.0" width="290.0" height="244.0" fill="none" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1906.0" y="2928.6" font-size="13" text-anchor="start" font-weight="bold" fill="#000000">ntt_eval_predictions  (tùy chọn)</text>
+<text x="1904.0" y="2952.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Key</text>
+<text x="1950.0" y="2952.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Column Name</text>
+<text x="2042.7" y="2952.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Data Type</text>
+<text x="2168.0" y="2952.2" font-size="12" text-anchor="middle" font-weight="bold" fill="#000000">Null</text>
+<line x1="1900.0" y1="2958.0" x2="2190.0" y2="2958.0" stroke="#000000" stroke-width="1"/>
+<text x="1904.0" y="2974.2" font-size="12" text-anchor="start" fill="#000000">PK</text>
+<text x="1950.0" y="2974.2" font-size="12" text-anchor="start" fill="#000000">prediction_id</text>
+<text x="2042.7" y="2974.2" font-size="12" text-anchor="start" fill="#000000">bigint AI</text>
+<text x="2168.0" y="2974.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="2994.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="2994.2" font-size="12" text-anchor="start" fill="#000000">run_id</text>
+<text x="2042.7" y="2994.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2168.0" y="2994.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="3014.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="3014.2" font-size="12" text-anchor="start" fill="#000000">item_id</text>
+<text x="2042.7" y="3014.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2168.0" y="3014.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="3034.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="3034.2" font-size="12" text-anchor="start" fill="#000000">split</text>
+<text x="2042.7" y="3034.2" font-size="12" text-anchor="start" fill="#000000">enum(&#x27;dev&#x27;,&#x27;test&#x27;)</text>
+<text x="2168.0" y="3034.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="3054.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="3054.2" font-size="12" text-anchor="start" fill="#000000">issue_type</text>
+<text x="2042.7" y="3054.2" font-size="12" text-anchor="start" fill="#000000">varchar(20)</text>
+<text x="2168.0" y="3054.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<text x="1904.0" y="3074.2" font-size="12" text-anchor="start" fill="#000000">FK</text>
+<text x="1950.0" y="3074.2" font-size="12" text-anchor="start" fill="#000000">suggestion_id</text>
+<text x="2042.7" y="3074.2" font-size="12" text-anchor="start" fill="#000000">bigint</text>
+<text x="2168.0" y="3074.2" font-size="12" text-anchor="middle" fill="#000000">Y</text>
+<text x="1904.0" y="3094.2" font-size="12" text-anchor="start" fill="#000000"></text>
+<text x="1950.0" y="3094.2" font-size="12" text-anchor="start" fill="#000000">created_at</text>
+<text x="2042.7" y="3094.2" font-size="12" text-anchor="start" fill="#000000">datetime(6)</text>
+<text x="2168.0" y="3094.2" font-size="12" text-anchor="middle" fill="#000000">N</text>
+<line x1="1900.0" y1="3104.0" x2="2190.0" y2="3104.0" stroke="#000000" stroke-width="1"/>
+<text x="1908.0" y="3120.8" font-size="11" text-anchor="start" fill="#000000">UQ uq_pred (run_id, item_id, issue_type)</text>
+<text x="1908.0" y="3134.8" font-size="11" text-anchor="start" fill="#000000">FK ghép (run_id, split) → eval_runs; (split, item_id) →</text>
+<text x="1908.0" y="3148.8" font-size="11" text-anchor="start" fill="#000000">eval_items</text>
+<rect x="46.0" y="1745.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="108.0" y="1761.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_admins</text>
+<rect x="1038.0" y="1472.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1100.0" y="1488.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_admins</text>
+<rect x="1125.0" y="2640.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1187.0" y="2656.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_admins</text>
+<rect x="1928.0" y="1432.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1990.0" y="1448.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_admins</text>
+<rect x="2570.0" y="2583.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="2632.0" y="2599.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_admins</text>
+<rect x="46.0" y="3333.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="108.0" y="3349.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_admins</text>
+<rect x="46.0" y="2897.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="108.0" y="2913.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_admins</text>
+<rect x="776.0" y="3297.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="838.0" y="3313.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_admins</text>
+<rect x="2530.0" y="2065.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="2592.0" y="2081.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_eval_runs</text>
+<rect x="46.0" y="2357.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="108.0" y="2373.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_questions</text>
+<rect x="2758.0" y="2844.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="2820.0" y="2860.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_questions</text>
+<rect x="3170.0" y="3485.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="3232.0" y="3501.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_issue_types</text>
+<rect x="2012.0" y="3234.0" width="124.0" height="26.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="2074.0" y="3250.8" font-size="11" text-anchor="middle" fill="#000000">→ ntt_issue_types</text>
+<line x1="760.0" y1="646.0" x2="550.0" y2="646.0" stroke="#000000" stroke-width="1"/>
+<line x1="746.0" y1="646.0" x2="760.0" y2="638.0" stroke="#000000" stroke-width="1"/>
+<line x1="746.0" y1="646.0" x2="760.0" y2="646.0" stroke="#000000" stroke-width="1"/>
+<line x1="746.0" y1="646.0" x2="760.0" y2="654.0" stroke="#000000" stroke-width="1"/>
+<line x1="560.0" y1="653.0" x2="560.0" y2="639.0" stroke="#000000" stroke-width="1"/>
+<line x1="2406.4" y1="922.0" x2="2406.4" y2="1388.0" stroke="#000000" stroke-width="1"/>
+<line x1="2406.4" y1="1388.0" x2="898.0" y2="1388.0" stroke="#000000" stroke-width="1"/>
+<line x1="898.0" y1="1388.0" x2="898.0" y2="922.0" stroke="#000000" stroke-width="1"/>
+<line x1="2406.4" y1="936.0" x2="2398.4" y2="922.0" stroke="#000000" stroke-width="1"/>
+<line x1="2406.4" y1="936.0" x2="2406.4" y2="922.0" stroke="#000000" stroke-width="1"/>
+<line x1="2406.4" y1="936.0" x2="2414.4" y2="922.0" stroke="#000000" stroke-width="1"/>
+<line x1="891.0" y1="932.0" x2="905.0" y2="932.0" stroke="#000000" stroke-width="1"/>
+<line x1="850.0" y1="476.0" x2="850.0" y2="566.0" stroke="#000000" stroke-width="1"/>
+<line x1="850.0" y1="490.0" x2="842.0" y2="476.0" stroke="#000000" stroke-width="1"/>
+<line x1="850.0" y1="490.0" x2="850.0" y2="476.0" stroke="#000000" stroke-width="1"/>
+<line x1="850.0" y1="490.0" x2="858.0" y2="476.0" stroke="#000000" stroke-width="1"/>
+<line x1="857.0" y1="556.0" x2="843.0" y2="556.0" stroke="#000000" stroke-width="1"/>
+<line x1="1430.0" y1="626.0" x2="1220.0" y2="626.0" stroke="#000000" stroke-width="1"/>
+<line x1="1416.0" y1="626.0" x2="1430.0" y2="618.0" stroke="#000000" stroke-width="1"/>
+<line x1="1416.0" y1="626.0" x2="1430.0" y2="626.0" stroke="#000000" stroke-width="1"/>
+<line x1="1416.0" y1="626.0" x2="1430.0" y2="634.0" stroke="#000000" stroke-width="1"/>
+<line x1="1230.0" y1="633.0" x2="1230.0" y2="619.0" stroke="#000000" stroke-width="1"/>
+<line x1="1900.0" y1="646.0" x2="2110.0" y2="646.0" stroke="#000000" stroke-width="1"/>
+<line x1="1914.0" y1="646.0" x2="1900.0" y2="654.0" stroke="#000000" stroke-width="1"/>
+<line x1="1914.0" y1="646.0" x2="1900.0" y2="646.0" stroke="#000000" stroke-width="1"/>
+<line x1="1914.0" y1="646.0" x2="1900.0" y2="638.0" stroke="#000000" stroke-width="1"/>
+<line x1="2101.0" y1="639.0" x2="2101.0" y2="653.0" stroke="#000000" stroke-width="1"/>
+<circle cx="2091.0" cy="646.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="1430.0" y1="1092.0" x2="1091.2" y2="1092.0" stroke="#000000" stroke-width="1"/>
+<line x1="1091.2" y1="1092.0" x2="1091.2" y2="922.0" stroke="#000000" stroke-width="1"/>
+<line x1="1416.0" y1="1092.0" x2="1430.0" y2="1084.0" stroke="#000000" stroke-width="1"/>
+<line x1="1416.0" y1="1092.0" x2="1430.0" y2="1092.0" stroke="#000000" stroke-width="1"/>
+<line x1="1416.0" y1="1092.0" x2="1430.0" y2="1100.0" stroke="#000000" stroke-width="1"/>
+<line x1="1084.2" y1="932.0" x2="1098.2" y2="932.0" stroke="#000000" stroke-width="1"/>
+<line x1="1710.0" y1="1112.0" x2="2216.4" y2="1112.0" stroke="#000000" stroke-width="1"/>
+<line x1="2216.4" y1="1112.0" x2="2216.4" y2="922.0" stroke="#000000" stroke-width="1"/>
+<line x1="1719.0" y1="1119.0" x2="1719.0" y2="1105.0" stroke="#000000" stroke-width="1"/>
+<circle cx="1729.0" cy="1112.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="2209.4" y1="931.0" x2="2223.4" y2="931.0" stroke="#000000" stroke-width="1"/>
+<circle cx="2216.4" cy="941.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="1954.0" x2="350.0" y2="1834.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="1940.0" x2="358.0" y2="1954.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="1940.0" x2="350.0" y2="1954.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="1940.0" x2="342.0" y2="1954.0" stroke="#000000" stroke-width="1"/>
+<line x1="343.0" y1="1844.0" x2="357.0" y2="1844.0" stroke="#000000" stroke-width="1"/>
+<line x1="280.0" y1="2054.0" x2="234.0" y2="2054.0" stroke="#000000" stroke-width="1"/>
+<line x1="234.0" y1="2054.0" x2="234.0" y2="2014.0" stroke="#000000" stroke-width="1"/>
+<line x1="234.0" y1="2014.0" x2="280.0" y2="2014.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2054.0" x2="280.0" y2="2046.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2054.0" x2="280.0" y2="2054.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2054.0" x2="280.0" y2="2062.0" stroke="#000000" stroke-width="1"/>
+<line x1="271.0" y1="2007.0" x2="271.0" y2="2021.0" stroke="#000000" stroke-width="1"/>
+<circle cx="261.0" cy="2014.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="1010.0" y1="1658.0" x2="550.0" y2="1658.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="1658.0" x2="1010.0" y2="1650.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="1658.0" x2="1010.0" y2="1658.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="1658.0" x2="1010.0" y2="1666.0" stroke="#000000" stroke-width="1"/>
+<line x1="560.0" y1="1665.0" x2="560.0" y2="1651.0" stroke="#000000" stroke-width="1"/>
+<line x1="1010.0" y1="1678.0" x2="840.0" y2="1678.0" stroke="#000000" stroke-width="1"/>
+<line x1="840.0" y1="1678.0" x2="840.0" y2="2014.0" stroke="#000000" stroke-width="1"/>
+<line x1="840.0" y1="2014.0" x2="550.0" y2="2014.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="1678.0" x2="1010.0" y2="1670.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="1678.0" x2="1010.0" y2="1678.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="1678.0" x2="1010.0" y2="1686.0" stroke="#000000" stroke-width="1"/>
+<line x1="559.0" y1="2021.0" x2="559.0" y2="2007.0" stroke="#000000" stroke-width="1"/>
+<circle cx="569.0" cy="2014.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="1080.0" y1="2310.0" x2="1080.0" y2="2170.0" stroke="#000000" stroke-width="1"/>
+<line x1="1080.0" y1="2296.0" x2="1088.0" y2="2310.0" stroke="#000000" stroke-width="1"/>
+<line x1="1080.0" y1="2296.0" x2="1080.0" y2="2310.0" stroke="#000000" stroke-width="1"/>
+<line x1="1080.0" y1="2296.0" x2="1072.0" y2="2310.0" stroke="#000000" stroke-width="1"/>
+<line x1="1073.0" y1="2180.0" x2="1087.0" y2="2180.0" stroke="#000000" stroke-width="1"/>
+<line x1="1900.0" y1="1638.0" x2="1510.0" y2="1638.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="1638.0" x2="1900.0" y2="1630.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="1638.0" x2="1900.0" y2="1638.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="1638.0" x2="1900.0" y2="1646.0" stroke="#000000" stroke-width="1"/>
+<line x1="1519.0" y1="1645.0" x2="1519.0" y2="1631.0" stroke="#000000" stroke-width="1"/>
+<circle cx="1529.0" cy="1638.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="1900.0" y1="1658.0" x2="1830.0" y2="1658.0" stroke="#000000" stroke-width="1"/>
+<line x1="1830.0" y1="1658.0" x2="1830.0" y2="2390.0" stroke="#000000" stroke-width="1"/>
+<line x1="1830.0" y1="2390.0" x2="1600.0" y2="2390.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="1658.0" x2="1900.0" y2="1650.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="1658.0" x2="1900.0" y2="1658.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="1658.0" x2="1900.0" y2="1666.0" stroke="#000000" stroke-width="1"/>
+<line x1="1609.0" y1="2397.0" x2="1609.0" y2="2383.0" stroke="#000000" stroke-width="1"/>
+<circle cx="1619.0" cy="2390.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2276.0" x2="1970.0" y2="2156.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2262.0" x2="1978.0" y2="2276.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2262.0" x2="1970.0" y2="2276.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2262.0" x2="1962.0" y2="2276.0" stroke="#000000" stroke-width="1"/>
+<line x1="1963.0" y1="2166.0" x2="1977.0" y2="2166.0" stroke="#000000" stroke-width="1"/>
+<line x1="2460.0" y1="2396.0" x2="2730.0" y2="2396.0" stroke="#000000" stroke-width="1"/>
+<line x1="2474.0" y1="2396.0" x2="2460.0" y2="2404.0" stroke="#000000" stroke-width="1"/>
+<line x1="2474.0" y1="2396.0" x2="2460.0" y2="2396.0" stroke="#000000" stroke-width="1"/>
+<line x1="2474.0" y1="2396.0" x2="2460.0" y2="2388.0" stroke="#000000" stroke-width="1"/>
+<line x1="2720.0" y1="2389.0" x2="2720.0" y2="2403.0" stroke="#000000" stroke-width="1"/>
+<line x1="1900.0" y1="2676.0" x2="1482.0" y2="2676.0" stroke="#000000" stroke-width="1"/>
+<line x1="1482.0" y1="2676.0" x2="1482.0" y2="2560.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="2676.0" x2="1900.0" y2="2668.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="2676.0" x2="1900.0" y2="2676.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="2676.0" x2="1900.0" y2="2684.0" stroke="#000000" stroke-width="1"/>
+<line x1="1475.0" y1="2569.0" x2="1489.0" y2="2569.0" stroke="#000000" stroke-width="1"/>
+<circle cx="1482.0" cy="2579.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="2986.0" x2="350.0" y2="3106.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="3000.0" x2="342.0" y2="2986.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="3000.0" x2="350.0" y2="2986.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="3000.0" x2="358.0" y2="2986.0" stroke="#000000" stroke-width="1"/>
+<line x1="357.0" y1="3097.0" x2="343.0" y2="3097.0" stroke="#000000" stroke-width="1"/>
+<circle cx="350.0" cy="3087.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="2520.0" x2="350.0" y2="2650.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="2534.0" x2="342.0" y2="2520.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="2534.0" x2="350.0" y2="2520.0" stroke="#000000" stroke-width="1"/>
+<line x1="350.0" y1="2534.0" x2="358.0" y2="2520.0" stroke="#000000" stroke-width="1"/>
+<line x1="357.0" y1="2640.0" x2="343.0" y2="2640.0" stroke="#000000" stroke-width="1"/>
+<line x1="650.0" y1="2390.0" x2="1010.0" y2="2390.0" stroke="#000000" stroke-width="1"/>
+<line x1="664.0" y1="2390.0" x2="650.0" y2="2398.0" stroke="#000000" stroke-width="1"/>
+<line x1="664.0" y1="2390.0" x2="650.0" y2="2390.0" stroke="#000000" stroke-width="1"/>
+<line x1="664.0" y1="2390.0" x2="650.0" y2="2382.0" stroke="#000000" stroke-width="1"/>
+<line x1="1001.0" y1="2383.0" x2="1001.0" y2="2397.0" stroke="#000000" stroke-width="1"/>
+<circle cx="991.0" cy="2390.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="3160.0" y1="3110.0" x2="3168.0" y2="3110.0" stroke="#000000" stroke-width="1"/>
+<line x1="3174.0" y1="3110.0" x2="3182.0" y2="3110.0" stroke="#000000" stroke-width="1"/>
+<line x1="3188.0" y1="3110.0" x2="3196.0" y2="3110.0" stroke="#000000" stroke-width="1"/>
+<line x1="3202.0" y1="3110.0" x2="3210.0" y2="3110.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3110.0" x2="3210.0" y2="3102.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3096.0" x2="3210.0" y2="3088.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3082.0" x2="3210.0" y2="3074.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3068.0" x2="3210.0" y2="3060.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3054.0" x2="3210.0" y2="3046.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3040.0" x2="3210.0" y2="3032.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3026.0" x2="3210.0" y2="3018.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3012.0" x2="3210.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="3210.0" y1="3010.0" x2="3202.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="3196.0" y1="3010.0" x2="3188.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="3182.0" y1="3010.0" x2="3174.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="3168.0" y1="3010.0" x2="3160.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="3174.0" y1="3110.0" x2="3160.0" y2="3118.0" stroke="#000000" stroke-width="1"/>
+<line x1="3174.0" y1="3110.0" x2="3160.0" y2="3110.0" stroke="#000000" stroke-width="1"/>
+<line x1="3174.0" y1="3110.0" x2="3160.0" y2="3102.0" stroke="#000000" stroke-width="1"/>
+<line x1="3169.0" y1="3017.0" x2="3169.0" y2="3003.0" stroke="#000000" stroke-width="1"/>
+<circle cx="3179.0" cy="3010.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3358.0" x2="2800.0" y2="3350.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3344.0" x2="2800.0" y2="3336.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3330.0" x2="2800.0" y2="3322.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3316.0" x2="2800.0" y2="3308.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3302.0" x2="2800.0" y2="3294.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3288.0" x2="2800.0" y2="3280.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3274.0" x2="2800.0" y2="3266.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3260.0" x2="2800.0" y2="3252.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3246.0" x2="2800.0" y2="3238.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3232.0" x2="2800.0" y2="3228.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3344.0" x2="2808.0" y2="3358.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3344.0" x2="2800.0" y2="3358.0" stroke="#000000" stroke-width="1"/>
+<line x1="2800.0" y1="3344.0" x2="2792.0" y2="3358.0" stroke="#000000" stroke-width="1"/>
+<line x1="2793.0" y1="3238.0" x2="2807.0" y2="3238.0" stroke="#000000" stroke-width="1"/>
+<line x1="1900.0" y1="2990.0" x2="1892.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="2990.0" x2="1878.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1872.0" y1="2990.0" x2="1864.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1858.0" y1="2990.0" x2="1850.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1844.0" y1="2990.0" x2="1836.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1830.0" y1="2990.0" x2="1822.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1816.0" y1="2990.0" x2="1808.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1802.0" y1="2990.0" x2="1794.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1788.0" y1="2990.0" x2="1780.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1774.0" y1="2990.0" x2="1766.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1760.0" y1="2990.0" x2="1752.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1746.0" y1="2990.0" x2="1738.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1732.0" y1="2990.0" x2="1724.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1718.0" y1="2990.0" x2="1710.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1704.0" y1="2990.0" x2="1696.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1690.0" y1="2990.0" x2="1682.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1676.0" y1="2990.0" x2="1668.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1662.0" y1="2990.0" x2="1654.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1648.0" y1="2990.0" x2="1640.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1634.0" y1="2990.0" x2="1626.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1620.0" y1="2990.0" x2="1612.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1606.0" y1="2990.0" x2="1598.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1592.0" y1="2990.0" x2="1584.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1578.0" y1="2990.0" x2="1570.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1564.0" y1="2990.0" x2="1556.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1550.0" y1="2990.0" x2="1542.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1536.0" y1="2990.0" x2="1528.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1522.0" y1="2990.0" x2="1514.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1508.0" y1="2990.0" x2="1500.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1494.0" y1="2990.0" x2="1486.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1480.0" y1="2990.0" x2="1472.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1466.0" y1="2990.0" x2="1458.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1452.0" y1="2990.0" x2="1444.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1438.0" y1="2990.0" x2="1430.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="2990.0" x2="1900.0" y2="2982.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="2990.0" x2="1900.0" y2="2990.0" stroke="#000000" stroke-width="1"/>
+<line x1="1886.0" y1="2990.0" x2="1900.0" y2="2998.0" stroke="#000000" stroke-width="1"/>
+<line x1="1440.0" y1="2997.0" x2="1440.0" y2="2983.0" stroke="#000000" stroke-width="1"/>
+<line x1="2190.0" y1="3010.0" x2="2198.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2204.0" y1="3010.0" x2="2212.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2218.0" y1="3010.0" x2="2226.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2232.0" y1="3010.0" x2="2240.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2246.0" y1="3010.0" x2="2254.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2260.0" y1="3010.0" x2="2268.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2274.0" y1="3010.0" x2="2282.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2288.0" y1="3010.0" x2="2296.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2302.0" y1="3010.0" x2="2310.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2316.0" y1="3010.0" x2="2324.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2330.0" y1="3010.0" x2="2338.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2344.0" y1="3010.0" x2="2352.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2358.0" y1="3010.0" x2="2366.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2372.0" y1="3010.0" x2="2380.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2386.0" y1="3010.0" x2="2394.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2400.0" y1="3010.0" x2="2408.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2414.0" y1="3010.0" x2="2422.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2428.0" y1="3010.0" x2="2436.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2442.0" y1="3010.0" x2="2450.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2456.0" y1="3010.0" x2="2464.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2470.0" y1="3010.0" x2="2478.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2484.0" y1="3010.0" x2="2492.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2498.0" y1="3010.0" x2="2506.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2512.0" y1="3010.0" x2="2520.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2526.0" y1="3010.0" x2="2534.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2540.0" y1="3010.0" x2="2548.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2554.0" y1="3010.0" x2="2562.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2568.0" y1="3010.0" x2="2576.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2582.0" y1="3010.0" x2="2590.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2596.0" y1="3010.0" x2="2604.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2610.0" y1="3010.0" x2="2618.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2624.0" y1="3010.0" x2="2632.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2638.0" y1="3010.0" x2="2646.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2652.0" y1="3010.0" x2="2660.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2666.0" y1="3010.0" x2="2674.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2680.0" y1="3010.0" x2="2688.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2694.0" y1="3010.0" x2="2702.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2708.0" y1="3010.0" x2="2716.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2722.0" y1="3010.0" x2="2730.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2204.0" y1="3010.0" x2="2190.0" y2="3018.0" stroke="#000000" stroke-width="1"/>
+<line x1="2204.0" y1="3010.0" x2="2190.0" y2="3010.0" stroke="#000000" stroke-width="1"/>
+<line x1="2204.0" y1="3010.0" x2="2190.0" y2="3002.0" stroke="#000000" stroke-width="1"/>
+<line x1="2720.0" y1="3003.0" x2="2720.0" y2="3017.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2910.0" x2="1970.0" y2="2902.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2896.0" x2="1970.0" y2="2888.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2882.0" x2="1970.0" y2="2874.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2868.0" x2="1970.0" y2="2860.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2854.0" x2="1970.0" y2="2846.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2840.0" x2="1970.0" y2="2832.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2826.0" x2="1970.0" y2="2818.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2812.0" x2="1970.0" y2="2804.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2798.0" x2="1970.0" y2="2790.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2784.0" x2="1970.0" y2="2776.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2770.0" x2="1970.0" y2="2762.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2896.0" x2="1978.0" y2="2910.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2896.0" x2="1970.0" y2="2910.0" stroke="#000000" stroke-width="1"/>
+<line x1="1970.0" y1="2896.0" x2="1962.0" y2="2910.0" stroke="#000000" stroke-width="1"/>
+<line x1="1963.0" y1="2769.0" x2="1977.0" y2="2769.0" stroke="#000000" stroke-width="1"/>
+<circle cx="1970.0" cy="2779.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="280.0" y1="1758.0" x2="170.0" y2="1758.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="1758.0" x2="280.0" y2="1750.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="1758.0" x2="280.0" y2="1758.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="1758.0" x2="280.0" y2="1766.0" stroke="#000000" stroke-width="1"/>
+<line x1="180.0" y1="1765.0" x2="180.0" y2="1751.0" stroke="#000000" stroke-width="1"/>
+<line x1="1100.0" y1="1578.0" x2="1100.0" y2="1498.0" stroke="#000000" stroke-width="1"/>
+<line x1="1100.0" y1="1564.0" x2="1108.0" y2="1578.0" stroke="#000000" stroke-width="1"/>
+<line x1="1100.0" y1="1564.0" x2="1100.0" y2="1578.0" stroke="#000000" stroke-width="1"/>
+<line x1="1100.0" y1="1564.0" x2="1092.0" y2="1578.0" stroke="#000000" stroke-width="1"/>
+<line x1="1093.0" y1="1508.0" x2="1107.0" y2="1508.0" stroke="#000000" stroke-width="1"/>
+<line x1="1187.0" y1="2560.0" x2="1187.0" y2="2640.0" stroke="#000000" stroke-width="1"/>
+<line x1="1187.0" y1="2574.0" x2="1179.0" y2="2560.0" stroke="#000000" stroke-width="1"/>
+<line x1="1187.0" y1="2574.0" x2="1187.0" y2="2560.0" stroke="#000000" stroke-width="1"/>
+<line x1="1187.0" y1="2574.0" x2="1195.0" y2="2560.0" stroke="#000000" stroke-width="1"/>
+<line x1="1194.0" y1="2630.0" x2="1180.0" y2="2630.0" stroke="#000000" stroke-width="1"/>
+<line x1="1990.0" y1="1538.0" x2="1990.0" y2="1458.0" stroke="#000000" stroke-width="1"/>
+<line x1="1990.0" y1="1524.0" x2="1998.0" y2="1538.0" stroke="#000000" stroke-width="1"/>
+<line x1="1990.0" y1="1524.0" x2="1990.0" y2="1538.0" stroke="#000000" stroke-width="1"/>
+<line x1="1990.0" y1="1524.0" x2="1982.0" y2="1538.0" stroke="#000000" stroke-width="1"/>
+<line x1="1983.0" y1="1468.0" x2="1997.0" y2="1468.0" stroke="#000000" stroke-width="1"/>
+<line x1="2460.0" y1="2596.0" x2="2570.0" y2="2596.0" stroke="#000000" stroke-width="1"/>
+<line x1="2474.0" y1="2596.0" x2="2460.0" y2="2604.0" stroke="#000000" stroke-width="1"/>
+<line x1="2474.0" y1="2596.0" x2="2460.0" y2="2596.0" stroke="#000000" stroke-width="1"/>
+<line x1="2474.0" y1="2596.0" x2="2460.0" y2="2588.0" stroke="#000000" stroke-width="1"/>
+<line x1="2561.0" y1="2589.0" x2="2561.0" y2="2603.0" stroke="#000000" stroke-width="1"/>
+<circle cx="2551.0" cy="2596.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="280.0" y1="3346.0" x2="170.0" y2="3346.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="3346.0" x2="280.0" y2="3338.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="3346.0" x2="280.0" y2="3346.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="3346.0" x2="280.0" y2="3354.0" stroke="#000000" stroke-width="1"/>
+<line x1="180.0" y1="3353.0" x2="180.0" y2="3339.0" stroke="#000000" stroke-width="1"/>
+<line x1="280.0" y1="2910.0" x2="170.0" y2="2910.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2910.0" x2="280.0" y2="2902.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2910.0" x2="280.0" y2="2910.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2910.0" x2="280.0" y2="2918.0" stroke="#000000" stroke-width="1"/>
+<line x1="180.0" y1="2917.0" x2="180.0" y2="2903.0" stroke="#000000" stroke-width="1"/>
+<line x1="1010.0" y1="3310.0" x2="1002.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="3310.0" x2="988.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="982.0" y1="3310.0" x2="974.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="968.0" y1="3310.0" x2="960.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="954.0" y1="3310.0" x2="946.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="940.0" y1="3310.0" x2="932.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="926.0" y1="3310.0" x2="918.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="912.0" y1="3310.0" x2="904.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="3310.0" x2="1010.0" y2="3302.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="3310.0" x2="1010.0" y2="3310.0" stroke="#000000" stroke-width="1"/>
+<line x1="996.0" y1="3310.0" x2="1010.0" y2="3318.0" stroke="#000000" stroke-width="1"/>
+<line x1="910.0" y1="3317.0" x2="910.0" y2="3303.0" stroke="#000000" stroke-width="1"/>
+<line x1="2420.0" y1="2078.0" x2="2428.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2434.0" y1="2078.0" x2="2442.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2448.0" y1="2078.0" x2="2456.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2462.0" y1="2078.0" x2="2470.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2476.0" y1="2078.0" x2="2484.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2490.0" y1="2078.0" x2="2498.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2504.0" y1="2078.0" x2="2512.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2518.0" y1="2078.0" x2="2526.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2434.0" y1="2078.0" x2="2420.0" y2="2086.0" stroke="#000000" stroke-width="1"/>
+<line x1="2434.0" y1="2078.0" x2="2420.0" y2="2078.0" stroke="#000000" stroke-width="1"/>
+<line x1="2434.0" y1="2078.0" x2="2420.0" y2="2070.0" stroke="#000000" stroke-width="1"/>
+<line x1="2521.0" y1="2071.0" x2="2521.0" y2="2085.0" stroke="#000000" stroke-width="1"/>
+<circle cx="2511.0" cy="2078.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="280.0" y1="2370.0" x2="170.0" y2="2370.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2370.0" x2="280.0" y2="2362.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2370.0" x2="280.0" y2="2370.0" stroke="#000000" stroke-width="1"/>
+<line x1="266.0" y1="2370.0" x2="280.0" y2="2378.0" stroke="#000000" stroke-width="1"/>
+<line x1="179.0" y1="2377.0" x2="179.0" y2="2363.0" stroke="#000000" stroke-width="1"/>
+<circle cx="189.0" cy="2370.0" r="5" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2950.0" x2="2820.0" y2="2942.0" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2936.0" x2="2820.0" y2="2928.0" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2922.0" x2="2820.0" y2="2914.0" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2908.0" x2="2820.0" y2="2900.0" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2894.0" x2="2820.0" y2="2886.0" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2880.0" x2="2820.0" y2="2872.0" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2936.0" x2="2828.0" y2="2950.0" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2936.0" x2="2820.0" y2="2950.0" stroke="#000000" stroke-width="1"/>
+<line x1="2820.0" y1="2936.0" x2="2812.0" y2="2950.0" stroke="#000000" stroke-width="1"/>
+<line x1="2813.0" y1="2880.0" x2="2827.0" y2="2880.0" stroke="#000000" stroke-width="1"/>
+<line x1="3060.0" y1="3498.0" x2="3068.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3074.0" y1="3498.0" x2="3082.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3088.0" y1="3498.0" x2="3096.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3102.0" y1="3498.0" x2="3110.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3116.0" y1="3498.0" x2="3124.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3130.0" y1="3498.0" x2="3138.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3144.0" y1="3498.0" x2="3152.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3158.0" y1="3498.0" x2="3166.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3074.0" y1="3498.0" x2="3060.0" y2="3506.0" stroke="#000000" stroke-width="1"/>
+<line x1="3074.0" y1="3498.0" x2="3060.0" y2="3498.0" stroke="#000000" stroke-width="1"/>
+<line x1="3074.0" y1="3498.0" x2="3060.0" y2="3490.0" stroke="#000000" stroke-width="1"/>
+<line x1="3160.0" y1="3491.0" x2="3160.0" y2="3505.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3154.0" x2="2074.0" y2="3162.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3168.0" x2="2074.0" y2="3176.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3182.0" x2="2074.0" y2="3190.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3196.0" x2="2074.0" y2="3204.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3210.0" x2="2074.0" y2="3218.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3224.0" x2="2074.0" y2="3232.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3168.0" x2="2066.0" y2="3154.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3168.0" x2="2074.0" y2="3154.0" stroke="#000000" stroke-width="1"/>
+<line x1="2074.0" y1="3168.0" x2="2082.0" y2="3154.0" stroke="#000000" stroke-width="1"/>
+<line x1="2081.0" y1="3224.0" x2="2067.0" y2="3224.0" stroke="#000000" stroke-width="1"/>
+<text x="655.0" y="640.9" font-size="11" text-anchor="middle" fill="#000000">fk_course_admin</text>
+<text x="1278.0" y="1406.8" font-size="11" text-anchor="middle" fill="#000000">fk_admin_mobile_device</text>
+<text x="858.0" y="524.9" font-size="11" text-anchor="start" fill="#000000">fk_admin_backup_code</text>
+<text x="1325.0" y="620.9" font-size="11" text-anchor="middle" fill="#000000">fk_admin_web_session</text>
+<text x="2005.0" y="640.9" font-size="11" text-anchor="middle" fill="#000000">fk_device_web_session</text>
+<text x="1305.0" y="1086.8" font-size="11" text-anchor="middle" fill="#000000">fk_admin_totp_credential</text>
+<text x="1840.0" y="1106.8" font-size="11" text-anchor="middle" fill="#000000">fk_device_totp_credential</text>
+<text x="358.0" y="1897.8" font-size="11" text-anchor="start" fill="#000000">fk_subject_topic</text>
+<text x="226.0" y="2025.8" font-size="11" text-anchor="end" fill="#000000">fk_topic_parent</text>
+<text x="226.0" y="2038.8" font-size="11" text-anchor="end" fill="#000000">(subject_id, parent_id)</text>
+<text x="780.0" y="1652.8" font-size="11" text-anchor="middle" fill="#000000">fk_subject_question</text>
+<text x="850.0" y="1771.8" font-size="11" text-anchor="start" fill="#000000">fk_topic_question</text>
+<text x="850.0" y="1784.8" font-size="11" text-anchor="start" fill="#000000">(subject_id, topic_id)</text>
+<text x="1088.0" y="2243.8" font-size="11" text-anchor="start" fill="#000000">fk_question_revision</text>
+<text x="1705.0" y="1632.8" font-size="11" text-anchor="middle" fill="#000000">fk_question_ai_task</text>
+<text x="1822.0" y="2273.8" font-size="11" text-anchor="end" fill="#000000">fk_revision_ai_task</text>
+<text x="1822.0" y="2286.8" font-size="11" text-anchor="end" fill="#000000">(question_id, question_revision_id)</text>
+<text x="1978.0" y="2219.8" font-size="11" text-anchor="start" fill="#000000">fk_ai_task_suggestion (CASCADE)</text>
+<text x="2595.0" y="2390.8" font-size="11" text-anchor="middle" fill="#000000">fk_issue_type_suggestion</text>
+<text x="1492.0" y="2670.8" font-size="11" text-anchor="start" fill="#000000">fk_revision_suggestion (applied_revision_id)</text>
+<text x="358.0" y="3049.8" font-size="11" text-anchor="start" fill="#000000">fk_moodle_profile_exchange</text>
+<text x="358.0" y="2588.8" font-size="11" text-anchor="start" fill="#000000">fk_moodle_exchange_item (CASCADE)</text>
+<text x="830.0" y="2371.8" font-size="11" text-anchor="middle" fill="#000000">fk_revision_exchange_item</text>
+<text x="830.0" y="2384.8" font-size="11" text-anchor="middle" fill="#000000">(question_id, question_revision_id)</text>
+<text x="3218.0" y="3027.8" font-size="11" text-anchor="start" fill="#000000">fk_eval_item_injected</text>
+<text x="3218.0" y="3040.8" font-size="11" text-anchor="start" fill="#000000">(split, injected_from_item_id)</text>
+<text x="2808.0" y="3296.8" font-size="11" text-anchor="start" fill="#000000">fk_eval_item_label</text>
+<text x="1665.0" y="2971.8" font-size="11" text-anchor="middle" fill="#000000">fk_eval_run_prediction</text>
+<text x="1665.0" y="2984.8" font-size="11" text-anchor="middle" fill="#000000">(run_id, split)</text>
+<text x="2460.0" y="2991.8" font-size="11" text-anchor="middle" fill="#000000">fk_eval_item_prediction</text>
+<text x="2460.0" y="3004.8" font-size="11" text-anchor="middle" fill="#000000">(split, item_id)</text>
+<text x="1978.0" y="2838.8" font-size="11" text-anchor="start" fill="#000000">fk_suggestion_prediction</text>
+<text x="225.0" y="1752.8" font-size="11" text-anchor="middle" fill="#000000">created_by</text>
+<text x="1108.0" y="1501.8" font-size="11" text-anchor="start" fill="#000000">created_by, updated_by</text>
+<text x="1195.0" y="2603.8" font-size="11" text-anchor="start" fill="#000000">changed_by</text>
+<text x="1998.0" y="1501.8" font-size="11" text-anchor="start" fill="#000000">created_by</text>
+<text x="2515.0" y="2590.8" font-size="11" text-anchor="middle" fill="#000000">decided_by</text>
+<text x="225.0" y="3340.8" font-size="11" text-anchor="middle" fill="#000000">created_by</text>
+<text x="225.0" y="2904.8" font-size="11" text-anchor="middle" fill="#000000">created_by</text>
+<text x="955.0" y="3304.8" font-size="11" text-anchor="middle" fill="#000000">created_by</text>
+<text x="2475.0" y="2072.8" font-size="11" text-anchor="middle" fill="#000000">eval_run_id</text>
+<text x="225.0" y="2364.8" font-size="11" text-anchor="middle" fill="#000000">question_id</text>
+<text x="2828.0" y="2913.8" font-size="11" text-anchor="start" fill="#000000">question_id</text>
+<text x="3115.0" y="3492.8" font-size="11" text-anchor="middle" fill="#000000">issue_type</text>
+<text x="2082.0" y="3197.8" font-size="11" text-anchor="start" fill="#000000">issue_type</text>
+<text x="1705.0" y="35.0" font-size="20" text-anchor="middle" font-weight="bold" fill="#000000">Sơ đồ CSDL (SQL) – Hệ thống ngân hàng câu hỏi trắc nghiệm tích hợp kiểm định AI và Moodle</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTpmZWVhNWY4MC05NTNmLTQwZGYtYTAwZS00ZGY5MDkxNzQ3OTgAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaE29fb2yduB1FE4d3fVbE1kAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDowMjdmMjAyZS0wNmJlLTQxOTQtYTdhZS1kNjFiMTQ0YjIxOGJscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNoyDK8uUDhwZqOd64yH9/QFQAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggyHMaY7gp/rpGdPSxekUrPzoY/9InY1IBF4PvEtBbR/ikZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaNKbo/Y66KCk4VNaWpgs9lcAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRKAAAAAAAAAAAAAGRoYXNoWCCq4MZuNwfkMqmMAIWOa5yHiqPuzHBhLxRL9oN+C7uuv2RuYW1lbmp1bWJmIG1hbmlmZXN0amV4Y2x1c2lvbnOBomVzdGFydBoAAnNjZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOmZlZWE1ZjgwLTk1M2YtNDBkZi1hMDBlLTRkZjkwOTE3NDc5OC9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjA5ZjM5MzcwLWUzNGYtNDIzYy1iNmY3LTViYWVkMDM0OTE5ZHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCDIcxpjuCn+ukZ09LF6RSs/Ohj/0idjUgEXg+8S0FtH+KJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggkP+APEP1k1/1nUgu914e6YVSDl7K5f9qTxPqTapa9AOiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggk9Bl+OdMx1k4WQxpPb/7xhLlPZcX1eOjjm0SgFIpaAZ0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQIpJXDX11itP2+ENieE3uTydgvdoa1nZ76dNX4y7j3e1HqRHY0kyHjYyLuVZDjC6bArNQrspuqK5RllI7A7zGYo=</c2pa:manifest></metadata></svg>

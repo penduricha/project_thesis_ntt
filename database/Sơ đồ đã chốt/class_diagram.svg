@@ -1,0 +1,765 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2627" height="3414" viewBox="0 0 2627 3414" font-family="Helvetica, Arial, Liberation Sans, sans-serif" xmlns:c2pa="http://c2pa.org/manifest">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<rect x="300.0" y="70.0" width="524.2" height="178.0" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<text x="310.0" y="90.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Chú thích</text>
+<text x="310.0" y="108.2" font-size="12" text-anchor="start" fill="#000000">Mũi tên mở: association một chiều, từ lớp giữ tham chiếu (cột FK) tới lớp được tham chiếu.</text>
+<text x="310.0" y="126.2" font-size="12" text-anchor="start" fill="#000000">Nhãn ở đầu mũi tên: bội số và tên thuộc tính tham chiếu (vai trò); đầu kia: bội số phía lớp con.</text>
+<text x="310.0" y="144.2" font-size="12" text-anchor="start" fill="#000000">Cột FK không liệt kê trong thuộc tính vì đã thể hiện bằng association.</text>
+<text x="310.0" y="162.2" font-size="12" text-anchor="start" fill="#000000">Nét đứt AuthAuditLog: tham chiếu logic qua adminId, deviceId, không có FK vật lý.</text>
+<text x="310.0" y="180.2" font-size="12" text-anchor="start" fill="#000000">Ô nét đứt “→ X”: association tới lớp ở nhóm khác, vẽ rút gọn (13 đầu nối).</text>
+<text x="310.0" y="198.2" font-size="12" text-anchor="start" fill="#000000">Lớp viền nét đứt: module thực nghiệm (tùy chọn).</text>
+<text x="310.0" y="216.2" font-size="12" text-anchor="start" fill="#000000">{PK} khoá chính | {generated} cột sinh, chỉ đọc | {version} @Version (khoá lạc quan).</text>
+<text x="310.0" y="234.2" font-size="12" text-anchor="start" fill="#000000">FK ghép (cùng môn, cùng câu hỏi, cùng split DEV/TEST) được ép ở tầng CSDL.</text>
+<rect x="300.0" y="278.0" width="358.3" height="124.0" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<text x="310.0" y="298.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Ánh xạ kiểu SQL → Java</text>
+<text x="310.0" y="316.2" font-size="12" text-anchor="start" fill="#000000">bigint → Long | int → Integer | tinyint → Byte | smallint → Short</text>
+<text x="310.0" y="334.2" font-size="12" text-anchor="start" fill="#000000">bit(1) → Boolean | varchar, char, text, longtext → String</text>
+<text x="310.0" y="352.2" font-size="12" text-anchor="start" fill="#000000">datetime(6) → Instant (UTC) | date → LocalDate</text>
+<text x="310.0" y="370.2" font-size="12" text-anchor="start" fill="#000000">decimal(6,3) → BigDecimal | json → JsonNode (Jackson)</text>
+<text x="310.0" y="388.2" font-size="12" text-anchor="start" fill="#000000">varbinary → byte[] | enum → Java enum (xem bảng bên dưới)</text>
+<rect x="2010.0" y="1496.0" width="457.7" height="538.0" fill="#FFFFFF" stroke="#000000" stroke-width="1"/>
+<text x="2020.0" y="1516.2" font-size="12" text-anchor="start" font-weight="bold" fill="#000000">Enumerations</text>
+<text x="2020.0" y="1534.2" font-size="12" text-anchor="start" fill="#000000">AccountStatus { active, disabled, locked, pending }</text>
+<text x="2020.0" y="1552.2" font-size="12" text-anchor="start" fill="#000000">AiTaskStatus { pending, running, succeeded, failed, cancelled }</text>
+<text x="2020.0" y="1570.2" font-size="12" text-anchor="start" fill="#000000">AiTaskType { question_check, nl_search }</text>
+<text x="2020.0" y="1588.2" font-size="12" text-anchor="start" fill="#000000">AnswerLabel { A, B, C, D }</text>
+<text x="2020.0" y="1606.2" font-size="12" text-anchor="start" fill="#000000">AnswerNumbering { none, abc, ABCD, 123 }</text>
+<text x="2020.0" y="1624.2" font-size="12" text-anchor="start" fill="#000000">AuthEvent { 19 giá trị }</text>
+<text x="2020.0" y="1642.2" font-size="12" text-anchor="start" fill="#000000">ChangeSource { create, manual, ai_suggestion, moodle_import, archive, restore }</text>
+<text x="2020.0" y="1660.2" font-size="12" text-anchor="start" fill="#000000">ContentFormat { plain, html }</text>
+<text x="2020.0" y="1678.2" font-size="12" text-anchor="start" fill="#000000">DevicePlatform { android, ios }</text>
+<text x="2020.0" y="1696.2" font-size="12" text-anchor="start" fill="#000000">DeviceStatus { active, pending, revoked }</text>
+<text x="2020.0" y="1714.2" font-size="12" text-anchor="start" fill="#000000">EvalMethod { rule_based, llm }</text>
+<text x="2020.0" y="1732.2" font-size="12" text-anchor="start" fill="#000000">EvalScenario { E1, E2, E3, E4, E5, E6, E7, E8 }</text>
+<text x="2020.0" y="1750.2" font-size="12" text-anchor="start" fill="#000000">EvalSplit { dev, test }</text>
+<text x="2020.0" y="1768.2" font-size="12" text-anchor="start" fill="#000000">ExchangeDirection { export, import }</text>
+<text x="2020.0" y="1786.2" font-size="12" text-anchor="start" fill="#000000">ExchangeItemStatus { ok, skipped, failed }</text>
+<text x="2020.0" y="1804.2" font-size="12" text-anchor="start" fill="#000000">ExchangeStatus { pending, succeeded, partial, failed }</text>
+<text x="2020.0" y="1822.2" font-size="12" text-anchor="start" fill="#000000">GoldStatus { unlabeled, clean, has_errors }</text>
+<text x="2020.0" y="1840.2" font-size="12" text-anchor="start" fill="#000000">ItemOrigin { real, injected }</text>
+<text x="2020.0" y="1858.2" font-size="12" text-anchor="start" fill="#000000">LabelStage { annotator, gold }</text>
+<text x="2020.0" y="1876.2" font-size="12" text-anchor="start" fill="#000000">MoodleCheck { unknown, ok, failed }</text>
+<text x="2020.0" y="1894.2" font-size="12" text-anchor="start" fill="#000000">QuestionSource { manual, moodle_import, eval }</text>
+<text x="2020.0" y="1912.2" font-size="12" text-anchor="start" fill="#000000">QuestionStatus { active, archived }</text>
+<text x="2020.0" y="1930.2" font-size="12" text-anchor="start" fill="#000000">SessionStatus { active, expired, logged_out, revoked }</text>
+<text x="2020.0" y="1948.2" font-size="12" text-anchor="start" fill="#000000">Severity { low, medium, high }</text>
+<text x="2020.0" y="1966.2" font-size="12" text-anchor="start" fill="#000000">SuggestionDecision { pending, accepted, rejected, stale }</text>
+<text x="2020.0" y="1984.2" font-size="12" text-anchor="start" fill="#000000">TargetField { question, stem, option_a, option_b, option_c, option_d }</text>
+<text x="2020.0" y="2002.2" font-size="12" text-anchor="start" fill="#000000">UserRole { admin, lecturer }</text>
+<text x="2020.0" y="2020.2" font-size="12" text-anchor="start" fill="#000000">ValidationStatus { not_checked, clean, has_issues, failed, stale }</text>
+<rect x="300.0" y="462.0" width="250.0" height="232.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="300.0" y1="492.0" x2="550.0" y2="492.0" stroke="#000000" stroke-width="2"/>
+<rect x="300.0" y="462.0" width="250.0" height="232.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="425.0" y="482.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">Course</text>
+<text x="306.0" y="510.6" font-size="13" text-anchor="start" fill="#000000">- courseId: Long {PK}</text>
+<text x="306.0" y="530.5" font-size="13" text-anchor="start" fill="#000000">- trainingSystem: String</text>
+<text x="306.0" y="550.5" font-size="13" text-anchor="start" fill="#000000">- branch: String</text>
+<text x="306.0" y="570.5" font-size="13" text-anchor="start" fill="#000000">- industry: String</text>
+<text x="306.0" y="590.5" font-size="13" text-anchor="start" fill="#000000">- faculty: String</text>
+<text x="306.0" y="610.5" font-size="13" text-anchor="start" fill="#000000">- major: String</text>
+<text x="306.0" y="630.5" font-size="13" text-anchor="start" fill="#000000">- typeOfTraining: String</text>
+<text x="306.0" y="650.5" font-size="13" text-anchor="start" fill="#000000">- yearOpening: Integer</text>
+<line x1="300.0" y1="663.0" x2="550.0" y2="663.0" stroke="#000000" stroke-width="2"/>
+<text x="306.0" y="682.5" font-size="13" text-anchor="start" fill="#000000">+ toString(): String</text>
+<rect x="914.2" y="462.0" width="250.0" height="372.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="914.2" y1="492.0" x2="1164.2" y2="492.0" stroke="#000000" stroke-width="2"/>
+<rect x="914.2" y="462.0" width="250.0" height="372.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="1039.2" y="482.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">Admin</text>
+<text x="920.2" y="510.6" font-size="13" text-anchor="start" fill="#000000">- adminId: Long {PK}</text>
+<text x="920.2" y="530.5" font-size="13" text-anchor="start" fill="#000000">- idCard: String</text>
+<text x="920.2" y="550.5" font-size="13" text-anchor="start" fill="#000000">- password: String</text>
+<text x="920.2" y="570.5" font-size="13" text-anchor="start" fill="#000000">- adminName: String</text>
+<text x="920.2" y="590.5" font-size="13" text-anchor="start" fill="#000000">- address: String</text>
+<text x="920.2" y="610.5" font-size="13" text-anchor="start" fill="#000000">- gender: Boolean</text>
+<text x="920.2" y="630.5" font-size="13" text-anchor="start" fill="#000000">- dateOfBirthAdmin: LocalDate</text>
+<text x="920.2" y="650.5" font-size="13" text-anchor="start" fill="#000000">- role: UserRole</text>
+<text x="920.2" y="670.5" font-size="13" text-anchor="start" fill="#000000">- totpEnabled: Boolean</text>
+<text x="920.2" y="690.5" font-size="13" text-anchor="start" fill="#000000">- accountStatus: AccountStatus</text>
+<text x="920.2" y="710.5" font-size="13" text-anchor="start" fill="#000000">- passwordChangedAt: Instant</text>
+<text x="920.2" y="730.5" font-size="13" text-anchor="start" fill="#000000">- lastLoginAt: Instant</text>
+<text x="920.2" y="750.5" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="920.2" y="770.5" font-size="13" text-anchor="start" fill="#000000">- updatedAt: Instant</text>
+<line x1="914.2" y1="783.0" x2="1164.2" y2="783.0" stroke="#000000" stroke-width="2"/>
+<text x="920.2" y="802.5" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="920.2" y="822.5" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="1934.2" y="462.0" width="250.0" height="352.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="1934.2" y1="492.0" x2="2184.2" y2="492.0" stroke="#000000" stroke-width="2"/>
+<rect x="1934.2" y="462.0" width="250.0" height="352.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="2059.2" y="482.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">MobileDevice</text>
+<text x="1940.2" y="510.6" font-size="13" text-anchor="start" fill="#000000">- deviceId: Long {PK}</text>
+<text x="1940.2" y="530.5" font-size="13" text-anchor="start" fill="#000000">- deviceUuid: String</text>
+<text x="1940.2" y="550.5" font-size="13" text-anchor="start" fill="#000000">- deviceName: String</text>
+<text x="1940.2" y="570.5" font-size="13" text-anchor="start" fill="#000000">- platform: DevicePlatform</text>
+<text x="1940.2" y="590.5" font-size="13" text-anchor="start" fill="#000000">- osVersion: String</text>
+<text x="1940.2" y="610.5" font-size="13" text-anchor="start" fill="#000000">- appVersion: String</text>
+<text x="1940.2" y="630.5" font-size="13" text-anchor="start" fill="#000000">- publicKey: String</text>
+<text x="1940.2" y="650.5" font-size="13" text-anchor="start" fill="#000000">- status: DeviceStatus</text>
+<text x="1940.2" y="670.5" font-size="13" text-anchor="start" fill="#000000">- lastIp: String</text>
+<text x="1940.2" y="690.5" font-size="13" text-anchor="start" fill="#000000">- lastSeenAt: Instant</text>
+<text x="1940.2" y="710.5" font-size="13" text-anchor="start" fill="#000000">- registeredAt: Instant</text>
+<text x="1940.2" y="730.5" font-size="13" text-anchor="start" fill="#000000">- revokedAt: Instant</text>
+<text x="1940.2" y="750.5" font-size="13" text-anchor="start" fill="#000000">- revokeReason: String</text>
+<line x1="1934.2" y1="763.0" x2="2184.2" y2="763.0" stroke="#000000" stroke-width="2"/>
+<text x="1940.2" y="782.5" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="1940.2" y="802.5" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="914.2" y="70.0" width="250.0" height="192.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="914.2" y1="100.0" x2="1164.2" y2="100.0" stroke="#000000" stroke-width="2"/>
+<rect x="914.2" y="70.0" width="250.0" height="192.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="1039.2" y="90.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">BackupCode</text>
+<text x="920.2" y="118.5" font-size="13" text-anchor="start" fill="#000000">- codeId: Long {PK}</text>
+<text x="920.2" y="138.6" font-size="13" text-anchor="start" fill="#000000">- codeHash: String</text>
+<text x="920.2" y="158.6" font-size="13" text-anchor="start" fill="#000000">- used: Boolean</text>
+<text x="920.2" y="178.6" font-size="13" text-anchor="start" fill="#000000">- usedAt: Instant</text>
+<text x="920.2" y="198.6" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<line x1="914.2" y1="211.0" x2="1164.2" y2="211.0" stroke="#000000" stroke-width="2"/>
+<text x="920.2" y="230.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="920.2" y="250.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="1424.2" y="462.0" width="250.0" height="272.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="1424.2" y1="492.0" x2="1674.2" y2="492.0" stroke="#000000" stroke-width="2"/>
+<rect x="1424.2" y="462.0" width="250.0" height="272.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="1549.2" y="482.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">WebSession</text>
+<text x="1430.2" y="510.6" font-size="13" text-anchor="start" fill="#000000">- sessionId: String {PK}</text>
+<text x="1430.2" y="530.5" font-size="13" text-anchor="start" fill="#000000">- refreshTokenHash: String</text>
+<text x="1430.2" y="550.5" font-size="13" text-anchor="start" fill="#000000">- ipAddress: String</text>
+<text x="1430.2" y="570.5" font-size="13" text-anchor="start" fill="#000000">- userAgent: String</text>
+<text x="1430.2" y="590.5" font-size="13" text-anchor="start" fill="#000000">- status: SessionStatus</text>
+<text x="1430.2" y="610.5" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="1430.2" y="630.5" font-size="13" text-anchor="start" fill="#000000">- expiresAt: Instant</text>
+<text x="1430.2" y="650.5" font-size="13" text-anchor="start" fill="#000000">- revokedAt: Instant</text>
+<text x="1430.2" y="670.5" font-size="13" text-anchor="start" fill="#000000">- revokeReason: String</text>
+<line x1="1424.2" y1="683.0" x2="1674.2" y2="683.0" stroke="#000000" stroke-width="2"/>
+<text x="1430.2" y="702.5" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="1430.2" y="722.5" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="1424.2" y="934.0" width="250.0" height="312.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="1424.2" y1="964.0" x2="1674.2" y2="964.0" stroke="#000000" stroke-width="2"/>
+<rect x="1424.2" y="934.0" width="250.0" height="312.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="1549.2" y="954.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">TotpCredential</text>
+<text x="1430.2" y="982.5" font-size="13" text-anchor="start" fill="#000000">- credentialId: Long {PK}</text>
+<text x="1430.2" y="1002.5" font-size="13" text-anchor="start" fill="#000000">- secretCipher: byte[]</text>
+<text x="1430.2" y="1022.5" font-size="13" text-anchor="start" fill="#000000">- iv: byte[]</text>
+<text x="1430.2" y="1042.5" font-size="13" text-anchor="start" fill="#000000">- kdfSalt: byte[]</text>
+<text x="1430.2" y="1062.5" font-size="13" text-anchor="start" fill="#000000">- keyVersion: Integer</text>
+<text x="1430.2" y="1082.5" font-size="13" text-anchor="start" fill="#000000">- algorithm: String</text>
+<text x="1430.2" y="1102.5" font-size="13" text-anchor="start" fill="#000000">- digits: Byte</text>
+<text x="1430.2" y="1122.5" font-size="13" text-anchor="start" fill="#000000">- periodSeconds: Short</text>
+<text x="1430.2" y="1142.5" font-size="13" text-anchor="start" fill="#000000">- confirmed: Boolean</text>
+<text x="1430.2" y="1162.5" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="1430.2" y="1182.5" font-size="13" text-anchor="start" fill="#000000">- confirmedAt: Instant</text>
+<line x1="1424.2" y1="1195.0" x2="1674.2" y2="1195.0" stroke="#000000" stroke-width="2"/>
+<text x="1430.2" y="1214.5" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="1430.2" y="1234.5" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="1934.2" y="70.0" width="250.0" height="272.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="1934.2" y1="100.0" x2="2184.2" y2="100.0" stroke="#000000" stroke-width="2"/>
+<rect x="1934.2" y="70.0" width="250.0" height="272.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="2059.2" y="90.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">AuthAuditLog</text>
+<text x="1940.2" y="118.5" font-size="13" text-anchor="start" fill="#000000">- logId: Long {PK}</text>
+<text x="1940.2" y="138.6" font-size="13" text-anchor="start" fill="#000000">- adminId: Long</text>
+<text x="1940.2" y="158.6" font-size="13" text-anchor="start" fill="#000000">- deviceId: Long</text>
+<text x="1940.2" y="178.6" font-size="13" text-anchor="start" fill="#000000">- eventType: AuthEvent</text>
+<text x="1940.2" y="198.6" font-size="13" text-anchor="start" fill="#000000">- success: Boolean</text>
+<text x="1940.2" y="218.6" font-size="13" text-anchor="start" fill="#000000">- ipAddress: String</text>
+<text x="1940.2" y="238.6" font-size="13" text-anchor="start" fill="#000000">- userAgent: String</text>
+<text x="1940.2" y="258.6" font-size="13" text-anchor="start" fill="#000000">- detail: String</text>
+<text x="1940.2" y="278.6" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<line x1="1934.2" y1="291.0" x2="2184.2" y2="291.0" stroke="#000000" stroke-width="2"/>
+<text x="1940.2" y="310.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="1940.2" y="330.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="300.0" y="1536.0" width="250.0" height="232.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="300.0" y1="1566.0" x2="550.0" y2="1566.0" stroke="#000000" stroke-width="2"/>
+<rect x="300.0" y="1536.0" width="250.0" height="232.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="425.0" y="1556.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">Subject</text>
+<text x="306.0" y="1584.5" font-size="13" text-anchor="start" fill="#000000">- subjectId: Long {PK}</text>
+<text x="306.0" y="1604.5" font-size="13" text-anchor="start" fill="#000000">- subjectCode: String</text>
+<text x="306.0" y="1624.5" font-size="13" text-anchor="start" fill="#000000">- subjectName: String</text>
+<text x="306.0" y="1644.5" font-size="13" text-anchor="start" fill="#000000">- description: String</text>
+<text x="306.0" y="1664.5" font-size="13" text-anchor="start" fill="#000000">- active: Boolean</text>
+<text x="306.0" y="1684.5" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="306.0" y="1704.5" font-size="13" text-anchor="start" fill="#000000">- updatedAt: Instant</text>
+<line x1="300.0" y1="1717.0" x2="550.0" y2="1717.0" stroke="#000000" stroke-width="2"/>
+<text x="306.0" y="1736.5" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="306.0" y="1756.5" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="300.0" y="1908.0" width="250.0" height="192.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="300.0" y1="1938.0" x2="550.0" y2="1938.0" stroke="#000000" stroke-width="2"/>
+<rect x="300.0" y="1908.0" width="250.0" height="192.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="425.0" y="1928.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">Topic</text>
+<text x="306.0" y="1956.5" font-size="13" text-anchor="start" fill="#000000">- topicId: Long {PK}</text>
+<text x="306.0" y="1976.5" font-size="13" text-anchor="start" fill="#000000">- topicName: String</text>
+<text x="306.0" y="1996.5" font-size="13" text-anchor="start" fill="#000000">- sortOrder: Integer</text>
+<text x="306.0" y="2016.5" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="306.0" y="2036.5" font-size="13" text-anchor="start" fill="#000000">- parentKey: Long {generated}</text>
+<line x1="300.0" y1="2049.0" x2="550.0" y2="2049.0" stroke="#000000" stroke-width="2"/>
+<text x="306.0" y="2068.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="306.0" y="2088.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="2010.0" y="2188.0" width="250.0" height="152.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="2010.0" y1="2218.0" x2="2260.0" y2="2218.0" stroke="#000000" stroke-width="2"/>
+<rect x="2010.0" y="2188.0" width="250.0" height="152.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="2135.0" y="2208.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">IssueType</text>
+<text x="2016.0" y="2236.6" font-size="13" text-anchor="start" fill="#000000">- issueType: String {PK}</text>
+<text x="2016.0" y="2256.6" font-size="13" text-anchor="start" fill="#000000">- labelVi: String</text>
+<text x="2016.0" y="2276.6" font-size="13" text-anchor="start" fill="#000000">- evaluated: Boolean</text>
+<line x1="2010.0" y1="2289.0" x2="2260.0" y2="2289.0" stroke="#000000" stroke-width="2"/>
+<text x="2016.0" y="2308.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="2016.0" y="2328.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="880.0" y="1536.0" width="250.0" height="472.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="880.0" y1="1566.0" x2="1130.0" y2="1566.0" stroke="#000000" stroke-width="2"/>
+<rect x="880.0" y="1536.0" width="250.0" height="472.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="1005.0" y="1556.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">Question</text>
+<text x="886.0" y="1584.5" font-size="13" text-anchor="start" fill="#000000">- questionId: Long {PK}</text>
+<text x="886.0" y="1604.5" font-size="13" text-anchor="start" fill="#000000">- title: String</text>
+<text x="886.0" y="1624.5" font-size="13" text-anchor="start" fill="#000000">- stem: String</text>
+<text x="886.0" y="1644.5" font-size="13" text-anchor="start" fill="#000000">- optionA: String</text>
+<text x="886.0" y="1664.5" font-size="13" text-anchor="start" fill="#000000">- optionB: String</text>
+<text x="886.0" y="1684.5" font-size="13" text-anchor="start" fill="#000000">- optionC: String</text>
+<text x="886.0" y="1704.5" font-size="13" text-anchor="start" fill="#000000">- optionD: String</text>
+<text x="886.0" y="1724.5" font-size="13" text-anchor="start" fill="#000000">- correctLabel: AnswerLabel</text>
+<text x="886.0" y="1744.5" font-size="13" text-anchor="start" fill="#000000">- contentFormat: ContentFormat</text>
+<text x="886.0" y="1764.5" font-size="13" text-anchor="start" fill="#000000">- generalFeedback: String</text>
+<text x="886.0" y="1784.5" font-size="13" text-anchor="start" fill="#000000">- difficulty: Byte</text>
+<text x="886.0" y="1804.5" font-size="13" text-anchor="start" fill="#000000">- status: QuestionStatus</text>
+<text x="886.0" y="1824.5" font-size="13" text-anchor="start" fill="#000000">- validationStatus: ValidationStatus</text>
+<text x="886.0" y="1844.5" font-size="13" text-anchor="start" fill="#000000">- lastValidatedAt: Instant</text>
+<text x="886.0" y="1864.5" font-size="13" text-anchor="start" fill="#000000">- source: QuestionSource</text>
+<text x="886.0" y="1884.5" font-size="13" text-anchor="start" fill="#000000">- contentHash: String</text>
+<text x="886.0" y="1904.5" font-size="13" text-anchor="start" fill="#000000">- version: Integer {version}</text>
+<text x="886.0" y="1924.5" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="886.0" y="1944.5" font-size="13" text-anchor="start" fill="#000000">- updatedAt: Instant</text>
+<line x1="880.0" y1="1957.0" x2="1130.0" y2="1957.0" stroke="#000000" stroke-width="2"/>
+<text x="886.0" y="1976.5" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="886.0" y="1996.5" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="880.0" y="2158.0" width="250.0" height="212.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="880.0" y1="2188.0" x2="1130.0" y2="2188.0" stroke="#000000" stroke-width="2"/>
+<rect x="880.0" y="2158.0" width="250.0" height="212.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="1005.0" y="2178.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">QuestionRevision</text>
+<text x="886.0" y="2206.6" font-size="13" text-anchor="start" fill="#000000">- revisionId: Long {PK}</text>
+<text x="886.0" y="2226.6" font-size="13" text-anchor="start" fill="#000000">- revNo: Integer</text>
+<text x="886.0" y="2246.6" font-size="13" text-anchor="start" fill="#000000">- snapshotJson: JsonNode</text>
+<text x="886.0" y="2266.6" font-size="13" text-anchor="start" fill="#000000">- changeSource: ChangeSource</text>
+<text x="886.0" y="2286.6" font-size="13" text-anchor="start" fill="#000000">- changeNote: String</text>
+<text x="886.0" y="2306.6" font-size="13" text-anchor="start" fill="#000000">- changedAt: Instant</text>
+<line x1="880.0" y1="2319.0" x2="1130.0" y2="2319.0" stroke="#000000" stroke-width="2"/>
+<text x="886.0" y="2338.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="886.0" y="2358.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="880.0" y="2750.0" width="250.0" height="412.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="880.0" y1="2780.0" x2="1130.0" y2="2780.0" stroke="#000000" stroke-width="2"/>
+<rect x="880.0" y="2750.0" width="250.0" height="412.0" fill="none" stroke="#000000" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="1005.0" y="2770.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">EvalRun</text>
+<text x="886.0" y="2798.6" font-size="13" text-anchor="start" fill="#000000">- runId: Long {PK}</text>
+<text x="886.0" y="2818.6" font-size="13" text-anchor="start" fill="#000000">- runLabel: String</text>
+<text x="886.0" y="2838.6" font-size="13" text-anchor="start" fill="#000000">- scenario: EvalScenario</text>
+<text x="886.0" y="2858.6" font-size="13" text-anchor="start" fill="#000000">- datasetVersion: String</text>
+<text x="886.0" y="2878.6" font-size="13" text-anchor="start" fill="#000000">- split: EvalSplit</text>
+<text x="886.0" y="2898.6" font-size="13" text-anchor="start" fill="#000000">- method: EvalMethod</text>
+<text x="886.0" y="2918.6" font-size="13" text-anchor="start" fill="#000000">- modelName: String</text>
+<text x="886.0" y="2938.6" font-size="13" text-anchor="start" fill="#000000">- modelDigest: String</text>
+<text x="886.0" y="2958.6" font-size="13" text-anchor="start" fill="#000000">- runtimeVersion: String</text>
+<text x="886.0" y="2978.6" font-size="13" text-anchor="start" fill="#000000">- gpuType: String</text>
+<text x="886.0" y="2998.6" font-size="13" text-anchor="start" fill="#000000">- promptVersion: String</text>
+<text x="886.0" y="3018.6" font-size="13" text-anchor="start" fill="#000000">- paramsJson: JsonNode</text>
+<text x="886.0" y="3038.6" font-size="13" text-anchor="start" fill="#000000">- seed: Integer</text>
+<text x="886.0" y="3058.6" font-size="13" text-anchor="start" fill="#000000">- startedAt: Instant</text>
+<text x="886.0" y="3078.6" font-size="13" text-anchor="start" fill="#000000">- finishedAt: Instant</text>
+<text x="886.0" y="3098.6" font-size="13" text-anchor="start" fill="#000000">- note: String</text>
+<line x1="880.0" y1="3111.0" x2="1130.0" y2="3111.0" stroke="#000000" stroke-width="2"/>
+<text x="886.0" y="3130.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="886.0" y="3150.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="1460.0" y="1536.0" width="250.0" height="512.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="1460.0" y1="1566.0" x2="1710.0" y2="1566.0" stroke="#000000" stroke-width="2"/>
+<rect x="1460.0" y="1536.0" width="250.0" height="512.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="1585.0" y="1556.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">AiTask</text>
+<text x="1466.0" y="1584.5" font-size="13" text-anchor="start" fill="#000000">- taskId: String {PK}</text>
+<text x="1466.0" y="1604.5" font-size="13" text-anchor="start" fill="#000000">- taskType: AiTaskType</text>
+<text x="1466.0" y="1624.5" font-size="13" text-anchor="start" fill="#000000">- status: AiTaskStatus</text>
+<text x="1466.0" y="1644.5" font-size="13" text-anchor="start" fill="#000000">- activeFlag: Byte {generated}</text>
+<text x="1466.0" y="1664.5" font-size="13" text-anchor="start" fill="#000000">- attemptCount: Byte</text>
+<text x="1466.0" y="1684.5" font-size="13" text-anchor="start" fill="#000000">- errorCode: String</text>
+<text x="1466.0" y="1704.5" font-size="13" text-anchor="start" fill="#000000">- errorMessage: String</text>
+<text x="1466.0" y="1724.5" font-size="13" text-anchor="start" fill="#000000">- inputJson: JsonNode</text>
+<text x="1466.0" y="1744.5" font-size="13" text-anchor="start" fill="#000000">- resultJson: JsonNode</text>
+<text x="1466.0" y="1764.5" font-size="13" text-anchor="start" fill="#000000">- rawResponse: String</text>
+<text x="1466.0" y="1784.5" font-size="13" text-anchor="start" fill="#000000">- jsonValid: Boolean</text>
+<text x="1466.0" y="1804.5" font-size="13" text-anchor="start" fill="#000000">- modelName: String</text>
+<text x="1466.0" y="1824.5" font-size="13" text-anchor="start" fill="#000000">- modelDigest: String</text>
+<text x="1466.0" y="1844.5" font-size="13" text-anchor="start" fill="#000000">- runtimeVersion: String</text>
+<text x="1466.0" y="1864.5" font-size="13" text-anchor="start" fill="#000000">- promptVersion: String</text>
+<text x="1466.0" y="1884.5" font-size="13" text-anchor="start" fill="#000000">- paramsJson: JsonNode</text>
+<text x="1466.0" y="1904.5" font-size="13" text-anchor="start" fill="#000000">- usageJson: JsonNode</text>
+<text x="1466.0" y="1924.5" font-size="13" text-anchor="start" fill="#000000">- inferenceMs: Integer</text>
+<text x="1466.0" y="1944.5" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="1466.0" y="1964.5" font-size="13" text-anchor="start" fill="#000000">- startedAt: Instant</text>
+<text x="1466.0" y="1984.5" font-size="13" text-anchor="start" fill="#000000">- finishedAt: Instant</text>
+<line x1="1460.0" y1="1997.0" x2="1710.0" y2="1997.0" stroke="#000000" stroke-width="2"/>
+<text x="1466.0" y="2016.5" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="1466.0" y="2036.5" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="1460.0" y="2188.0" width="250.0" height="392.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="1460.0" y1="2218.0" x2="1710.0" y2="2218.0" stroke="#000000" stroke-width="2"/>
+<rect x="1460.0" y="2188.0" width="250.0" height="392.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="1585.0" y="2208.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">AiSuggestion</text>
+<text x="1466.0" y="2236.6" font-size="13" text-anchor="start" fill="#000000">- suggestionId: Long {PK}</text>
+<text x="1466.0" y="2256.6" font-size="13" text-anchor="start" fill="#000000">- seqNo: Short</text>
+<text x="1466.0" y="2276.6" font-size="13" text-anchor="start" fill="#000000">- severity: Severity</text>
+<text x="1466.0" y="2296.6" font-size="13" text-anchor="start" fill="#000000">- targetField: TargetField</text>
+<text x="1466.0" y="2316.6" font-size="13" text-anchor="start" fill="#000000">- originalText: String</text>
+<text x="1466.0" y="2336.6" font-size="13" text-anchor="start" fill="#000000">- spanStart: Integer</text>
+<text x="1466.0" y="2356.6" font-size="13" text-anchor="start" fill="#000000">- spanEnd: Integer</text>
+<text x="1466.0" y="2376.6" font-size="13" text-anchor="start" fill="#000000">- explanation: String</text>
+<text x="1466.0" y="2396.6" font-size="13" text-anchor="start" fill="#000000">- proposedText: String</text>
+<text x="1466.0" y="2416.6" font-size="13" text-anchor="start" fill="#000000">- suggestedDifficulty: Byte</text>
+<text x="1466.0" y="2436.6" font-size="13" text-anchor="start" fill="#000000">- decision: SuggestionDecision</text>
+<text x="1466.0" y="2456.6" font-size="13" text-anchor="start" fill="#000000">- decidedAt: Instant</text>
+<text x="1466.0" y="2476.6" font-size="13" text-anchor="start" fill="#000000">- rejectReason: String</text>
+<text x="1466.0" y="2496.6" font-size="13" text-anchor="start" fill="#000000">- finalText: String</text>
+<text x="1466.0" y="2516.6" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<line x1="1460.0" y1="2529.0" x2="1710.0" y2="2529.0" stroke="#000000" stroke-width="2"/>
+<text x="1466.0" y="2548.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="1466.0" y="2568.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="300.0" y="2952.0" width="250.0" height="312.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="300.0" y1="2982.0" x2="550.0" y2="2982.0" stroke="#000000" stroke-width="2"/>
+<rect x="300.0" y="2952.0" width="250.0" height="312.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="425.0" y="2972.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">MoodleProfile</text>
+<text x="306.0" y="3000.6" font-size="13" text-anchor="start" fill="#000000">- profileId: Long {PK}</text>
+<text x="306.0" y="3020.6" font-size="13" text-anchor="start" fill="#000000">- profileName: String</text>
+<text x="306.0" y="3040.6" font-size="13" text-anchor="start" fill="#000000">- moodleBaseUrl: String</text>
+<text x="306.0" y="3060.6" font-size="13" text-anchor="start" fill="#000000">- categoryPrefix: String</text>
+<text x="306.0" y="3080.6" font-size="13" text-anchor="start" fill="#000000">- answerNumbering: AnswerNumbering</text>
+<text x="306.0" y="3100.6" font-size="13" text-anchor="start" fill="#000000">- shuffleAnswers: Boolean</text>
+<text x="306.0" y="3120.6" font-size="13" text-anchor="start" fill="#000000">- defaultGrade: BigDecimal</text>
+<text x="306.0" y="3140.6" font-size="13" text-anchor="start" fill="#000000">- defaultProfile: Boolean</text>
+<text x="306.0" y="3160.6" font-size="13" text-anchor="start" fill="#000000">- defaultKey: Byte {generated}</text>
+<text x="306.0" y="3180.6" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="306.0" y="3200.6" font-size="13" text-anchor="start" fill="#000000">- updatedAt: Instant</text>
+<line x1="300.0" y1="3213.0" x2="550.0" y2="3213.0" stroke="#000000" stroke-width="2"/>
+<text x="306.0" y="3232.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="306.0" y="3252.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="300.0" y="2510.0" width="250.0" height="312.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="300.0" y1="2540.0" x2="550.0" y2="2540.0" stroke="#000000" stroke-width="2"/>
+<rect x="300.0" y="2510.0" width="250.0" height="312.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="425.0" y="2530.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">MoodleExchange</text>
+<text x="306.0" y="2558.6" font-size="13" text-anchor="start" fill="#000000">- exchangeId: Long {PK}</text>
+<text x="306.0" y="2578.6" font-size="13" text-anchor="start" fill="#000000">- direction: ExchangeDirection</text>
+<text x="306.0" y="2598.6" font-size="13" text-anchor="start" fill="#000000">- status: ExchangeStatus</text>
+<text x="306.0" y="2618.6" font-size="13" text-anchor="start" fill="#000000">- fileName: String</text>
+<text x="306.0" y="2638.6" font-size="13" text-anchor="start" fill="#000000">- fileSize: Long</text>
+<text x="306.0" y="2658.6" font-size="13" text-anchor="start" fill="#000000">- fileSha256: String</text>
+<text x="306.0" y="2678.6" font-size="13" text-anchor="start" fill="#000000">- storageRef: String</text>
+<text x="306.0" y="2698.6" font-size="13" text-anchor="start" fill="#000000">- moodleCheck: MoodleCheck</text>
+<text x="306.0" y="2718.6" font-size="13" text-anchor="start" fill="#000000">- errorMessage: String</text>
+<text x="306.0" y="2738.6" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="306.0" y="2758.6" font-size="13" text-anchor="start" fill="#000000">- finishedAt: Instant</text>
+<line x1="300.0" y1="2771.0" x2="550.0" y2="2771.0" stroke="#000000" stroke-width="2"/>
+<text x="306.0" y="2790.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="306.0" y="2810.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="300.0" y="2158.0" width="250.0" height="212.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="300.0" y1="2188.0" x2="550.0" y2="2188.0" stroke="#000000" stroke-width="2"/>
+<rect x="300.0" y="2158.0" width="250.0" height="212.0" fill="none" stroke="#000000" stroke-width="2"/>
+<text x="425.0" y="2178.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">MoodleExchangeItem</text>
+<text x="306.0" y="2206.6" font-size="13" text-anchor="start" fill="#000000">- itemId: Long {PK}</text>
+<text x="306.0" y="2226.6" font-size="13" text-anchor="start" fill="#000000">- seqNo: Integer</text>
+<text x="306.0" y="2246.6" font-size="13" text-anchor="start" fill="#000000">- sourceName: String</text>
+<text x="306.0" y="2266.6" font-size="13" text-anchor="start" fill="#000000">- itemStatus: ExchangeItemStatus</text>
+<text x="306.0" y="2286.6" font-size="13" text-anchor="start" fill="#000000">- errorCode: String</text>
+<text x="306.0" y="2306.6" font-size="13" text-anchor="start" fill="#000000">- errorMessage: String</text>
+<line x1="300.0" y1="2319.0" x2="550.0" y2="2319.0" stroke="#000000" stroke-width="2"/>
+<text x="306.0" y="2338.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="306.0" y="2358.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="2010.0" y="2750.0" width="250.0" height="212.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="2010.0" y1="2780.0" x2="2260.0" y2="2780.0" stroke="#000000" stroke-width="2"/>
+<rect x="2010.0" y="2750.0" width="250.0" height="212.0" fill="none" stroke="#000000" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="2135.0" y="2770.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">EvalItem</text>
+<text x="2016.0" y="2798.6" font-size="13" text-anchor="start" fill="#000000">- itemId: Long {PK}</text>
+<text x="2016.0" y="2818.6" font-size="13" text-anchor="start" fill="#000000">- datasetVersion: String</text>
+<text x="2016.0" y="2838.6" font-size="13" text-anchor="start" fill="#000000">- split: EvalSplit</text>
+<text x="2016.0" y="2858.6" font-size="13" text-anchor="start" fill="#000000">- origin: ItemOrigin</text>
+<text x="2016.0" y="2878.6" font-size="13" text-anchor="start" fill="#000000">- goldStatus: GoldStatus</text>
+<text x="2016.0" y="2898.6" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<line x1="2010.0" y1="2911.0" x2="2260.0" y2="2911.0" stroke="#000000" stroke-width="2"/>
+<text x="2016.0" y="2930.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="2016.0" y="2950.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="2010.0" y="3102.0" width="250.0" height="212.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="2010.0" y1="3132.0" x2="2260.0" y2="3132.0" stroke="#000000" stroke-width="2"/>
+<rect x="2010.0" y="3102.0" width="250.0" height="212.0" fill="none" stroke="#000000" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="2135.0" y="3122.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">EvalLabel</text>
+<text x="2016.0" y="3150.6" font-size="13" text-anchor="start" fill="#000000">- labelId: Long {PK}</text>
+<text x="2016.0" y="3170.6" font-size="13" text-anchor="start" fill="#000000">- stage: LabelStage</text>
+<text x="2016.0" y="3190.6" font-size="13" text-anchor="start" fill="#000000">- annotatorCode: String</text>
+<text x="2016.0" y="3210.6" font-size="13" text-anchor="start" fill="#000000">- note: String</text>
+<text x="2016.0" y="3230.6" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<text x="2016.0" y="3250.6" font-size="13" text-anchor="start" fill="#000000">- annotatorKey: String {generated}</text>
+<line x1="2010.0" y1="3263.0" x2="2260.0" y2="3263.0" stroke="#000000" stroke-width="2"/>
+<text x="2016.0" y="3282.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="2016.0" y="3302.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="1460.0" y="2750.0" width="250.0" height="152.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="1460.0" y1="2780.0" x2="1710.0" y2="2780.0" stroke="#000000" stroke-width="2"/>
+<rect x="1460.0" y="2750.0" width="250.0" height="152.0" fill="none" stroke="#000000" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="1585.0" y="2770.2" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">EvalPrediction</text>
+<text x="1466.0" y="2798.6" font-size="13" text-anchor="start" fill="#000000">- predictionId: Long {PK}</text>
+<text x="1466.0" y="2818.6" font-size="13" text-anchor="start" fill="#000000">- split: EvalSplit</text>
+<text x="1466.0" y="2838.6" font-size="13" text-anchor="start" fill="#000000">- createdAt: Instant</text>
+<line x1="1460.0" y1="2851.0" x2="1710.0" y2="2851.0" stroke="#000000" stroke-width="2"/>
+<text x="1466.0" y="2870.6" font-size="13" text-anchor="start" fill="#000000">+ equals(o: Object): boolean</text>
+<text x="1466.0" y="2890.6" font-size="13" text-anchor="start" fill="#000000">+ hashCode(): int</text>
+<rect x="78.0" y="1582.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="134.0" y="1600.5" font-size="13" text-anchor="middle" fill="#000000">→ Admin</text>
+<rect x="914.0" y="1408.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="970.0" y="1426.5" font-size="13" text-anchor="middle" fill="#000000">→ Admin</text>
+<rect x="899.0" y="2470.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="955.0" y="2488.6" font-size="13" text-anchor="middle" fill="#000000">→ Admin</text>
+<rect x="1494.0" y="1408.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1550.0" y="1426.5" font-size="13" text-anchor="middle" fill="#000000">→ Admin</text>
+<rect x="1820.0" y="2274.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1876.0" y="2292.6" font-size="13" text-anchor="middle" fill="#000000">→ Admin</text>
+<rect x="78.0" y="2998.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="134.0" y="3016.6" font-size="13" text-anchor="middle" fill="#000000">→ Admin</text>
+<rect x="78.0" y="2556.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="134.0" y="2574.6" font-size="13" text-anchor="middle" fill="#000000">→ Admin</text>
+<rect x="658.0" y="2796.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="714.0" y="2814.6" font-size="13" text-anchor="middle" fill="#000000">→ Admin</text>
+<rect x="1820.0" y="1622.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1876.0" y="1640.5" font-size="13" text-anchor="middle" fill="#000000">→ EvalRun</text>
+<rect x="78.0" y="2204.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="134.0" y="2222.6" font-size="13" text-anchor="middle" fill="#000000">→ Question</text>
+<rect x="2044.0" y="2622.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="2100.0" y="2640.6" font-size="13" text-anchor="middle" fill="#000000">→ Question</text>
+<rect x="2370.0" y="3148.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="2426.0" y="3166.6" font-size="13" text-anchor="middle" fill="#000000">→ IssueType</text>
+<rect x="1554.0" y="3002.0" width="112.0" height="28.0" fill="#FFFFFF" stroke="#000000" stroke-width="1" stroke-dasharray="8 6"/>
+<text x="1610.0" y="3020.6" font-size="13" text-anchor="middle" fill="#000000">→ IssueType</text>
+<line x1="914.2" y1="532.0" x2="550.0" y2="532.0" stroke="#000000" stroke-width="2"/>
+<line x1="1004.2" y1="262.0" x2="1004.2" y2="462.0" stroke="#000000" stroke-width="2"/>
+<line x1="998.2" y1="450.0" x2="1004.2" y2="462.0" stroke="#000000" stroke-width="2"/>
+<line x1="1010.2" y1="450.0" x2="1004.2" y2="462.0" stroke="#000000" stroke-width="2"/>
+<line x1="1424.2" y1="532.0" x2="1164.2" y2="532.0" stroke="#000000" stroke-width="2"/>
+<line x1="1176.2" y1="526.0" x2="1164.2" y2="532.0" stroke="#000000" stroke-width="2"/>
+<line x1="1176.2" y1="538.0" x2="1164.2" y2="532.0" stroke="#000000" stroke-width="2"/>
+<line x1="1674.2" y1="532.0" x2="1934.2" y2="532.0" stroke="#000000" stroke-width="2"/>
+<line x1="1922.2" y1="538.0" x2="1934.2" y2="532.0" stroke="#000000" stroke-width="2"/>
+<line x1="1922.2" y1="526.0" x2="1934.2" y2="532.0" stroke="#000000" stroke-width="2"/>
+<line x1="1424.2" y1="1034.0" x2="1094.2" y2="1034.0" stroke="#000000" stroke-width="2"/>
+<line x1="1094.2" y1="1034.0" x2="1094.2" y2="834.0" stroke="#000000" stroke-width="2"/>
+<line x1="1100.2" y1="846.0" x2="1094.2" y2="834.0" stroke="#000000" stroke-width="2"/>
+<line x1="1088.2" y1="846.0" x2="1094.2" y2="834.0" stroke="#000000" stroke-width="2"/>
+<line x1="1674.2" y1="1034.0" x2="2004.2" y2="1034.0" stroke="#000000" stroke-width="2"/>
+<line x1="2004.2" y1="1034.0" x2="2004.2" y2="814.0" stroke="#000000" stroke-width="2"/>
+<line x1="2010.2" y1="826.0" x2="2004.2" y2="814.0" stroke="#000000" stroke-width="2"/>
+<line x1="1998.2" y1="826.0" x2="2004.2" y2="814.0" stroke="#000000" stroke-width="2"/>
+<line x1="2129.2" y1="814.0" x2="2129.2" y2="1306.0" stroke="#000000" stroke-width="2"/>
+<line x1="2129.2" y1="1306.0" x2="989.2" y2="1306.0" stroke="#000000" stroke-width="2"/>
+<line x1="989.2" y1="1306.0" x2="989.2" y2="834.0" stroke="#000000" stroke-width="2"/>
+<line x1="995.2" y1="846.0" x2="989.2" y2="834.0" stroke="#000000" stroke-width="2"/>
+<line x1="983.2" y1="846.0" x2="989.2" y2="834.0" stroke="#000000" stroke-width="2"/>
+<line x1="1934.2" y1="130.0" x2="1926.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1920.2" y1="130.0" x2="1912.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1906.2" y1="130.0" x2="1898.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1892.2" y1="130.0" x2="1884.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1878.2" y1="130.0" x2="1870.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1864.2" y1="130.0" x2="1856.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1850.2" y1="130.0" x2="1842.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1836.2" y1="130.0" x2="1828.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1822.2" y1="130.0" x2="1814.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1808.2" y1="130.0" x2="1800.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1794.2" y1="130.0" x2="1786.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1780.2" y1="130.0" x2="1772.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1766.2" y1="130.0" x2="1758.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1752.2" y1="130.0" x2="1744.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1738.2" y1="130.0" x2="1730.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1724.2" y1="130.0" x2="1716.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1710.2" y1="130.0" x2="1702.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1696.2" y1="130.0" x2="1688.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1682.2" y1="130.0" x2="1674.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1668.2" y1="130.0" x2="1660.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1654.2" y1="130.0" x2="1646.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1640.2" y1="130.0" x2="1632.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1626.2" y1="130.0" x2="1618.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1612.2" y1="130.0" x2="1604.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1598.2" y1="130.0" x2="1590.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1584.2" y1="130.0" x2="1576.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1570.2" y1="130.0" x2="1562.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1556.2" y1="130.0" x2="1548.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1542.2" y1="130.0" x2="1534.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1528.2" y1="130.0" x2="1520.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1514.2" y1="130.0" x2="1506.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1500.2" y1="130.0" x2="1492.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1486.2" y1="130.0" x2="1478.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1472.2" y1="130.0" x2="1464.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1458.2" y1="130.0" x2="1450.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1444.2" y1="130.0" x2="1436.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1430.2" y1="130.0" x2="1422.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1416.2" y1="130.0" x2="1408.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1402.2" y1="130.0" x2="1394.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1388.2" y1="130.0" x2="1380.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1374.2" y1="130.0" x2="1366.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1360.2" y1="130.0" x2="1352.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1346.2" y1="130.0" x2="1338.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1332.2" y1="130.0" x2="1324.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1318.2" y1="130.0" x2="1310.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1304.2" y1="130.0" x2="1296.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1290.2" y1="130.0" x2="1282.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1276.2" y1="130.0" x2="1268.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1262.2" y1="130.0" x2="1254.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1248.2" y1="130.0" x2="1240.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1234.2" y1="130.0" x2="1226.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1220.2" y1="130.0" x2="1212.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1206.2" y1="130.0" x2="1198.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1192.2" y1="130.0" x2="1184.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1178.2" y1="130.0" x2="1170.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1164.2" y1="130.0" x2="1156.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1150.2" y1="130.0" x2="1142.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1136.2" y1="130.0" x2="1134.2" y2="130.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="130.0" x2="1134.2" y2="138.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="144.0" x2="1134.2" y2="152.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="158.0" x2="1134.2" y2="166.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="172.0" x2="1134.2" y2="180.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="186.0" x2="1134.2" y2="194.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="200.0" x2="1134.2" y2="208.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="214.0" x2="1134.2" y2="222.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="228.0" x2="1134.2" y2="236.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="242.0" x2="1134.2" y2="250.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="256.0" x2="1134.2" y2="264.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="270.0" x2="1134.2" y2="278.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="284.0" x2="1134.2" y2="292.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="298.0" x2="1134.2" y2="306.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="312.0" x2="1134.2" y2="320.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="326.0" x2="1134.2" y2="334.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="340.0" x2="1134.2" y2="348.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="354.0" x2="1134.2" y2="362.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="368.0" x2="1134.2" y2="376.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="382.0" x2="1134.2" y2="390.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="396.0" x2="1134.2" y2="404.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="410.0" x2="1134.2" y2="418.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="424.0" x2="1134.2" y2="432.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="438.0" x2="1134.2" y2="446.0" stroke="#000000" stroke-width="2"/>
+<line x1="1134.2" y1="452.0" x2="1134.2" y2="460.0" stroke="#000000" stroke-width="2"/>
+<line x1="1128.2" y1="450.0" x2="1134.2" y2="462.0" stroke="#000000" stroke-width="2"/>
+<line x1="1140.2" y1="450.0" x2="1134.2" y2="462.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="342.0" x2="2059.2" y2="350.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="356.0" x2="2059.2" y2="364.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="370.0" x2="2059.2" y2="378.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="384.0" x2="2059.2" y2="392.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="398.0" x2="2059.2" y2="406.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="412.0" x2="2059.2" y2="420.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="426.0" x2="2059.2" y2="434.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="440.0" x2="2059.2" y2="448.0" stroke="#000000" stroke-width="2"/>
+<line x1="2059.2" y1="454.0" x2="2059.2" y2="462.0" stroke="#000000" stroke-width="2"/>
+<line x1="2053.2" y1="450.0" x2="2059.2" y2="462.0" stroke="#000000" stroke-width="2"/>
+<line x1="2065.2" y1="450.0" x2="2059.2" y2="462.0" stroke="#000000" stroke-width="2"/>
+<line x1="370.0" y1="1908.0" x2="370.0" y2="1768.0" stroke="#000000" stroke-width="2"/>
+<line x1="376.0" y1="1780.0" x2="370.0" y2="1768.0" stroke="#000000" stroke-width="2"/>
+<line x1="364.0" y1="1780.0" x2="370.0" y2="1768.0" stroke="#000000" stroke-width="2"/>
+<line x1="300.0" y1="1968.0" x2="250.0" y2="1968.0" stroke="#000000" stroke-width="2"/>
+<line x1="250.0" y1="1968.0" x2="250.0" y2="2008.0" stroke="#000000" stroke-width="2"/>
+<line x1="250.0" y1="2008.0" x2="300.0" y2="2008.0" stroke="#000000" stroke-width="2"/>
+<line x1="288.0" y1="2014.0" x2="300.0" y2="2008.0" stroke="#000000" stroke-width="2"/>
+<line x1="288.0" y1="2002.0" x2="300.0" y2="2008.0" stroke="#000000" stroke-width="2"/>
+<line x1="880.0" y1="1606.0" x2="550.0" y2="1606.0" stroke="#000000" stroke-width="2"/>
+<line x1="562.0" y1="1600.0" x2="550.0" y2="1606.0" stroke="#000000" stroke-width="2"/>
+<line x1="562.0" y1="1612.0" x2="550.0" y2="1606.0" stroke="#000000" stroke-width="2"/>
+<line x1="880.0" y1="1640.0" x2="710.0" y2="1640.0" stroke="#000000" stroke-width="2"/>
+<line x1="710.0" y1="1640.0" x2="710.0" y2="1978.0" stroke="#000000" stroke-width="2"/>
+<line x1="710.0" y1="1978.0" x2="550.0" y2="1978.0" stroke="#000000" stroke-width="2"/>
+<line x1="562.0" y1="1972.0" x2="550.0" y2="1978.0" stroke="#000000" stroke-width="2"/>
+<line x1="562.0" y1="1984.0" x2="550.0" y2="1978.0" stroke="#000000" stroke-width="2"/>
+<line x1="950.0" y1="2158.0" x2="950.0" y2="2008.0" stroke="#000000" stroke-width="2"/>
+<line x1="956.0" y1="2020.0" x2="950.0" y2="2008.0" stroke="#000000" stroke-width="2"/>
+<line x1="944.0" y1="2020.0" x2="950.0" y2="2008.0" stroke="#000000" stroke-width="2"/>
+<line x1="1460.0" y1="1606.0" x2="1130.0" y2="1606.0" stroke="#000000" stroke-width="2"/>
+<line x1="1142.0" y1="1600.0" x2="1130.0" y2="1606.0" stroke="#000000" stroke-width="2"/>
+<line x1="1142.0" y1="1612.0" x2="1130.0" y2="1606.0" stroke="#000000" stroke-width="2"/>
+<line x1="1460.0" y1="1640.0" x2="1370.0" y2="1640.0" stroke="#000000" stroke-width="2"/>
+<line x1="1370.0" y1="1640.0" x2="1370.0" y2="2228.0" stroke="#000000" stroke-width="2"/>
+<line x1="1370.0" y1="2228.0" x2="1130.0" y2="2228.0" stroke="#000000" stroke-width="2"/>
+<line x1="1142.0" y1="2222.0" x2="1130.0" y2="2228.0" stroke="#000000" stroke-width="2"/>
+<line x1="1142.0" y1="2234.0" x2="1130.0" y2="2228.0" stroke="#000000" stroke-width="2"/>
+<line x1="1530.0" y1="2188.0" x2="1530.0" y2="2048.0" stroke="#000000" stroke-width="2"/>
+<line x1="1536.0" y1="2060.0" x2="1530.0" y2="2048.0" stroke="#000000" stroke-width="2"/>
+<line x1="1524.0" y1="2060.0" x2="1530.0" y2="2048.0" stroke="#000000" stroke-width="2"/>
+<line x1="1710.0" y1="2258.0" x2="2010.0" y2="2258.0" stroke="#000000" stroke-width="2"/>
+<line x1="1998.0" y1="2264.0" x2="2010.0" y2="2258.0" stroke="#000000" stroke-width="2"/>
+<line x1="1998.0" y1="2252.0" x2="2010.0" y2="2258.0" stroke="#000000" stroke-width="2"/>
+<line x1="1460.0" y1="2258.0" x2="1075.0" y2="2258.0" stroke="#000000" stroke-width="2"/>
+<line x1="1075.0" y1="2258.0" x2="1075.0" y2="2370.0" stroke="#000000" stroke-width="2"/>
+<line x1="1069.0" y1="2358.0" x2="1075.0" y2="2370.0" stroke="#000000" stroke-width="2"/>
+<line x1="1081.0" y1="2358.0" x2="1075.0" y2="2370.0" stroke="#000000" stroke-width="2"/>
+<line x1="370.0" y1="2822.0" x2="370.0" y2="2952.0" stroke="#000000" stroke-width="2"/>
+<line x1="364.0" y1="2940.0" x2="370.0" y2="2952.0" stroke="#000000" stroke-width="2"/>
+<line x1="376.0" y1="2940.0" x2="370.0" y2="2952.0" stroke="#000000" stroke-width="2"/>
+<line x1="370.0" y1="2370.0" x2="370.0" y2="2510.0" stroke="#000000" stroke-width="2"/>
+<line x1="364.0" y1="2498.0" x2="370.0" y2="2510.0" stroke="#000000" stroke-width="2"/>
+<line x1="376.0" y1="2498.0" x2="370.0" y2="2510.0" stroke="#000000" stroke-width="2"/>
+<line x1="550.0" y1="2258.0" x2="880.0" y2="2258.0" stroke="#000000" stroke-width="2"/>
+<line x1="868.0" y1="2264.0" x2="880.0" y2="2258.0" stroke="#000000" stroke-width="2"/>
+<line x1="868.0" y1="2252.0" x2="880.0" y2="2258.0" stroke="#000000" stroke-width="2"/>
+<line x1="2260.0" y1="2810.0" x2="2315.0" y2="2810.0" stroke="#000000" stroke-width="2"/>
+<line x1="2315.0" y1="2810.0" x2="2315.0" y2="2850.0" stroke="#000000" stroke-width="2"/>
+<line x1="2315.0" y1="2850.0" x2="2260.0" y2="2850.0" stroke="#000000" stroke-width="2"/>
+<line x1="2272.0" y1="2844.0" x2="2260.0" y2="2850.0" stroke="#000000" stroke-width="2"/>
+<line x1="2272.0" y1="2856.0" x2="2260.0" y2="2850.0" stroke="#000000" stroke-width="2"/>
+<line x1="2080.0" y1="3102.0" x2="2080.0" y2="2962.0" stroke="#000000" stroke-width="2"/>
+<line x1="2086.0" y1="2974.0" x2="2080.0" y2="2962.0" stroke="#000000" stroke-width="2"/>
+<line x1="2074.0" y1="2974.0" x2="2080.0" y2="2962.0" stroke="#000000" stroke-width="2"/>
+<line x1="1460.0" y1="2820.0" x2="1130.0" y2="2820.0" stroke="#000000" stroke-width="2"/>
+<line x1="1142.0" y1="2814.0" x2="1130.0" y2="2820.0" stroke="#000000" stroke-width="2"/>
+<line x1="1142.0" y1="2826.0" x2="1130.0" y2="2820.0" stroke="#000000" stroke-width="2"/>
+<line x1="1710.0" y1="2820.0" x2="2010.0" y2="2820.0" stroke="#000000" stroke-width="2"/>
+<line x1="1998.0" y1="2826.0" x2="2010.0" y2="2820.0" stroke="#000000" stroke-width="2"/>
+<line x1="1998.0" y1="2814.0" x2="2010.0" y2="2820.0" stroke="#000000" stroke-width="2"/>
+<line x1="1530.0" y1="2750.0" x2="1530.0" y2="2580.0" stroke="#000000" stroke-width="2"/>
+<line x1="1536.0" y1="2592.0" x2="1530.0" y2="2580.0" stroke="#000000" stroke-width="2"/>
+<line x1="1524.0" y1="2592.0" x2="1530.0" y2="2580.0" stroke="#000000" stroke-width="2"/>
+<line x1="300.0" y1="1596.0" x2="190.0" y2="1596.0" stroke="#000000" stroke-width="2"/>
+<line x1="202.0" y1="1590.0" x2="190.0" y2="1596.0" stroke="#000000" stroke-width="2"/>
+<line x1="202.0" y1="1602.0" x2="190.0" y2="1596.0" stroke="#000000" stroke-width="2"/>
+<line x1="970.0" y1="1536.0" x2="970.0" y2="1436.0" stroke="#000000" stroke-width="2"/>
+<line x1="976.0" y1="1448.0" x2="970.0" y2="1436.0" stroke="#000000" stroke-width="2"/>
+<line x1="964.0" y1="1448.0" x2="970.0" y2="1436.0" stroke="#000000" stroke-width="2"/>
+<line x1="955.0" y1="2370.0" x2="955.0" y2="2470.0" stroke="#000000" stroke-width="2"/>
+<line x1="949.0" y1="2458.0" x2="955.0" y2="2470.0" stroke="#000000" stroke-width="2"/>
+<line x1="961.0" y1="2458.0" x2="955.0" y2="2470.0" stroke="#000000" stroke-width="2"/>
+<line x1="1550.0" y1="1536.0" x2="1550.0" y2="1436.0" stroke="#000000" stroke-width="2"/>
+<line x1="1556.0" y1="1448.0" x2="1550.0" y2="1436.0" stroke="#000000" stroke-width="2"/>
+<line x1="1544.0" y1="1448.0" x2="1550.0" y2="1436.0" stroke="#000000" stroke-width="2"/>
+<line x1="1710.0" y1="2288.0" x2="1820.0" y2="2288.0" stroke="#000000" stroke-width="2"/>
+<line x1="1808.0" y1="2294.0" x2="1820.0" y2="2288.0" stroke="#000000" stroke-width="2"/>
+<line x1="1808.0" y1="2282.0" x2="1820.0" y2="2288.0" stroke="#000000" stroke-width="2"/>
+<line x1="300.0" y1="3012.0" x2="190.0" y2="3012.0" stroke="#000000" stroke-width="2"/>
+<line x1="202.0" y1="3006.0" x2="190.0" y2="3012.0" stroke="#000000" stroke-width="2"/>
+<line x1="202.0" y1="3018.0" x2="190.0" y2="3012.0" stroke="#000000" stroke-width="2"/>
+<line x1="300.0" y1="2570.0" x2="190.0" y2="2570.0" stroke="#000000" stroke-width="2"/>
+<line x1="202.0" y1="2564.0" x2="190.0" y2="2570.0" stroke="#000000" stroke-width="2"/>
+<line x1="202.0" y1="2576.0" x2="190.0" y2="2570.0" stroke="#000000" stroke-width="2"/>
+<line x1="880.0" y1="2810.0" x2="770.0" y2="2810.0" stroke="#000000" stroke-width="2"/>
+<line x1="782.0" y1="2804.0" x2="770.0" y2="2810.0" stroke="#000000" stroke-width="2"/>
+<line x1="782.0" y1="2816.0" x2="770.0" y2="2810.0" stroke="#000000" stroke-width="2"/>
+<line x1="1710.0" y1="1636.0" x2="1820.0" y2="1636.0" stroke="#000000" stroke-width="2"/>
+<line x1="1808.0" y1="1642.0" x2="1820.0" y2="1636.0" stroke="#000000" stroke-width="2"/>
+<line x1="1808.0" y1="1630.0" x2="1820.0" y2="1636.0" stroke="#000000" stroke-width="2"/>
+<line x1="300.0" y1="2218.0" x2="190.0" y2="2218.0" stroke="#000000" stroke-width="2"/>
+<line x1="202.0" y1="2212.0" x2="190.0" y2="2218.0" stroke="#000000" stroke-width="2"/>
+<line x1="202.0" y1="2224.0" x2="190.0" y2="2218.0" stroke="#000000" stroke-width="2"/>
+<line x1="2100.0" y1="2750.0" x2="2100.0" y2="2650.0" stroke="#000000" stroke-width="2"/>
+<line x1="2106.0" y1="2662.0" x2="2100.0" y2="2650.0" stroke="#000000" stroke-width="2"/>
+<line x1="2094.0" y1="2662.0" x2="2100.0" y2="2650.0" stroke="#000000" stroke-width="2"/>
+<line x1="2260.0" y1="3162.0" x2="2370.0" y2="3162.0" stroke="#000000" stroke-width="2"/>
+<line x1="2358.0" y1="3168.0" x2="2370.0" y2="3162.0" stroke="#000000" stroke-width="2"/>
+<line x1="2358.0" y1="3156.0" x2="2370.0" y2="3162.0" stroke="#000000" stroke-width="2"/>
+<line x1="1610.0" y1="2902.0" x2="1610.0" y2="3002.0" stroke="#000000" stroke-width="2"/>
+<line x1="1604.0" y1="2990.0" x2="1610.0" y2="3002.0" stroke="#000000" stroke-width="2"/>
+<line x1="1616.0" y1="2990.0" x2="1610.0" y2="3002.0" stroke="#000000" stroke-width="2"/>
+<text x="906.2" y="521.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="906.2" y="549.5" font-size="13" text-anchor="end" fill="#000000">admins</text>
+<text x="558.0" y="521.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="558.0" y="549.5" font-size="13" text-anchor="start" fill="#000000">course</text>
+<text x="1012.2" y="282.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="1012.2" y="450.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1012.2" y="435.6" font-size="13" text-anchor="start" fill="#000000">admin</text>
+<text x="1416.2" y="521.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="1172.2" y="521.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1172.2" y="549.5" font-size="13" text-anchor="start" fill="#000000">admin</text>
+<text x="1682.2" y="521.5" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="1926.2" y="521.5" font-size="13" text-anchor="end" fill="#000000">0..1</text>
+<text x="1926.2" y="549.5" font-size="13" text-anchor="end" fill="#000000">device</text>
+<text x="1416.2" y="1023.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="1102.2" y="854.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1102.2" y="869.5" font-size="13" text-anchor="start" fill="#000000">admin</text>
+<text x="1682.2" y="1023.5" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="2012.2" y="834.5" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="2012.2" y="849.5" font-size="13" text-anchor="start" fill="#000000">device</text>
+<text x="2137.2" y="834.5" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="997.2" y="854.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="997.2" y="869.5" font-size="13" text-anchor="start" fill="#000000">admin</text>
+<text x="1474.2" y="122.5" font-size="13" text-anchor="middle" fill="#000000">adminId</text>
+<text x="2069.2" y="406.6" font-size="13" text-anchor="start" fill="#000000">deviceId</text>
+<text x="378.0" y="1896.5" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="378.0" y="1788.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="378.0" y="1803.5" font-size="13" text-anchor="start" fill="#000000">subject</text>
+<text x="242.0" y="1960.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="242.0" y="2024.5" font-size="13" text-anchor="end" fill="#000000">0..1</text>
+<text x="242.0" y="2040.5" font-size="13" text-anchor="end" fill="#000000">parent</text>
+<text x="872.0" y="1595.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="558.0" y="1595.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="558.0" y="1623.5" font-size="13" text-anchor="start" fill="#000000">subject</text>
+<text x="872.0" y="1629.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="558.0" y="1967.5" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="558.0" y="1995.5" font-size="13" text-anchor="start" fill="#000000">topic</text>
+<text x="958.0" y="2146.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="958.0" y="2028.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="958.0" y="2043.5" font-size="13" text-anchor="start" fill="#000000">question</text>
+<text x="1452.0" y="1595.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="1138.0" y="1595.5" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="1138.0" y="1623.5" font-size="13" text-anchor="start" fill="#000000">question</text>
+<text x="1452.0" y="1629.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="1138.0" y="2217.6" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="1138.0" y="2245.6" font-size="13" text-anchor="start" fill="#000000">questionRevision</text>
+<text x="1538.0" y="2176.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="1538.0" y="2068.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1538.0" y="2083.6" font-size="13" text-anchor="start" fill="#000000">task</text>
+<text x="1718.0" y="2247.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="2002.0" y="2247.6" font-size="13" text-anchor="end" fill="#000000">1</text>
+<text x="2002.0" y="2275.6" font-size="13" text-anchor="end" fill="#000000">issueType</text>
+<text x="1452.0" y="2247.6" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="1083.0" y="2358.6" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="1083.0" y="2343.6" font-size="13" text-anchor="start" fill="#000000">appliedRevision</text>
+<text x="378.0" y="2842.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="378.0" y="2940.6" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="378.0" y="2925.6" font-size="13" text-anchor="start" fill="#000000">profile</text>
+<text x="378.0" y="2390.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="378.0" y="2498.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="378.0" y="2483.6" font-size="13" text-anchor="start" fill="#000000">exchange</text>
+<text x="558.0" y="2247.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="872.0" y="2247.6" font-size="13" text-anchor="end" fill="#000000">0..1</text>
+<text x="872.0" y="2275.6" font-size="13" text-anchor="end" fill="#000000">questionRevision</text>
+<text x="2323.0" y="2802.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="2323.0" y="2866.6" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="2323.0" y="2882.6" font-size="13" text-anchor="start" fill="#000000">injectedFrom</text>
+<text x="2088.0" y="3090.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="2088.0" y="2982.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="2088.0" y="2997.6" font-size="13" text-anchor="start" fill="#000000">item</text>
+<text x="1452.0" y="2809.6" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="1138.0" y="2809.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1138.0" y="2837.6" font-size="13" text-anchor="start" fill="#000000">run</text>
+<text x="1718.0" y="2809.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="2002.0" y="2809.6" font-size="13" text-anchor="end" fill="#000000">1</text>
+<text x="2002.0" y="2837.6" font-size="13" text-anchor="end" fill="#000000">item</text>
+<text x="1538.0" y="2738.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="1538.0" y="2600.6" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="1538.0" y="2615.6" font-size="13" text-anchor="start" fill="#000000">suggestion</text>
+<text x="245.0" y="1574.5" font-size="13" text-anchor="middle" fill="#000000">createdBy</text>
+<text x="292.0" y="1585.5" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="198.0" y="1585.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="978.0" y="1524.5" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="978.0" y="1490.5" font-size="13" text-anchor="start" fill="#000000">createdBy, updatedBy</text>
+<text x="978.0" y="1456.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="963.0" y="2390.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="963.0" y="2424.6" font-size="13" text-anchor="start" fill="#000000">changedBy</text>
+<text x="963.0" y="2458.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1558.0" y="1524.5" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="1558.0" y="1490.5" font-size="13" text-anchor="start" fill="#000000">createdBy</text>
+<text x="1558.0" y="1456.5" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1765.0" y="2266.6" font-size="13" text-anchor="middle" fill="#000000">decidedBy</text>
+<text x="1718.0" y="2277.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="1812.0" y="2277.6" font-size="13" text-anchor="end" fill="#000000">0..1</text>
+<text x="245.0" y="2990.6" font-size="13" text-anchor="middle" fill="#000000">createdBy</text>
+<text x="292.0" y="3001.6" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="198.0" y="3001.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="245.0" y="2548.6" font-size="13" text-anchor="middle" fill="#000000">createdBy</text>
+<text x="292.0" y="2559.6" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="198.0" y="2559.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="825.0" y="2788.6" font-size="13" text-anchor="middle" fill="#000000">createdBy</text>
+<text x="872.0" y="2799.6" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="778.0" y="2799.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1765.0" y="1614.5" font-size="13" text-anchor="middle" fill="#000000">evalRun</text>
+<text x="1718.0" y="1625.5" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="1812.0" y="1625.5" font-size="13" text-anchor="end" fill="#000000">0..1</text>
+<text x="245.0" y="2196.6" font-size="13" text-anchor="middle" fill="#000000">question</text>
+<text x="292.0" y="2207.6" font-size="13" text-anchor="end" fill="#000000">0..*</text>
+<text x="198.0" y="2207.6" font-size="13" text-anchor="start" fill="#000000">0..1</text>
+<text x="2108.0" y="2738.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="2108.0" y="2704.6" font-size="13" text-anchor="start" fill="#000000">question</text>
+<text x="2108.0" y="2670.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="2315.0" y="3140.6" font-size="13" text-anchor="middle" fill="#000000">issueType</text>
+<text x="2268.0" y="3151.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="2362.0" y="3151.6" font-size="13" text-anchor="end" fill="#000000">1</text>
+<text x="1618.0" y="2922.6" font-size="13" text-anchor="start" fill="#000000">0..*</text>
+<text x="1618.0" y="2956.6" font-size="13" text-anchor="start" fill="#000000">issueType</text>
+<text x="1618.0" y="2990.6" font-size="13" text-anchor="start" fill="#000000">1</text>
+<text x="1313.5" y="35.0" font-size="20" text-anchor="middle" font-weight="bold" fill="#000000">Sơ đồ Class (Java / JPA) – Hệ thống ngân hàng câu hỏi trắc nghiệm tích hợp kiểm định AI và Moodle</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTpmNmY4MDYxMS00Y2ExLTRjYjEtYmI2ZC0wYmMzY2EzNWJmN2MAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaKVsZVBVsMsHMd/k3frLolMAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDoxMTcyMGZjZS04ZGNhLTQxMWItYWEzNS04ZTBmNTZlYmIzNDlscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNo+ZN+CXlFjDuFyEfIeNfjwAAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggVsFex1nw7Xmn/xB2d8Fj5t5C4jAQQR8Y1Twce1VzN2WkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaA3aCEfX5RqiBWCUCY3s2XsAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRKAAAAAAAAAAAAAGRoYXNoWCAwBrynE/xZSPbDolfqT0UuiIXh1Z589CPcgZdv/lFTe2RuYW1lbmp1bWJmIG1hbmlmZXN0amV4Y2x1c2lvbnOBomVzdGFydBoAASskZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOmY2ZjgwNjExLTRjYTEtNGNiMS1iYjZkLTBiYzNjYTM1YmY3Yy9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjJhZDU5MWJkLTg2ODUtNDQxMi04NGU3LWUxMjIxMTcwNTkxMXJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCBWwV7HWfDteaf/EHZ3wWPm3kLiMBBBHxjVPBx7VXM3ZaJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggdIbbdhQ/LCHV7TdfiVvCc6Jh1p8TtDW/JhLhHafS7y6iY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggwaqu0GXU/j2TFahgHqeaXzackdJ3tysyzOsyPkw0epF0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQDuSN7KaTeGMyaSFWukZ1aVNEPrnaPtCdNfAu0ksALGRgbE/ZrbORdBCmQgtwmg1Sn0YsV2+Q7gl/NKABXEP9t0=</c2pa:manifest></metadata></svg>
