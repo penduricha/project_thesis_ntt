@@ -27,9 +27,10 @@ API base URL nếu cần trỏ sang máy khác (mặc định `http://localhost:
 | `ai` | Tiền kiểm `RulePreflightChecker` + gọi Ollama qua `NodePool` (giống hệt pipeline `question_check`, gồm `few_cot` prompt, parse `AiResultParser`) | vài giây–vài phút / câu | ≥ 1 node Colab đang bật (trang `node-colab.html`) |
 
 Runner chạy **song song** (mặc định 2 worker, cấu hình `ai.demo.eval-concurrency` hoặc
-`AI_DEMO_EVAL_CONCURRENCY`, tối đa 4): mỗi worker tự lấy câu hỏi qua `AtomicInteger` cursor
-(không câu nào bị chấm trùng), giữ nguyên semantics lease/release của `NodePool`. Khuyến nghị
-bằng `OLLAMA_NUM_PARALLEL` trên Colab (2 với num_ctx 8192 trên T4 16GB).
+`AI_DEMO_EVAL_CONCURRENCY`, clamp tối đa 16): mỗi worker tự lấy câu hỏi qua `AtomicInteger` cursor
+(không câu nào bị chấm trùng), giữ nguyên semantics lease/release của `NodePool`. Với 1 node Colab
+đặt bằng `OLLAMA_NUM_PARALLEL` (3 với num_ctx 8192 trên T4 16GB); với 5 node × 3 slot đặt 10–15
+(`AI_DEMO_EVAL_CONCURRENCY=10` chừa đệm, 15 là bão hòa hoàn toàn).
 
 Dừng run: `POST /api/web/ai/demo/runs/{id}/stop` (cooperative giữa hai câu). Tối đa 2 lần
 thử AI cho một câu; lỗi node (`LLM_UNREACHABLE/TIMEOUT/UNAUTHORIZED/HTTP_5XX`) bị loại khỏi

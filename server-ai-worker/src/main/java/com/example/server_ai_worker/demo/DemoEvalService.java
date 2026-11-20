@@ -123,7 +123,7 @@ public class DemoEvalService {
             throw new IllegalStateException("Bảng ntt_demo_questions trống — chưa seed câu hỏi demo.");
         }
         int total = limit == null ? (int) available : Math.max(1, Math.min(limit, (int) available));
-        int concurrency = Math.max(1, Math.min(4, props.getDemo().getEvalConcurrency()));
+        int concurrency = Math.max(1, Math.min(16, props.getDemo().getEvalConcurrency()));
         DemoEvalRun run = new DemoEvalRun(m, total);
         run = runs.saveAndFlush(run);
         stopFlags.put(run.getId(), new AtomicBoolean(false));
