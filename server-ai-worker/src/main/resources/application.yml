@@ -95,12 +95,13 @@ ai:
     connect-timeout: 5s
     # Dưới ~125s (Proxy Read Timeout của Cloudflare)
     read-timeout: 120s
-    keep-alive: 30m
+    keep-alive: 12h
     allowed-host-suffixes:
       - .trycloudflare.com
     # Giữ num_ctx bằng nhau giữa hai loại task để Ollama không nạp lại mô hình.
     # 8192: đủ chỗ cho prompt few_cot (few-shot + CoT) — tránh truncate => ít retry => nhanh hơn
     # ở lượt full 1000 câu; KV cache ~+2-3GB so với 4096 (đo lại nvidia-smi sau lần load đầu).
+    # keep-alive 12h: run 1000 câu có thể chạy hàng giờ, tránh Ollama unload model giữa chừng.
     question-check:
       num-ctx: 8192
       num-predict: 700
