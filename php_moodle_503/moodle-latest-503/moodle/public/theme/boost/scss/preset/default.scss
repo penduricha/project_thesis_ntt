@@ -36,7 +36,8 @@ $green:   $mds-color-green-500 !default;
 $teal:    $mds-color-teal-500 !default;
 $cyan:    $mds-color-cyan-500 !default;
 
-$primary:       $blue !default;
+// NTTU brand fallback; keep the site administrator's configured brand colour authoritative.
+$primary:       #004b87 !default;
 $secondary:     $gray-400 !default;
 $success:       $green !default;
 $info:          $cyan !default;
@@ -165,4 +166,21 @@ $warning-outline: #a6670e;
 
 .btn-outline-warning {
     @include button-outline-variant($warning-outline);
+}
+
+// Light-mode surfaces inspired by the QBank reference. Leave Boost's dark palette intact.
+:root:not([data-bs-theme="dark"]) {
+    #page.drawers {
+        background-color: #f8faff;
+    }
+
+    #page.drawers > .main-inner {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 0 0 1px #e3ebf5, 0 1px 2px rgba(19, 82, 157, .06);
+    }
+
+    #page-header h1 {
+        color: #1b2a41;
+    }
 }
