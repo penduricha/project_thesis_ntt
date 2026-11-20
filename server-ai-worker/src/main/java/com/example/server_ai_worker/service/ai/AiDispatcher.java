@@ -1,0 +1,165 @@
+package com.example.server_ai_worker.service.ai;
+
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.SmartLifecycle;
+import org.springframework.stereotype.Component;
+
+import com.example.server_ai_worker.config.AiProperties;
+import com.example.server_ai_worker.enums.AiErrorCode;
+import com.example.server_ai_worker.model.jpa.AiTask;
+import com.example.server_ai_worker.repository.jpa.AiTaskRepository;
+import com.example.server_ai_worker.service.redis.AiQueueService;
+
+/**
+ * Vòng lặp điều phối trung tâm: lấy task từ ai:queue và đẩy vào bể luồng worker để AiTaskProcessor chạy.
+ * Định kỳ quét các task bị kẹt ở running quá lâu và làm mới heartbeat node trên Redis.
+ */
+@Component
+public class AiDispatcher implements SmartLifecycle {
+
+    private static final Logger log = LoggerFactory.getLogger(AiDispatcher.class);
+
+    private final AiQueueService queue;
+    private final AiTaskProcessor processor;
+    private final AiTaskRepository tasks;
+    private final NodePool nodePool;
+    private final AiProperties props;
+
+    private volatile boolean running;
+    private ScheduledExecutorService workerPool;
+    private ScheduledExecutorService sweeper;
+    private Thread loopThread;
+
+    public AiDispatcher(AiQueueService queue,
+                        AiTaskProcessor processor,
+                        AiTaskRepository tasks,
+                        NodePool nodePool,
+                        AiProperties props) {
+        this.queue = queue;
+        this.processor = processor;
+        this.tasks = tasks;
+        this.nodePool = nodePool;
+        this.props = props;
+    }
+
+    @Override
+    public synchronized void start() {
+        if (running) {
+            return;
+        }
+        int capacity = Math.max(4, nodePool.totalCapacity());
+        AtomicInteger n = new AtomicInteger();
+        this.workerPool = Executors.newScheduledThreadPool(capacity,
+                r -> new Thread(r, "ai-worker-" + n.incrementAndGet()));
+        this.sweeper = Executors.newSingleThreadScheduledExecutor(
+                r -> new Thread(r, "ai-sweeper"));
+        this.running = true;
+
+        this.loopThread = new Thread(this::runLoop, "ai-dispatcher");
+        this.loopThread.start();
+
+        long sweepSec = props.getOrchestrator().getSweeperInterval().toSeconds();
+        this.sweeper.scheduleWithFixedDelay(this::sweepStuck, sweepSec, sweepSec, TimeUnit.SECONDS);
+        log.info("AiDispatcher đã bật với sức chứa {} worker song song", capacity);
+    }
+
+    private void runLoop() {
+        while (running) {
+            try {
+                if (!nodePool.hasEnabledNode()) {
+                    Thread.sleep(1000);
+                    continue;
+                }
+                String taskId = queue.pop(props.getOrchestrator().getQueueBlock());
+                if (taskId == null) {
+                    continue;
+                }
+                if (!running) {
+                    queue.push(taskId);
+                    break;
+                }
+                workerPool.execute(() -> processor.process(taskId));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                log.warn("Lỗi ở vòng lặp AiDispatcher (sẽ chạy tiếp sau 2s): {}", e.getMessage());
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+    }
+
+    void sweepStuck() {
+        try {
+            nodePool.heartbeat();
+            long stuckSec = props.getOrchestrator().getStuckAfter().toSeconds();
+            int maxAttempts = props.getOrchestrator().getMaxAttempts();
+            List<String> stuckIds = tasks.findStuckRunningIds(stuckSec);
+            for (String id : stuckIds) {
+                AiTask t = tasks.findById(id).orElse(null);
+                if (t == null) {
+                    continue;
+                }
+                if (t.getAttemptCount() < maxAttempts) {
+                    if (tasks.requeue(id, AiErrorCode.LLM_TIMEOUT.name(),
+                            "Tác vụ kẹt ở running quá " + stuckSec + "s, quét trả lại hàng đợi",
+                            maxAttempts) > 0) {
+                        queue.push(id);
+                        log.warn("Quét task kẹt {} (lần {}), đẩy lại hàng đợi", id, t.getAttemptCount());
+                    }
+                } else {
+                    if (tasks.markFailed(id, AiErrorCode.MAX_ATTEMPTS.name(),
+                            "Tác vụ kẹt sau khi hết " + maxAttempts + " lần thử", null, null) > 0) {
+                        queue.publishDone(id, "failed");
+                        log.warn("Quét task kẹt {} hết lượt thử -> failed", id);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Quét tác vụ kẹt lỗi: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public synchronized void stop() {
+        running = false;
+        if (loopThread != null) {
+            loopThread.interrupt();
+        }
+        if (sweeper != null) {
+            sweeper.shutdownNow();
+        }
+        if (workerPool != null) {
+            workerPool.shutdown();
+            long waitSec = Math.max(10L, props.getLlm().getReadTimeout().toSeconds() + 5L);
+            try {
+                if (!workerPool.awaitTermination(waitSec, TimeUnit.SECONDS)) {
+                    log.warn("Một số worker chưa xong sau {}s, tiến hành ngắt để trả task về hàng đợi", waitSec);
+                    workerPool.shutdownNow();
+                    workerPool.awaitTermination(5, TimeUnit.SECONDS);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                workerPool.shutdownNow();
+            }
+        }
+        log.info("AiDispatcher đã tắt");
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running;
+    }
+}

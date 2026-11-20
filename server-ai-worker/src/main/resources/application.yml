@@ -1,0 +1,179 @@
+server:
+  port: ${SPRING_BOOT_PORT:8082}
+  servlet:
+    encoding:
+      enabled: true
+      charset: UTF-8
+      force: true
+    context-path: /api
+  # Tắt êm: chờ các request web đang chạy xong. Phần tác vụ AI đang chạy do AiDispatcher xử lý
+  # (dừng nhận việc mới, chờ xong hoặc trả task về pending) trong thời gian lifecycle bên dưới.
+  shutdown: graceful
+  forward-headers-strategy: native
+  tomcat:
+    threads:
+      max: 20
+      min-spare: 5
+    max-connections: 1000
+    accept-count: 20
+
+gg:
+  jte:
+    developmentMode: false
+
+spring:
+  config:
+    import: "optional:file:.env[.properties]"
+  application:
+    name: server-ai-worker
+
+  # Phải lớn hơn ai.llm.read-timeout (120s) để một lần gọi Colab đang chạy kịp kết thúc hoặc requeue sạch.
+  lifecycle:
+    timeout-per-shutdown-phase: 150s
+
+  data:
+    redis:
+      host: ${IP_ADDRESS:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME:default}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DBS:0}
+      connect-timeout: 2000ms
+      # Lettuce áp dụng timeout này cho cả lệnh chặn BRPOP; giữ ai.orchestrator.queue-block (5s) nhỏ hơn 10s.
+      timeout: 10s
+
+  datasource:
+    url: jdbc:mariadb://${IP_ADDRESS:127.0.0.1}:${MARIADB_PORT:3306}/${MARIADB_DBS:ntt_demo_llm}
+    username: ${MARIADB_USERNAME:root}
+    password: ${MARIADB_PASSWORD:}
+    driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      connection-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 900000
+      minimum-idle: 5
+      maximum-pool-size: 10
+      pool-name: HikariPool-Fast
+      auto-commit: true
+      leak-detection-threshold: 20000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Đang giữ "update" để test độc lập trên ntt_demo_llm (Hibernate tự tạo 3 bảng AI).
+      # Khi ghép vào DB chính đã chạy script ER v4: đổi thành "validate" hoặc "none"
+      # và đặt ai.demo.seed-issue-types=false.
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
+
+  docker:
+    compose:
+      enabled: false
+
+ai:
+  llm:
+    model: qwen2.5:14b-instruct-q4_K_M
+    prompt-version: v2
+    # zero | few | few_cot (E2 | E3 | E4)
+    question-check-mode: few_cot
+    few-shot-count: 3
+    # Tiền kiểm tất định ở backend (trùng phương án, lộ đáp án, câu dẫn/phương án rỗng)
+    rule-preflight: true
+    # Bật true nếu muốn LLM gợi ý thêm độ khó 1..5 vào suggested_difficulty
+    suggest-difficulty: false
+    connect-timeout: 5s
+    # Dưới ~125s (Proxy Read Timeout của Cloudflare)
+    read-timeout: 120s
+    keep-alive: 30m
+    allowed-host-suffixes:
+      - .trycloudflare.com
+    # Giữ num_ctx bằng nhau giữa hai loại task để Ollama không nạp lại mô hình.
+    question-check:
+      num-ctx: 4096
+      num-predict: 700
+      temperature: 0.0
+      seed: 42
+    nl-search:
+      num-ctx: 4096
+      num-predict: 350
+      temperature: 0.0
+      seed: 42
+
+  nodes:
+    - name: colab-1
+      url: ${AI_NODE_1_URL:}
+      token: ${AI_NODE_1_TOKEN:}
+      max-concurrency: 3
+      enabled: ${AI_NODE_1_ENABLED:true}
+    - name: colab-2
+      url: ${AI_NODE_2_URL:}
+      token: ${AI_NODE_2_TOKEN:}
+      max-concurrency: 3
+      enabled: ${AI_NODE_2_ENABLED:true}
+    - name: colab-3
+      url: ${AI_NODE_3_URL:}
+      token: ${AI_NODE_3_TOKEN:}
+      max-concurrency: 3
+      enabled: ${AI_NODE_3_ENABLED:true}
+    - name: colab-4
+      url: ${AI_NODE_4_URL:}
+      token: ${AI_NODE_4_TOKEN:}
+      max-concurrency: 3
+      enabled: ${AI_NODE_4_ENABLED:true}
+    - name: colab-5
+      url: ${AI_NODE_5_URL:}
+      token: ${AI_NODE_5_TOKEN:}
+      max-concurrency: 3
+      enabled: ${AI_NODE_5_ENABLED:true}
+
+  orchestrator:
+    max-attempts: 5
+    max-wait: 10m
+    fail-threshold: 3
+    cooldown: 60s
+    cooldown-max: 5m
+    queue-block: 5s
+    sweeper-interval: 60s
+    stuck-after: 5m
+
+  # Danh mục môn học/chủ đề mặc định khi chạy demo nl_search độc lập (không truyền subjects trong input_json).
+  # Khi Server 1 tích hợp: Server 1 nhúng danh sách ntt_subjects/ntt_topics thật vào input_json.subjects.
+  nl-search:
+    default-subjects:
+      - subject-code: INT3202
+        subject-name: Cơ sở dữ liệu
+        topics: ["Mô hình quan hệ & Khóa", "Ngôn ngữ truy vấn SQL", "Chuẩn hóa dữ liệu", "NoSQL & Lưu trữ phân tán"]
+      - subject-code: INT3304
+        subject-name: Mạng máy tính
+        topics: ["Kiến trúc phân tầng OSI/TCP-IP", "Giao thức ứng dụng HTTP/REST", "Bảo mật mạng & Xác thực"]
+      - subject-code: INT3306
+        subject-name: Lập trình Java
+        topics: ["Cú pháp & OOP cơ bản", "Ngoại lệ & Collections", "Spring Boot & REST API"]
+      - subject-code: INT3401
+        subject-name: Trí tuệ nhân tạo
+        topics: ["Tìm kiếm & Biểu diễn tri thức", "Học máy & Mạng nơ-ron", "Mô hình ngôn ngữ lớn (LLM)"]
+      - subject-code: ENG-TOEIC
+        subject-name: Tiếng Anh TOEIC
+        topics: ["Part 5 - Ngữ pháp & Từ loại", "Part 6 - Hoàn thành đoạn văn", "Part 7 - Đọc hiểu"]
+
+  demo:
+    created-by: ${AI_DEMO_CREATED_BY:1}
+    seed-issue-types: ${AI_DEMO_SEED_ISSUE_TYPES:true}
+
+logging:
+  level:
+    root: INFO
+    com.zaxxer.hikari: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
