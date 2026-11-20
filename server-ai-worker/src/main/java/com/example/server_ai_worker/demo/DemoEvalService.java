@@ -233,7 +233,7 @@ public class DemoEvalService {
     private record EvalOutcome(String predictedLabel, String rawIssue, int suggestionCount,
                                String topSeverity, long latencyMs, String modelName,
                                String nodeName, String errorCode, boolean noNode) {
-        static EvalOutcome noNode() {
+        static EvalOutcome noNodeOutcome() {
             return new EvalOutcome("error", null, 0, null, 0L, null, null, "LLM_UNREACHABLE", true);
         }
 
@@ -324,7 +324,7 @@ public class DemoEvalService {
 
         if (lastLlm != null && lastLlm.getCode() == AiErrorCode.LLM_UNREACHABLE && excluded.isEmpty()) {
             // Không lấy được lease nào (toàn node bận/tắt)
-            return EvalOutcome.noNode();
+            return EvalOutcome.noNodeOutcome();
         }
         String code = lastLlm != null ? lastLlm.getCode().name() : "LLM_UNREACHABLE";
         return EvalOutcome.error(code, System.currentTimeMillis() - t0);
