@@ -54,8 +54,8 @@ public class AiProperties {
         private String keepAlive = "30m";
         private List<String> allowedHostSuffixes = new ArrayList<>(List.of(".trycloudflare.com"));
         // num_ctx của hai loại task phải bằng nhau: Ollama nạp lại mô hình khi num_ctx đổi.
-        private final Options questionCheck = new Options(4096, 700, 0.0, 42);
-        private final Options nlSearch = new Options(4096, 350, 0.0, 42);
+        private final Options questionCheck = new Options(8192, 700, 0.0, 42);
+        private final Options nlSearch = new Options(8192, 350, 0.0, 42);
 
         public String getModel() {
             return model;
