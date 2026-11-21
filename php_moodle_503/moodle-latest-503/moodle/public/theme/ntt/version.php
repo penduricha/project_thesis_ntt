@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026112100;
+$plugin->version   = 2026112101;
 $plugin->requires  = 2026100200; // Cùng mốc với theme_boost của bản Moodle 5.3 trong repo.
 $plugin->component = 'theme_ntt';
 $plugin->dependencies = [

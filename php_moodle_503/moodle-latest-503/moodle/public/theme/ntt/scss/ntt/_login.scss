@@ -1,28 +1,250 @@
-// Trang đăng nhập: nửa trái là nền xanh thương hiệu (+ ảnh nền nếu có, do Boost đặt trong SCSS "extra" đến sau tệp này)
-// phủ thêm một lớp chuyển màu; nửa phải là biểu mẫu trên nền trắng.
-// .login-layout-left của Boost đã là "position: sticky" nên lớp ::before tuyệt đối neo đúng vào nửa trái.
+// Trang đăng nhập (và các trang cùng layout "login": quên mật khẩu, đăng ký, MFA).
+//
+// Cấu trúc HTML do templates/core/login_layout.mustache của theme dựng: MỘT thẻ trắng ở giữa trang, không ảnh nền,
+// không biểu tượng, không khung "Welcome to Moodle". Biểu mẫu bên trong vẫn là core/loginform (không sửa), nên chỉ cần định kiểu lại.
+//
+// Kiểu lấy từ project-design/UI_Accept_v3.html (bản thiết kế không có màn hình đăng nhập nên dùng đúng token của nó):
+// nền trang #f8faff, thẻ trắng viền #e3ebf5 bo 12px, ô nhập cao >= 44px viền #8596ad bo 8px, nút chính xanh đặc,
+// vòng tiêu điểm 2px màu chính, thông báo lỗi nền đỏ nhạt có vạch nhấn trái.
+//
+// Boost đặt các quy tắc cho .login-container ... bằng cùng độ ưu tiên; các quy tắc dưới đây đứng sau nên thắng.
 
-.login-layout-left {
-    &::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(160deg, rgba($ntt-primary-hover, .9) 0%, rgba($ntt-primary, .62) 100%);
-        pointer-events: none;
-    }
+$ntt-login-width: 26rem;
 
-    .login-layout-left-content {
-        position: relative;
-        z-index: 1;
-        border-radius: $ntt-radius-card;
-    }
+.pagelayout-login #page {
+    background-color: var(--#{$prefix}gray-100);
 }
 
-.login-layout-right {
+// --- Bố cục: thẻ ở giữa trang -------------------------------------------------------------------------------------
+
+.ntt-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+}
+
+.ntt-login-main {
+    width: 100%;
+    max-width: $ntt-login-width;
+}
+
+.ntt-login-card {
+    padding: 2rem;
     background-color: var(--ntt-surface);
+    border: 1px solid var(--ntt-border);
+    border-top: 4px solid var(--ntt-primary);
+    border-radius: $ntt-radius-card;
+    box-shadow: $ntt-shadow-card, 0 12px 32px rgba(0, 30, 60, .08);
 }
+
+// Logo site: ảnh duy nhất có thể xuất hiện, và chỉ khi quản trị đã đặt logo trong cài đặt site. Căn trái, cao tối đa 3rem.
+.ntt-login-card #loginlogo {
+    justify-content: flex-start !important; // stylelint-disable-line declaration-no-important
+    margin-bottom: 1.25rem !important; // stylelint-disable-line declaration-no-important
+
+    img {
+        width: auto;
+        max-height: 3rem;
+    }
+}
+
+// --- Tiêu đề --------------------------------------------------------------------------------------------------------
 
 .login-heading,
 .login-container h2 {
     font-weight: 700;
+}
+
+.ntt-login-card .loginform {
+    h1 {
+        margin-bottom: .25rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    // Dòng "Log in to <tên site>".
+    > p.text-muted {
+        font-size: .875rem;
+    }
+}
+
+// --- Biểu mẫu -------------------------------------------------------------------------------------------------------
+
+.login-container .login-form {
+    .form-label {
+        margin-bottom: .375rem;
+        color: var(--ntt-text);
+        font-weight: 600;
+    }
+
+    .login-input-wrapper {
+        // Ô tên đăng nhập nằm trực tiếp trong khung nên phải rộng 100%. Ô mật khẩu nằm trong .input-group (cùng nút
+        // hiện/ẩn): ở đó Bootstrap đã đặt width 1% + flex, nếu ép 100% thì nút bị đẩy xuống dòng dưới.
+        > .form-control {
+            width: 100%;
+        }
+
+        .form-control {
+            min-height: 2.75rem; // 44px: đủ lớn để chạm trên điện thoại
+            padding-inline-start: 2.75rem;
+            font-size: 1rem; // < 16px thì iOS tự phóng to khi bấm vào ô
+            background-color: var(--ntt-surface);
+            border-color: var(--ntt-border-strong);
+            border-radius: $ntt-radius;
+            box-shadow: none;
+
+            &::placeholder {
+                color: var(--ntt-text-muted);
+                opacity: 1;
+            }
+
+            &:hover:not(:focus):not(:disabled) {
+                background-color: var(--ntt-surface);
+                border-color: var(--ntt-primary);
+            }
+
+            &:focus {
+                background-color: var(--ntt-surface);
+                border-color: var(--ntt-primary);
+                box-shadow: 0 0 0 1px var(--ntt-primary);
+            }
+
+            // Trình duyệt tự điền: Chrome tô nền xanh nhạt khó coi, giữ nền trắng của thiết kế.
+            &:-webkit-autofill,
+            &:-webkit-autofill:hover,
+            &:-webkit-autofill:focus {
+                -webkit-text-fill-color: var(--ntt-text);
+                caret-color: var(--ntt-text);
+                -webkit-box-shadow: 0 0 0 1000px var(--ntt-surface) inset !important; // stylelint-disable-line declaration-no-important
+                box-shadow: 0 0 0 1000px var(--ntt-surface) inset !important; // stylelint-disable-line declaration-no-important
+            }
+        }
+
+        .login-input-icon {
+            inset-inline-start: .875rem;
+            color: var(--ntt-text-muted);
+        }
+    }
+
+    // Nút hiện/ẩn mật khẩu (core/togglesensitive dựng sau khi trang tải): cùng viền với ô nhập, đổi màu cùng ô nhập.
+    .toggle-sensitive-wrapper {
+        .toggle-sensitive-btn {
+            --#{$prefix}btn-bg: var(--ntt-surface);
+            --#{$prefix}btn-hover-bg: var(--ntt-surface);
+            --#{$prefix}btn-active-bg: var(--ntt-surface);
+            --#{$prefix}btn-border-color: var(--ntt-border-strong);
+            --#{$prefix}btn-hover-border-color: var(--ntt-border-strong);
+            --#{$prefix}btn-active-border-color: var(--ntt-border-strong);
+            min-width: 2.75rem;
+            color: var(--ntt-text-muted);
+            border-inline-start: 0;
+            border-radius: 0 $ntt-radius $ntt-radius 0;
+            box-shadow: none;
+
+            &:hover,
+            &:focus-visible {
+                color: var(--ntt-primary);
+                background-color: var(--ntt-surface);
+            }
+        }
+
+        &:hover .toggle-sensitive-btn,
+        &:focus-within .toggle-sensitive-btn {
+            border-color: var(--ntt-primary);
+        }
+
+        &:focus-within .toggle-sensitive-btn {
+            box-shadow: 0 0 0 1px var(--ntt-primary);
+        }
+    }
+
+    // "Forgot password?": nhỏ, đậm, màu chính, vùng bấm đủ cao.
+    .text-end a {
+        display: inline-block;
+        padding: .25rem 0;
+        font-size: .875rem;
+        font-weight: 600;
+    }
+
+    .login-form-submit .btn {
+        min-height: 2.75rem;
+        font-size: 1rem;
+    }
+}
+
+// --- Thông báo lỗi / thông tin trong thẻ -----------------------------------------------------------------------------
+
+.ntt-login-card .alert {
+    margin-bottom: 1.25rem;
+    font-size: .875rem;
+}
+
+.ntt-login-card .alert-danger {
+    border-left-color: var(--ntt-danger);
+}
+
+.ntt-login-card .alert-info {
+    border-left-color: var(--ntt-primary);
+}
+
+// --- Phần dưới biểu mẫu: dòng đăng ký, đăng nhập bên thứ ba, khách, ngôn ngữ, cookies ------------------------------
+
+.login-container {
+    // Boost để "my-5" (3rem) quanh các khối này, trong thẻ hẹp thì quá thưa.
+    .login-separator {
+        margin-block: 1.25rem !important; // stylelint-disable-line declaration-no-important
+    }
+
+    .login-languagemenu {
+        margin-block: 1.25rem !important; // stylelint-disable-line declaration-no-important
+    }
+
+    .login-identityprovider-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        min-height: 2.75rem;
+        background-color: var(--ntt-surface);
+        border-color: var(--ntt-border-strong);
+        color: var(--ntt-text);
+
+        &:hover,
+        &:focus {
+            background-color: var(--ntt-surface-hover);
+            border-color: var(--ntt-text-muted);
+        }
+    }
+
+    // "Cookies notice": nằm cuối thẻ, tách bằng đường kẻ mảnh.
+    .login-cookiesnotice {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--ntt-border);
+
+        .btn-link {
+            color: var(--ntt-text-muted);
+
+            &:hover,
+            &:focus {
+                color: var(--ntt-on-primary-soft);
+            }
+        }
+    }
+}
+
+// --- Màn hình nhỏ: thẻ sát mép, chừa chỗ cho bàn phím ---------------------------------------------------------------
+
+@include media-breakpoint-down(sm) {
+    .ntt-login {
+        align-items: flex-start;
+        padding: 1rem .75rem;
+    }
+
+    .ntt-login-card {
+        padding: 1.5rem 1.25rem;
+    }
 }
