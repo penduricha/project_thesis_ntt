@@ -62,7 +62,7 @@ Bảng đối chiếu thiết kế sang Moodle:
 
 Moodle 5.3 mặc định chia đôi màn hình: nửa trái là ảnh nền + khung chào mừng, nửa phải là biểu mẫu. NTT bỏ nửa trái và đặt
 biểu mẫu trong một thẻ ở giữa trang (cùng layout dùng cho quên mật khẩu, đăng ký, MFA nên các trang đó cũng đổi theo).
-Nếu quản trị đặt logo cho site thì logo hiện thay cho biểu tượng mũ tốt nghiệp. Sau khi thêm/đổi template phải xoá cache
+Trang không có ảnh hay biểu tượng nào; chỉ khi quản trị đặt logo cho site thì logo đó mới hiện phía trên tiêu đề. Sau khi thêm/đổi template phải xoá cache
 (`php admin/cli/purge_caches.php`) để Moodle nạp lại template.
 
 ## Đổi màu nhanh, không sửa tệp

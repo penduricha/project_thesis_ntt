@@ -1,7 +1,7 @@
 // Trang đăng nhập (và các trang cùng layout "login": quên mật khẩu, đăng ký, MFA).
 //
 // Cấu trúc HTML do templates/core/login_layout.mustache của theme dựng: MỘT thẻ trắng ở giữa trang, không ảnh nền,
-// không khung "Welcome to Moodle". Biểu mẫu bên trong vẫn là core/loginform (không sửa), nên chỉ cần định kiểu lại.
+// không biểu tượng, không khung "Welcome to Moodle". Biểu mẫu bên trong vẫn là core/loginform (không sửa), nên chỉ cần định kiểu lại.
 //
 // Kiểu lấy từ project-design/UI_Accept_v3.html (bản thiết kế không có màn hình đăng nhập nên dùng đúng token của nó):
 // nền trang #f8faff, thẻ trắng viền #e3ebf5 bo 12px, ô nhập cao >= 44px viền #8596ad bo 8px, nút chính xanh đặc,
@@ -39,27 +39,7 @@ $ntt-login-width: 26rem;
     box-shadow: $ntt-shadow-card, 0 12px 32px rgba(0, 30, 60, .08);
 }
 
-// Biểu tượng thương hiệu (như .logo-badge của thiết kế). Nếu quản trị đã đặt logo site thì dùng logo đó, bỏ biểu tượng.
-.ntt-login-mark {
-    display: grid;
-    place-items: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    margin-bottom: 1.25rem;
-    border-radius: 10px;
-    background-color: var(--ntt-primary);
-    color: #fff;
-
-    svg {
-        width: 1.5rem;
-        height: 1.5rem;
-    }
-}
-
-.ntt-login-card:has(#loginlogo) .ntt-login-mark {
-    display: none;
-}
-
+// Logo site: ảnh duy nhất có thể xuất hiện, và chỉ khi quản trị đã đặt logo trong cài đặt site. Căn trái, cao tối đa 3rem.
 .ntt-login-card #loginlogo {
     justify-content: flex-start !important; // stylelint-disable-line declaration-no-important
     margin-bottom: 1.25rem !important; // stylelint-disable-line declaration-no-important
