@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -17,7 +19,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/web/admin")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminControllerMgmtWeb {
 
     private final AdminServiceImpl adminService;
@@ -126,8 +127,8 @@ public class AdminControllerMgmtWeb {
         // 2. Lấy Token ra khỏi chuỗi "Bearer "
         String jwtToken = authHeader.substring(7);
 
-        // 3. Verify chữ ký & hạn sử dụng JWT Token
-        if (!adminJwtTokenProvider.validateToken(jwtToken)) {
+        // 3. Verify chữ ký, hạn sử dụng và token_type == ACCESS
+        if (!adminJwtTokenProvider.validateAccessToken(jwtToken)) {
             Map<String, Object> responseInvalid = new HashMap<>();
             responseInvalid.put("success", false);
             responseInvalid.put("message", "Token is invalid or expired.");
@@ -174,8 +175,8 @@ public class AdminControllerMgmtWeb {
         // 2. Lấy Token ra khỏi chuỗi "Bearer "
         String jwtToken = authHeader.substring(7);
 
-        // 3. Verify chữ ký & hạn sử dụng JWT Token
-        if (!adminJwtTokenProvider.validateToken(jwtToken)) {
+        // 3. Verify chữ ký, hạn sử dụng và token_type == REFRESH
+        if (!adminJwtTokenProvider.validateRefreshToken(jwtToken)) {
             Map<String, Object> responseInvalid = new HashMap<>();
             responseInvalid.put("success", false);
             responseInvalid.put("message", "Token is invalid or expired.");
@@ -225,15 +226,24 @@ public class AdminControllerMgmtWeb {
         return ResponseEntity.ok(responseSuccess);
     }
 
-    @GetMapping ("/information/basic")
-    //@RequestHeader(value = "Authorization", required = false) String authHeader
-    public ResponseEntity<?> getAdminInformationBasic(@RequestParam Long adminId) throws RuntimeException {
+    @GetMapping("/information/basic")
+    public ResponseEntity<?> getAdminInformationBasic(@RequestParam(required = false) Long adminId) throws RuntimeException {
+        Long authAdminId = resolveAuthenticatedAdminId();
+        if (authAdminId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("status", HttpStatus.UNAUTHORIZED.value(), "message", "Unauthorized", "data", Map.of()));
+        }
+        if (adminId != null && !adminId.equals(authAdminId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("status", HttpStatus.FORBIDDEN.value(), "message", "Forbidden", "data", Map.of()));
+        }
+
         Map<String, Object> responseHttp = new HashMap<>();
-        Map<String, Object> responseData = adminService.getAdminInfo(adminId);
+        Map<String, Object> responseData = adminService.getAdminInfo(authAdminId);
 
         responseHttp.put("status", HttpStatus.OK.value());
 
-        if(responseData.isEmpty()) {
+        if (responseData.isEmpty()) {
             responseHttp.put("message", "Admin not found.");
         } else {
             responseHttp.put("message", "Admin found successfully.");
@@ -242,21 +252,38 @@ public class AdminControllerMgmtWeb {
         return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
     }
 
-    @GetMapping ("/information/detail")
-    //@RequestHeader(value = "Authorization", required = false) String authHeader
-    public ResponseEntity<?> getAdminInformationDetail(@RequestParam Long adminId) throws RuntimeException {
+    @GetMapping("/information/detail")
+    public ResponseEntity<?> getAdminInformationDetail(@RequestParam(required = false) Long adminId) throws RuntimeException {
+        Long authAdminId = resolveAuthenticatedAdminId();
+        if (authAdminId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("status", HttpStatus.UNAUTHORIZED.value(), "message", "Unauthorized", "data", Map.of()));
+        }
+        if (adminId != null && !adminId.equals(authAdminId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("status", HttpStatus.FORBIDDEN.value(), "message", "Forbidden", "data", Map.of()));
+        }
+
         Map<String, Object> responseHttp = new HashMap<>();
-        Map<String, Object> responseData = adminService.getAdminDetailInformation(adminId);
+        Map<String, Object> responseData = adminService.getAdminDetailInformation(authAdminId);
 
         responseHttp.put("status", HttpStatus.OK.value());
 
-        if(responseData.isEmpty()) {
+        if (responseData.isEmpty()) {
             responseHttp.put("message", "Admin not found.");
         } else {
             responseHttp.put("message", "Admin found successfully.");
         }
         responseHttp.put("data", responseData);
         return ResponseEntity.status(HttpStatus.OK).body(responseHttp);
+    }
+
+    private Long resolveAuthenticatedAdminId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Long id) {
+            return id;
+        }
+        return null;
     }
 
 //    @PostMapping("/login")   // giữ đường dẫn hiện tại: Vue gọi /admin/auth/login

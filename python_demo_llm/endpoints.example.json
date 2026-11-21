@@ -1,0 +1,27 @@
+[
+  {
+    "name": "colab1",
+    "url": "https://xxxx-colab-1.trycloudflare.com",
+    "token": "PASTE_COLAB_1_TOKEN_HERE"
+  },
+  {
+    "name": "colab2",
+    "url": "https://xxxx-colab-2.trycloudflare.com",
+    "token": "PASTE_COLAB_2_TOKEN_HERE"
+  },
+  {
+    "name": "colab3",
+    "url": "https://xxxx-colab-3.trycloudflare.com",
+    "token": "PASTE_COLAB_3_TOKEN_HERE"
+  },
+  {
+    "name": "colab4",
+    "url": "https://xxxx-colab-4.trycloudflare.com",
+    "token": "PASTE_COLAB_4_TOKEN_HERE"
+  },
+  {
+    "name": "colab5",
+    "url": "https://xxxx-colab-5.trycloudflare.com",
+    "token": "PASTE_COLAB_5_TOKEN_HERE"
+  }
+]

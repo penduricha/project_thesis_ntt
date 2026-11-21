@@ -182,4 +182,28 @@ class AiResultParserTest {
         assertEquals("2026-11-01", out.get("created_from").asText());
         assertEquals("2026-11-20", out.get("created_to").asText());
     }
+
+    @Test
+    void acceptsErV4ValidationStatusesInNlSearch() throws Exception {
+        ObjectNode input = om.createObjectNode();
+        input.put("query", "Tìm câu hỏi đạt chuẩn");
+
+        String llmJson = """
+                {
+                  "subject_code": null,
+                  "topic_name": null,
+                  "difficulty": null,
+                  "validation_status": "clean",
+                  "keywords": [],
+                  "search_in": "all",
+                  "created_from": null,
+                  "created_to": null
+                }""";
+
+        ChatResult chat = new ChatResult(llmJson, llmJson, "qwen2.5:14b-instruct-q4_K_M",
+                null, null, 60, 1_000_000_000L, 100, 1_100_000_000L, "stop", 1100L);
+
+        JsonNode out = om.readTree(parser.parseNlSearch(input, chat));
+        assertEquals("clean", out.get("validation_status").asText());
+    }
 }

@@ -67,11 +67,11 @@ abstract class EnrollmentAuth {
 /// CHỈ CẦN ĐỔI 3 TÊN KEY cho khớp với key màn Login của bạn đang ghi.
 class SecureStorageEnrollmentAuth implements EnrollmentAuth {
   const SecureStorageEnrollmentAuth({
-    this.tokenKey = 'access_token',
-    this.adminIdKey = 'admin_id',
-    this.adminNameKey = 'admin_name',
-    this._storage = const FlutterSecureStorage(),
-  });
+    this.tokenKey = AuthStorage.accessTokenKey,
+    this.adminIdKey = AuthStorage.adminIdKey,
+    this.adminNameKey = AuthStorage.adminNameKey,
+    FlutterSecureStorage storage = const FlutterSecureStorage(),
+  }) : _storage = storage;
 
   final String tokenKey;
   final String adminIdKey;

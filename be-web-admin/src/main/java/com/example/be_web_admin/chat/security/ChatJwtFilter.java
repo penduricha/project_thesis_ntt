@@ -1,10 +1,12 @@
 package com.example.be_web_admin.chat.security;
 
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
+import com.example.be_web_admin.service.redis.AdminTokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -14,19 +16,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Đọc "Authorization: Bearer ..." và đặt adminId làm người dùng hiện tại (principal là Long).
- * Cố ý KHÔNG khai báo là bean (không @Component): nếu là bean, Spring Boot sẽ tự đăng ký nó thành filter servlet
- * toàn cục và nó chạy với cả các API cũ. Nó chỉ được tạo trong ChatSecurityConfig và chỉ gắn vào chuỗi chat.
- * Token sai hoặc thiếu thì không đặt gì cả; lớp phân quyền phía sau trả 401.
+ * Đọc "Authorization: Bearer ..." và xác thực ACCESS JWT + đối chiếu Redis AdminAccessToken
+ * để đặt adminId làm người dùng hiện tại (principal là Long).
+ * Cố ý KHÔNG khai báo là bean (không @Component) để chỉ chạy trong ChatSecurityConfig.
  */
+@Slf4j
 public class ChatJwtFilter extends OncePerRequestFilter {
 
     private static final String BEARER = "Bearer ";
 
     private final AdminJwtTokenProvider tokenProvider;
+    private final AdminTokenService adminTokenService;
 
-    public ChatJwtFilter(AdminJwtTokenProvider tokenProvider) {
+    public ChatJwtFilter(AdminJwtTokenProvider tokenProvider, AdminTokenService adminTokenService) {
         this.tokenProvider = tokenProvider;
+        this.adminTokenService = adminTokenService;
     }
 
     @Override
@@ -34,10 +38,17 @@ public class ChatJwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.regionMatches(true, 0, BEARER, 0, BEARER.length())) {
-            Long adminId = tokenProvider.parseAccessTokenAdminId(header.substring(BEARER.length()).trim());
+            String token = header.substring(BEARER.length()).trim();
+            Long adminId = tokenProvider.parseAccessTokenAdminId(token);
             if (adminId != null) {
-                SecurityContextHolder.getContext().setAuthentication(
-                        new UsernamePasswordAuthenticationToken(adminId, null, AuthorityUtils.NO_AUTHORITIES));
+                try {
+                    if (adminTokenService.findAdminAccessTokenByJwtToken(token)) {
+                        SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken(adminId, null, AuthorityUtils.NO_AUTHORITIES));
+                    }
+                } catch (Exception e) {
+                    log.warn("Chat: không kiểm tra được access token trên Redis: {}", e.getMessage());
+                }
             }
         }
         chain.doFilter(request, response);

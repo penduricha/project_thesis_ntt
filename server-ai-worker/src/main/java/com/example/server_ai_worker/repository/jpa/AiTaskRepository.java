@@ -68,6 +68,14 @@ public interface AiTaskRepository extends JpaRepository<AiTask, String> {
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(nativeQuery = true, value = """
+            UPDATE ntt_ai_tasks SET status = 'pending', started_at = NULL,
+                   error_code = :code, error_message = :msg
+            WHERE task_id = :id AND status = 'running'""")
+    int requeueWithoutAttempt(@Param("id") String id, @Param("code") String code, @Param("msg") String msg);
+
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(nativeQuery = true, value = """
             UPDATE ntt_ai_tasks SET status = 'pending', started_at = NULL
             WHERE task_id = :id AND status = 'running'""")
     int requeueOnShutdown(@Param("id") String id);

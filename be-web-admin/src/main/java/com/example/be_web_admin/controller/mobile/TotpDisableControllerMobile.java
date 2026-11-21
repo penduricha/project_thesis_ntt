@@ -86,7 +86,7 @@ public class TotpDisableControllerMobile {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
         String jwt = authHeader.substring(7);
         try {
-            if (!adminJwtTokenProvider.validateToken(jwt)) return null;
+            if (!adminJwtTokenProvider.validateAccessToken(jwt)) return null;
             if (!adminTokenService.findAdminAccessTokenByJwtToken(jwt)) return null;
             return adminJwtTokenProvider.getAdminIdFromToken(jwt);
         } catch (Exception e) {

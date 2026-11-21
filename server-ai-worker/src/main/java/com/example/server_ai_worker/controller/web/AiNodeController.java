@@ -2,7 +2,6 @@ package com.example.server_ai_worker.controller.web;
 
 import java.util.List;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +22,6 @@ import com.example.server_ai_worker.service.ai.AiTaskService;
  */
 @RestController
 @RequestMapping("/web/ai/nodes")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AiNodeController {
 
     private final AiTaskService service;

@@ -1,5 +1,6 @@
 package com.example.server_ai_worker.demo;
 
+import com.example.server_ai_worker.config.AiProperties;
 import com.example.server_ai_worker.enums.AiErrorCode;
 import com.example.server_ai_worker.enums.SuggestionSeverity;
 import com.example.server_ai_worker.model.jpa.AiSuggestion;
@@ -21,18 +22,24 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Module đánh giá DEMO (không tích hợp vào pipeline production):
@@ -65,6 +72,7 @@ public class DemoEvalService {
     private final AiResultParser parser;
     private final NodePool nodePool;
     private final RulePreflightChecker preflight;
+    private final AiProperties props;
     private final ObjectMapper json;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -82,6 +90,7 @@ public class DemoEvalService {
                            AiResultParser parser,
                            NodePool nodePool,
                            RulePreflightChecker preflight,
+                           AiProperties props,
                            ObjectMapper json) {
         this.questions = questions;
         this.runs = runs;
@@ -91,6 +100,7 @@ public class DemoEvalService {
         this.parser = parser;
         this.nodePool = nodePool;
         this.preflight = preflight;
+        this.props = props;
         this.json = json;
     }
 
@@ -148,6 +158,9 @@ public class DemoEvalService {
         return false;
     }
 
+    private record WorkerResult(DemoQuestion question, EvalOutcome outcome) {
+    }
+
     // ------------------------------------------------------------------
     // Vòng đời một run
     // ------------------------------------------------------------------
@@ -160,64 +173,126 @@ public class DemoEvalService {
         int correct = 0;
         int errors = 0;
         int consecutiveNoNode = 0;
+        int concurrency = "ai".equals(mode)
+                ? Math.max(1, Math.min(16, props.getDemo().getEvalConcurrency()))
+                : 1;
+        ExecutorService workers = null;
         try {
-            List<DemoQuestion> all = questions.findAllByOrderByExtIdAsc();
-            for (DemoQuestion q : all) {
-                if (processed >= limit) {
-                    break;
-                }
-                AtomicBoolean stop = stopFlags.get(runId);
-                if (stop != null && stop.get()) {
-                    run.setStatus("stopped");
-                    break;
-                }
-                EvalOutcome out = "ai".equals(mode) ? evalWithAi(runId, q) : evalWithRules(q);
-                if (out.noNode()) {
-                    consecutiveNoNode++;
-                    if (consecutiveNoNode >= MAX_CONSECUTIVE_NO_NODE) {
-                        run.setStatus("failed");
-                        run.setNotes("Không nhận được node Colab sau " + MAX_CONSECUTIVE_NO_NODE
-                                + " lần liên tiếp — run hủy. Kiểm tra kết nối các node ở trang node-colab.");
+            List<DemoQuestion> selected = questions.findAllByOrderByExtIdAsc()
+                    .stream()
+                    .limit(limit)
+                    .toList();
+            Deque<DemoQuestion> pending = new ArrayDeque<>(selected);
+
+            if (concurrency == 1) {
+                while (!pending.isEmpty()) {
+                    AtomicBoolean stop = stopFlags.get(runId);
+                    if (stop != null && stop.get()) {
+                        run.setStatus("stopped");
                         break;
                     }
-                    sleepQuiet(2000);
-                    continue; // không tăng processed, thử lại câu này
+                    DemoQuestion q = pending.pollFirst();
+                    EvalOutcome out = "ai".equals(mode) ? evalWithAi(runId, q) : evalWithRules(q);
+                    if (out.noNode()) {
+                        consecutiveNoNode++;
+                        if (consecutiveNoNode >= MAX_CONSECUTIVE_NO_NODE) {
+                            run.setStatus("failed");
+                            run.setNotes("Không nhận được node Colab sau " + MAX_CONSECUTIVE_NO_NODE
+                                    + " lần liên tiếp — run hủy. Kiểm tra kết nối các node ở trang node-colab.");
+                            break;
+                        }
+                        pending.addFirst(q);
+                        sleepQuiet(2000);
+                        continue;
+                    }
+                    consecutiveNoNode = 0;
+                    boolean ok = saveItemOutcome(runId, q, out);
+                    processed++;
+                    if (ok) {
+                        correct++;
+                    }
+                    if (out.errorCode() != null) {
+                        errors++;
+                    }
+                    run.setProcessedCount(processed);
+                    run.setCorrectCount(correct);
+                    run.setErrorCount(errors);
+                    runs.save(run);
                 }
-                consecutiveNoNode = 0;
+            } else {
+                AtomicInteger seq = new AtomicInteger();
+                workers = Executors.newFixedThreadPool(concurrency, r -> {
+                    Thread t = new Thread(r, "demo-eval-worker-" + seq.incrementAndGet());
+                    t.setDaemon(true);
+                    return t;
+                });
+                CompletionService<WorkerResult> cs = new ExecutorCompletionService<>(workers);
+                int inFlight = 0;
+                boolean stopping = false;
 
-                DemoEvalItem item = new DemoEvalItem(runId, q.getId(), q.getExtId(),
-                        q.getSubjectCode(), q.getGoldIssueType());
-                item.setPredictedLabel(out.predictedLabel());
-                item.setRawPredictedIssue(out.rawIssue());
-                item.setSuggestionCount(out.suggestionCount());
-                item.setTopSeverity(out.topSeverity());
-                item.setLatencyMs(out.latencyMs());
-                item.setModelName(out.modelName());
-                item.setNodeName(out.nodeName());
-                item.setErrorCode(out.errorCode());
-                boolean ok = out.errorCode() == null && out.predictedLabel().equals(q.getGoldIssueType());
-                item.setPredictionCorrect(ok);
-                items.save(item);
-
-                processed++;
-                if (ok) {
-                    correct++;
+                while ((!pending.isEmpty() && !stopping) || inFlight > 0) {
+                    AtomicBoolean stop = stopFlags.get(runId);
+                    if (!stopping && stop != null && stop.get()) {
+                        stopping = true;
+                        run.setStatus("stopped");
+                    }
+                    while (!stopping && inFlight < concurrency && !pending.isEmpty()) {
+                        DemoQuestion q = pending.pollFirst();
+                        cs.submit(() -> new WorkerResult(q, evalWithAi(runId, q)));
+                        inFlight++;
+                    }
+                    if (inFlight == 0) {
+                        break;
+                    }
+                    WorkerResult res = cs.take().get();
+                    inFlight--;
+                    EvalOutcome out = res.outcome();
+                    if (out.noNode()) {
+                        consecutiveNoNode++;
+                        if (consecutiveNoNode >= MAX_CONSECUTIVE_NO_NODE) {
+                            stopping = true;
+                            run.setStatus("failed");
+                            run.setNotes("Không nhận được node Colab sau " + MAX_CONSECUTIVE_NO_NODE
+                                    + " lần liên tiếp — run hủy. Kiểm tra kết nối các node ở trang node-colab.");
+                            continue;
+                        }
+                        pending.addLast(res.question());
+                        sleepQuiet(1500);
+                        continue;
+                    }
+                    consecutiveNoNode = 0;
+                    boolean ok = saveItemOutcome(runId, res.question(), out);
+                    processed++;
+                    if (ok) {
+                        correct++;
+                    }
+                    if (out.errorCode() != null) {
+                        errors++;
+                    }
+                    run.setProcessedCount(processed);
+                    run.setCorrectCount(correct);
+                    run.setErrorCount(errors);
+                    runs.save(run);
                 }
-                if (out.errorCode() != null) {
-                    errors++;
-                }
-                run.setProcessedCount(processed);
-                run.setCorrectCount(correct);
-                run.setErrorCount(errors);
-                runs.save(run);
             }
             if (!"stopped".equals(run.getStatus()) && !"failed".equals(run.getStatus())) {
                 run.setStatus("done");
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            if (!"failed".equals(run.getStatus())) {
+                run.setStatus("stopped");
+            }
+        } catch (ExecutionException e) {
+            run.setStatus("failed");
+            run.setNotes("Lỗi nội bộ khi chạy đánh giá: " + e.getCause().getMessage());
         } catch (Exception e) {
             run.setStatus("failed");
             run.setNotes("Lỗi nội bộ khi chạy đánh giá: " + e.getMessage());
         } finally {
+            if (workers != null) {
+                workers.shutdownNow();
+            }
             run.setFinishedAt(Instant.now());
             if ("done".equals(run.getStatus()) || "stopped".equals(run.getStatus()) || "failed".equals(run.getStatus())) {
                 persistMetrics(run);
@@ -225,6 +300,23 @@ public class DemoEvalService {
             runs.save(run);
             stopFlags.remove(runId);
         }
+    }
+
+    private boolean saveItemOutcome(long runId, DemoQuestion q, EvalOutcome out) {
+        DemoEvalItem item = new DemoEvalItem(runId, q.getId(), q.getExtId(),
+                q.getSubjectCode(), q.getGoldIssueType());
+        item.setPredictedLabel(out.predictedLabel());
+        item.setRawPredictedIssue(out.rawIssue());
+        item.setSuggestionCount(out.suggestionCount());
+        item.setTopSeverity(out.topSeverity());
+        item.setLatencyMs(out.latencyMs());
+        item.setModelName(out.modelName());
+        item.setNodeName(out.nodeName());
+        item.setErrorCode(out.errorCode());
+        boolean ok = out.errorCode() == null && out.predictedLabel().equals(q.getGoldIssueType());
+        item.setPredictionCorrect(ok);
+        items.save(item);
+        return ok;
     }
 
     // ------------------------------------------------------------------
@@ -278,8 +370,7 @@ public class DemoEvalService {
                 continue; // thử lại theo lượt (hoặc báo noNode ở ngoài nếu lặp lại nhiều)
             }
             String nodeName = lease.name();
-            final NodePool.Lease activeLease = lease;
-            try (activeLease) {
+            try {
                 ChatResult chat = ollama.chat(lease.url(), lease.token(), spec);
                 double tps = chat.evalDurationNs() > 0
                         ? chat.evalCount() / (chat.evalDurationNs() / 1_000_000_000.0)
@@ -319,6 +410,8 @@ public class DemoEvalService {
             } catch (Exception e) {
                 lease.release();
                 return EvalOutcome.error("INTERNAL_ERROR", System.currentTimeMillis() - t0);
+            } finally {
+                lease.close();
             }
         }
 

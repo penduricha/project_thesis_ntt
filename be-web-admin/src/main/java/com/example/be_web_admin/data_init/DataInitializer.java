@@ -5,6 +5,9 @@ import com.example.be_web_admin.model.jpa.Course;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.repository.jpa.CourseRepository;
 import com.example.be_web_admin.security.password.MgmtPassword;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,10 +17,15 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Seed dữ liệu mẫu cho môi trường dev/demo.
+ * Tắt mặc định (app.seed.enabled=false); chỉ chạy khi bật rõ APP_SEED_ENABLED=true
+ * và cung cấp APP_SEED_DEFAULT_PASSWORD. Không tự chạy ALTER TABLE khi khởi động.
+ */
+@Slf4j
 @Component
+@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true")
 public class DataInitializer {
-
-    private static final String DEFAULT_RAW_PASSWORD = "1234";
 
     private static final int BCRYPT_STRENGTH = 12;
 
@@ -27,13 +35,20 @@ public class DataInitializer {
 
     private final CourseRepository courseRepository;
 
+    private final String defaultRawPassword;
+
     private final String tableAdmin = "ntt_admins";
 
     private final String tableCourse = "ntt_courses";
 
-    public DataInitializer(JdbcTemplate jdbcTemplate, AdminRepository adminRepository, CourseRepository courseRepository) {
+    public DataInitializer(
+            JdbcTemplate jdbcTemplate,
+            AdminRepository adminRepository,
+            CourseRepository courseRepository,
+            @Value("${app.seed.default-password:}") String defaultRawPassword) {
         this.jdbcTemplate = jdbcTemplate;
         this.courseRepository = courseRepository;
+        this.defaultRawPassword = defaultRawPassword == null ? "" : defaultRawPassword.trim();
     }
 
     public String generateHash(String rawText, int strength) {
@@ -43,19 +58,9 @@ public class DataInitializer {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeData() throws JpaSystemException {
-
-        //set utf-8
-        List<String> codeSQLSetUtf8List = List.of(
-                "ALTER TABLE " + tableAdmin + " CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
-                "ALTER TABLE " + tableCourse + " CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-        );
-
-        for (String sqlStatement : codeSQLSetUtf8List) {
-            try {
-                jdbcTemplate.execute(sqlStatement);
-            } catch (Exception e) {
-                System.err.println("Error executing: " + sqlStatement + " - " + e.getMessage());
-            }
+        if (defaultRawPassword.isEmpty()) {
+            log.warn("app.seed.enabled=true nhưng APP_SEED_DEFAULT_PASSWORD đang trống; bỏ qua seed dữ liệu mẫu.");
+            return;
         }
 
         // Chỉ seed khi cả 2 bảng đều rỗng
@@ -70,7 +75,7 @@ public class DataInitializer {
         }
 
         // Cùng 1 mật khẩu mẫu => băm BCrypt 1 lần rồi dùng lại cho cả 10 Admin
-        String defaultPasswordHash = generateHash(DEFAULT_RAW_PASSWORD, BCRYPT_STRENGTH);
+        String defaultPasswordHash = generateHash(defaultRawPassword, BCRYPT_STRENGTH);
 
         // ===================== Course 1: 5 Admin =====================
         Course course1 = createCourse(
@@ -113,7 +118,7 @@ public class DataInitializer {
         // Course là bên cascade => lưu Course sẽ lưu luôn các Admin bên trong
         courseRepository.saveAll(List.of(course1, course2));
 
-        System.out.println("DataInitializer: đã tạo 2 Course và 10 Admin mẫu.");
+        log.info("DataInitializer: đã tạo 2 Course và 10 Admin mẫu.");
     }
 
     private Course createCourse(Long courseId, String trainingSystem, String branch, String industry,

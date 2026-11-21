@@ -19,6 +19,11 @@ export default {
       required: true,
       type: Boolean,
       default: false,
+    },
+
+    buttonType: {
+      type: String,
+      default: "button",
     }
   },
 
@@ -45,6 +50,7 @@ export default {
     không dùng .spinner-border của Bootstrap.
   -->
   <button
+      :type="buttonType"
       class="button-red"
       :class="['button-red-opacity-disabled', setOpacityBtnLogin]"
       :disabled="disableButton"

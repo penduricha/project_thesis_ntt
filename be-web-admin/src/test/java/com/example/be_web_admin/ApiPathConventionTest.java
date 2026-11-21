@@ -7,6 +7,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -65,6 +66,14 @@ class ApiPathConventionTest {
 
         for (BeanDefinition definition : controllers) {
             Class<?> controller = Class.forName(definition.getBeanClassName());
+
+            CrossOrigin crossOrigin = AnnotatedElementUtils.findMergedAnnotation(controller, CrossOrigin.class);
+            if (crossOrigin != null) {
+                for (String origin : crossOrigin.origins()) {
+                    assertFalse("*".equals(origin),
+                            controller.getSimpleName() + " không được dùng @CrossOrigin(origins = \"*\"); CORS tập trung tại SecurityConfig");
+                }
+            }
 
             RequestMapping classMapping = AnnotatedElementUtils.findMergedAnnotation(controller, RequestMapping.class);
             assertNotNull(classMapping, controller.getSimpleName() + " thiếu @RequestMapping ở cấp class");

@@ -96,6 +96,7 @@ VALUES ('spelling', 'Lỗi chính tả', 1, 10),
        ('logic', 'Logic câu dẫn - đáp án không khớp', 1, 40),
        ('distractor', 'Phương án nhiễu kém', 1, 50),
        ('style', 'Văn phong / nhất quán thuật ngữ', 1, 60),
+       ('key_doubt', 'Nghi ngờ đáp án đúng bị gán nhầm', 0, 70),
        ('none', 'Không phát hiện lỗi (đã duyệt mẫu)', 0, 900)
 ON DUPLICATE KEY UPDATE label_vi = VALUES(label_vi),
                         is_evaluated = VALUES(is_evaluated),

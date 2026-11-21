@@ -60,10 +60,9 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # Đang giữ "update" để test độc lập trên ntt_demo_llm (Hibernate tự tạo 3 bảng AI).
-      # Khi ghép vào DB chính đã chạy script ER v4: đổi thành "validate" hoặc "none"
-      # và đặt ai.demo.seed-issue-types=false.
-      ddl-auto: update
+      # Mặc định "update" để chạy thử độc lập trên ntt_demo_llm (tự tạo 3 bảng AI và 3 bảng demo).
+      # Khi ghép vào DB chính đã chạy script ER v4: đặt JPA_DDL_AUTO=validate và AI_DEMO_SEED_ISSUE_TYPES=false trong .env.
+      ddl-auto: ${JPA_DDL_AUTO:update}
     show-sql: false
     properties:
       hibernate:
@@ -176,6 +175,11 @@ ai:
     # Số câu chấm song song trong run demo AI (clamp 1..16).
     # 1 node: đặt = OLLAMA_NUM_PARALLEL trên Colab (3). 5 node x 3 slot: 10-15.
     eval-concurrency: ${AI_DEMO_EVAL_CONCURRENCY:10}
+
+  security:
+    jwt-secret: ${AI_JWT_SECRET:${JWT_SECRET:}}
+    internal-token: ${AI_INTERNAL_TOKEN:}
+    cors-allowed-origins: ${AI_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:8082,http://127.0.0.1:8082}
 
 logging:
   level:

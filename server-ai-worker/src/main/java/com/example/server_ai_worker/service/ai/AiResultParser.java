@@ -32,7 +32,8 @@ public class AiResultParser {
 
     private static final Set<String> ALLOWED_ISSUE_TYPES = Set.of(
             "spelling", "grammar", "logic", "distractor", "key_doubt");
-    private static final Set<String> VALIDATION_STATUSES = Set.of("draft", "approved", "rejected");
+    private static final Set<String> VALIDATION_STATUSES = Set.of(
+            "not_checked", "clean", "has_issues", "failed", "stale");
     private static final Set<String> SEARCH_IN_VALUES = Set.of("stem", "options", "explanation", "all");
     private static final int MAX_SUGGESTIONS = 8;
 

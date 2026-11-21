@@ -17,6 +17,7 @@ public class AiProperties {
     private final Orchestrator orchestrator = new Orchestrator();
     private final NlSearch nlSearch = new NlSearch();
     private final Demo demo = new Demo();
+    private final Security security = new Security();
 
     public Llm getLlm() {
         return llm;
@@ -40,6 +41,10 @@ public class AiProperties {
 
     public Demo getDemo() {
         return demo;
+    }
+
+    public Security getSecurity() {
+        return security;
     }
 
     public static class Llm {
@@ -363,6 +368,7 @@ public class AiProperties {
     public static class Demo {
         private long createdBy = 1L;
         private boolean seedIssueTypes = true;
+        private int evalConcurrency = 10;
 
         public boolean isSeedIssueTypes() {
             return seedIssueTypes;
@@ -378,6 +384,48 @@ public class AiProperties {
 
         public void setCreatedBy(long createdBy) {
             this.createdBy = createdBy;
+        }
+
+        public int getEvalConcurrency() {
+            return evalConcurrency;
+        }
+
+        public void setEvalConcurrency(int evalConcurrency) {
+            this.evalConcurrency = evalConcurrency;
+        }
+    }
+
+    public static class Security {
+        private String jwtSecret = "";
+        private String internalToken = "";
+        private List<String> corsAllowedOrigins = new ArrayList<>(List.of(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:8082",
+                "http://127.0.0.1:8082"));
+
+        public String getJwtSecret() {
+            return jwtSecret;
+        }
+
+        public void setJwtSecret(String jwtSecret) {
+            this.jwtSecret = jwtSecret;
+        }
+
+        public String getInternalToken() {
+            return internalToken;
+        }
+
+        public void setInternalToken(String internalToken) {
+            this.internalToken = internalToken;
+        }
+
+        public List<String> getCorsAllowedOrigins() {
+            return corsAllowedOrigins;
+        }
+
+        public void setCorsAllowedOrigins(List<String> corsAllowedOrigins) {
+            this.corsAllowedOrigins = corsAllowedOrigins;
         }
     }
 }

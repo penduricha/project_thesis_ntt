@@ -32,15 +32,20 @@ class LoginController extends ChangeNotifier {
   Future<LoginResult> login({
     required int adminId,
     required String password,
+    String? totpCode,
   }) async {
     _setLoading(true);
     try {
+      final manualTotp = totpCode?.trim();
+      final resolvedTotp = (manualTotp != null && manualTotp.isNotEmpty)
+          ? manualTotp
+          : await _currentTotpCode(adminId);
       final admin = AdminLogin(
         adminId: adminId,
         password: password,
         deviceName: await _deviceInfoService.getDeviceName(),
         platform: _deviceInfoService.platform,
-        totpCode: await _currentTotpCode(adminId),
+        totpCode: resolvedTotp,
       );
 
       final result = await _loginService.login(admin);

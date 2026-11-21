@@ -48,10 +48,15 @@ class AuthStorage {
   AuthStorage({FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
 
-  static const String _adminIdKey = 'admin_id';
-  static const String _adminNameKey = 'admin_name';
-  static const String _accessTokenKey = 'access_token';
-  static const String _refreshTokenKey = 'refresh_token';
+  static const String adminIdKey = 'admin_id';
+  static const String adminNameKey = 'admin_name';
+  static const String accessTokenKey = 'access_token';
+  static const String refreshTokenKey = 'refresh_token';
+
+  static const String _adminIdKey = adminIdKey;
+  static const String _adminNameKey = adminNameKey;
+  static const String _accessTokenKey = accessTokenKey;
+  static const String _refreshTokenKey = refreshTokenKey;
 
   // Bản sao trong bộ nhớ, dùng chung toàn app để lấy adminId ngay (đồng bộ),
   // không cần await. Được nạp khi lưu phiên mới hoặc khi gọi readSession().

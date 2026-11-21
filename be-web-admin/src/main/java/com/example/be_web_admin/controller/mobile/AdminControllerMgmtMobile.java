@@ -22,7 +22,6 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping("/mobile/admin")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminControllerMgmtMobile {
 
     private final AdminServiceImpl adminService;
@@ -132,7 +131,7 @@ public class AdminControllerMgmtMobile {
         }
 
         // Lấy adminId trước khi xoá token (ưu tiên refresh token vì sống lâu hơn).
-        Long adminId = resolveAdminId(refreshToken, accessToken);
+        Long adminId = resolveAdminIdForLogout(refreshToken, accessToken);
 
         try {
             if (accessToken != null) {
@@ -171,8 +170,8 @@ public class AdminControllerMgmtMobile {
         // 2. Lấy Token ra khỏi chuỗi "Bearer "
         String jwtToken = authHeader.substring(7);
 
-        // 3. Verify chữ ký & hạn sử dụng JWT Token
-        if (!adminJwtTokenProvider.validateToken(jwtToken)) {
+        // 3. Verify chữ ký, hạn sử dụng và token_type == ACCESS
+        if (!adminJwtTokenProvider.validateAccessToken(jwtToken)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(errorBody("Token is invalid or expired."));
         }
@@ -216,8 +215,8 @@ public class AdminControllerMgmtMobile {
         // 2. Lấy Token ra khỏi chuỗi "Bearer "
         String jwtToken = authHeader.substring(7);
 
-        // 3. Verify chữ ký & hạn sử dụng JWT Token
-        if (!adminJwtTokenProvider.validateToken(jwtToken)) {
+        // 3. Verify chữ ký, hạn sử dụng và token_type == REFRESH
+        if (!adminJwtTokenProvider.validateRefreshToken(jwtToken)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(errorBody("Token is invalid or expired."));
         }
@@ -293,7 +292,7 @@ public class AdminControllerMgmtMobile {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
         String jwtToken = authHeader.substring(7);
         try {
-            if (!adminJwtTokenProvider.validateToken(jwtToken)) return null;
+            if (!adminJwtTokenProvider.validateAccessToken(jwtToken)) return null;
             if (!adminTokenService.findAdminAccessTokenByJwtToken(jwtToken)) return null;
             return adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
         } catch (Exception e) {
@@ -379,16 +378,13 @@ public class AdminControllerMgmtMobile {
         }
     }
 
-    private Long resolveAdminId(String... jwtTokens) {
-        for (String jwtToken : jwtTokens) {
-            if (jwtToken == null) continue;
-            try {
-                if (adminJwtTokenProvider.validateToken(jwtToken)) {
-                    return adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
-                }
-            } catch (Exception e) {
-                log.warn("Can't read adminId from token: {}", e.getMessage());
-            }
+    private Long resolveAdminIdForLogout(String refreshToken, String accessToken) {
+        if (refreshToken != null) {
+            Long id = adminJwtTokenProvider.parseRefreshTokenAdminId(refreshToken);
+            if (id != null) return id;
+        }
+        if (accessToken != null) {
+            return adminJwtTokenProvider.parseAccessTokenAdminId(accessToken);
         }
         return null;
     }

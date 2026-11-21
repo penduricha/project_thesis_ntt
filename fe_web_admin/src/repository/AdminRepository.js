@@ -102,7 +102,7 @@ export default class AdminRepository {
             return null;
         }
 
-        const response = await this.adminService.getAdminInformationBasicRequestByAdminId(adminId);
+        const response = await this.adminService.getAdminInformationBasicRequestByAdminId(adminId, new TokenLogin());
         return response?.data?.data ?? null;
     }
 
@@ -112,11 +112,15 @@ export default class AdminRepository {
         const adminId = this.adminLocalStorage.getAdminIdToLocalStorage();
 
         if (!isAutoLoggedIn || !adminId) {
-            return null;
+            throw new Error('Phiên đăng nhập không hợp lệ.');
         }
 
-        const response = await this.adminService.getAdminInformationDetailRequestByAdminId(adminId);
-        return response?.data?.data ?? null;
+        const response = await this.adminService.getAdminInformationDetailRequestByAdminId(adminId, new TokenLogin());
+        const detail = response?.data?.data;
+        if (!detail || typeof detail !== 'object' || Object.keys(detail).length === 0) {
+            throw new Error('Không có dữ liệu chi tiết quản trị viên.');
+        }
+        return detail;
     }
 
     // ---------- Private helpers ----------

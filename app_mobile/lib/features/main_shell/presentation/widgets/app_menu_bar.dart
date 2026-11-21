@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/auth_storage.dart';
+import '../../../authenticator/data/service/enrollment_service.dart';
 import '../../../config/network/spring_config_header.dart';
 import 'logout_confirm_dialog.dart';
 
@@ -69,11 +70,18 @@ class _AppMenuBarState extends State<AppMenuBar> {
   }
 
   /// Server trả { success, message, data: { adminName } }; adminId lấy từ access token nên không gửi kèm.
-  /// Trả null nếu lỗi mạng / token hết hạn (401) / server / tên rỗng.
+  /// Nếu access token hết hạn (401), tự làm mới bằng refresh token rồi gọi lại 1 lần.
   Future<String?> _fetchAdminName(String accessToken) async {
-    final response = await SpringConfigHeader()
+    var response = await SpringConfigHeader()
         .getApiClientWithHeadersToken(accessToken)
         .get<Map<String, dynamic>>(_adminNamePath);
+    if (response.statusCode == 401) {
+      final refreshed = await const SecureStorageEnrollmentAuth().refreshAccessToken();
+      if (refreshed == null || refreshed.isEmpty) return null;
+      response = await SpringConfigHeader()
+          .getApiClientWithHeadersToken(refreshed)
+          .get<Map<String, dynamic>>(_adminNamePath);
+    }
     final data = response.data?['data'];
     final name = data is Map ? data['adminName'] : null;
     if (response.statusCode != 200 || name is! String) return null;
@@ -110,26 +118,23 @@ class _AppMenuBarState extends State<AppMenuBar> {
                   _MenuItem(
                     icon: Icons.person_outline,
                     label: 'Account',
-                    onTap: () {
-                      Navigator.pop(context); // Đóng drawer
-                      // TODO: Chuyển sang màn hình Tài khoản
-                    },
+                    onTap: () => _showAccountInfo(context),
                   ),
                   _MenuItem(
                     icon: Icons.settings_outlined,
                     label: 'Settings',
-                    onTap: () {
-                      Navigator.pop(context); // Đóng drawer
-                      // TODO: Chuyển sang màn hình Cài đặt
-                    },
+                    onTap: () => _showInfoMessage(
+                      context,
+                      '2FA & chat settings are managed in the app tabs.',
+                    ),
                   ),
                   _MenuItem(
                     icon: Icons.feedback_outlined,
                     label: 'Send Feedback',
-                    onTap: () {
-                      Navigator.pop(context); // Đóng drawer
-                      // TODO: Chuyển sang màn hình gửi phản hồi
-                    },
+                    onTap: () => _showInfoMessage(
+                      context,
+                      'Please contact the system administrator for feedback.',
+                    ),
                   ),
                 ],
               ),
@@ -227,6 +232,42 @@ class _AppMenuBarState extends State<AppMenuBar> {
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
     );
+  }
+
+  void _showAccountInfo(BuildContext context) {
+    final navigator = Navigator.of(context);
+    final adminId = AuthStorage.cachedAdminId;
+    final displayName = _adminName ?? AuthStorage.cachedAdminName ?? _fallbackName;
+    navigator.pop();
+    showDialog<void>(
+      context: navigator.context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Account'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Name: $displayName'),
+            if (adminId != null) ...[
+              const SizedBox(height: 6),
+              Text('Admin ID: $adminId'),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInfoMessage(BuildContext context, String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    Navigator.pop(context);
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 
   // Đăng xuất là thao tác "phá hủy phiên" -> luôn hỏi xác nhận trước khi thực hiện.

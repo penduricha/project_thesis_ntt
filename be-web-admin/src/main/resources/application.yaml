@@ -20,8 +20,15 @@ gg:
   jte:
     developmentMode: false
 
-# ===================== CẤU HÌNH ỨNG DỤNG (2FA) =====================
+# ===================== CẤU HÌNH ỨNG DỤNG (2FA & BẢO MẬT) =====================
 app:
+  jwt:
+    secret: ${JWT_SECRET:}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5375,http://127.0.0.1:5375}
+  seed:
+    enabled: ${APP_SEED_ENABLED:false}
+    default-password: ${APP_SEED_DEFAULT_PASSWORD:}
   crypto:
     # Phiên bản khóa dùng để MÃ HÓA bản ghi mới. Được lưu vào ntt_totp_credentials.key_version.
     # Muốn xoay khóa: thêm khóa mới vào "keys", tăng active-version, giữ khóa cũ cho đến khi
@@ -84,10 +91,9 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # CSDL có sẵn và do bạn quản lý bằng script SQL: không để Hibernate tự sửa schema.
-      # "update" không sửa được cột ENUM/kiểu đã tồn tại, chỉ tạo cột mới và dễ gây lệch ngầm.
-      # Dùng "none" cho đến khi mọi script ALTER đã chạy; sau đó thử "validate" để phát hiện lệch.
-      ddl-auto: update
+      # CSDL có sẵn và do bạn quản lý bằng script SQL: khi production đã chạy đủ script SQL, đặt JPA_DDL_AUTO=validate trong .env.
+      # Giữ mặc định "update" để tương thích dev local chưa chạy hết script ALTER/chat mới.
+      ddl-auto: ${JPA_DDL_AUTO:update}
     # Tắt show-sql: trùng với org.hibernate.SQL và in ra console không qua logger.
     show-sql: false
     properties:
@@ -124,10 +130,14 @@ logging:
 # Mọi con số của module chat (xem ChatProperties). Giá trị bên dưới là mặc định, xóa dòng nào thì dùng mặc định trong mã.
 chat:
   ws:
-    # Origin được phép bắt tay WebSocket (Flutter web 5375, Vue admin 5374). Ứng dụng mobile gốc không gửi Origin nên luôn qua.
-    allowed-origins:
+    # Origin pattern được phép bắt tay WebSocket (Flutter web 5375, Vue admin 5374/5173). Ứng dụng mobile gốc không gửi Origin nên luôn qua.
+    allowed-origin-patterns:
       - http://localhost:5375
       - http://localhost:5374
+      - http://localhost:5173
+      - http://127.0.0.1:5375
+      - http://127.0.0.1:5374
+      - http://127.0.0.1:5173
     ticket-ttl-seconds: 30        # hạn của vé mở WebSocket (dùng một lần)
     ping-interval-seconds: 25     # chu kỳ ping đề xuất cho client
     idle-timeout-seconds: 50      # đóng kết nối im lặng quá lâu (nhỏ hơn mốc 60s của Nginx)

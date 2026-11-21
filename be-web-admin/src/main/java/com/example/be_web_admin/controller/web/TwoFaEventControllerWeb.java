@@ -18,7 +18,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Slf4j
 @RestController
 @RequestMapping("/web/admin")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class TwoFaEventControllerWeb {
 
     private final TwoFaEventServiceImpl eventService;
@@ -57,7 +56,7 @@ public class TwoFaEventControllerWeb {
         }
         String jwtToken = authHeader.substring(7);
         try {
-            if (!adminJwtTokenProvider.validateToken(jwtToken)) {
+            if (!adminJwtTokenProvider.validateAccessToken(jwtToken)) {
                 return null;
             }
             if (!adminTokenService.findAdminAccessTokenByJwtToken(jwtToken)) {

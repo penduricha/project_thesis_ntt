@@ -68,28 +68,20 @@ export class AdminService {
         });
     }
 
-    async getAdminInformationBasicRequestByAdminId(adminId) {
-        try {
-            const path = `${ENDPOINTS.INFORMATION}?adminId=${encodeURIComponent(adminId)}`;
-            return await this.springConfigHeader
-                .getAPIClientNoHeaders()
-                .get(path, this.springConfigHeader.getAuthorization());
-        } catch (error) {
-            console.error(error);
-            return null;
-        }
+    async getAdminInformationBasicRequestByAdminId(adminId, tokenLogin = new TokenLogin()) {
+        assertInstanceOf(tokenLogin, TokenLogin, 'TokenLogin');
+        const path = `${ENDPOINTS.INFORMATION}?adminId=${encodeURIComponent(adminId)}`;
+        return this.springConfigHeader
+            .getAuthorizedAPIClient(tokenLogin)
+            .get(path);
     }
 
-    async getAdminInformationDetailRequestByAdminId(adminId) {
-        try {
-            const path = `${ENDPOINTS.INFORMATION_DETAIL}?adminId=${encodeURIComponent(adminId)}`;
-            return await this.springConfigHeader
-                .getAPIClientNoHeaders()
-                .get(path, this.springConfigHeader.getAuthorization());
-        } catch (error) {
-            console.error(error);
-            return null;
-        }
+    async getAdminInformationDetailRequestByAdminId(adminId, tokenLogin = new TokenLogin()) {
+        assertInstanceOf(tokenLogin, TokenLogin, 'TokenLogin');
+        const path = `${ENDPOINTS.INFORMATION_DETAIL}?adminId=${encodeURIComponent(adminId)}`;
+        return this.springConfigHeader
+            .getAuthorizedAPIClient(tokenLogin)
+            .get(path);
     }
 
     /**

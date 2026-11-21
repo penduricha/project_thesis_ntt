@@ -10,17 +10,18 @@
   },
   "dependencies": {
     "@phosphor-icons/vue": "^2.2.1",
+    "@popperjs/core": "^2.11.8",
+    "axios": "1.18.0",
     "bootstrap": "^5.3.6",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "vuetify": "^3.8.9"
   },
   "devDependencies": {
     "@canvasjs/vue-charts": "^1.0.4",
-    "@vitejs/plugin-vue": "^5.2.3",
-    "axios": "1.18.0",
+    "@vitejs/plugin-vue": "^6.0.11",
     "sass-embedded": "^1.89.2",
     "vite": "8.0.16",
-    "vite-plugin-vue-devtools": "^7.7.2",
-    "vuetify": "^3.8.9"
+    "vite-plugin-vue-devtools": "^8.2.1"
   }
 }

@@ -142,6 +142,25 @@ async function mountApp(routes, targetPath) {
         routes,
     })
 
+    router.beforeEach((to) => {
+        const hasSessionTokens = Boolean(
+            tokenLogin.getAccessTokenFromStorage() && tokenLogin.getRefreshTokenFromStorage()
+        )
+        const matched = routes.find((route) => route.path === to.path)
+
+        if (!hasSessionTokens) {
+            if (!matched || matched.allow === false) {
+                return to.path === LOGIN_PATH ? true : LOGIN_PATH
+            }
+            return true
+        }
+
+        if (!matched) {
+            return to.path === NOT_FOUND_PATH ? true : NOT_FOUND_PATH
+        }
+        return true
+    })
+
     app.use(createVuetify())
     app.use(router)
 

@@ -95,10 +95,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     if (!mounted) return;
 
-    await _handleLoginResult(result);
+    await _handleLoginResult(result, adminId);
   }
 
-  Future<void> _handleLoginResult(LoginResult result) async {
+  Future<void> _handleLoginResult(LoginResult result, int adminId) async {
     switch (result) {
     // Trường hợp 1: thành công -> vào khung Tab (Authenticator | Chat),
     // xóa LoginScreen khỏi lịch sử. Token đã được controller lưu.
@@ -116,6 +116,30 @@ class _LoginScreenState extends State<LoginScreen> {
           buttonText: 'OK',
         );
         _focusPasswordAndSelectAll();
+
+    // Trường hợp 2a: tài khoản bật 2FA -> yêu cầu nhập mã 6 số hoặc đang bị khóa tạm.
+      case LoginTotpRequired(:final reason, :final message):
+        if (reason == LoginTotpFailureReason.locked) {
+          HapticFeedback.heavyImpact();
+          await showErrorDialog(
+            context,
+            icon: Icons.timer_off_outlined,
+            title: 'Too many attempts',
+            message: message,
+            buttonText: 'OK',
+          );
+          return;
+        }
+        HapticFeedback.mediumImpact();
+        final code = await _promptTotpCode(message);
+        if (!mounted || code == null) return;
+        final retryResult = await _controller.login(
+          adminId: adminId,
+          password: _passwordController.text,
+          totpCode: code,
+        );
+        if (!mounted) return;
+        await _handleLoginResult(retryResult, adminId);
 
     // Trường hợp 3: tài khoản đã đăng nhập ở thiết bị khác.
       case LoginBlockedByOtherDevice blocked:
@@ -138,6 +162,77 @@ class _LoginScreenState extends State<LoginScreen> {
           message: message,
           buttonText: 'OK',
         );
+    }
+  }
+
+  Future<String?> _promptTotpCode(String message) async {
+    final codeController = TextEditingController();
+    String? inlineError;
+    try {
+      return await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('Two-Factor Verification'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message,
+                      style: const TextStyle(fontSize: 14, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: codeController,
+                      autofocus: true,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      maxLength: 6,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(6),
+                      ],
+                      decoration: InputDecoration(
+                        hintText: '000000',
+                        counterText: '',
+                        errorText: inlineError,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      final trimmed = codeController.text.trim();
+                      if (!RegExp(r'^\d{6}$').hasMatch(trimmed)) {
+                        setDialogState(() {
+                          inlineError = 'Enter all 6 digits';
+                        });
+                        return;
+                      }
+                      Navigator.of(dialogContext).pop(trimmed);
+                    },
+                    child: const Text('Verify'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      codeController.dispose();
     }
   }
 

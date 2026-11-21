@@ -47,27 +47,6 @@ export default {
     }
   },
 
-  // Guard được Vue Router gọi trước khi rời khỏi route hiện tại
-  async beforeRouteLeave(to, from, next) {
-    if (to.path === '/login') {
-      try {
-        const adminRepository = new AdminRepository();
-        let status = await adminRepository.getResponseFromLogoutRequest();
-
-        if (status === "OK") {
-          next();
-        } else {
-          next(false);
-        }
-      } catch (error) {
-        console.error('Error to logout:', error);
-        next(false);
-      }
-    } else {
-      next();
-    }
-  },
-
   // ================= LIFECYCLE =================
 
   // 1. created: instance đã có data/computed/methods, CHƯA có DOM.
@@ -185,13 +164,16 @@ export default {
           silentRefresher.stop(); // đã đăng xuất: dừng làm mới ngầm (không còn token để làm mới)
           broadcastLogout(); // <-- báo các tab khác
           this.$refs.logoutDialog?.close();
-          await this.$router.replace({ path: pathLogin });
+          // Tải lại để bootstrap() nạp lại bộ route trước đăng nhập (routersBeforeLogin)
+          window.location.replace(pathLogin);
+        } else {
+          alert('Không thể đăng xuất lúc này. Vui lòng thử lại.');
         }
       } catch (error) {
         console.error('Error to logout:', error);
-        alert(error);
+        alert('Không thể kết nối máy chủ để đăng xuất.');
       } finally {
-        // Sau router.replace component có thể đã unmounted: không cập nhật state nữa
+        // Sau window.location.replace trang sẽ tải lại; kiểm tra isUnmounted để an toàn
         if (!this.isUnmounted) this.stopLoadButtonLogout();
       }
     },

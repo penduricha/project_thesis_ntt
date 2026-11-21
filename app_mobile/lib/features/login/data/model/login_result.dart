@@ -20,6 +20,21 @@ final class LoginRejected extends LoginResult {
   final String message;
 }
 
+enum LoginTotpFailureReason { required, invalid, locked }
+
+/// Trường hợp 2a: tài khoản đã bật 2FA — cần nhập mã 6 số hoặc đang bị khóa tạm.
+final class LoginTotpRequired extends LoginResult {
+  const LoginTotpRequired({
+    required this.reason,
+    required this.message,
+    this.retryAfterSeconds = 0,
+  });
+
+  final LoginTotpFailureReason reason;
+  final String message;
+  final int retryAfterSeconds;
+}
+
 /// Trường hợp 3: mật khẩu đúng nhưng tài khoản đã đăng nhập ở thiết bị khác (HTTP 409).
 final class LoginBlockedByOtherDevice extends LoginResult {
   const LoginBlockedByOtherDevice({

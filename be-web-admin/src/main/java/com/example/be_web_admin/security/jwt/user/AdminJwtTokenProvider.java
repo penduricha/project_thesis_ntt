@@ -6,34 +6,78 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Set;
 
 @Slf4j
 @Component
 public class AdminJwtTokenProvider {
 
-    // Khóa bí mật (Tối thiểu 32 ký tự / 256-bit cho HS256)
-    // Lưu ý: Trong thực tế nên đưa chuỗi này vào file application.properties/yml
-    private static final String JWT_SECRET = "x9K#mP$7vL2!nQ5@zW8*yR1&jF4^bC3(vT0)mN6+qX8=";
+    private static final int MIN_SECRET_BYTES = 32;
+    private static final Set<String> DEV_PROFILES = Set.of("dev", "test", "local");
 
-    // Thời gian hết hạn Access Token: 5 phút = 300,000 ms
+    // Thời gian hết hạn Access Token: 5 phút = 300,000 ms (khớp AdminAccessToken timeToLive = 300s)
     private static final long ACCESS_TOKEN_EXPIRATION = 5 * 60 * 1000L;
 
     // Thời gian hết hạn Refresh Token: 30 ngày = 2,592,000,000 ms
     private static final long REFRESH_TOKEN_EXPIRATION = 30L * 24 * 60 * 60 * 1000L;
 
-//    public JwtTokenProvider() {
-//
-//    }
+    private final SecretKey signingKey;
+    private final boolean usingEphemeralDevKey;
+    private final String configuredSecret;
 
-    // Tạo SecretKey từ chuỗi bí mật
+    @Autowired
+    public AdminJwtTokenProvider(
+            @Value("${app.jwt.secret:}") String configuredSecret,
+            Environment environment) {
+        this.configuredSecret = configuredSecret == null ? "" : configuredSecret.trim();
+        if (this.configuredSecret.isEmpty()) {
+            String[] activeProfiles = environment == null ? new String[0] : environment.getActiveProfiles();
+            boolean isDevLike = Arrays.stream(activeProfiles).anyMatch(DEV_PROFILES::contains);
+            if (!isDevLike) {
+                log.warn("JWT_SECRET chưa được cấu hình; JwtSecretGuard sẽ chặn khởi động ngoài profile dev/test/local.");
+            } else {
+                log.warn("JWT_SECRET trống trong profile dev/test/local: sinh khóa tạm trong bộ nhớ (token mất hiệu lực sau khi restart).");
+            }
+            byte[] randomBytes = new byte[48];
+            new SecureRandom().nextBytes(randomBytes);
+            this.signingKey = Keys.hmacShaKeyFor(randomBytes);
+            this.usingEphemeralDevKey = true;
+        } else {
+            byte[] keyBytes = this.configuredSecret.getBytes(StandardCharsets.UTF_8);
+            if (keyBytes.length < MIN_SECRET_BYTES) {
+                throw new IllegalStateException(
+                        "JWT_SECRET phải dài ít nhất " + MIN_SECRET_BYTES + " byte (256-bit cho HS256).");
+            }
+            this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+            this.usingEphemeralDevKey = false;
+        }
+    }
+
+    /** Constructor tiện cho unit test thuần Java. */
+    public AdminJwtTokenProvider(String configuredSecret) {
+        this(configuredSecret, null);
+    }
+
+    public boolean isUsingEphemeralDevKey() {
+        return usingEphemeralDevKey;
+    }
+
+    public String getConfiguredSecret() {
+        return configuredSecret;
+    }
+
     private SecretKey getSigningKey() {
-        byte[] keyBytes = JWT_SECRET.getBytes(StandardCharsets.UTF_8);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return signingKey;
     }
 
     /**
@@ -45,14 +89,12 @@ public class AdminJwtTokenProvider {
 
         return Jwts.builder()
                 // jti: iat/exp chỉ chính xác đến GIÂY, nên hai lần cấp token cho cùng admin trong cùng một giây
-                // (vd làm mới token hai lần liên tiếp) sẽ ra CHUỖI Y HỆT. addAdminAccessToken thấy token đã
-                // tồn tại, trả false, và refresh trả 401 "Can't create new tokens" -> app báo "Session expired".
+                // sẽ ra chuỗi y hệt nếu không có jti.
                 .id(java.util.UUID.randomUUID().toString())
                 .subject(String.valueOf(adminId))
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .claim("token_type", "ACCESS")
-                // Đánh dấu loại token để tránh dùng nhầm RT thay AT
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -65,7 +107,7 @@ public class AdminJwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION);
 
         return Jwts.builder()
-                .id(java.util.UUID.randomUUID().toString()) // xem chú thích ở generateAccessToken
+                .id(java.util.UUID.randomUUID().toString())
                 .subject(String.valueOf(adminId))
                 .issuedAt(now)
                 .expiration(expiryDate)
@@ -88,33 +130,35 @@ public class AdminJwtTokenProvider {
     }
 
     /**
-     * 4. Verify/Xác thực Token (Không cần gọi Database)
-     * Trả về true nếu Token hợp lệ và chưa hết hạn.
+     * 4. Verify/Xác thực Token (chữ ký, hạn dùng và token_type hợp lệ).
      */
     public boolean validateToken(String token) {
-        try {
-            Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token);
-            return true;
-        } catch (ExpiredJwtException e) {
-            // Token đã hết hạn: tình huống bình thường (access token chỉ sống 5 phút, client sẽ làm mới ngầm),
-            // nên chỉ ghi DEBUG thay vì in đỏ ra stderr mỗi request.
-            log.debug("JWT token expired: {}", e.getMessage());
-        } catch (JwtException | IllegalArgumentException e) {
-            // Token bị chỉnh sửa, sai chữ ký hoặc không đúng định dạng: đáng chú ý hơn
-            log.warn("JWT token invalid: {}", e.getMessage());
-        }
-        return false;
+        return parseAdminIdWithType(token, null) != null;
+    }
+
+    public boolean validateAccessToken(String token) {
+        return parseAccessTokenAdminId(token) != null;
+    }
+
+    public boolean validateRefreshToken(String token) {
+        return parseRefreshTokenAdminId(token) != null;
     }
 
     /**
-     * 5. (Dùng cho chat) Xác thực ACCESS token chỉ bằng chữ ký + hạn + token_type, trả adminId, hoặc null nếu không hợp lệ.
-     * Hàm bổ sung, KHÔNG đổi hành vi của các hàm ở trên. Cố ý không đối chiếu AdminAccessToken trên Redis (hạn 10 giây,
-     * lệch với JWT 5 phút) nên chat không bị đăng xuất oan.
+     * 5. Xác thực ACCESS token bằng chữ ký + hạn + token_type == "ACCESS", trả adminId hoặc null.
      */
     public Long parseAccessTokenAdminId(String token) {
+        return parseAdminIdWithType(token, "ACCESS");
+    }
+
+    /**
+     * 6. Xác thực REFRESH token bằng chữ ký + hạn + token_type == "REFRESH", trả adminId hoặc null.
+     */
+    public Long parseRefreshTokenAdminId(String token) {
+        return parseAdminIdWithType(token, "REFRESH");
+    }
+
+    private Long parseAdminIdWithType(String token, String expectedType) {
         if (token == null || token.isBlank()) {
             return null;
         }
@@ -124,14 +168,19 @@ public class AdminJwtTokenProvider {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-            if (!"ACCESS".equals(claims.get("token_type", String.class))) {
+            String tokenType = claims.get("token_type", String.class);
+            if (expectedType != null) {
+                if (!expectedType.equals(tokenType)) {
+                    return null;
+                }
+            } else if (!"ACCESS".equals(tokenType) && !"REFRESH".equals(tokenType)) {
                 return null;
             }
             return Long.parseLong(claims.getSubject());
         } catch (ExpiredJwtException e) {
-            log.debug("Chat: access token hết hạn: {}", e.getMessage());
+            log.debug("JWT token expired: {}", e.getMessage());
         } catch (JwtException | IllegalArgumentException e) {
-            log.warn("Chat: access token không hợp lệ: {}", e.getMessage());
+            log.warn("JWT token invalid: {}", e.getMessage());
         }
         return null;
     }

@@ -1,1 +1,13 @@
 .env
+**/.env
+.env.*
+!**/.env.example
+!**/.env.template
+python_demo_llm/endpoints.json
+node_modules/
+**/dist/
+**/.gradle/
+**/build/
+**/.dart_tool/
+__pycache__/
+.DS_Store

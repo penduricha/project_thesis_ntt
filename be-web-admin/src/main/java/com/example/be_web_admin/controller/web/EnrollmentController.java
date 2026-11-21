@@ -26,7 +26,6 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/web/admin")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class EnrollmentController {
 
     private final EnrollmentServiceImpl enrollmentService;
@@ -164,7 +163,7 @@ public class EnrollmentController {
         }
         String jwtToken = authHeader.substring(7);
         try {
-            if (!adminJwtTokenProvider.validateToken(jwtToken)) {
+            if (!adminJwtTokenProvider.validateAccessToken(jwtToken)) {
                 return null;
             }
             if (!adminTokenService.findAdminAccessTokenByJwtToken(jwtToken)) {

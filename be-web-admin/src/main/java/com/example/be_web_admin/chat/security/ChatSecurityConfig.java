@@ -1,6 +1,7 @@
 package com.example.be_web_admin.chat.security;
 
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
+import com.example.be_web_admin.service.redis.AdminTokenService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +29,10 @@ public class ChatSecurityConfig {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain chatSecurityFilterChain(HttpSecurity http, AdminJwtTokenProvider tokenProvider) throws Exception {
+    public SecurityFilterChain chatSecurityFilterChain(
+            HttpSecurity http,
+            AdminJwtTokenProvider tokenProvider,
+            AdminTokenService adminTokenService) throws Exception {
         http
                 .securityMatcher(new AntPathRequestMatcher("/mobile/chat/**"))
                 // Dùng lại CorsConfigurationSource đã khai báo trong SecurityConfig.
@@ -46,7 +50,7 @@ public class ChatSecurityConfig {
                     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                     response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Thiếu hoặc sai access token.\"}");
                 }))
-                .addFilterBefore(new ChatJwtFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new ChatJwtFilter(tokenProvider, adminTokenService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }

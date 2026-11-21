@@ -54,30 +54,41 @@ class LoginService {
       return _parseBlockedByOtherDevice(body);
     }
 
-    // Trường hợp 2a: mật khẩu đúng nhưng tài khoản đã bật 2FA mà mã không qua.
-    final twoFaMessage = _twoFaMessage(body);
-    if (twoFaMessage != null) return LoginRejected(twoFaMessage);
+    // Trường hợp 2a: mật khẩu đúng nhưng tài khoản đã bật 2FA.
+    final totpResult = _mapTwoFaResult(body);
+    if (totpResult != null) return totpResult;
 
     // Trường hợp 2: sai Admin Id / mật khẩu hoặc server từ chối.
     return LoginRejected(_readString(body['message']) ?? _defaultRejectedMessage);
   }
 
   /// data.code do server trả (cùng quy ước với Web): TOTP_REQUIRED | TOTP_INVALID | LOCKED.
-  String? _twoFaMessage(Map<String, dynamic> body) {
+  LoginResult? _mapTwoFaResult(Map<String, dynamic> body) {
     final data = body['data'];
     if (data is! Map<String, dynamic>) return null;
     switch (data['code']) {
       case 'TOTP_REQUIRED':
-        return 'Two-factor authentication is on for this account, '
-            'but this device has no key for it.';
+        return const LoginTotpRequired(
+          reason: LoginTotpFailureReason.required,
+          message: 'Two-factor authentication is enabled on this account. '
+              'Enter the 6-digit code from your Authenticator app.',
+        );
       case 'TOTP_INVALID':
-        return 'The code was rejected. The key on this device may be out of '
-            'date, or the code was just used. Wait a few seconds and try again.';
+        return const LoginTotpRequired(
+          reason: LoginTotpFailureReason.invalid,
+          message: 'The 6-digit code was incorrect or expired. '
+              'Wait for the next code and try again.',
+        );
       case 'LOCKED':
         final secs = data['retryAfterSeconds'];
-        return secs is num
-            ? 'Too many wrong codes. Try again in ${secs.toInt()} seconds.'
-            : 'Too many wrong codes. Try again later.';
+        final retry = secs is num ? secs.toInt() : 0;
+        return LoginTotpRequired(
+          reason: LoginTotpFailureReason.locked,
+          retryAfterSeconds: retry,
+          message: retry > 0
+              ? 'Too many wrong codes. Try again in $retry seconds.'
+              : 'Too many wrong codes. Try again later.',
+        );
     }
     return null;
   }

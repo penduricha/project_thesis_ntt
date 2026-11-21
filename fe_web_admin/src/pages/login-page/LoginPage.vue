@@ -5,7 +5,6 @@ import RouterMgmt from "@/router/RouterMgmt.js";
 import ButtonRed from "@/components/button/button_red/ButtonRed.vue";
 
 import AdminStorage from "@/local_storage/AdminStorage.js";
-import {AdminAccount} from "@/model/AdminAccount.js";
 import AdminRepository, {REQUEST_STATUS} from "@/repository/AdminRepository.js";
 import {silentRefresher} from "@/services/auth/SilentTokenRefresher.js";
 import Footer from "@/components/footer/Footer.vue";
@@ -138,11 +137,6 @@ export default {
       const routePath = this.$route.path;
       const routerManagement = new RouterMgmt();
       routerManagement.savePathToSessionStorage(routePath);
-    },
-
-    //lock paste
-    preventPaste(event) {
-      event.preventDefault();
     },
 
     /* ------------------------------------------------------------
@@ -473,11 +467,9 @@ export default {
     },
 
     saveDataInputToLocalStorage() {
-      if (this.adminId && this.password) {
+      if (this.adminId) {
         const adminLocalStorage = new AdminStorage();
-        adminLocalStorage.saveLocalStorageRememberMe(
-            this.adminId,
-            this.password.trim());
+        adminLocalStorage.saveLocalStorageRememberMe(this.adminId);
       }
     },
 
@@ -498,12 +490,8 @@ export default {
     },
 
     setDataInputFromLocalStorage(adminFetched) {
-      if (adminFetched) {
-        let adminId = adminFetched.adminId;
-        let password = adminFetched.password;
-        const adminAccount = new AdminAccount(adminId, password);
-        this.adminId = adminAccount.getAdminId();
-        this.password = adminAccount.getPassword();
+      if (adminFetched?.adminId) {
+        this.adminId = String(adminFetched.adminId);
       }
     }
   },
@@ -579,11 +567,9 @@ export default {
                        ref="inputPassword"
                        placeholder="Mật khẩu"
                        autocomplete="current-password"
-                       maxlength="20"
                        :aria-invalid="invalidPassword"
                        :aria-describedby="errors.password ? 'errorPassword' : null"
                        @input="setInputPassword"
-                       @paste="preventPaste($event)"
                        v-model="password">
                 <label for="floatingInputPassword">Mật khẩu</label>
                 <button type="button" class="btn-toggle-password"
@@ -641,9 +627,8 @@ export default {
               <label for="rememberMe">Ghi nhớ đăng nhập</label>
             </div>
 
-            <!-- Nếu ButtonRed render <button type="submit"> thì có thể xoá @click (form @submit đã gọi rồi) -->
             <ButtonRed class="btn-login btn-login-border-radius"
-                       @click="handleLoginEvent()"
+                       button-type="submit"
                        :text-button="isSubmitting ? '' : (isLocked ? 'Thử lại sau ' + lockCountdownLabel : 'Đăng nhập')"
                        :loading-button="isSubmitting"
                        :disable-button="isFormDisabled"

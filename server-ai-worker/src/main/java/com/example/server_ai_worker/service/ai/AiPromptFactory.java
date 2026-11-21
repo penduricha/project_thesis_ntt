@@ -112,7 +112,7 @@ public class AiPromptFactory {
             - subject_code: CHỈ chọn đúng mã có trong danh mục môn học bên dưới; nếu không nhắc tới hoặc không khớp rõ ràng thì để null.
             - topic_name: CHỈ chọn đúng tên chủ đề có trong danh mục bên dưới (ưu tiên chủ đề thuộc môn đã chọn); nếu không khớp thì để null.
             - difficulty: số nguyên 1 (rất dễ/nhận biết) đến 5 (rất khó/vận dụng cao), hoặc null nếu không đề cập. Map gần đúng: dễ -> 1 hoặc 2, trung bình -> 3, khó -> 4 hoặc 5.
-            - validation_status: "draft" (nháp/chờ duyệt), "approved" (đã duyệt), "rejected" (từ chối), hoặc null.
+            - validation_status: "not_checked" (chưa kiểm tra / nháp), "clean" (đạt chuẩn / sạch / không lỗi / đã duyệt), "has_issues" (có lỗi / cần sửa), "failed" (kiểm tra thất bại), "stale" (cần kiểm tra lại), hoặc null.
             - keywords: danh sách từ khóa chuyên môn quan trọng để tìm toàn văn (bỏ các từ nhiễu như "tìm câu hỏi", "cho tôi", "mức độ", "trạng thái").
             - search_in: phạm vi tìm từ khóa ("stem", "options", "explanation", hoặc mặc định "all").
             - created_from, created_to: định dạng YYYY-MM-DD tính theo hôm nay nếu có nhắc mốc thời gian ("hôm nay", "tuần này", "tháng trước"...), ngược lại để null.
@@ -217,7 +217,7 @@ public class AiPromptFactory {
 
         ObjectNode valStatus = propsNode.putObject("validation_status");
         valStatus.putArray("type").add("string").add("null");
-        valStatus.putArray("enum").add("draft").add("approved").add("rejected").addNull();
+        valStatus.putArray("enum").add("not_checked").add("clean").add("has_issues").add("failed").add("stale").addNull();
 
         ObjectNode keywords = propsNode.putObject("keywords");
         keywords.put("type", "array");

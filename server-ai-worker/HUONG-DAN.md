@@ -25,10 +25,11 @@ Module worker AI độc lập được xây dựng sạch sẽ từ `server-ai-d
 
 ## 2. Chạy thử độc lập với `ntt_demo_llm`
 
-1. Sao chép `.env` thành `.env` ngay trong `server-ai-worker/` và điền thông số MariaDB + Redis:
+1. Sao chép `.env.example` thành `.env` ngay trong `server-ai-worker/` và điền thông số MariaDB + Redis + `JWT_SECRET` (hoặc `AI_INTERNAL_TOKEN`):
    ```bash
-   cp .env .env
+   cp .env.example .env
    ```
+   (Mặc định `JPA_DDL_AUTO=update` sẽ tự tạo bảng trên `ntt_demo_llm` khi chạy độc lập.)
 2. Đảm bảo MariaDB đang chạy (database `ntt_demo_llm` đã được tạo: `CREATE DATABASE IF NOT EXISTS ntt_demo_llm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`) và Redis đang chạy.
 3. Chạy project bằng JDK 17+:
    ```bash
@@ -39,12 +40,12 @@ Module worker AI độc lập được xây dựng sạch sẽ từ `server-ai-d
    ./gradlew test
    ```
 4. Mở trang test giao diện:
-   - `http://localhost:8082/api/node-colab.html`
-   - Dán cặp `URL` + `TOKEN` từ Colab notebook, bấm **Kết nối** → **Lưu**, sau đó thử cả `nl_search`, `burst`, và `question_check` (để trống `questionId`/`questionRevisionId` khi test trên `ntt_demo_llm`).
+   - `http://localhost:8082/api/node-colab.html` hoặc `http://localhost:8082/api/demo-eval.html`
+   - Nhập `JWT` (ACCESS token từ `be-web-admin`) hoặc `AI_INTERNAL_TOKEN`, bấm **Kết nối**, sau đó dán cặp `URL` + `TOKEN` từ Colab notebook → **Lưu** và thử `nl_search`, `burst`, hoặc `question_check`.
 
 ## 3. Chuyển sang DB chính ER v4 sau này
 
 Khi ghép với `be-web-admin` (Server 1):
-1. Trong `application.yml` hoặc biến môi trường, đặt `JPA_DDL_AUTO=validate` (hoặc `none`) và `AI_DEMO_SEED_ISSUE_TYPES=false` (vì SQL migration đã tạo bảng và seed sẵn `ntt_issue_types`).
+1. Đặt `JPA_DDL_AUTO=validate` và `AI_DEMO_SEED_ISSUE_TYPES=false` trong `.env` (vì SQL migration đã tạo bảng và seed sẵn `ntt_issue_types`).
 2. Đặt `AI_DEMO_CREATED_BY` bằng một `admin_id` thật trong `ntt_admins` (nếu còn dùng endpoint test).
-3. Khóa `/web/ai/**` trong `SecurityConfig` bằng JWT/internal gateway trước khi đưa lên môi trường thật.
+3. Cấu hình chung `JWT_SECRET` (>= 32 ký tự) với `be-web-admin` và/hoặc `AI_INTERNAL_TOKEN` để mọi endpoint `/web/ai/**` luôn được bảo vệ (`SecurityConfig` + `AiAuthFilter` đã mặc định fail-closed).

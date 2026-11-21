@@ -6,40 +6,42 @@ export default class AdminStorage {
     };
 
     /**
-     * Lưu thông tin admin vào localStorage
-     * @param {Object} admin
+     * Lưu thông tin Remember Me (chỉ lưu adminId, tuyệt đối không lưu mật khẩu ở localStorage)
+     * @param {number|string} adminId
      */
-    // setAdminLocalStorage(admin) {
-    //     if (!admin) {
-    //         console.error('Admin object is empty.');
-    //         return;
-    //     }
-    //     localStorage.setItem(AdminStorage.STORAGE_KEYS.ADMIN, JSON.stringify(admin));
-    // }
-    /**
-     * Lưu thông tin Remember Me (adminId & password)
-     * @param {number} adminId
-     * @param {string} password
-     */
-    saveLocalStorageRememberMe(adminId, password) {
-        if (!adminId || !password) {
-            console.error('Admin ID or password is null.');
+    saveLocalStorageRememberMe(adminId) {
+        if (!adminId) {
+            console.error('Admin ID is null.');
             return;
         }
-        const credentials = { adminId, password };
         localStorage.setItem(
             AdminStorage.STORAGE_KEYS.REMEMBER_LOGIN,
-            JSON.stringify(credentials)
+            JSON.stringify({ adminId: String(adminId) })
         );
     }
 
     /**
-     * Lấy thông tin Remember Me
+     * Lấy thông tin Remember Me (tự xóa trường password cũ nếu tồn tại trong localStorage)
      * @returns {Object}
      */
     getLocalStorageRememberMe() {
-        const data = localStorage.getItem(AdminStorage.STORAGE_KEYS.REMEMBER_LOGIN);
-        return data ? JSON.parse(data) : {};
+        const raw = localStorage.getItem(AdminStorage.STORAGE_KEYS.REMEMBER_LOGIN);
+        if (!raw) {
+            return {};
+        }
+        try {
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object' || !parsed.adminId) {
+                return {};
+            }
+            if ('password' in parsed) {
+                this.saveLocalStorageRememberMe(parsed.adminId);
+            }
+            return { adminId: parsed.adminId };
+        } catch {
+            this.removeLocalStorageRememberMe();
+            return {};
+        }
     }
 
     /**
@@ -54,7 +56,6 @@ export default class AdminStorage {
 
     /**
      * Lưu riêng adminId vào localStorage
-     *
      */
     setAdminIdToLocalStorage(adminId) {
         if (!adminId) {

@@ -1,8 +1,11 @@
 package com.example.server_ai_worker.service.ai;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -18,7 +21,8 @@ import com.example.server_ai_worker.repository.jpa.AiTaskRepository;
 import com.example.server_ai_worker.service.redis.AiQueueService;
 
 /**
- * Vòng lặp điều phối trung tâm: lấy task từ ai:queue và đẩy vào bể luồng worker để AiTaskProcessor chạy.
+ * Vòng lặp điều phối trung tâm: giữ Semaphore đúng bằng sức chứa worker trước khi rút task từ ai:queue,
+ * tránh rút cạn hàng đợi Redis vào hàng đợi bộ nhớ khi toàn bộ worker đang bận.
  * Định kỳ quét các task bị kẹt ở running quá lâu và làm mới heartbeat node trên Redis.
  */
 @Component
@@ -33,7 +37,8 @@ public class AiDispatcher implements SmartLifecycle {
     private final AiProperties props;
 
     private volatile boolean running;
-    private ScheduledExecutorService workerPool;
+    private ExecutorService workerPool;
+    private Semaphore workerSlots;
     private ScheduledExecutorService sweeper;
     private Thread loopThread;
 
@@ -56,7 +61,8 @@ public class AiDispatcher implements SmartLifecycle {
         }
         int capacity = Math.max(4, nodePool.totalCapacity());
         AtomicInteger n = new AtomicInteger();
-        this.workerPool = Executors.newScheduledThreadPool(capacity,
+        this.workerSlots = new Semaphore(capacity);
+        this.workerPool = Executors.newFixedThreadPool(capacity,
                 r -> new Thread(r, "ai-worker-" + n.incrementAndGet()));
         this.sweeper = Executors.newSingleThreadScheduledExecutor(
                 r -> new Thread(r, "ai-sweeper"));
@@ -77,15 +83,37 @@ public class AiDispatcher implements SmartLifecycle {
                     Thread.sleep(1000);
                     continue;
                 }
-                String taskId = queue.pop(props.getOrchestrator().getQueueBlock());
-                if (taskId == null) {
-                    continue;
+                workerSlots.acquire();
+                boolean handedOff = false;
+                try {
+                    if (!running) {
+                        break;
+                    }
+                    String taskId = queue.pop(props.getOrchestrator().getQueueBlock());
+                    if (taskId == null) {
+                        continue;
+                    }
+                    if (!running) {
+                        queue.push(taskId);
+                        break;
+                    }
+                    try {
+                        workerPool.execute(() -> {
+                            try {
+                                processor.process(taskId);
+                            } finally {
+                                workerSlots.release();
+                            }
+                        });
+                        handedOff = true;
+                    } catch (RejectedExecutionException rejected) {
+                        queue.push(taskId);
+                    }
+                } finally {
+                    if (!handedOff) {
+                        workerSlots.release();
+                    }
                 }
-                if (!running) {
-                    queue.push(taskId);
-                    break;
-                }
-                workerPool.execute(() -> processor.process(taskId));
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -105,7 +133,7 @@ public class AiDispatcher implements SmartLifecycle {
         try {
             nodePool.heartbeat();
             long stuckSec = props.getOrchestrator().getStuckAfter().toSeconds();
-            int maxAttempts = props.getOrchestrator().getMaxAttempts();
+            int maxAttempts = Math.min(5, Math.max(1, props.getOrchestrator().getMaxAttempts()));
             List<String> stuckIds = tasks.findStuckRunningIds(stuckSec);
             for (String id : stuckIds) {
                 AiTask t = tasks.findById(id).orElse(null);

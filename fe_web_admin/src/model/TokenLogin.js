@@ -13,9 +13,16 @@ export class TokenLogin {
      * @param {string} [accessToken] - Mã access token.
      * @param {string} [refreshToken] - Mã refresh token.
      */
-    constructor(accessToken, refreshToken) {
-        this.#accessToken = String(accessToken);
-        this.#refreshToken = String(refreshToken);
+    constructor(accessToken = "", refreshToken = "") {
+        this.#accessToken = TokenLogin.#normalize(accessToken);
+        this.#refreshToken = TokenLogin.#normalize(refreshToken);
+    }
+
+    static #normalize(value) {
+        if (value === null || value === undefined) {
+            return "";
+        }
+        return String(value).trim();
     }
 
     // ================= GETTER & SETTER =================
@@ -31,7 +38,7 @@ export class TokenLogin {
      * @returns {void}
      */
     setAccessToken(value) {
-        this.#accessToken = String(value);
+        this.#accessToken = TokenLogin.#normalize(value);
     }
 
     /**
@@ -45,17 +52,20 @@ export class TokenLogin {
      * @returns {void}
      */
     setRefreshToken(value) {
-        this.#refreshToken = String(value);
+        this.#refreshToken = TokenLogin.#normalize(value);
     }
 
     // ================= LOCALSTORAGE METHODS =================
 
     /**
-     *
      * @returns {void}
      */
     setAccessTokenToStorage() {
-        localStorage.setItem("accessToken", this.#accessToken);
+        if (this.#accessToken) {
+            localStorage.setItem("accessToken", this.#accessToken);
+        } else {
+            localStorage.removeItem("accessToken");
+        }
     }
 
     /**
@@ -71,11 +81,14 @@ export class TokenLogin {
     }
 
     /**
-     *
      * @returns {void}
      */
     setRefreshTokenToStorage() {
-        localStorage.setItem("refreshToken", this.#refreshToken);
+        if (this.#refreshToken) {
+            localStorage.setItem("refreshToken", this.#refreshToken);
+        } else {
+            localStorage.removeItem("refreshToken");
+        }
     }
 
     /**
@@ -91,7 +104,6 @@ export class TokenLogin {
     }
 
     /**
-     *
      * @returns {void}
      */
     removeAccessTokenAndRefreshTokenFromStorage() {
@@ -102,10 +114,9 @@ export class TokenLogin {
     // ================= TO STRING =================
 
     /**
-     *
      * @returns {string}
      */
     toString() {
-        return `TokenLogin [accessToken=${this.#accessToken}, refreshToken=${this.#refreshToken}]`;
+        return "TokenLogin [configured=" + Boolean(this.#accessToken || this.#refreshToken) + "]";
     }
 }

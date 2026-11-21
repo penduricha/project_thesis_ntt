@@ -135,7 +135,7 @@ public class AiTaskProcessor {
     private void executeWithRetry(AiTask task, JsonNode input, String nlQueryHash) {
         String taskId = task.getTaskId();
         AiTaskType type = task.getTaskType();
-        int maxAttempts = props.getOrchestrator().getMaxAttempts();
+        int maxAttempts = Math.min(5, Math.max(1, props.getOrchestrator().getMaxAttempts()));
         int attempt = task.getAttemptCount();
         Set<String> excludedNodes = new HashSet<>();
 
@@ -158,25 +158,20 @@ public class AiTaskProcessor {
             }
 
             if (lease == null) {
-                if (attempt >= maxAttempts) {
-                    fail(taskId, type, attempt, AiErrorCode.MAX_ATTEMPTS,
-                            "Không có node Colab rảnh sau nhiều lần thử", null, null);
-                    return;
-                }
-                if (tasks.requeue(taskId, AiErrorCode.LLM_UNREACHABLE.name(),
-                        "Chưa có node Colab rảnh, đưa lại hàng đợi", maxAttempts) > 0) {
-                    cache.putStatus(taskId, type, AiTaskStatus.PENDING, attempt + 1,
+                if (tasks.requeueWithoutAttempt(taskId, AiErrorCode.LLM_UNREACHABLE.name(),
+                        "Chưa có node Colab rảnh, trả lại hàng đợi") > 0) {
+                    cache.putStatus(taskId, type, AiTaskStatus.PENDING, attempt,
                             AiErrorCode.LLM_UNREACHABLE.name());
                     sleepQuiet(Duration.ofSeconds(1));
                     queueFacade.push(taskId);
                 } else {
                     fail(taskId, type, attempt, AiErrorCode.MAX_ATTEMPTS,
-                            "Không thể requeue do hết lượt thử", null, null);
+                            "Không thể trả lại hàng đợi do trạng thái tác vụ đã thay đổi", null, null);
                 }
                 return;
             }
 
-            try (lease) {
+            try {
                 ChatResult chat = ollama.chat(lease.url(), lease.token(), spec);
                 int ms = (int) chat.wallMs();
                 double tps = chat.evalDurationNs() > 0
@@ -250,6 +245,8 @@ public class AiTaskProcessor {
                 log.error("Task {} lỗi nội bộ", taskId, e);
                 fail(taskId, type, attempt, AiErrorCode.INTERNAL_ERROR, e.getMessage(), null, null);
                 return;
+            } finally {
+                lease.close();
             }
         }
     }

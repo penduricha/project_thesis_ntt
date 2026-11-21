@@ -1,30 +1,89 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:my_flutter_app/main.dart';
+import 'package:my_flutter_app/features/authenticator/presentation/screens/totp_generator.dart';
+import 'package:my_flutter_app/features/login/presentation/screens/login_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('TotpGenerator (RFC 6238)', () {
+    const sha1Secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+    const sha256Secret =
+        'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA';
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('matches RFC 6238 SHA-1 test vectors', () {
+      expect(
+        TotpGenerator.generate(
+          sha1Secret,
+          digits: 8,
+          algorithm: TotpAlgorithm.sha1,
+          at: DateTime.fromMillisecondsSinceEpoch(59 * 1000, isUtc: true),
+        ),
+        '94287082',
+      );
+      expect(
+        TotpGenerator.generate(
+          sha1Secret,
+          digits: 6,
+          algorithm: TotpAlgorithm.sha1,
+          at: DateTime.fromMillisecondsSinceEpoch(59 * 1000, isUtc: true),
+        ),
+        '287082',
+      );
+      expect(
+        TotpGenerator.generate(
+          sha1Secret,
+          digits: 8,
+          algorithm: TotpAlgorithm.sha1,
+          at: DateTime.fromMillisecondsSinceEpoch(1234567890 * 1000, isUtc: true),
+        ),
+        '89005924',
+      );
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    test('matches RFC 6238 SHA-256 test vectors', () {
+      expect(
+        TotpGenerator.generate(
+          sha256Secret,
+          digits: 8,
+          algorithm: TotpAlgorithm.sha256,
+          at: DateTime.fromMillisecondsSinceEpoch(59 * 1000, isUtc: true),
+        ),
+        '46119246',
+      );
+      expect(
+        TotpGenerator.generate(
+          sha256Secret,
+          digits: 8,
+          algorithm: TotpAlgorithm.sha256,
+          at: DateTime.fromMillisecondsSinceEpoch(1234567890 * 1000, isUtc: true),
+        ),
+        '91819424',
+      );
+    });
+
+    test('normalizes secret and rejects invalid Base32 characters', () {
+      expect(TotpGenerator.normalizeSecret(' abcd-efgh= '), 'ABCDEFGH');
+      expect(
+        () => TotpGenerator.generate('INVALID*KEY!'),
+        throwsFormatException,
+      );
+      expect(TotpAlgorithm.parse('HmacSHA256'), TotpAlgorithm.sha256);
+    });
+  });
+
+  testWidgets('LoginScreen validates empty credentials on submit',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+
+    expect(find.text('Authenticator'), findsOneWidget);
+    expect(find.text('Admin Id'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
+
+    await tester.tap(find.text('Login'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Enter your admin Id'), findsOneWidget);
+    expect(find.text('Enter your password'), findsOneWidget);
   });
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// TODO: chỉnh lại 2 đường dẫn import cho đúng với cấu trúc thư mục của dự án
 import '../../../authenticator/presentation/screens/authenticator_screen.dart';
 import '../../../chat/application/chat_controller.dart';
 import '../../../chat/presentation/screens/chat_list_screen.dart';

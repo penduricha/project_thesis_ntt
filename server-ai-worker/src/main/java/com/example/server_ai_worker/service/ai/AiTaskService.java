@@ -39,14 +39,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class AiTaskService {
 
     private static final List<String> BURST_NL_SAMPLES = List.of(
-            "Tìm câu hỏi môn Cơ sở dữ liệu mức độ khó đã duyệt",
+            "Tìm câu hỏi môn Cơ sở dữ liệu mức độ khó đã kiểm tra sạch",
             "Các câu hỏi Lập trình Java chủ đề Spring Boot & REST API",
             "Câu hỏi TOEIC Part 5 về ngữ pháp mức trung bình",
             "Tìm câu hỏi Mạng máy tính về giao thức HTTP tạo tháng này",
-            "Câu hỏi Trí tuệ nhân tạo về mô hình ngôn ngữ lớn ở trạng thái nháp",
+            "Câu hỏi Trí tuệ nhân tạo về mô hình ngôn ngữ lớn chưa kiểm tra",
             "Tìm câu có từ khóa Primary Key trong phần câu dẫn môn INT3202",
-            "Bộ câu hỏi chuẩn hóa dữ liệu 3NF mức độ dễ",
-            "Tìm câu hỏi Java OOP chưa được duyệt gần đây"
+            "Bộ câu hỏi chuẩn hóa dữ liệu 3NF mức độ dễ có lỗi cần sửa",
+            "Tìm câu hỏi Java OOP chưa được kiểm tra gần đây"
     );
 
     private final AiTaskRepository tasks;

@@ -169,7 +169,11 @@
           <button class="btn btn-xs" id="btn-connect" type="button">Kết nối</button>
         </div>
       </div>
-      <p class="muted" style="margin:8px 0 0;font-size:12px">Trang này được phục vụ tĩnh từ chính Server AI Worker (<code>/api/demo-eval.html</code>), API cùng origin nên không cần cấu hình base khi mở qua Spring.</p>
+      <div class="field" style="display:grid;gap:4px;margin-top:8px">
+        <label class="field-label" for="api-jwt" style="font-size:13px;color:var(--ink-2)">JWT hoặc Internal Token (Bearer)</label>
+        <input class="input" id="api-jwt" type="password" placeholder="Nhập ACCESS JWT hoặc AI_INTERNAL_TOKEN" spellcheck="false" autocomplete="off">
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:12px">Trang này được phục vụ tĩnh từ chính Server AI Worker (<code>/api/demo-eval.html</code>), API cùng origin nên chỉ cần dán token hợp lệ khi kết nối.</p>
     </div>
   </div>
 
@@ -372,7 +376,7 @@
   function hideBanner() { $('#global-banner').classList.add('hidden'); }
 
   /* ============ connection ============ */
-  var api = { base: '', connected: false, checkedOnce: false };
+  var api = { base: '', jwt: '', connected: false, checkedOnce: false };
   var BASE_KEY = 'ntt-demo-eval-api-base';
 
   function defaultBase() {
@@ -381,6 +385,7 @@
   async function call(method, path, body, timeoutMs) {
     var headers = { Accept: 'application/json' };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (api.jwt) headers.Authorization = 'Bearer ' + api.jwt;
     var ctl = new AbortController();
     var timer = setTimeout(function () { ctl.abort(); }, timeoutMs || 30000);
     var res;
@@ -396,7 +401,9 @@
     var data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
     if (!res.ok) {
-      var msg = (data && (data.error || data.message)) ? (data.error || data.message) : ('HTTP ' + res.status);
+      var msg = res.status === 401 ? 'Thiếu hoặc sai JWT / Internal Token (401).'
+        : res.status === 403 ? 'Không đủ quyền (403).'
+        : ((data && (data.error || data.message)) ? (data.error || data.message) : ('HTTP ' + res.status));
       throw new Error(msg);
     }
     return data;
@@ -409,6 +416,7 @@
   async function connect() {
     var input = $('#api-base');
     api.base = input.value.trim().replace(/\/+$/, '');
+    api.jwt = ($('#api-jwt').value || '').trim();
     if (!/^https?:\/\/\S+$/i.test(api.base)) { setStatus('Base URL không hợp lệ', 'bad'); return; }
     try { localStorage.setItem(BASE_KEY, api.base); } catch (e) {}
     setStatus('Đang kiểm tra…', '');
