@@ -3,8 +3,9 @@
 Giao diện Moodle 5.3 theo thiết kế của đề án (`project-design/UI_Accept_v2.html`): xanh `#004b87`, chữ Be Vietnam Pro,
 bo góc 8px (thẻ 12px), huy hiệu dạng viên thuốc nhạt màu, thanh trên cùng xanh đặc.
 
-Đây là **theme con của Boost**. Không có code nghiệp vụ nào bị đổi: không sửa PHP của Moodle, không sửa template, không
-sửa layout. Mọi thứ khác Boost nằm trong `scss/` và `fonts/`.
+Đây là **theme con của Boost**. Không có code nghiệp vụ nào bị đổi: không sửa PHP của Moodle, không sửa layout. Mọi thứ khác
+Boost nằm trong `scss/` và `fonts/`, cộng một template duy nhất: `templates/core/login_layout.mustache` (trang đăng nhập,
+xem bên dưới).
 
 ## Cài đặt
 
@@ -32,7 +33,8 @@ Moodle biên dịch lại SCSS, không cần xoá cache. Nhớ tắt khi chạy 
 | `scss/ntt/_drawers.scss` | Thanh bên trái (chỉ mục khoá học) và phải (block). |
 | `scss/ntt/_buttons.scss`, `_cards.scss`, `_forms.scss`, `_tables.scss`, `_feedback.scss`, `_page.scss` | Thành phần dùng chung. |
 | `scss/ntt/_question.scss` | Ngân hàng câu hỏi: bảng danh sách, xem trước câu trắc nghiệm (đáp án đúng/sai). |
-| `scss/ntt/_login.scss` | Trang đăng nhập. |
+| `scss/ntt/_login.scss` | Trang đăng nhập: thẻ ở giữa trang, ô nhập, nút, thông báo lỗi. |
+| `templates/core/login_layout.mustache` | Ghi đè khung trang đăng nhập: bỏ nửa trái (ảnh nền, khung "Welcome to Moodle", số liệu), chỉ còn một thẻ biểu mẫu. Chỉ là HTML, biểu mẫu `core/loginform` giữ nguyên. |
 | `fonts/be-vietnam-pro/` | Phông (giấy phép OFL 1.1, xem `OFL.txt` và `thirdpartylibs.xml`). |
 | `settings.php` | Trang cài đặt: màu thương hiệu, SCSS thô (để chỉnh nhanh mà không sửa tệp). |
 
@@ -55,6 +57,13 @@ Bảng đối chiếu thiết kế sang Moodle:
 | `--success-strong #166534` | `$mds-color-green-500` (→ `$success`) |
 | `--warning-strong #9a5b00` | `$mds-color-yellow-700` (chữ cảnh báo: `yellow-800`) |
 | `--radius 8px`, thẻ 12px | `$border-radius`, `$card-border-radius` |
+
+## Trang đăng nhập
+
+Moodle 5.3 mặc định chia đôi màn hình: nửa trái là ảnh nền + khung chào mừng, nửa phải là biểu mẫu. NTT bỏ nửa trái và đặt
+biểu mẫu trong một thẻ ở giữa trang (cùng layout dùng cho quên mật khẩu, đăng ký, MFA nên các trang đó cũng đổi theo).
+Nếu quản trị đặt logo cho site thì logo hiện thay cho biểu tượng mũ tốt nghiệp. Sau khi thêm/đổi template phải xoá cache
+(`php admin/cli/purge_caches.php`) để Moodle nạp lại template.
 
 ## Đổi màu nhanh, không sửa tệp
 

@@ -1,0 +1,52 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template core/login_layout
+
+    Theme NTT override of the login-flow layout (login, forgot password, sign up, MFA, ...).
+
+    Core renders a split screen: a decorative left panel (background photo, "Welcome to Moodle" card, user/site/country
+    statistics) next to the form. NTT drops the left panel completely and shows only the form, as one card centred on
+    the page. Nothing else changes: the form itself (core/loginform) and every form-related id, name and class are
+    untouched, so login behaviour, JavaScript and Behat selectors keep working.
+
+    Context variables required for this template:
+    * output - The core renderer output object (provides main_content).
+
+    Example context (json):
+    {
+        "output": {
+            "main_content": "<h1>Login form goes here</h1>"
+        }
+    }
+}}
+<div id="page-content" class="ntt-login">
+    <div id="region-main" class="ntt-login-main" role="main">
+        <div id="region-main-box" class="ntt-login-box">
+            <div class="login-container ntt-login-card">
+                <span class="ntt-login-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                        <path d="M2 9l10-5 10 5-10 5-10-5z"/>
+                        <path d="M6 11.5V16c0 1.2 2.7 3 6 3s6-1.8 6-3v-4.5"/>
+                        <path d="M22 9v6"/>
+                    </svg>
+                </span>
+                {{{ output.main_content }}}
+            </div>
+        </div>
+    </div>
+</div>
