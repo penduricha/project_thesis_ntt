@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+@import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css") layer(bootstrap);
+
 :root{
   --primary:#004b87;--primary-hover:#003a69;--primary-soft:#e8f1fa;
   --danger-strong:#a51818;--danger-hover:#8a1414;--danger-soft:#fdeeee;--danger-border:#f3c3c3;
@@ -318,12 +320,12 @@ mark{background:#fef08a;color:var(--text);padding:0 .15rem;border-radius:2px;fon
 #selbar .btn.dan{background:var(--danger-strong);border-color:var(--danger-strong);color:#fff}
 
 /* Dialog & Toast */
-dialog{position:fixed;inset:0;width:min(40rem,calc(100vw - 2rem));height:fit-content;max-height:calc(100dvh - 2rem);margin:clamp(1rem,6vh,4rem) auto auto;padding:var(--space-3);overflow:auto;border:0;border-radius:12px;background:var(--surface);box-shadow:0 20px 50px rgba(0,0,0,.28);color:var(--text)}
-dialog::backdrop{background:rgba(27,42,65,.55)}dialog[open]{display:flex;flex-direction:column;gap:1rem;animation:dlg-in .2s ease both}@keyframes dlg-in{from{opacity:0;transform:translateY(-.75rem)}to{opacity:1;transform:none}}
-dialog h3{margin:0;color:var(--text);font-size:1.125rem}
-@media (max-width:639.98px){dialog{width:calc(100vw - 1rem);padding:var(--space-2);margin-top:.5rem;max-height:calc(100dvh - 1rem)}dialog .end{grid-template-columns:minmax(0,1fr)}}
-@media(min-width:1024px){dialog{width:min(44rem,calc(100vw - 2rem))}}
-dialog .end{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin:0}dialog .end .btn{width:100%}
+
+@keyframes dlg-in{from{opacity:0;transform:translateY(-.75rem)}to{opacity:1;transform:none}}
+
+
+
+
 .opt-list{display:flex;flex-direction:column;gap:.5rem}
 .opt{display:flex;gap:.65rem;align-items:center;margin:0}.opt input:not([type=radio]){flex:1}
 .row{display:grid;gap:1rem;grid-template-columns:minmax(0,1fr)}@media(min-width:768px){.row{grid-template-columns:1fr 1fr}}
@@ -478,10 +480,65 @@ td small{display:block;margin-top:.2rem;color:var(--text-muted)}
 @media (min-width:768px){.lm__f{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}}
 @media (min-width:1280px) and (min-height:800px){.tools{position:sticky;top:calc(var(--topbar-h) + env(safe-area-inset-top,0px) + .5rem);z-index:20}}
 html{scroll-padding-top:calc(var(--topbar-h) + 1rem)}
-dialog,.cb-list{overscroll-behavior:contain}
+.modal,.cb-list{overscroll-behavior:contain}
 @media (pointer:coarse){.btn,.btn.sm,.btn-rev,select,input:not([type=checkbox]):not([type=radio]),.acct__item{min-height:2.75rem}}
 kbd{display:inline-block;min-width:1.5rem;padding:.1rem .4rem;border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:4px;background:var(--surface);font:inherit;font-size:var(--fs-xs);text-align:center}
 .keys{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:.6rem 1rem;align-items:center}.keys dt{margin:0}.keys dd{margin:0;color:var(--text-muted)}
+
+/* ===== Modal: Bootstrap Modal JS + CSS tối thiểu theo theme (Bootstrap CSS nằm trong @layer nên không ghi đè) ===== */
+.modal{position:fixed;inset:0;z-index:1055;display:none;overflow-x:hidden;overflow-y:auto;outline:0}
+.modal-dialog{position:relative;width:auto;max-width:min(44rem,calc(100vw - 1rem));margin:.5rem auto;pointer-events:none}
+.modal-dialog-centered{display:flex;align-items:center;min-height:calc(100% - 1rem)}
+.modal-dialog-scrollable{height:calc(100% - 1rem)}
+.modal-dialog-scrollable .modal-content{max-height:100%;overflow:hidden}
+.modal-dialog-scrollable .modal-body{overflow-y:auto}
+.modal-content{position:relative;display:flex;flex-direction:column;width:100%;pointer-events:auto;border:0;border-radius:12px;background:var(--surface);color:var(--text);box-shadow:0 20px 60px rgba(27,42,65,.35)}
+.modal-header{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:.75rem;padding:var(--space-3) var(--space-3) var(--space-2);border:0}
+.modal-title{margin:0;color:var(--text);font-size:1.125rem;line-height:1.35}
+.modal-body{position:relative;flex:1 1 auto;display:flex;flex-direction:column;gap:1rem;padding:var(--space-1) var(--space-3) var(--space-3)}
+.modal-footer{flex-shrink:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin:0;padding:var(--space-2) var(--space-3) var(--space-3);border-top:1px solid var(--border);background:var(--surface)}
+.modal-footer .btn{width:100%}
+.modal-backdrop{--bs-backdrop-bg:#1b2a41;--bs-backdrop-opacity:.55;position:fixed;inset:0;z-index:1050;background-color:var(--bs-backdrop-bg)}
+.modal-backdrop.show{opacity:var(--bs-backdrop-opacity)}
+body.modal-open{overflow:hidden}
+.dlg-x{flex:none;display:inline-grid;place-items:center;width:2.25rem;height:2.25rem;margin:-.25rem -.25rem -.25rem auto;border:0;border-radius:var(--radius);background:transparent;color:var(--text-muted);cursor:pointer}
+.dlg-x:hover{background:var(--surface-hover);color:var(--text)}
+.dlg-x svg{width:1.125rem;height:1.125rem}
+#toast{z-index:2000}
+@media (max-width:639.98px){.modal-dialog{margin:0;max-width:none;height:100%}.modal-dialog-centered{min-height:100%}.modal-content{border-radius:0;height:100%}.modal-footer{grid-template-columns:minmax(0,1fr)}}
+
+/* ===== Modal v6: chữ rõ hơn, thoáng hơn (vẫn theo theme) ===== */
+.modal-content{font-size:1rem;line-height:1.6}
+.modal-header{padding:1.25rem var(--space-3);border-bottom:1px solid var(--border)}
+.modal-title{font-size:1.25rem;font-weight:700;line-height:1.35}
+.dlg-x{width:2.5rem;height:2.5rem;margin:-.5rem -.5rem -.5rem auto}
+.dlg-x svg{width:1.25rem;height:1.25rem}
+.modal-body{gap:1.25rem;padding:1.5rem var(--space-3)}
+.modal-body p{font-size:1rem;line-height:1.6}
+.modal-body label,.modal-body .subj-box>legend,.modal-body h4{color:var(--text);font-size:.9375rem;font-weight:600;line-height:1.4}
+.modal-body .subj-box>legend{margin-bottom:.5rem}
+.modal-body label small:not(.fe){font-weight:400}
+.modal-body label>small:not(.fe){margin-top:.4rem;font-size:.875rem;line-height:1.45}
+.modal-body input:not([type=checkbox]):not([type=radio]),.modal-body textarea,.modal-body select{font-size:1rem;font-weight:400;padding:.65rem .875rem;min-height:2.875rem}
+.modal-body ::placeholder{color:#6b7a90;opacity:1}
+.modal-body input:not([type=checkbox]):not([type=radio]):focus,.modal-body textarea:focus,.modal-body select:focus{outline:0;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 22%,transparent)}
+.modal-body .invalid:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--danger-strong) 22%,transparent)}
+/* Danh sách môn học: 2 cột, không cuộn lồng, dòng rộng dễ chạm */
+.subj-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:.25rem .5rem;max-height:none;overflow:visible;padding:.5rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.subj-list .qall{min-height:2.5rem;padding:.35rem .6rem;border-radius:6px;font-size:.9375rem;font-weight:500;line-height:1.35}
+.subj-list .qall:hover{background:var(--surface-hover)}
+.subj-list .qall:has(input:checked){background:var(--primary-soft);color:var(--primary);font-weight:600}
+/* Chân modal: bỏ margin Bootstrap làm nút lệch khỏi lưới */
+.modal-footer>*{margin:0}
+.modal-footer .btn{min-height:2.75rem;font-size:.9375rem}
+@media(min-width:640px){
+  .modal-body:has(#u-id){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem 1rem;align-items:start}
+  .modal-body:has(#u-id)>.subj-box{grid-column:1/-1}
+}
+@media(max-width:639.98px){
+  .modal-header,.modal-body,.modal-footer{padding-inline:var(--space-2)}
+  .modal-footer{padding-bottom:calc(var(--space-3) + env(safe-area-inset-bottom,0px))}
+}
 </style>
 </head>
 <body>
@@ -533,9 +590,10 @@ kbd{display:inline-block;min-width:1.5rem;padding:.1rem .4rem;border:1px solid v
   </div>
 </div>
 
-<dialog id="dlg"></dialog>
+<div class="modal fade" id="bsm" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content" id="dlg"></div></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 <script>
 const $=(s,e=document)=>e.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -1424,7 +1482,7 @@ const P={
     <p id="directory-empty" class="policy" ${directoryUsers().length?'hidden':''}>Không tìm thấy tài khoản. Hãy thử tên, mã hoặc trạng thái khác.</p>
     </section>`},
   account(){return acctPage()},
-  settings(){return`${tfaCard()}<section class="icard" aria-labelledby="role-t"><div class="icard__hdr"><h3 id="role-t" class="icard__title">Chế độ xem theo vai trò</h3></div><label>Vai trò xem thử<select id="preview-role" onchange="previewRole(this.value)"><option value="admin" ${S.role==='admin'?'selected':''}>Quản trị viên</option>${S.users.filter(u=>u.role==='Giảng viên').map(u=>`<option value="gv:${u.adminId}" ${S.role==='gv'&&asUser()&&asUser().adminId===u.adminId?'selected':''}>Giảng viên: ${esc(u.name)}</option>`).join('')}</select></label><small class="mut">Chỉ thay đổi giao diện xem thử, không thay đổi quyền của tài khoản.</small></section><section class="icard" aria-labelledby="opt-t"><div class="icard__hdr"><h3 id="opt-t" class="icard__title">Tùy chọn</h3></div><label class="tg"><input type="checkbox" ${S.notifyTasks?'checked':''} onchange="S.notifyTasks=this.checked;log('Đổi tùy chọn thông báo','info');toast('Đã lưu tùy chọn','ok')"><span>Thông báo khi tác vụ AI hoàn tất</span></label><label class="tg"><input type="checkbox" ${S.confirmDelete?'checked':''} onchange="S.confirmDelete=this.checked;log('Đổi tùy chọn xác nhận xóa','info');toast('Đã lưu tùy chọn','ok')"><span>Hỏi xác nhận trước khi xóa câu hỏi</span></label></section>`}
+  settings(){return`${tfaCard()}<section class="icard" aria-labelledby="role-t"><div class="icard__hdr"><h3 id="role-t" class="icard__title">Chế độ xem theo vai trò</h3></div><label>Vai trò xem thử<select id="preview-role" onchange="previewRole(this.value)"><option value="admin" ${S.role==='admin'?'selected':''}>Quản trị viên</option><option value="gv" ${S.role==='gv'?'selected':''}>Giảng viên</option></select></label><small class="mut">Chỉ thay đổi giao diện xem thử, không thay đổi quyền của tài khoản.${S.role==='gv'&&asUser()?` Chế độ Giảng viên đang mô phỏng phạm vi môn của ${esc(asUser().name)}.`:''}</small></section><section class="icard" aria-labelledby="opt-t"><div class="icard__hdr"><h3 id="opt-t" class="icard__title">Tùy chọn</h3></div><label class="tg"><input type="checkbox" ${S.notifyTasks?'checked':''} onchange="S.notifyTasks=this.checked;log('Đổi tùy chọn thông báo','info');toast('Đã lưu tùy chọn','ok')"><span>Thông báo khi tác vụ AI hoàn tất</span></label><label class="tg"><input type="checkbox" ${S.confirmDelete?'checked':''} onchange="S.confirmDelete=this.checked;log('Đổi tùy chọn xác nhận xóa','info');toast('Đã lưu tùy chọn','ok')"><span>Hỏi xác nhận trước khi xóa câu hỏi</span></label></section>`}
 };
 
 /* ===== Trang Thông tin tài khoản: dữ liệu mẫu khớp ntt_admins + ntt_courses (FK course_id) + ntt_totp_credentials ===== */
@@ -1734,11 +1792,35 @@ document.addEventListener('keydown',e=>{
   }
 });
 
-/* Hộp thoại: gán tên truy cập từ tiêu đề, trả focus về nút đã mở, Enter / Ctrl+Enter = hành động chính */
-(()=>{const d=$('#dlg'),sm=d.showModal;
-  d.showModal=function(){const h=d.querySelector('h3');if(h){h.id='dlg-t';d.setAttribute('aria-labelledby','dlg-t')}d._op=document.activeElement;sm.call(d)};
-  d.addEventListener('close',()=>{const o=d._op;d._op=null;if(o&&o!==document.body&&document.contains(o))o.focus();else{const h=$('#ttl');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}}});
-  d.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.defaultPrevented||e.isComposing)return;const t=e.target,ok=(t.tagName==='INPUT'&&!/^(checkbox|radio|button|submit)$/.test(t.type))||(t.tagName==='TEXTAREA'&&(e.ctrlKey||e.metaKey));if(!ok)return;const b=d.querySelector('.end .btn.pri:not(:disabled)');if(b){e.preventDefault();b.click()}});
+/* Modal: Bootstrap Modal JS bọc quanh #dlg; giữ API cũ showModal / close / open để các hàm khác không đổi.
+   Không tải được Bootstrap (offline) thì dùng bản dự phòng tối giản. */
+(()=>{const el=$('#bsm'),d=$('#dlg'),has=!!(window.bootstrap&&bootstrap.Modal);
+  const inst=has?new bootstrap.Modal(el,{backdrop:true,keyboard:true,focus:true}):null;
+  let isOpen=false,force=false,timer=0,bd=null;
+  Object.defineProperty(d,'open',{get:()=>isOpen});
+  const struct=()=>{if(d.querySelector(':scope>.modal-body'))return;
+    const h3=d.querySelector(':scope>h3'),end=d.querySelector(':scope>.end'),body=document.createElement('div'),head=document.createElement('div');
+    body.className='modal-body';[...d.childNodes].forEach(n=>{if(n!==h3&&n!==end)body.appendChild(n)});
+    head.className='modal-header';if(h3){h3.className='modal-title';h3.id='dlg-t';head.appendChild(h3)}
+    head.insertAdjacentHTML('beforeend','<button type="button" class="dlg-x" data-bs-dismiss="modal" aria-label="Đóng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>');
+    d.replaceChildren(head,body);if(end){end.classList.add('modal-footer');d.appendChild(end)}el.setAttribute('aria-labelledby','dlg-t')};
+  const askHide=()=>{const ev=new Event('hide.bs.modal',{cancelable:true});el.dispatchEvent(ev);if(!ev.defaultPrevented)fbHide()};
+  const fbShow=()=>{el.style.display='block';el.classList.add('show');el.removeAttribute('aria-hidden');el.setAttribute('aria-modal','true');document.body.classList.add('modal-open');bd=document.createElement('div');bd.className='modal-backdrop show';document.body.appendChild(bd);setTimeout(()=>el.dispatchEvent(new Event('shown.bs.modal')),0)};
+  const fbHide=()=>{el.style.display='none';el.classList.remove('show');el.setAttribute('aria-hidden','true');document.body.classList.remove('modal-open');if(bd){bd.remove();bd=null}el.dispatchEvent(new Event('hidden.bs.modal'))};
+  if(!has)el.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();askHide()}});
+  /* Chạm/nhấp ra ngoài modal thì đóng (qua hide.bs.modal nên vẫn hỏi xác nhận khi form nhập dở).
+     Hộp thoại chứa bí mật chỉ hiện một lần (khóa 2FA, mật khẩu tạm) thì không đóng, chỉ rung nhẹ. */
+  const locked=()=>!!d.querySelector('.tfa-key');let down=false;
+  el.addEventListener('mousedown',e=>{down=e.target===el},true);
+  el.addEventListener('click',e=>{const out=down&&e.target===el;down=false;if(!out)return;
+    if(locked()){e.stopImmediatePropagation();el.classList.add('modal-static');setTimeout(()=>el.classList.remove('modal-static'),300);return}
+    if(!has)askHide()},true);
+  d.showModal=function(){clearTimeout(timer);timer=0;struct();if(isOpen)return;isOpen=true;d._op=document.activeElement;has?inst.show():fbShow()};
+  d.close=function(){if(!isOpen)return;force=true;clearTimeout(timer);timer=setTimeout(()=>{timer=0;has?inst.hide():fbHide()},0)};
+  el.addEventListener('hide.bs.modal',e=>{if(force)return;if(dlgDirty){if(!confirm('Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?')){e.preventDefault();return}dlgDirty=false}});
+  el.addEventListener('shown.bs.modal',()=>{const t=d.querySelector('[data-af],.modal-body input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([disabled]),.modal-body textarea,.modal-body select')||d.querySelector('.modal-footer .btn');if(t)t.focus({preventScroll:true})});
+  el.addEventListener('hidden.bs.modal',()=>{isOpen=false;force=false;const o=d._op;d._op=null;d.dispatchEvent(new Event('close'));if(o&&o!==document.body&&document.contains(o))o.focus();else{const h=$('#ttl');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}}});
+  d.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.defaultPrevented||e.isComposing)return;const t=e.target,ok=(t.tagName==='INPUT'&&!/^(checkbox|radio|button|submit)$/.test(t.type))||(t.tagName==='TEXTAREA'&&(e.ctrlKey||e.metaKey));if(!ok)return;const b=d.querySelector('.modal-footer .btn.pri:not(:disabled)');if(b){e.preventDefault();b.click()}});
 })();
 $('#yr').textContent=new Date().getFullYear();S.name='Từ Quang Nhật';S.t0=new Date().toLocaleTimeString('vi-VN');
 setNav(mq.matches);go('admin');
