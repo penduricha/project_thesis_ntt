@@ -1,5 +1,8 @@
 package com.example.be_web_admin;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -21,8 +24,22 @@ import org.springframework.data.redis.repository.configuration.EnableRedisReposi
 public class BeWebAdminApplication {
 
 	public static void main(String[] args) throws RuntimeException {
-		Dotenv dotenv = Dotenv.load();
-		dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
+		String envDir = Files.isRegularFile(Path.of(".env"))
+				? "./"
+				: Files.isRegularFile(Path.of("be-web-admin/.env"))
+						? "be-web-admin"
+						: "./";
+		Dotenv dotenv = Dotenv.configure()
+				.directory(envDir)
+				.ignoreIfMissing()
+				.load();
+		dotenv.entries(Dotenv.Filter.DECLARED_IN_ENV_FILE).forEach(entry -> {
+			String key = entry.getKey();
+			String val = entry.getValue();
+			if (System.getProperty(key) == null && (System.getenv(key) == null || !val.isEmpty())) {
+				System.setProperty(key, val);
+			}
+		});
 		SpringApplication.run(BeWebAdminApplication.class, args);
 	}
 }

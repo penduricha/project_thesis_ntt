@@ -48,7 +48,9 @@ app:
 
 spring:
   config:
-    import: "optional:file:.env[.properties]"
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:be-web-admin/.env[.properties]"
   #  rabbitmq:
   #    host: localhost
   #    port: 5672

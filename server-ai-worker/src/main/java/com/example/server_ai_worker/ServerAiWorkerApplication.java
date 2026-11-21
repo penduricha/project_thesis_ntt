@@ -1,5 +1,8 @@
 package com.example.server_ai_worker;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -25,8 +28,22 @@ public class ServerAiWorkerApplication {
     //http://localhost:8082/api/node-colab.html
     //http://localhost:8082/api/demo-eval.html
     public static void main(String[] args) {
-        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
-        dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
+        String envDir = Files.isRegularFile(Path.of(".env"))
+                ? "./"
+                : Files.isRegularFile(Path.of("server-ai-worker/.env"))
+                        ? "server-ai-worker"
+                        : "./";
+        Dotenv dotenv = Dotenv.configure()
+                .directory(envDir)
+                .ignoreIfMissing()
+                .load();
+        dotenv.entries(Dotenv.Filter.DECLARED_IN_ENV_FILE).forEach(entry -> {
+            String key = entry.getKey();
+            String val = entry.getValue();
+            if (System.getProperty(key) == null && (System.getenv(key) == null || !val.isEmpty())) {
+                System.setProperty(key, val);
+            }
+        });
         SpringApplication.run(ServerAiWorkerApplication.class, args);
     }
 }

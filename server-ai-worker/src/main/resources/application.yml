@@ -23,7 +23,9 @@ gg:
 
 spring:
   config:
-    import: "optional:file:.env[.properties]"
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:server-ai-worker/.env[.properties]"
   application:
     name: server-ai-worker
 

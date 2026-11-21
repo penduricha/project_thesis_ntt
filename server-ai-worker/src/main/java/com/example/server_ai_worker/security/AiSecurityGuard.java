@@ -60,7 +60,7 @@ public class AiSecurityGuard {
         if (jwtSecret.isEmpty() && internalToken.isEmpty()) {
             if (!isDevProfile) {
                 throw new IllegalStateException(
-                        "Phải cấu hình JWT_SECRET (>= 32 byte) hoặc AI_INTERNAL_TOKEN (>= 16 ký tự) khi chạy ngoài profile dev/test/local.");
+                        "Phải cấu hình JWT_SECRET (>= 32 byte) hoặc AI_INTERNAL_TOKEN (>= 16 ký tự) trong server-ai-worker/.env (hoặc biến môi trường) khi chạy ngoài profile dev/test/local.");
             }
             log.warn("JWT_SECRET và AI_INTERNAL_TOKEN đều đang trống: các API /web/ai/** sẽ từ chối mọi request (401) cho tới khi cấu hình.");
         }
