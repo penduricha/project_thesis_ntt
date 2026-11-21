@@ -82,6 +82,7 @@ class DataInitializerTest {
         assertEquals(8, saved.stream().filter(a -> a.getRole() == Role.ADMIN).count());
         assertEquals(2, saved.stream().filter(a -> a.getRole() == Role.LECTURER).count());
         assertFalse(saved.stream().anyMatch(a -> a.getCourse() == null));
+        assertTrue(existingCourse1.getAdmins().isEmpty());
         verify(courseRepo).save(any(Course.class)); // chỉ tạo course 8480202 vì 8480201 đã có
     }
 

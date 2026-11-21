@@ -196,9 +196,8 @@ public class DataInitializer {
         admin.setTotpEnabled(false);
         admin.setPasswordChangedAt(now);
         admin.setCourse(course);
-        if (course.getAdmins() != null) {
-            course.getAdmins().add(admin);
-        }
+        // Không thêm transient Admin vào course.getAdmins() vì Course có CascadeType.ALL:
+        // adminRepository.saveAll() dùng merge() sẽ tạo bản managed khác, khiến flush() cascade persist đụng NonUniqueObjectException.
         return admin;
     }
 }
