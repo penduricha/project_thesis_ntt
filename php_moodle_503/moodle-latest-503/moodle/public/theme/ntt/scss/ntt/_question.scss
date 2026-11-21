@@ -1,0 +1,113 @@
+// Ngân hàng câu hỏi (trọng tâm của đề án): bảng danh sách câu hỏi và khung xem trước câu hỏi trắc nghiệm.
+// Theo .qrow / .o của thiết kế: viền mảnh bo góc, đáp án là các ô nhỏ, đáp án đúng nền xanh lá nhạt.
+
+// ---- Bảng danh sách câu hỏi (qbank) -----------------------------------------------------------------------------
+table.question-bank-table {
+    font-size: .875rem;
+    background-color: var(--ntt-surface);
+
+    // Hàng chẵn/lẻ của Moodle dùng class r0/r1: bỏ nền sọc đậm, để hover nổi bật hơn.
+    & > tbody > tr.r1 {
+        background-color: var(--ntt-tile);
+    }
+
+    & > tbody > tr:hover > td {
+        background-color: var(--ntt-primary-soft);
+    }
+
+    // Hàng đang chọn (tích hộp kiểm): nền xanh nhạt như .qrow:has(input:checked).
+    & > tbody > tr:has(input[type="checkbox"]:checked) > td {
+        background-color: var(--ntt-primary-soft);
+    }
+
+    th.header {
+        background-color: var(--ntt-surface-hover);
+        color: var(--ntt-text-muted);
+        font-weight: 700;
+    }
+}
+
+// Tiêu đề các khối của trang ngân hàng (Categories, ...).
+.questionbank h2,
+.questioncategories h3 {
+    font-weight: 700;
+}
+
+// ---- Khung xem trước câu hỏi (.que) ----------------------------------------------------------------------------
+.que .info {
+    background-color: var(--ntt-surface-hover);
+    border: 1px solid var(--ntt-border);
+    border-radius: $ntt-radius;
+}
+
+// Phần đề bài: tông trung tính (thay cho nền xanh ngọc mặc định của Moodle).
+.que .formulation {
+    background-color: var(--ntt-tile);
+    border-color: var(--ntt-border);
+    color: var(--ntt-text);
+    border-radius: $ntt-radius;
+}
+
+// Nhận xét / kết quả: tông cảnh báo nhạt của thiết kế.
+.que .outcome,
+.que .comment {
+    background-color: var(--ntt-warning-tint);
+    border-color: var(--ntt-warning-border);
+    color: var(--ntt-text);
+    border-radius: $ntt-radius;
+}
+
+// Câu trắc nghiệm nhiều lựa chọn: mỗi đáp án là một ô viền mảnh (.o).
+.que.multichoice .answer > div {
+    padding: .45rem .75rem;
+    margin-bottom: .5rem;
+    border: 1px solid var(--ntt-border);
+    border-radius: $ntt-radius;
+    background-color: var(--ntt-surface);
+    transition: border-color .15s ease, background-color .15s ease;
+
+    &:hover {
+        border-color: var(--ntt-border-strong);
+    }
+
+    // Đáp án đang chọn.
+    &:has(input:checked) {
+        border-color: var(--ntt-primary);
+        background-color: var(--ntt-primary-soft);
+    }
+
+    // Sau khi chấm: đúng = xanh lá nhạt, sai = đỏ nhạt (.o.on trong thiết kế).
+    &.correct {
+        border-color: var(--ntt-success-border);
+        background-color: var(--ntt-success-soft);
+    }
+
+    &.incorrect {
+        border-color: var(--ntt-danger-border);
+        background-color: var(--ntt-danger-soft);
+    }
+}
+
+// Huy hiệu đúng/sai/một phần của Moodle: dùng màu mới.
+.que .correctness {
+    border-radius: $border-radius-pill;
+    font-weight: 700;
+
+    &.correct {
+        background-color: var(--ntt-success);
+    }
+
+    &.incorrect,
+    &.notanswered {
+        background-color: var(--ntt-danger);
+    }
+}
+
+// ---- Hộp chọn loại câu hỏi và hộp thoại tạo câu hỏi -------------------------------------------------------------
+#chooseqtype .qtypeoption {
+    border-radius: $ntt-radius;
+}
+
+#chooseqtype .selected {
+    border-color: var(--ntt-primary);
+}

@@ -1,0 +1,156 @@
+// =====================================================================================================================
+// NTT theme - PRE SCSS
+// Chạy TRƯỚC preset Boost và Bootstrap. Chỉ khai báo giá trị cho các biến; mọi biến ở đây đều có "!default" để trang
+// cài đặt của theme (SCSS thô khởi tạo / màu thương hiệu) vẫn đè được.
+//
+// Nguồn: bảng màu và kích thước trong project-design/UI_Accept_v2.html (khối :root) và AppColors của app_mobile.
+//
+//   --primary #004b87   --primary-hover #003a69   --primary-soft #e8f1fa
+//   --danger-strong #a51818   --success-strong #166534   --warning-strong #9a5b00
+//   --text #1b2a41   --text-muted #5b6b82   --bg #f8faff   --border #e3ebf5   --border-strong #8596ad
+//   --radius 8px   thẻ (card) 12px   phông Be Vietnam Pro
+//
+// Cách hoạt động: Moodle 5.3 dựng toàn bộ màu từ bộ token Moodle Design System ($mds-color-*). Bootstrap
+// ($primary, $gray-*, $success...) và các thành phần của Design System đều đọc từ đó, nên đè token là đổi màu cả trang
+// mà không phải sửa từng thành phần.
+// =====================================================================================================================
+
+
+// ---------------------------------------------------------------------------------------------------------------------
+// 1. Bảng màu Moodle Design System
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Xanh thương hiệu. 500 = màu chính, 600 = hover, 700 = nhấn (active), 50 = nền nhạt.
+$mds-color-blue-50:  #e8f1fa !default;
+$mds-color-blue-100: #cfe2f4 !default;
+$mds-color-blue-200: #a0c4e6 !default;
+$mds-color-blue-300: #6fa4d3 !default;
+$mds-color-blue-400: #3d7fb9 !default;
+$mds-color-blue-500: #004b87 !default;
+$mds-color-blue-600: #003a69 !default;
+$mds-color-blue-700: #002c50 !default;
+$mds-color-blue-800: #001e36 !default;
+$mds-color-blue-900: #000f1b !default;
+
+// Xám pha xanh (nền, viền, chữ). 100 = nền trang, 300 = viền, 500 = viền ô nhập, 600 = chữ phụ, 900 = chữ chính.
+$mds-color-gray-white: #ffffff !default;
+$mds-color-gray-100:   #f8faff !default;
+$mds-color-gray-200:   #f1f5fa !default;
+$mds-color-gray-300:   #e3ebf5 !default;
+$mds-color-gray-400:   #c8d3e1 !default;
+$mds-color-gray-500:   #8596ad !default;
+$mds-color-gray-600:   #5b6b82 !default;
+$mds-color-gray-700:   #44546b !default;
+$mds-color-gray-800:   #2d3d55 !default;
+$mds-color-gray-900:   #1b2a41 !default;
+$mds-color-gray-black: #0b1626 !default;
+
+// Đỏ (nguy hiểm / lỗi).
+$mds-color-red-50:  #fdeeee !default;
+$mds-color-red-100: #fadcdc !default;
+$mds-color-red-200: #f3c3c3 !default;
+$mds-color-red-300: #e69494 !default;
+$mds-color-red-400: #cc5555 !default;
+$mds-color-red-500: #a51818 !default;
+$mds-color-red-600: #8a1414 !default;
+$mds-color-red-700: #6b0f0f !default;
+$mds-color-red-800: #4d0b0b !default;
+$mds-color-red-900: #2e0606 !default;
+
+// Xanh lá (thành công).
+$mds-color-green-50:  #f3fbf6 !default;
+$mds-color-green-100: #e8f6ee !default;
+$mds-color-green-200: #bfe5cc !default;
+$mds-color-green-300: #8ccfa4 !default;
+$mds-color-green-400: #4aa56f !default;
+$mds-color-green-500: #166534 !default;
+$mds-color-green-600: #11522a !default;
+$mds-color-green-700: #0d3f20 !default;
+$mds-color-green-800: #092c16 !default;
+$mds-color-green-900: #04170b !default;
+
+// Vàng (cảnh báo). 500 giữ màu hổ phách để nút/nền cảnh báo vẫn rõ; 700 và 800 là chữ cảnh báo trên nền nhạt.
+$mds-color-yellow-50:  #fff8e1 !default;
+$mds-color-yellow-100: #fdecb3 !default;
+$mds-color-yellow-200: #f2cf7a !default;
+$mds-color-yellow-300: #f4c95a !default;
+$mds-color-yellow-400: #f2bb3a !default;
+$mds-color-yellow-500: #f0ad4e !default;
+$mds-color-yellow-600: #c08a3e !default;
+$mds-color-yellow-700: #9a5b00 !default;
+$mds-color-yellow-800: #7a4a00 !default;
+$mds-color-yellow-900: #3d2500 !default;
+
+
+// ---------------------------------------------------------------------------------------------------------------------
+// 2. Phông chữ: Be Vietnam Pro (có sẵn trong theme/ntt/fonts, không gọi Google Fonts), Noto Sans của Moodle là dự phòng
+// ---------------------------------------------------------------------------------------------------------------------
+$mds-font-family-base: "Be Vietnam Pro" !default;
+$font-family-fallback: "Noto Sans",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    "Liberation Sans",
+    Arial,
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji" !default;
+
+
+// ---------------------------------------------------------------------------------------------------------------------
+// 3. Biến Bootstrap (đứng trước Bootstrap nên preset Boost không ghi đè được, vì preset dùng "!default")
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Màu ngữ nghĩa. $primary/$success/$danger/$warning/$info lấy từ bảng màu ở trên; chỉ đổi $secondary (xám đậm vừa,
+// dùng cho huy hiệu/nền phụ, nút phụ được tạo kiểu riêng trong post.scss).
+$secondary: #5b6b82 !default;
+
+// Hình khối.
+$border-radius:    .5rem !default;      // 8px: nút, ô nhập, menu
+$border-radius-sm: .375rem !default;    // 6px: chip, mã
+$border-radius-lg: .75rem !default;     // 12px: thẻ, bảng lớn
+$card-border-radius: .75rem !default;
+$card-box-shadow: 0 1px 2px rgba(19, 82, 157, .06) !default;
+$card-border-color: var(--bs-border-color) !default;
+$card-cap-bg: rgba(0, 75, 135, .03) !default;
+
+// Chữ.
+$line-height-base: 1.55 !default;
+$headings-font-weight: 700 !default;
+$font-weight-semibold: 600 !default;
+$font-weight-bold: 700 !default;
+$h1-font-size: 1.5rem !default;
+$h2-font-size: 1.25rem !default;
+$h3-font-size: 1.125rem !default;
+$h4-font-size: 1rem !default;
+$h5-font-size: .9375rem !default;
+$h6-font-size: .875rem !default;
+
+// Nút và ô nhập: cao tối thiểu 2.5rem, chữ .875rem như thiết kế.
+$input-btn-padding-y: .5rem !default;
+$input-btn-padding-x: 1rem !default;
+$input-btn-font-size: .875rem !default;
+$input-btn-padding-y-sm: .25rem !default;
+$input-btn-padding-x-sm: .75rem !default;
+$input-btn-font-size-sm: .8125rem !default;
+$btn-font-weight: 600 !default;
+$btn-hover-bg-shade-amount: 22% !default;        // #004b87 -> #003a69
+$btn-hover-border-shade-amount: 22% !default;
+$btn-active-bg-shade-amount: 32% !default;
+$btn-active-border-shade-amount: 32% !default;
+$input-padding-x: .75rem !default;
+$form-label-color: #5b6b82 !default;
+$form-label-font-size: .875rem !default;
+$form-label-font-weight: 500 !default;
+
+// Bảng.
+$table-cell-padding-y: .75rem !default;
+$table-cell-padding-x: 1rem !default;
+$table-th-font-weight: 700 !default;
+
+// Thanh trên cùng cao 60px như Boost (thiết kế 56-60px).
+$navbar-height: 60px !default;

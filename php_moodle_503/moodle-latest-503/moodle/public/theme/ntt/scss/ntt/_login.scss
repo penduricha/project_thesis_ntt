@@ -1,0 +1,28 @@
+// Trang đăng nhập: nửa trái là nền xanh thương hiệu (+ ảnh nền nếu có, do Boost đặt trong SCSS "extra" đến sau tệp này)
+// phủ thêm một lớp chuyển màu; nửa phải là biểu mẫu trên nền trắng.
+// .login-layout-left của Boost đã là "position: sticky" nên lớp ::before tuyệt đối neo đúng vào nửa trái.
+
+.login-layout-left {
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(160deg, rgba($ntt-primary-hover, .9) 0%, rgba($ntt-primary, .62) 100%);
+        pointer-events: none;
+    }
+
+    .login-layout-left-content {
+        position: relative;
+        z-index: 1;
+        border-radius: $ntt-radius-card;
+    }
+}
+
+.login-layout-right {
+    background-color: var(--ntt-surface);
+}
+
+.login-heading,
+.login-container h2 {
+    font-weight: 700;
+}

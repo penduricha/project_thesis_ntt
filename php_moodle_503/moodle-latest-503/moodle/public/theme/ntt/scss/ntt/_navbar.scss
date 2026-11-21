@@ -1,0 +1,185 @@
+// Thanh trên cùng: nền xanh đặc, chữ trắng (như .topbar trong thiết kế).
+//
+// Boost gắn class "bg-body" (có !important) cho thanh này nên ở đây buộc phải dùng !important cho màu nền.
+// Menu thả xuống (user menu, "More") là hộp trắng nên chữ bên trong phải trở lại màu chữ thường.
+
+$ntt-on-topbar: #fff;
+$ntt-on-topbar-muted: rgba(255, 255, 255, .92);
+$ntt-topbar-hover: rgba(255, 255, 255, .14);
+$ntt-topbar-selected: rgba(255, 255, 255, .22);
+
+.navbar.fixed-top {
+    background-color: var(--ntt-primary) !important; // stylelint-disable-line declaration-no-important
+    color: $ntt-on-topbar;
+    border-bottom: 0;
+    box-shadow: 0 2px 8px rgba(0, 30, 60, .25);
+
+    .navbar-brand,
+    .navbar-brand:hover,
+    .navbar-brand:focus {
+        color: $ntt-on-topbar;
+        font-weight: 700;
+        letter-spacing: -.01em;
+    }
+
+    // Liên kết ở thanh chính (Dashboard, My courses, ...) và nút người dùng.
+    .nav-link,
+    .primary-navigation .navigation .nav-link,
+    .usermenu .dropdown-toggle,
+    .langmenu .dropdown-toggle,
+    .colourmodemenu .dropdown-toggle {
+        color: $ntt-on-topbar-muted;
+        border-radius: 0;
+    }
+
+    .nav-link:hover,
+    .nav-link:focus,
+    .usermenu .dropdown-toggle:hover,
+    .usermenu .dropdown-toggle:focus,
+    .langmenu .dropdown-toggle:hover,
+    .colourmodemenu .dropdown-toggle:hover {
+        color: $ntt-on-topbar;
+        background-color: $ntt-topbar-hover;
+    }
+
+    // Mục đang ở (Khoá học, ...): nền sáng nhẹ + vạch trắng dưới chân (như .nv.on nhưng trên nền xanh).
+    .primary-navigation .nav-link.active,
+    .primary-navigation .nav-link[aria-current="true"] {
+        color: $ntt-on-topbar;
+        background-color: $ntt-topbar-selected;
+        box-shadow: inset 0 -3px 0 $ntt-on-topbar;
+        font-weight: 600;
+    }
+
+    // Biểu tượng (chuông, tin nhắn, ...) theo màu chữ của liên kết chứa nó.
+    .nav-link .icon,
+    .usermenu .dropdown-toggle .icon,
+    .popover-region-toggle .icon {
+        color: inherit;
+    }
+
+    // Nút mở menu bên trên màn hình nhỏ.
+    .navbar-toggler {
+        --bs-navbar-toggler-focus-width: 0;
+
+        .navbar-toggler-icon {
+            filter: brightness(0) invert(1);
+        }
+
+        &:hover {
+            background-color: $ntt-topbar-hover;
+        }
+    }
+
+    // Vạch ngăn giữa các nhóm biểu tượng.
+    .divider {
+        background-color: rgba(255, 255, 255, .28);
+        border-color: rgba(255, 255, 255, .28) !important; // stylelint-disable-line declaration-no-important
+    }
+
+    // Chữ của công tắc chế độ chỉnh sửa.
+    .editmode-switch-form .mds-switch-label {
+        color: $ntt-on-topbar;
+    }
+
+    // Viên thuốc điều hướng của Design System (menu chính khi có JavaScript).
+    .mds-nav-pill,
+    .mds-nav-pill:visited {
+        color: $ntt-on-topbar-muted;
+    }
+
+    .mds-nav-pill:hover:not([aria-disabled="true"]):not(.mds-nav-pill--selected),
+    .mds-nav-pill:focus {
+        background-color: $ntt-topbar-hover;
+        color: $ntt-on-topbar;
+    }
+
+    .mds-nav-pill--selected,
+    .mds-nav-pill--selected:visited,
+    .mds-nav-pill--selected:hover:not([aria-disabled="true"]) {
+        background-color: $ntt-topbar-selected;
+        color: $ntt-on-topbar;
+        font-weight: 600;
+    }
+
+    .mds-nav-pill:focus-visible,
+    .nav-link:focus-visible,
+    .navbar-brand:focus-visible {
+        outline-color: $ntt-on-topbar;
+    }
+
+    // Số thông báo chưa đọc: đỏ đặc chữ trắng (như .nv em), không dùng kiểu nhạt của huy hiệu thường.
+    .badge,
+    .count-container {
+        background-color: var(--ntt-danger) !important; // stylelint-disable-line declaration-no-important
+        color: #fff !important; // stylelint-disable-line declaration-no-important
+        border-color: var(--ntt-primary) !important; // stylelint-disable-line declaration-no-important
+    }
+
+    // Ảnh đại diện có viền trắng để nổi trên nền xanh.
+    .userpicture,
+    .avatar img {
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, .85);
+    }
+
+    // Ô tìm kiếm trong thanh trên.
+    .simplesearchform .btn.search-icon,
+    .simplesearchform .btn-submit {
+        color: $ntt-on-topbar-muted;
+    }
+}
+
+// Hộp thông báo (biểu tượng chuông) nằm BÊN TRONG thanh xanh nên kế thừa chữ trắng của thanh, trong khi nền hộp là trắng:
+// tiêu đề, nội dung và dòng "không có thông báo" thành chữ trắng trên nền trắng (không đọc được).
+// Trả lại màu chữ thường (đen cơ bản của giao diện; ở chế độ tối tự chuyển sang chữ sáng) cho cả hộp.
+.popover-region-container {
+    color: var(--ntt-text);
+
+    .popover-region-header-text,
+    .popover-region-content,
+    .content-item-body,
+    .notification-message,
+    .empty-message,
+    .all-notifications {
+        color: var(--ntt-text);
+    }
+
+    // Giờ/ngày của từng thông báo: màu phụ (xám), vẫn đọc rõ trên nền trắng.
+    .timestamp,
+    .text-muted {
+        color: var(--ntt-text-muted);
+    }
+
+    // Số đếm chưa đọc nếu có trong hộp: đỏ đặc chữ trắng, giống số đếm trên chuông.
+    .badge,
+    .count-container {
+        background-color: var(--ntt-danger) !important; // stylelint-disable-line declaration-no-important
+        color: #fff !important; // stylelint-disable-line declaration-no-important
+    }
+}
+
+// Hộp menu thả xuống (menu người dùng, "More", ngôn ngữ): trắng, viền mảnh, bo 8px, đổ bóng như .acct__menu.
+.dropdown-menu {
+    --bs-dropdown-border-color: var(--ntt-border);
+    --bs-dropdown-border-radius: #{$ntt-radius};
+    --bs-dropdown-inner-border-radius: calc(#{$ntt-radius} - 1px);
+    --bs-dropdown-box-shadow: #{$ntt-shadow-pop};
+    --bs-dropdown-link-hover-bg: var(--ntt-primary-soft);
+    --bs-dropdown-link-hover-color: var(--ntt-on-primary-soft);
+    --bs-dropdown-divider-bg: var(--ntt-border);
+    --bs-dropdown-padding-y: .5rem;
+}
+
+.dropdown-item {
+    font-size: .875rem;
+    transition: background-color .15s ease, color .15s ease;
+}
+
+// Mục đang chọn/hiện tại: xanh đặc như .nv.on.
+.dropdown-item.active,
+.dropdown-item:active,
+.dropdown-item[aria-current="true"],
+.dropdown-item[aria-selected="true"] {
+    background-color: var(--ntt-primary);
+    color: #fff;
+}

@@ -1,0 +1,37 @@
+// Bảng. Thiết kế: viền mảnh, đầu bảng nền nhạt chữ xám đậm, hàng rê chuột nền xanh nhạt.
+
+.table {
+    --#{$prefix}table-border-color: var(--ntt-border);
+    --#{$prefix}table-hover-bg: var(--ntt-primary-soft);
+    --#{$prefix}table-hover-color: var(--ntt-text);
+    --#{$prefix}table-striped-bg: var(--ntt-tile);
+    font-size: .875rem;
+}
+
+.table > thead > tr > th,
+.generaltable > thead > tr > th,
+table.generaltable th.header,
+table.flexible th.header {
+    background-color: var(--ntt-surface-hover);
+    color: var(--ntt-text-muted);
+    font-weight: 700;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--ntt-border);
+}
+
+// Bảng nằm trong vùng cuộn ngang: viền ngoài bo 8px như .tw.
+.table-responsive {
+    border: 1px solid var(--ntt-border);
+    border-radius: $ntt-radius;
+    background-color: var(--ntt-surface);
+
+    .table {
+        border-top: 0;
+    }
+}
+
+// Hàng của bảng thường (không phải .table) cũng có hiệu ứng rê chuột nhẹ.
+.generaltable tbody tr:hover > td,
+.generaltable tbody tr:hover > th {
+    background-color: var(--ntt-primary-soft);
+}

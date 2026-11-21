@@ -1,0 +1,90 @@
+// Biểu mẫu. Thiết kế: ô nhập viền xám xanh (#8596ad), đổi sang xanh khi rê chuột / lấy tiêu điểm, nhãn xám nhỏ,
+// ô tệp có nút "Choose file" bo 6px nền nhạt.
+
+.form-control,
+.form-select {
+    border-color: var(--ntt-border-strong);
+    transition: border-color .15s ease, box-shadow .15s ease;
+
+    &:hover:not(:disabled):not(:focus) {
+        border-color: var(--ntt-primary);
+    }
+
+    &:focus {
+        border-color: var(--ntt-primary);
+    }
+
+    &:disabled,
+    &[readonly] {
+        background-color: var(--ntt-surface-hover);
+    }
+}
+
+// Nhãn (Moodle dùng .col-form-label trong .mform).
+.form-label,
+.col-form-label,
+.mform .fitem .fitemtitle label {
+    color: var(--ntt-text-muted);
+    font-size: .875rem;
+    font-weight: 500;
+}
+
+// Chọn tệp: nút bo 6px, hover xanh nhạt.
+.form-control[type="file"]::file-selector-button {
+    margin-right: .75rem;
+    padding: .35rem .75rem;
+    border: 1px solid var(--ntt-border-strong);
+    border-radius: $border-radius-sm;
+    background-color: var(--ntt-surface-hover);
+    color: var(--ntt-text);
+    font-size: .8125rem;
+    font-weight: 600;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.form-control[type="file"]:hover:not(:disabled):not([readonly])::file-selector-button {
+    background-color: var(--ntt-primary-soft);
+    border-color: var(--ntt-primary);
+    color: var(--ntt-on-primary-soft);
+}
+
+// Hộp chọn / nút radio: màu chính, con trỏ tay.
+.form-check-input {
+    cursor: pointer;
+
+    &:checked {
+        background-color: var(--ntt-primary);
+        border-color: var(--ntt-primary);
+    }
+
+    &:focus {
+        border-color: var(--ntt-primary);
+    }
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+// Ô lỗi xác thực: đỏ đậm của thiết kế kèm viền kép như input.invalid.
+.is-invalid,
+.was-validated :invalid {
+    border-color: var(--ntt-danger) !important; // stylelint-disable-line declaration-no-important
+}
+
+.invalid-feedback,
+.form-control-feedback {
+    color: var(--ntt-danger);
+    font-size: .875rem;
+    font-weight: 600;
+}
+
+// Nhóm có thể thu gọn trong biểu mẫu Moodle (fieldset/legend): đường kẻ mảnh, tiêu đề đậm.
+.mform fieldset {
+    border-color: var(--ntt-border);
+}
+
+.mform .fheader,
+.mform legend.ftoggler {
+    font-weight: 700;
+}

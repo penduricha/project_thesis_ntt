@@ -1,0 +1,65 @@
+// Thanh bên (drawer): chỉ mục khoá học bên trái, khối (block) bên phải. Như .sidebar + .nv của thiết kế:
+// nền trắng, viền mảnh, mục bo 8px, mục đang xem là xanh đặc chữ trắng.
+
+.drawer {
+    background-color: var(--ntt-surface);
+    border-color: var(--ntt-border);
+
+    // Trên màn hình nhỏ drawer trượt đè lên trang: thêm bóng để tách khỏi nội dung.
+    @include media-breakpoint-down(lg) {
+        &.show {
+            box-shadow: 0 0 40px rgba(0, 30, 60, .3);
+        }
+    }
+}
+
+// Boost tô drawer trái xám (gray-200); thiết kế dùng thanh bên trắng có viền (.sidebar), nên đồng bộ hai bên.
+.drawer.drawer-left,
+.drawer.drawer-right {
+    background-color: var(--ntt-surface);
+}
+
+.drawer.drawer-left {
+    border-right: 1px solid var(--ntt-border);
+}
+
+// Nút mở/đóng drawer ở mép trang.
+.drawer-toggles .drawer-toggler .btn {
+    color: var(--ntt-primary);
+
+    &:hover,
+    &:focus {
+        background-color: var(--ntt-primary-soft);
+        color: var(--ntt-on-primary-soft);
+    }
+}
+
+.drawer .drawerheader .draweractions .btn:hover {
+    background-color: var(--ntt-primary-soft);
+}
+
+// Chỉ mục khoá học.
+.courseindex {
+    .courseindex-item {
+        border-radius: $ntt-radius;
+        transition: background-color .15s ease, color .15s ease;
+
+        &:hover,
+        &:focus {
+            background-color: var(--ntt-surface-hover);
+            color: var(--ntt-on-primary-soft);
+        }
+
+        &.pageitem,
+        &.pageitem:hover {
+            background-color: var(--ntt-primary);
+            color: #fff;
+            font-weight: 600;
+        }
+    }
+
+    // Tên chương/chủ đề: chữ nhỏ, đậm, màu phụ (như .nav-group).
+    .courseindex-section-title {
+        font-weight: 700;
+    }
+}

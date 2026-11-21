@@ -1,0 +1,67 @@
+// Khung trang: tiêu đề, đường dẫn (breadcrumb), thanh điều hướng phụ, chân trang.
+
+// Tiêu đề trang (.page__title: 1.5rem, đậm).
+#page-header .page-header-headings h1,
+#page-header h1,
+.activity-header h1 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+}
+
+// Đường dẫn: liên kết xanh đậm 600 như .crumb-bar.
+.breadcrumb {
+    --#{$prefix}breadcrumb-divider-color: var(--ntt-text-muted);
+    --#{$prefix}breadcrumb-item-active-color: var(--ntt-text-muted);
+    font-size: .875rem;
+
+    .breadcrumb-item a {
+        color: var(--ntt-on-primary-soft);
+        font-weight: 600;
+    }
+}
+
+// Điều hướng phụ (tab: Course, Settings, Participants, Question bank, ...).
+.secondary-navigation {
+    .nav-link {
+        font-weight: 500;
+    }
+
+    .nav-link.active,
+    .nav-link[aria-current="true"] {
+        font-weight: 600;
+    }
+}
+
+// Nút trợ giúp ở chân trang (popover).
+.btn-footer-popover {
+    background-color: var(--ntt-primary);
+    border-color: var(--ntt-primary);
+    color: #fff;
+
+    &:hover,
+    &:focus {
+        background-color: var(--ntt-primary-hover);
+        border-color: var(--ntt-primary-hover);
+        color: #fff;
+    }
+}
+
+// Phân trang.
+.pagination {
+    --#{$prefix}pagination-border-radius: #{$ntt-radius};
+    --#{$prefix}pagination-hover-bg: var(--ntt-primary-soft);
+    --#{$prefix}pagination-hover-color: var(--ntt-on-primary-soft);
+    --#{$prefix}pagination-active-bg: var(--ntt-primary);
+    --#{$prefix}pagination-active-border-color: var(--ntt-primary);
+}
+
+// Tab của Bootstrap (nav-tabs / nav-pills).
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+    color: var(--ntt-on-primary-soft);
+    font-weight: 600;
+}
+
+.nav-pills {
+    --#{$prefix}nav-pills-link-active-bg: var(--ntt-primary);
+}

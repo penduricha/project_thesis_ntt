@@ -1,0 +1,74 @@
+// Nút. Thiết kế: nút thường là viền xám xanh, nền trong; nút chính xanh đặc; nút nguy hiểm đỏ đặc; chữ đậm 600.
+// Bootstrap 5.3 dựng nút bằng biến --bs-btn-*, nên chỉ cần gán lại biến cho từng loại nút.
+
+.btn {
+    font-weight: 600;
+    line-height: 1.4;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+
+    &:not(:disabled):not(.disabled):active {
+        transform: translateY(1px);
+    }
+
+    &:disabled,
+    &.disabled {
+        opacity: .5;
+    }
+}
+
+// Nút phụ = nút "thường" của thiết kế (Cancel, Back, ...): viền xám xanh, hover nền nhạt.
+.btn-secondary {
+    --#{$prefix}btn-color: var(--ntt-text);
+    --#{$prefix}btn-bg: transparent;
+    --#{$prefix}btn-border-color: var(--ntt-border-strong);
+    --#{$prefix}btn-hover-color: var(--ntt-text);
+    --#{$prefix}btn-hover-bg: var(--ntt-surface-hover);
+    --#{$prefix}btn-hover-border-color: var(--ntt-text-muted);
+    --#{$prefix}btn-active-color: var(--ntt-text);
+    --#{$prefix}btn-active-bg: var(--#{$prefix}gray-300);
+    --#{$prefix}btn-active-border-color: var(--ntt-text-muted);
+    --#{$prefix}btn-disabled-color: var(--ntt-text-muted);
+    --#{$prefix}btn-disabled-bg: transparent;
+    --#{$prefix}btn-disabled-border-color: var(--#{$prefix}gray-400);
+    --#{$prefix}btn-focus-shadow-rgb: 133, 150, 173;
+}
+
+// Nút nguy hiểm: đỏ đặc, hover đậm hơn (#a51818 -> #8a1414).
+.btn-danger {
+    --#{$prefix}btn-hover-bg: #{$mds-color-red-600};
+    --#{$prefix}btn-hover-border-color: #{$mds-color-red-600};
+    --#{$prefix}btn-active-bg: #{$mds-color-red-700};
+    --#{$prefix}btn-active-border-color: #{$mds-color-red-700};
+}
+
+// Nút "ma" của thiết kế (.btn.ghost): chữ xanh, không viền, hover nền nhạt.
+.btn-link {
+    --#{$prefix}btn-color: var(--ntt-on-primary-soft);
+    --#{$prefix}btn-hover-color: var(--ntt-on-primary-soft);
+    --#{$prefix}btn-active-color: var(--ntt-on-primary-soft);
+    font-weight: 600;
+
+    &:hover,
+    &:focus {
+        background-color: var(--ntt-primary-soft);
+        text-decoration: none;
+    }
+}
+
+// Nút viền màu chính / nguy hiểm: hover đổ đặc như Bootstrap, nhưng viền và chữ theo token mới.
+.btn-outline-primary {
+    --#{$prefix}btn-color: var(--ntt-on-primary-soft);
+    --#{$prefix}btn-border-color: var(--ntt-primary);
+}
+
+.btn-outline-danger {
+    --#{$prefix}btn-hover-bg: var(--ntt-danger-soft);
+    --#{$prefix}btn-hover-color: var(--ntt-danger);
+    --#{$prefix}btn-hover-border-color: var(--ntt-danger);
+}
+
+// Nút biểu tượng tròn (Moodle dùng nhiều): hover nền nhạt của màu chính.
+.btn-icon:hover,
+.btn-icon:focus {
+    background-color: var(--ntt-primary-soft);
+}

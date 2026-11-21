@@ -1,0 +1,19 @@
+// =====================================================================================================================
+// NTT theme - POST SCSS
+// Đứng sau preset Boost (Bootstrap + toàn bộ SCSS của Moodle), nên chỉ cần ghi đè phần khác biệt.
+// Mỗi tệp trong scss/ntt/ lo một nhóm thành phần; thứ tự import không quan trọng trừ _tokens (phải đứng đầu).
+// =====================================================================================================================
+
+@import "ntt/tokens";
+@import "ntt/fonts";
+@import "ntt/base";
+@import "ntt/navbar";
+@import "ntt/drawers";
+@import "ntt/buttons";
+@import "ntt/cards";
+@import "ntt/forms";
+@import "ntt/tables";
+@import "ntt/feedback";
+@import "ntt/page";
+@import "ntt/question";
+@import "ntt/login";

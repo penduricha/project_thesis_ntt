@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<libraries>
+  <library>
+    <location>fonts/be-vietnam-pro</location>
+    <name>Be Vietnam Pro</name>
+    <version>5.3.0</version>
+    <license>OFL-1.1</license>
+    <licenseversion>1.1</licenseversion>
+    <repository>https://github.com/bettergui/BeVietnamPro</repository>
+    <copyrights>
+      <copyright>2021 The Be Vietnam Pro Project Authors</copyright>
+    </copyrights>
+    <description>Be Vietnam Pro web fonts (weights 400, 500, 600, 700; vietnamese, latin and latin-ext subsets) taken from the @fontsource/be-vietnam-pro npm package.</description>
+  </library>
+</libraries>

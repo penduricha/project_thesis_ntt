@@ -1,0 +1,53 @@
+// Thẻ (card), khối (block), hộp thoại: nền trắng, viền mảnh, bo 12px, bóng rất nhẹ (như .card của thiết kế).
+
+.card {
+    --#{$prefix}card-border-radius: #{$ntt-radius-card};
+    --#{$prefix}card-inner-border-radius: calc(#{$ntt-radius-card} - 1px);
+    --#{$prefix}card-box-shadow: #{$ntt-shadow-card};
+    --#{$prefix}card-cap-bg: var(--ntt-tile);
+    box-shadow: var(--#{$prefix}card-box-shadow);
+}
+
+.card-header,
+.card-footer {
+    border-color: var(--ntt-border);
+}
+
+.card-title,
+.block .card-title,
+.block_title {
+    font-weight: 700;
+}
+
+// Thẻ có thể bấm (khoá học trên dashboard, ...): viền đổi sang màu chính khi rê chuột.
+.card.dashboard-card,
+.card.course-card,
+.card.activity-card {
+    transition: border-color .15s ease, background-color .15s ease;
+
+    &:hover {
+        border-color: var(--ntt-primary);
+        background-color: var(--ntt-tile);
+    }
+}
+
+.list-group {
+    --#{$prefix}list-group-border-color: var(--ntt-border);
+    --#{$prefix}list-group-border-radius: #{$ntt-radius};
+    --#{$prefix}list-group-action-hover-bg: var(--ntt-primary-soft);
+    --#{$prefix}list-group-action-hover-color: var(--ntt-on-primary-soft);
+    --#{$prefix}list-group-active-bg: var(--ntt-primary);
+    --#{$prefix}list-group-active-border-color: var(--ntt-primary);
+}
+
+// Hộp thoại (modal).
+.modal-content {
+    border-radius: $ntt-radius-card;
+    border-color: var(--ntt-border);
+    box-shadow: 0 16px 48px rgba(0, 30, 60, .28);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--ntt-border);
+}

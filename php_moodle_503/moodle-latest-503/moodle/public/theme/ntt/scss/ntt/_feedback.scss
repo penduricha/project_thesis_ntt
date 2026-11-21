@@ -1,0 +1,94 @@
+// Huy hiệu và thông báo.
+//
+// Huy hiệu (.b trong thiết kế): hình viên thuốc, nền nhạt + viền + chữ cùng tông, chữ đậm .8125rem.
+// Bootstrap dùng nền đặc kèm !important (.bg-*), nên các quy tắc dưới đây cũng cần !important và độ ưu tiên cao hơn.
+
+.badge {
+    padding: .2rem .65rem;
+    border: 1px solid transparent;
+    border-radius: $border-radius-pill;
+    font-size: .8125rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+@mixin ntt-badge($bg, $border, $color) {
+    background-color: $bg !important; // stylelint-disable-line declaration-no-important
+    border-color: $border !important; // stylelint-disable-line declaration-no-important
+    color: $color !important; // stylelint-disable-line declaration-no-important
+}
+
+.badge.bg-primary,
+.badge.text-bg-primary {
+    @include ntt-badge(var(--ntt-primary-soft), transparent, var(--ntt-on-primary-soft));
+}
+
+.badge.bg-success,
+.badge.text-bg-success {
+    @include ntt-badge(var(--ntt-success-soft), var(--ntt-success-border), var(--ntt-success));
+}
+
+.badge.bg-danger,
+.badge.text-bg-danger {
+    @include ntt-badge(var(--ntt-danger-soft), var(--ntt-danger-border), var(--ntt-danger));
+}
+
+.badge.bg-warning,
+.badge.text-bg-warning {
+    @include ntt-badge(var(--ntt-warning-soft), var(--ntt-warning-border), var(--ntt-warning-text));
+}
+
+.badge.bg-info,
+.badge.text-bg-info {
+    @include ntt-badge(var(--#{$prefix}info-bg-subtle), var(--#{$prefix}info-border-subtle), var(--#{$prefix}info-text-emphasis));
+}
+
+.badge.bg-secondary,
+.badge.bg-light,
+.badge.bg-dark,
+.badge.text-bg-secondary,
+.badge.text-bg-light,
+.badge.text-bg-dark {
+    @include ntt-badge(var(--ntt-surface-hover), var(--ntt-border), var(--ntt-text-muted));
+}
+
+// Thông báo (alert): bo 8px, vạch nhấn 4px bên trái theo màu từng loại.
+.alert {
+    --#{$prefix}alert-border-radius: #{$ntt-radius};
+    border-left-width: 4px;
+}
+
+.alert-success {
+    --#{$prefix}alert-bg: var(--ntt-success-soft);
+    --#{$prefix}alert-border-color: var(--ntt-success-border);
+}
+
+.alert-danger {
+    --#{$prefix}alert-bg: var(--ntt-danger-soft);
+    --#{$prefix}alert-border-color: var(--ntt-danger-border);
+}
+
+.alert-warning {
+    --#{$prefix}alert-bg: var(--ntt-warning-tint);
+    --#{$prefix}alert-border-color: var(--ntt-warning-border);
+}
+
+.alert-primary,
+.alert-info {
+    --#{$prefix}alert-bg: var(--ntt-primary-soft);
+    --#{$prefix}alert-border-color: #{$mds-color-blue-200};
+    --#{$prefix}alert-color: var(--ntt-text);
+}
+
+@include color-mode(dark) {
+    .alert-primary,
+    .alert-info {
+        --#{$prefix}alert-border-color: #{rgba($mds-color-blue-300, .45)};
+    }
+}
+
+// Thông báo nổi (toast).
+.toast {
+    border-radius: $ntt-radius;
+    box-shadow: $ntt-shadow-pop;
+}

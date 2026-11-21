@@ -1,0 +1,48 @@
+// Nền tảng: chữ, liên kết, tiêu điểm bàn phím.
+
+html {
+    // Cuộn tới neo (#id) không bị thanh trên cùng che.
+    scroll-padding-top: calc(#{$navbar-height} + 1rem);
+}
+
+body {
+    line-height: $line-height-base;
+}
+
+// Vòng tiêu điểm cùng kiểu thiết kế: viền 2px màu chính, cách 2px.
+:focus-visible {
+    outline: 2px solid var(--ntt-primary);
+    outline-offset: 2px;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    letter-spacing: -.005em;
+}
+
+// Chữ phụ: dùng màu chữ phụ của thiết kế thay vì độ mờ của Bootstrap (Bootstrap đặt !important nên ở đây cũng phải).
+.text-muted,
+.text-body-secondary {
+    color: var(--ntt-text-muted) !important; // stylelint-disable-line declaration-no-important
+}
+
+mark,
+.highlight {
+    background-color: #fef08a;
+    color: var(--#{$prefix}black);
+    padding: 0 .15rem;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+hr {
+    border-color: var(--ntt-border);
+    opacity: 1;
+}
+
+// Thanh cuộn mảnh cho các vùng cuộn bên trong (nhật ký, danh sách dài).
+.drawer .drawercontent,
+.table-responsive,
+.simplesearchform .dropdown-menu {
+    scrollbar-color: var(--ntt-border-strong) transparent;
+}
