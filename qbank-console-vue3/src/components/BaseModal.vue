@@ -1,16 +1,23 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-const props = defineProps({ title: String, dirty: Boolean, footerStyle: String })
+import { toast } from '../store.js'
+const props = defineProps({ title: String, dirty: Boolean, footerStyle: String, locked: Boolean })
 const emit = defineEmits(['close'])
 const root = ref(null), opener = document.activeElement
 let down = false
 const MSG = 'Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?'
-function ask() { if (props.dirty && !confirm(MSG)) return; emit('close') }
+function nudge() {
+  root.value.classList.add('modal-static'); setTimeout(() => root.value?.classList.remove('modal-static'), 300)
+  toast('Thông tin này chỉ hiển thị một lần. Hãy sao chép lại, rồi dùng nút bên dưới để đóng.', 'wa')
+}
+function ask() { if (props.locked) return nudge(); if (props.dirty && !confirm(MSG)) return; emit('close') }
 function onKey(e) {
   if (e.key === 'Escape') { e.preventDefault(); ask(); return }
   if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing) return
   const t = e.target
-  const ok = (t.tagName === 'INPUT' && !/^(checkbox|radio|button|submit)$/.test(t.type)) || (t.tagName === 'TEXTAREA' && (e.ctrlKey || e.metaKey))
+  if (t.closest?.('[data-enter="none"]')) return
+  const multi = !!root.value.querySelector('.modal-body textarea'), mod = e.ctrlKey || e.metaKey
+  const ok = (t.tagName === 'INPUT' && !/^(checkbox|radio|button|submit)$/.test(t.type) && (!multi || mod)) || (t.tagName === 'TEXTAREA' && mod)
   if (!ok) return
   const b = root.value.querySelector('.modal-footer .btn.pri:not(:disabled)')
   if (b) { e.preventDefault(); b.click() }

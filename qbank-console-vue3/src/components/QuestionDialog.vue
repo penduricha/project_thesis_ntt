@@ -2,7 +2,7 @@
 import { reactive, ref, computed, watch, nextTick } from 'vue'
 import BaseModal from './BaseModal.vue'
 import CourseCombobox from './CourseCombobox.vue'
-import { COURSES, S, code, nowStr, saveQuestion } from '../store.js'
+import { COURSES, S, code, nowStr, saveQuestion, toast, subjOk } from '../store.js'
 import { LV, LV_DB, ENUM_DB } from '../data/mock.js'
 import { norm } from '../utils.js'
 
@@ -43,8 +43,12 @@ async function save() {
   if (!text) err.t = 'Câu dẫn đang trống. Hãy nhập nội dung câu hỏi.'
   o.forEach((x, i) => { if (!x) err['o' + i] = 'Phương án ' + 'ABCD'[i] + ' đang trống.' })
   if (!c) err.c = 'Hãy chọn môn học trong danh sách.'
+  else if (!subjOk(f.c)) err.c = 'Bạn chưa được phân công môn học này.'
   else if (!c.topics[f.tp]) err.chips = 'Môn học này chưa có chương. Hãy thêm chương cho môn học trước khi lưu câu hỏi.'
   if (Object.keys(err).length) { await nextTick(); return focusFirstInvalid() }
+  if (cur && cur.text === text && cur.o.every((x, i) => x === o[i]) && cur.a === f.a && cur.c === f.c && (cur.tp || 0) === f.tp && cur.l === +f.l && (cur.title || '') === f.title.trim() && (cur.fb || '') === f.fb.trim()) {
+    dirty.value = false; emit('close'); return toast('Không có thay đổi nào để lưu')
+  }
   saving.value = true
   try {
     await saveQuestion({ text, o, a: f.a, c: f.c, tp: f.tp, l: +f.l, title: f.title.trim(), fb: f.fb.trim(), updatedAt: nowStr(), by: S.name }, props.id)

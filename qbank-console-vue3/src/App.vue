@@ -3,12 +3,14 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NAV, EXTRA, SUB, ICO } from './data/mock.js'
 import ModalHost from './components/ModalHost.vue'
-import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse } from './store.js'
+import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse, toastHold, toastRelease } from './store.js'
 
 const route = useRoute(), router = useRouter()
 const mq = matchMedia('(min-width:768px)')
 const nav = ref(mq.matches ? 'open' : 'closed')
 const amOpen = ref(false)
+const desk = ref(mq.matches)
+const selbar = ref(null)
 const yr = new Date().getFullYear()
 
 const page = computed(() => route.name || 'dash')
@@ -24,8 +26,26 @@ const ini = computed(() => { const w = S.name.split(' '); return (w.length > 1 ?
 const shown = computed(() => (onBank.value ? list(page.value === 'course').length : 0))
 
 const go = k => router.push('/' + k)
-const toggleNav = () => { nav.value = nav.value === 'open' ? 'closed' : 'open' }
-const focusView = () => document.getElementById('view')?.scrollIntoView()
+const toggleNav = () => {
+  nav.value = nav.value === 'open' ? 'closed' : 'open'
+  if (nav.value === 'open' && !mq.matches) requestAnimationFrame(() => (document.querySelector('#menu .nv.on') || document.querySelector('#menu .nv'))?.focus())
+}
+const focusView = () => { const v = document.getElementById('view'); if (v) { v.tabIndex = -1; v.focus() } }
+const showSel = computed(() => onBank.value && S.sel.size > 0)
+/* v10: thanh chọn không che hàng cuối – body.has-sel + biến --selbar-h */
+function fitSel() {
+  const sb = selbar.value; if (!sb) return
+  document.body.classList.toggle('has-sel', !sb.hidden)
+  if (!sb.hidden) document.documentElement.style.setProperty('--selbar-h', sb.offsetHeight + 'px')
+}
+watch(showSel, () => nextTick(fitSel))
+watch(amOpen, v => { if (v) nextTick(() => document.querySelector('#am .acct__item')?.focus()) })
+function menuKey(e) {
+  const it = [...document.querySelectorAll('#am .acct__item')], i = it.indexOf(document.activeElement); let n = -1
+  if (e.key === 'ArrowDown') n = (i + 1) % it.length; else if (e.key === 'ArrowUp') n = (i - 1 + it.length) % it.length
+  else if (e.key === 'Home') n = 0; else if (e.key === 'End') n = it.length - 1
+  if (n >= 0) { e.preventDefault(); it[n].focus() }
+}
 
 function bulk(k) {
   if (!S.sel.size) return toast('Hãy chọn ít nhất một câu hỏi trước', 'wa')
@@ -51,26 +71,29 @@ watch(() => route.fullPath, async () => {
 }, { immediate: true })
 
 const onDoc = e => { if (!e.target.closest('.acct')) amOpen.value = false }
-const onMq = e => { nav.value = e.matches ? 'open' : 'closed' }
+const onMq = e => { desk.value = e.matches; nav.value = e.matches ? 'open' : 'closed' }
 const onKey = e => {
   if (e.key === 'Escape' && amOpen.value) { amOpen.value = false; document.getElementById('ab')?.focus() }
   const typing = /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.target.isContentEditable
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && String(e.key).toLowerCase() === 'z' && !typing && S.toast.cb && S.toast.on) { e.preventDefault(); undo() }
+  if (e.key === 'Escape' && !mq.matches && nav.value === 'open' && !S.dlg.kind) { nav.value = 'closed'; document.getElementById('mt')?.focus() }
   if (e.key === '/' && onBank.value && !typing) { e.preventDefault(); document.getElementById('q-srch')?.focus() }
   if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && !S.dlg.kind) {
-    if (e.key === '?') { e.preventDefault(); notYet('Bảng phím tắt') }
+    if (e.key === '?') { e.preventDefault(); openDialog('keys') }
     else if (e.key === 'n' && onBank.value) { e.preventDefault(); editQuestion(0, page.value === 'course' ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0 } : {}) }
   }
 }
 onMounted(() => {
   document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey); mq.addEventListener('change', onMq)
   loadQuestions()
+  if (window.ResizeObserver && selbar.value) new ResizeObserver(fitSel).observe(selbar.value)
 })
 onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey); mq.removeEventListener('change', onMq) })
 </script>
 
 <template>
   <a href="#view" class="skip" @click.prevent="focusView">Bỏ qua điều hướng</a>
-  <div id="app" class="shell" :data-nav="nav">
+  <div id="app" class="shell" :data-nav="nav" :inert="S.dlg.kind ? '' : undefined">
     <header class="topbar">
       <button class="topbar__toggle" id="mt" aria-label="Mở hoặc đóng menu" :aria-expanded="String(nav === 'open')" aria-controls="side" @click="toggleNav"><span></span><span></span><span></span></button>
       <RouterLink to="/dash" class="logo-link">
@@ -78,14 +101,14 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
         <span class="logo-text"><strong>QBank Console</strong><span>NTTU · Kiểm định LLM</span></span>
       </RouterLink>
       <div class="acct" id="acct-wrap" @focusout="e => { if (!e.currentTarget.contains(e.relatedTarget)) amOpen = false }">
-        <button class="acct__btn" id="ab" aria-haspopup="true" :aria-expanded="String(amOpen)" aria-controls="am" aria-label="Menu tài khoản" @click="amOpen = !amOpen"><span class="av js-av">{{ ini }}</span><span class="acct__chev" aria-hidden="true"></span></button>
-        <div class="acct__menu" id="am" :hidden="!amOpen">
+        <button class="acct__btn" id="ab" aria-haspopup="menu" :aria-expanded="String(amOpen)" aria-controls="am" aria-label="Menu tài khoản" @click="amOpen = !amOpen" @keydown.down.prevent="amOpen = true"><span class="av js-av">{{ ini }}</span><span class="acct__chev" aria-hidden="true"></span></button>
+        <div class="acct__menu" id="am" role="menu" aria-label="Tài khoản" :hidden="!amOpen" @keydown="menuKey">
           <div class="acct__head"><div class="who"><span class="av av--lg js-av">{{ ini }}</span><div><b id="acn">{{ S.name }}</b><small id="acr">{{ S.role === 'admin' ? 'Quản trị viên' : 'Giảng viên' }}</small></div></div></div>
-          <button class="acct__item" @click="go('account')">Thông tin tài khoản</button>
-          <button class="acct__item" @click="go('settings')">Cài đặt</button>
-          <button class="acct__item" @click="amOpen = false; notYet('Bảng phím tắt')">Phím tắt</button>
-          <div class="acct__sep"></div>
-          <button class="acct__item out" @click="amOpen = false; toast('Bản demo không có màn hình đăng nhập nên chưa đăng xuất thật', 'wa')">Đăng xuất</button>
+          <button role="menuitem" class="acct__item" @click="go('account')">Thông tin tài khoản</button>
+          <button role="menuitem" class="acct__item" @click="go('settings')">Cài đặt</button>
+          <button role="menuitem" class="acct__item" @click="amOpen = false; openDialog('keys')">Phím tắt</button>
+          <div class="acct__sep" role="separator"></div>
+          <button role="menuitem" class="acct__item out" @click="amOpen = false; toast('Bản demo không có màn hình đăng nhập nên chưa đăng xuất thật', 'wa')">Đăng xuất</button>
         </div>
       </div>
     </header>
@@ -103,7 +126,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
     </aside>
     <div class="scrim" @click="nav = 'closed'"></div>
 
-    <main class="content">
+    <main class="content" :inert="nav === 'open' && !desk ? '' : undefined">
       <div class="page">
         <div id="crumb">
           <div v-if="page === 'course' && crs" class="crumb-bar"><button type="button" @click="go('courses')">‹ Môn học</button><span>/</span><span><b>{{ crs.id }}</b> · {{ crs.name }}</span></div>
@@ -117,7 +140,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
               <button class="btn sm" @click="openDialog('course', { index: S.ci })">Sửa môn học</button>
               <button class="btn sm dan" @click="askDeleteCourse(S.ci, () => go('courses'))">Xóa môn học</button>
             </template>
-            <button v-else-if="page === 'moodle'" class="btn pri" @click="notYet('Hộp thoại nhập Moodle XML')">Nhập Moodle XML</button>
+            <button v-else-if="page === 'moodle'" class="btn pri" @click="openDialog('import')">Nhập Moodle XML</button>
           </div>
         </div>
         <div id="view"><RouterView /></div>
@@ -126,12 +149,12 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
     </main>
   </div>
 
-  <div id="selbar" :hidden="!(onBank && S.sel.size)">
+  <div id="selbar" ref="selbar" :hidden="!showSel" :inert="S.dlg.kind ? '' : undefined">
     <b id="sn">Đã chọn {{ S.sel.size }} câu</b>
     <div class="sel-acts">
       <button class="btn sm" id="sb-all" @click="list(page === 'course').forEach(q => S.sel.add(q.id))">Chọn tất cả {{ shown }}</button>
       <button class="btn sm pri" @click="bulk('ai')">Kiểm định AI</button>
-      <button class="btn sm" @click="bulk('xml')">Xuất Moodle XML</button>
+      <button class="btn sm" @click="bulk('xml')">Xuất <span class="x-long">Moodle </span>XML</button>
       <button class="btn sm dan" @click="bulkDel" aria-label="Xóa các câu hỏi đã chọn">Xóa</button>
       <button class="btn sm" @click="S.sel.clear()">Bỏ chọn tất cả</button>
     </div>
@@ -139,8 +162,8 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
 
   <ModalHost />
 
-  <div id="toast" role="status" aria-live="polite" :class="S.toast.on ? ['on', S.toast.tone] : ''" @click="S.toast.on = false">
+  <div id="toast" role="status" aria-live="polite" :class="S.toast.on ? ['on', S.toast.tone] : ''" @click="S.toast.on = false" @mouseenter="toastHold" @focusin="toastHold" @mouseleave="toastRelease" @focusout="toastRelease">
     <span>{{ S.toast.msg }}</span>
-    <button v-if="S.toast.label && S.toast.cb" type="button" @click.stop="undo">{{ S.toast.label }}</button>
+    <button v-if="S.toast.label && S.toast.cb" type="button" title="Ctrl+Z" aria-keyshortcuts="Control+Z" @click.stop="undo">{{ S.toast.label }}</button>
   </div>
 </template>

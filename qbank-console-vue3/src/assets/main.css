@@ -1,4 +1,11 @@
-@import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css") layer(bootstrap);
+/* v10: chuẩn hóa để giao diện giống nhau dù Bootstrap có tải được hay không.
+   Các giá trị dưới đây trùng với phần reboot của Bootstrap 5.3 mà thiết kế đã dựa vào; các luật sau chúng trong file vẫn ghi đè được. */
+button,input,select,textarea{margin:0;font-family:inherit;font-size:inherit;line-height:inherit}
+svg{vertical-align:middle}
+h1,h2,h3,h4,h5,h6{line-height:1.2;color:inherit}
+.btn{vertical-align:middle;-webkit-user-select:none;user-select:none}
+.card{position:relative;color:inherit}
+dt{font-weight:700}
 
 :root{
   --primary:#004b87;--primary-hover:#003a69;--primary-soft:#e8f1fa;
@@ -511,7 +518,7 @@ body.modal-open{overflow:hidden}
 .modal-body label small:not(.fe){font-weight:400}
 .modal-body label>small:not(.fe){margin-top:.4rem;font-size:.875rem;line-height:1.45}
 .modal-body input:not([type=checkbox]):not([type=radio]),.modal-body textarea,.modal-body select{font-size:1rem;font-weight:400;padding:.65rem .875rem;min-height:2.875rem}
-.modal-body ::placeholder{color:#6b7a90;opacity:1}
+.modal-body ::placeholder{color:#5f6e84;opacity:1}
 .modal-body input:not([type=checkbox]):not([type=radio]):focus,.modal-body textarea:focus,.modal-body select:focus{outline:0;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 22%,transparent)}
 .modal-body .invalid:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--danger-strong) 22%,transparent)}
 /* Danh sách môn học: 2 cột, không cuộn lồng, dòng rộng dễ chạm */
@@ -593,7 +600,12 @@ body.modal-open{overflow:hidden}
 .sopt+.sopt{border-top:1px solid var(--border)}
 .sopt__t{display:grid;gap:.15rem;min-width:0}.sopt__t b{font-weight:600}
 .sopt .sw{position:relative;flex:none;min-height:0}
-@media(min-width:768px){.set__row{grid-template-columns:minmax(13rem,1fr) minmax(0,2fr);gap:var(--space-4);padding:var(--space-4)}}
+/* v10: bố cục theo bề rộng của chính thẻ (container query) thay vì bề rộng cửa sổ, vì sidebar mở chiếm ~250px */
+.set{container:set/inline-size}.set__body{container:setb/inline-size}
+@container set (min-width:40rem){.set__row{grid-template-columns:minmax(13rem,1fr) minmax(0,2fr);gap:var(--space-4);padding:var(--space-4)}}
+.set .tfa{flex-direction:column;align-items:stretch}.set .tfa>.btn{align-self:flex-start}
+@container setb (min-width:34rem){.set .tfa{flex-direction:row;align-items:center;justify-content:space-between}.set .tfa>.btn{align-self:center}}
+.set__body>label.sopt{font-weight:400}
 
 /* ===== v9: mũi tên dropdown thống nhất cho <select> và combobox .cb (cùng icon, cùng cỡ, cùng vị trí) ===== */
 :root{--chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235b6b82' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");--chev-on:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23004b87' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")} /* stroke trùng --text-muted / --primary; đổi theme thì đổi mã màu trong data-URI */
@@ -604,3 +616,42 @@ select option{color:var(--text);background:var(--surface)}
 .cb-btn{display:block;font-size:0;background-color:transparent;background-image:var(--chev);background-repeat:no-repeat;background-position:center;background-size:1rem;transition:transform .15s ease,background-color .15s ease}
 .cb-btn:hover,.cb-in:focus+.cb-btn{background-image:var(--chev-on)}
 .cb-in[aria-expanded=true]+.cb-btn{transform:translateY(-50%) rotate(180deg)}
+
+/* ===== v10 ===== */
+/* Drawer đóng trên điện thoại: không cho focus/đọc được các mục nằm ngoài màn hình */
+@media(max-width:47.99rem){
+  .sidebar{visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
+  [data-nav=open] .sidebar{visibility:visible;transition-delay:0s}
+}
+/* Thanh chọn nhiều: gọn trên điện thoại + chừa chỗ để không che hàng cuối */
+@media(max-width:47.99rem){
+  #selbar{gap:.4rem;padding:.6rem .75rem}
+  #selbar #sn{font-size:var(--fs-sm)}
+  #selbar .x-long{display:none}
+  #selbar .sel-acts{grid-template-columns:repeat(6,minmax(0,1fr));gap:.4rem}
+  #selbar .sel-acts .btn{min-height:2.625rem;font-size:var(--fs-sm)}
+  #selbar .sel-acts .btn:nth-child(2){grid-column:span 2;order:1}
+  #selbar .sel-acts .btn:nth-child(3){grid-column:span 2;order:2}
+  #selbar .sel-acts .btn:nth-child(4){grid-column:span 2;order:3}
+  #selbar #sb-all{grid-column:span 3;order:4}
+  #selbar .sel-acts .btn:nth-child(5){grid-column:span 3;order:5}
+}
+body.has-sel .page{padding-bottom:calc(var(--selbar-h,0px) + 1.5rem + env(safe-area-inset-bottom,0px))}
+/* Bảng Tác vụ trên điện thoại: mỗi tác vụ là một thẻ, không cuộn ngang */
+@media(max-width:47.99rem){
+  .tw--tasks{border:0;overflow:visible;max-height:none}
+  .tw--tasks table,.tw--tasks tbody,.tw--tasks tr,.tw--tasks td{display:block}
+  .tw--tasks thead{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .tw--tasks tr{margin-bottom:.75rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden}
+  .tw--tasks td{display:grid;grid-template-columns:6.25rem minmax(0,1fr);gap:.5rem;align-items:start;padding:.55rem .85rem;border-bottom:1px solid var(--border)}
+  .tw--tasks td::before{content:attr(data-l);color:var(--text-muted);font-weight:700}
+  .tw--tasks tbody tr:hover{background:var(--surface)}
+}
+/* Thông báo luôn nằm trên hộp thoại (Bootstrap .modal có z-index 1055) */
+#toast{z-index:2000}
+/* Tiêu đề nhận focus bằng mã sau khi chuyển trang: vòng focus ôm sát chữ */
+.page__title,#tfa-t{width:fit-content;max-width:100%}
+.page__title:focus-visible,#tfa-t:focus-visible{outline:2px solid var(--primary);outline-offset:4px;border-radius:4px}
+/* Vùng bấm */
+.crumb-bar button{min-height:1.75rem;padding-block:.25rem}
+@media(pointer:coarse){.qrow__sel input[type=checkbox]{width:1.5rem;height:1.5rem}.chip{min-height:2.5rem}.logo-link{min-height:2.75rem}}

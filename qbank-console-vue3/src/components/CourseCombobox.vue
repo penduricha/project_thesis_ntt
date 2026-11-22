@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { COURSES } from '../store.js'
+import { COURSES, subjOk } from '../store.js'
 const props = defineProps({ modelValue: { type: String, default: '' }, uid: { type: String, default: 'flt' }, all: { type: Boolean, default: true }, placeholder: { type: String, default: 'Tất cả môn học' }, invalid: Boolean })
 const emit = defineEmits(['update:modelValue'])
 const norm = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase()
@@ -10,7 +10,7 @@ const text = ref(label()), open = ref(false), typing = ref(false), act = ref(-1)
 watch(cur, () => { text.value = label(); typing.value = false })
 const items = computed(() => {
   const q = typing.value ? norm(text.value.trim()) : ''
-  return COURSES.map((c, i) => [c, i]).filter(([c, i]) => (props.all || c.active !== false || i === cur.value) && (!q || norm(c.name).includes(q) || norm(c.id).includes(q)))
+  return COURSES.map((c, i) => [c, i]).filter(([c, i]) => subjOk(i) && (props.all || c.active !== false || i === cur.value) && (!q || norm(c.name).includes(q) || norm(c.id).includes(q)))
 })
 function pick(i) { open.value = false; typing.value = false; text.value = COURSES[i]?.name || ''; emit('update:modelValue', i < 0 ? '' : String(i)) }
 function blur() {

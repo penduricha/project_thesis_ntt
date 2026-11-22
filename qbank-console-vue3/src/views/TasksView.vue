@@ -22,18 +22,18 @@ const hasSug = t => S.sug.some(s => s.qid == t.qid)
     <div class="chips">
       <button v-for="[k, l] in tabs" :key="k" type="button" class="chip" :class="{ on: S.tf === k }" @click="S.tf = k">{{ l }} ({{ counts[k] }})</button>
     </div>
-    <div v-if="rows.length" class="tw">
+    <div v-if="rows.length" class="tw tw--tasks">
       <table>
         <thead><tr><th>Mã tác vụ</th><th>Câu hỏi</th><th>Bắt đầu</th><th>Trạng thái</th><th>Thời lượng</th><th>Kết quả</th><th>Hành động</th></tr></thead>
         <tbody>
           <tr v-for="t in rows" :key="t.id">
-            <td><b>{{ t.id }}</b></td>
-            <td><b>{{ code({ id: t.qid }) }}</b></td>
-            <td>{{ t.started || '—' }}</td>
-            <td><span class="b" :class="TS[t.st][1]"><template v-if="live.test(t.st)"><i class="spin"></i> </template>{{ TS[t.st][0] }}</span></td>
-            <td>{{ t.ms ? (t.ms / 1000).toFixed(1) + ' giây' : '…' }}</td>
-            <td>{{ t.msg || 'Đang chờ worker xử lý…' }}</td>
-            <td>
+            <td data-l="Mã tác vụ"><b>{{ t.id }}</b></td>
+            <td data-l="Câu hỏi"><b>{{ code({ id: t.qid }) }}</b></td>
+            <td data-l="Bắt đầu">{{ t.started || '—' }}</td>
+            <td data-l="Trạng thái"><span class="b" :class="TS[t.st][1]"><template v-if="live.test(t.st)"><i class="spin"></i> </template>{{ TS[t.st][0] }}</span></td>
+            <td data-l="Thời lượng">{{ t.ms ? (t.ms / 1000).toFixed(1) + ' giây' : '…' }}</td>
+            <td data-l="Kết quả">{{ t.msg || 'Đang chờ worker xử lý…' }}</td>
+            <td data-l="Hành động">
               <button v-if="t.st === 'failed'" class="btn sm pri" @click="runAI([t.qid])">Thử lại</button>
               <button v-else-if="t.st === 'succeeded' && hasSug(t)" class="btn sm" @click="router.push('/review')">Xem đề xuất</button>
               <template v-else>—</template>
