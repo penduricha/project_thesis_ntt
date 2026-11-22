@@ -204,7 +204,7 @@ label>input:not([type=checkbox]),label>textarea,label>select{display:block;width
 .cb{position:relative;display:block;width:100%}label .cb{margin-top:.35rem}
 .cb .cb-in,.tools .cb .cb-in{width:100%;padding-right:2.25rem;text-overflow:ellipsis}
 .cb-btn{position:absolute;right:.25rem;top:50%;transform:translateY(-50%);width:2rem;height:2rem;border:0;border-radius:var(--radius);background:transparent;color:var(--text-muted);cursor:pointer}
-.cb-btn:hover{background:var(--surface-hover)}
+.cb-btn:hover{background-color:var(--surface-hover)}
 .cb-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:80;margin:0;padding:.25rem;list-style:none;max-height:min(16rem,45vh);overflow:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);box-shadow:0 8px 24px rgba(19,40,80,.16)}
 .cb-list li{padding:.5rem .65rem;border-radius:6px;color:var(--text);font-size:var(--fs-sm);cursor:pointer}
 .cb-list li:hover,.cb-list li.act{background:var(--surface-hover)}
@@ -482,7 +482,7 @@ td small{display:block;margin-top:.2rem;color:var(--text-muted)}
 html{scroll-padding-top:calc(var(--topbar-h) + 1rem)}
 .modal,.cb-list{overscroll-behavior:contain}
 @media (pointer:coarse){.btn,.btn.sm,.btn-rev,select,input:not([type=checkbox]):not([type=radio]),.acct__item{min-height:2.75rem}}
-kbd{display:inline-block;min-width:1.5rem;padding:.1rem .4rem;border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:4px;background:var(--surface);font:inherit;font-size:var(--fs-xs);text-align:center}
+kbd{display:inline-block;min-width:1.5rem;color:var(--text);font-weight:600;padding:.1rem .4rem;border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:4px;background:var(--surface);font:inherit;font-size:var(--fs-xs);text-align:center}
 .keys{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:.6rem 1rem;align-items:center}.keys dt{margin:0}.keys dd{margin:0;color:var(--text-muted)}
 
 /* ===== Modal: Bootstrap Modal JS + CSS tối thiểu theo theme (Bootstrap CSS nằm trong @layer nên không ghi đè) ===== */
@@ -539,6 +539,80 @@ body.modal-open{overflow:hidden}
   .modal-header,.modal-body,.modal-footer{padding-inline:var(--space-2)}
   .modal-footer{padding-bottom:calc(var(--space-3) + env(safe-area-inset-bottom,0px))}
 }
+
+/* ===== Cài đặt LLM v7: rack node kiểu node-colab (cùng theme) ===== */
+.lmhead{display:grid;gap:var(--space-3);grid-template-columns:minmax(0,1fr);align-items:stretch}
+@media(min-width:1024px){.lmhead{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.lmpills{display:grid;grid-template-columns:minmax(0,1fr);gap:.4rem}
+.lmpills .b{width:100%;justify-content:flex-start;border-radius:6px;white-space:normal;overflow-wrap:anywhere}
+.area{min-height:7.5rem;resize:vertical;font:.8125rem/1.6 ui-monospace,Consolas,monospace}
+.lmtg{display:flex;align-items:center;gap:.6rem;flex:1 1 16rem;margin:0;color:var(--text);font-weight:600}
+.lmtg select{flex:1;width:auto;margin-top:0;font-weight:400}
+.lmwarn{margin:0;padding:.85rem 1rem;border:1px solid var(--warning-border);border-radius:var(--radius);background:var(--warning-soft);color:var(--warning-strong);font-size:var(--fs-sm);font-weight:600}
+.rack{container:rack/inline-size;display:flex;flex-direction:column;gap:.75rem}
+.slot{--lc:var(--border-strong);display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden;border:1px solid var(--border);border-left:4px solid var(--lc);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-card);transition:border-color .15s}
+.slot[data-led=ok]{--lc:var(--success-strong)}.slot[data-led=draft]{--lc:var(--warning-strong)}.slot[data-led=fail]{--lc:var(--danger-strong)}.slot[data-led=checking]{--lc:var(--primary)}
+.slot.flash{animation:slflash 1.2s ease}@keyframes slflash{from{background:var(--primary-soft)}to{background:var(--surface)}}
+.slot__rail{display:flex;align-items:center;flex-wrap:wrap;gap:.25rem .75rem;padding:.9rem 1.25rem;background:var(--tile)}
+.slot__id{display:flex;align-items:center;gap:.6rem;font-size:1.0625rem}
+.led{flex:none;width:.75rem;height:.75rem;border-radius:50%;background:var(--lc)}
+.slot[data-led=checking] .led{animation:ledp 1s ease-in-out infinite}@keyframes ledp{50%{opacity:.3}}
+.slot__st{font-size:var(--fs-sm);font-weight:700;color:var(--lc)}.slot__tps{font-size:var(--fs-xs);color:var(--text-muted)}
+.slot__body{display:grid;gap:.9rem;padding:1.25rem;min-width:0}
+.slot__body input{font-size:1rem}
+.slot__note{min-height:1.2em;margin:0}.slot__note.er{color:var(--danger-strong);font-weight:600}.slot__note.wa{color:var(--warning-strong);font-weight:600}.slot__note.ok{color:var(--success-strong);font-weight:600}
+.slot__acts{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;padding:1rem 1.25rem;border-top:1px solid var(--border)}
+.slot__btns{display:flex;gap:.5rem}
+@container rack (min-width:52rem){
+  .slot{grid-template-columns:11.5rem minmax(0,1fr) 15rem}
+  .slot__rail{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:.35rem;padding:1.25rem}
+  .slot__acts{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:1rem;padding:1.25rem;border-top:0;border-left:1px solid var(--border)}
+  .slot__btns .btn{flex:1}
+}
+.sw{display:inline-flex;align-items:center;gap:.6rem;min-height:2.25rem;margin:0;color:var(--text);font-size:var(--fs-sm);font-weight:600;cursor:pointer}
+.sw input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.sw__ui{position:relative;flex:none;width:2.5rem;height:1.5rem;border-radius:999px;background:var(--border-strong);transition:background-color .15s}
+.sw__ui::after{content:"";position:absolute;top:.1875rem;left:.1875rem;width:1.125rem;height:1.125rem;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.sw input:checked+.sw__ui{background:var(--primary)}.sw input:checked+.sw__ui::after{transform:translateX(1rem)}
+.sw input:focus-visible+.sw__ui{outline:2px solid var(--primary);outline-offset:2px}
+.lmbar{position:sticky;bottom:calc(.75rem + env(safe-area-inset-bottom,0px));z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;padding:.75rem 1rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:0 8px 24px rgba(19,40,80,.14)}
+
+/* v8: hai thẻ đầu trang bằng chiều cao, hàng đầu và hàng cuối thẳng nhau */
+.lmhead>.card{height:100%}
+.lmhead .card__head{min-height:2rem}
+.lmhead p.mut{font-size:var(--fs-sm)}
+.lmhead input:not([type=checkbox]),.lmhead select,.lmhead .btn{min-height:2.75rem;font-size:1rem}
+.lmhead .btn{font-size:var(--fs-sm)}
+.lmhead .area{flex:1 1 auto;min-height:8.5rem;font-size:.8125rem}
+.lmhead .lmact{margin-top:auto}
+
+/* ===== v9: Cài đặt: một thẻ, mỗi mục một hàng (tiêu đề bên trái, điều khiển bên phải) ===== */
+.set{max-width:62rem;padding:0;gap:0}
+.set__row{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;padding:var(--space-3) var(--space-2)}
+.set__row+.set__row{border-top:1px solid var(--border)}
+.set__t{font-size:1.0625rem}
+.set__d{margin-top:.25rem;color:var(--text-muted);font-size:var(--fs-sm);line-height:1.5}
+.set__body{display:grid;gap:.35rem;min-width:0;align-content:start}
+.set__body>label{color:var(--text);font-weight:600}
+.set__body select{display:block;width:100%;max-width:22rem}
+.set__tfa{display:grid;gap:.75rem}
+.set .tfa{border-radius:var(--radius)}
+.sopt{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);padding:.875rem 0;color:var(--text);cursor:pointer}
+.sopt:first-child{padding-top:0}.sopt:last-child{padding-bottom:0}
+.sopt+.sopt{border-top:1px solid var(--border)}
+.sopt__t{display:grid;gap:.15rem;min-width:0}.sopt__t b{font-weight:600}
+.sopt .sw{position:relative;flex:none;min-height:0}
+@media(min-width:768px){.set__row{grid-template-columns:minmax(13rem,1fr) minmax(0,2fr);gap:var(--space-4);padding:var(--space-4)}}
+
+/* ===== v9: mũi tên dropdown thống nhất cho <select> và combobox .cb (cùng icon, cùng cỡ, cùng vị trí) ===== */
+:root{--chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235b6b82' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");--chev-on:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23004b87' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")} /* stroke trùng --text-muted / --primary; đổi theme thì đổi mã màu trong data-URI */
+select:not([multiple]):not([size]){appearance:none;-webkit-appearance:none;padding-right:2.5rem;background-image:var(--chev);background-repeat:no-repeat;background-position:right .75rem center;background-size:1rem;cursor:pointer}
+select:not([multiple]):not([size]):hover,select:not([multiple]):not([size]):focus{background-image:var(--chev-on)}
+select:disabled{cursor:not-allowed;opacity:.6}
+select option{color:var(--text);background:var(--surface)}
+.cb-btn{display:block;font-size:0;background-color:transparent;background-image:var(--chev);background-repeat:no-repeat;background-position:center;background-size:1rem;transition:transform .15s ease,background-color .15s ease}
+.cb-btn:hover,.cb-in:focus+.cb-btn{background-image:var(--chev-on)}
+.cb-in[aria-expanded=true]+.cb-btn{transform:translateY(-50%) rotate(180deg)}
 </style>
 </head>
 <body>
@@ -676,7 +750,7 @@ const EXTRA=[['account','','Thông tin tài khoản'],['settings','','Cài đặ
 const SUB={
   courses:'Chọn một môn học để quản lý các chương/chủ đề con và ngân hàng câu hỏi bên trong',
   course:'Lọc theo chương/chủ đề con, thêm, sửa, xóa và kiểm định câu hỏi thuộc môn học này',
-  llm:'URL dịch vụ suy luận và token của 5 LLM',
+  llm:'Quản lý tối đa 5 node Colab (Cloudflare Quick Tunnel): dán kết quả, kiểm tra, lưu lên Server 2.',
   dash:'Tình hình ngân hàng câu hỏi theo học phần và các dịch vụ suy luận',
   bank:'Thêm, sửa, xóa, lọc và chọn câu hỏi để kiểm định hoặc xuất Moodle',
   search:'Tìm câu hỏi bằng ngôn ngữ tự nhiên qua phân tích cấu trúc 3 bước',
@@ -773,8 +847,9 @@ function list(){
     (S.f.l===''||q.l==S.f.l)&&
     (S.f.s===''||q.st==S.f.s)
   );
-  if(S.f.sort=='level')arr=[...arr].sort((a,b)=>b.l-a.l);
-  else if(S.f.sort=='status')arr=[...arr].sort((a,b)=>a.st.localeCompare(b.st));
+  if(S.f.sort=='level_asc')arr=[...arr].sort((a,b)=>a.l-b.l);
+  else if(S.f.sort=='level')arr=[...arr].sort((a,b)=>b.l-a.l);
+  
   else if(S.f.sort=='recent')arr=[...arr].sort((a,b)=>tsk(b.updatedAt)-tsk(a.updatedAt));
   else arr=[...arr].sort((a,b)=>a.id-b.id);
   return arr;
@@ -871,7 +946,7 @@ const qrow=q=>{
     <div class="acts">
       <button class="btn sm pri" ${busy(q)?'disabled':''} onclick="runAI([${q.id}])">Kiểm định</button>
       <button class="btn sm" ${busy(q)?'disabled':''} onclick="edit(${q.id})">Sửa</button>
-      <button class="btn sm del" ${busy(q)?'disabled':''} onclick="del(${q.id})">Xóa</button>
+      <button class="btn sm dan" ${busy(q)?'disabled':''} onclick="del(${q.id})">Xóa</button>
     </div>
   </div>`;
 };
@@ -996,7 +1071,7 @@ function ccT(p,commit){
 /* Ô chọn môn học có lọc khi gõ (không dấu cũng được); danh sách chỉ hiện TÊN môn, không có mã */
 const norm=t=>(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase();
 const CB={flt:{cur:()=>S.f.c===''?-1:+S.f.c,pick:i=>{S.f.c=i<0?'':String(i);S.f.page=1;render()},all:true}};
-function cbHtml(p,cur,ph,cls=''){return`<div class="cb${cls}"><input id="${p}-c" class="cb-in ${p=='flt'?'flt-sel':''}" role="combobox" aria-expanded="false" aria-controls="${p}-lb" aria-autocomplete="list" autocomplete="off" placeholder="${ph}" value="${esc(COURSES[cur]?.name||'')}" onfocus="this.select();cbOpen('${p}',1)" onclick="cbOpen('${p}',1)" oninput="cbOpen('${p}')" onkeydown="cbKey(event,'${p}')" onblur="cbClose('${p}',1)"><button type="button" class="cb-btn" tabindex="-1" aria-label="Mở danh sách môn học" onmousedown="event.preventDefault()" onclick="cbToggle('${p}')">▾</button><ul id="${p}-lb" class="cb-list" role="listbox" hidden onmousedown="cbDown(event,'${p}')" onclick="event.preventDefault()"></ul></div>`}
+function cbHtml(p,cur,ph,cls=''){return`<div class="cb${cls}"><input id="${p}-c" class="cb-in ${p=='flt'?'flt-sel':''}" role="combobox" aria-expanded="false" aria-controls="${p}-lb" aria-autocomplete="list" autocomplete="off" placeholder="${ph}" value="${esc(COURSES[cur]?.name||'')}" onfocus="this.select();cbOpen('${p}',1)" onclick="cbOpen('${p}',1)" oninput="cbOpen('${p}')" onkeydown="cbKey(event,'${p}')" onblur="cbClose('${p}',1)"><button type="button" class="cb-btn" tabindex="-1" aria-label="Mở danh sách môn học" onmousedown="event.preventDefault()" onclick="cbToggle('${p}')"></button><ul id="${p}-lb" class="cb-list" role="listbox" hidden onmousedown="cbDown(event,'${p}')" onclick="event.preventDefault()"></ul></div>`}
 function cbOpen(p,all){const el=$('#'+p+'-c'),lb=$('#'+p+'-lb');if(!el||!lb)return;const c=CB[p],q=all?'':norm(el.value.trim()),cur=c.cur();
   const li=COURSES.map((x,i)=>[x,i]).filter(([x,i])=>subjOk(i)&&(c.all||x.active!==false||i==cur)&&(!q||norm(x.name).includes(q)||norm(x.id).includes(q)));
   lb.innerHTML=(c.all&&!q?`<li role="option" data-i="" class="${cur<0?'on':''}">Tất cả môn học</li>`:'')+li.map(([x,i])=>`<li role="option" id="${p}-o${i}" data-i="${i}" class="${i==cur?'on':''}">${esc(x.name)}</li>`).join('')||'<li class="none">Không tìm thấy môn học phù hợp</li>';
@@ -1336,8 +1411,8 @@ const P={
         <select class="flt-sel" aria-label="Trạng thái" onchange="S.f.s=this.value;S.f.page=1;render()"><option value="">Trạng thái</option>${Object.keys(stB).map(k=>`<option value="${k}" ${f.s==k?'selected':''}>${stB[k][0]}</option>`).join('')}</select>
         <select class="flt-sel" aria-label="Sắp xếp" onchange="S.f.sort=this.value;rows()">
           <option value="id" ${f.sort=='id'?'selected':''}>Sắp xếp</option>
+          <option value="level_asc" ${f.sort=='level_asc'?'selected':''}>Dễ → Khó</option>
           <option value="level" ${f.sort=='level'?'selected':''}>Khó → Dễ</option>
-          <option value="status" ${f.sort=='status'?'selected':''}>Trạng thái</option>
           <option value="recent" ${f.sort=='recent'?'selected':''}>Mới nhất</option>
         </select>
         <button class="btn pri" onclick="edit(0)">Thêm câu hỏi</button>
@@ -1472,7 +1547,7 @@ const P={
     </div>`;
   },
 
-  llm(){return`<div class="card"><h3>Dịch vụ LLM</h3><p class="mut">Mỗi LLM gồm một URL dịch vụ suy luận và một token. Server 2 gửi tác vụ AI tới các LLM đã cấu hình. Token lưu bằng biến môi trường ở Server 2, không ghi cứng trong mã nguồn.</p></div>${S.lm.map((c,i)=>{const ok=c.url&&c.tok;return`<form id="lm${i}" class="card lm" novalidate onsubmit="lmSave(${i});return false"><div class="bar"><b class="grow">LLM ${i+1}</b><span class="b ${ok?'ok':'n'}">${ok?'Đã cấu hình':'Chưa cấu hình'}</span><button class="btn sm pri" type="submit">Lưu</button></div><div class="lm__f"><label>URL dịch vụ suy luận <span style="color:var(--danger-strong)">*</span><input id="lu${i}" value="${esc(c.url)}" placeholder="https://…/api/chat" inputmode="url" autocomplete="off" oninput="S.lm[${i}].url=this.value"></label><label>Token <span style="color:var(--danger-strong)">*</span><div class="pw"><input id="tk${i}" type="password" value="${esc(c.tok)}" placeholder="Dán token" autocomplete="off" oninput="S.lm[${i}].tok=this.value"><button class="btn sm" type="button" onclick="lmEye(${i},this)">Hiện</button></div></label></div></form>`}).join('')}`},
+  llm(){return lmView()},
   admin(){return `<section class="card accounts" aria-labelledby="users-title">
     <header class="card__head"><div><p class="directory-kicker">QUẢN LÝ TRUY CẬP</p><h3 id="users-title">Danh sách tài khoản</h3></div><button class="btn pri" onclick="udlg()">Thêm tài khoản</button></header>
     <div class="directory-tools"><label>Tìm tài khoản<input type="search" id="user-search" placeholder="Họ tên hoặc mã đăng nhập" value="${esc(S.userQuery)}" oninput="S.userQuery=this.value;updateDirectory()"></label>
@@ -1482,7 +1557,13 @@ const P={
     <p id="directory-empty" class="policy" ${directoryUsers().length?'hidden':''}>Không tìm thấy tài khoản. Hãy thử tên, mã hoặc trạng thái khác.</p>
     </section>`},
   account(){return acctPage()},
-  settings(){return`${tfaCard()}<section class="icard" aria-labelledby="role-t"><div class="icard__hdr"><h3 id="role-t" class="icard__title">Chế độ xem theo vai trò</h3></div><label>Vai trò xem thử<select id="preview-role" onchange="previewRole(this.value)"><option value="admin" ${S.role==='admin'?'selected':''}>Quản trị viên</option><option value="gv" ${S.role==='gv'?'selected':''}>Giảng viên</option></select></label><small class="mut">Chỉ thay đổi giao diện xem thử, không thay đổi quyền của tài khoản.${S.role==='gv'&&asUser()?` Chế độ Giảng viên đang mô phỏng phạm vi môn của ${esc(asUser().name)}.`:''}</small></section><section class="icard" aria-labelledby="opt-t"><div class="icard__hdr"><h3 id="opt-t" class="icard__title">Tùy chọn</h3></div><label class="tg"><input type="checkbox" ${S.notifyTasks?'checked':''} onchange="S.notifyTasks=this.checked;log('Đổi tùy chọn thông báo','info');toast('Đã lưu tùy chọn','ok')"><span>Thông báo khi tác vụ AI hoàn tất</span></label><label class="tg"><input type="checkbox" ${S.confirmDelete?'checked':''} onchange="S.confirmDelete=this.checked;log('Đổi tùy chọn xác nhận xóa','info');toast('Đã lưu tùy chọn','ok')"><span>Hỏi xác nhận trước khi xóa câu hỏi</span></label></section>`}
+  settings(){const gv=S.role==='gv'&&asUser()?` Đang mô phỏng phạm vi môn của ${esc(asUser().name)}.`:'',
+    sopt=(k,t,d,msg)=>`<label class="sopt"><span class="sopt__t"><b>${t}</b><small>${d}</small></span><span class="sw"><input type="checkbox" role="switch" ${S[k]?'checked':''} onchange="S.${k}=this.checked;log('${msg}','info');toast('Đã lưu tùy chọn','ok')"><span class="sw__ui" aria-hidden="true"></span></span></label>`;
+    return`<div class="card set">
+    <section class="set__row" aria-labelledby="tfa-t"><div class="set__intro"><h3 id="tfa-t" class="set__t">Xác thực hai yếu tố</h3><p class="set__d">Thêm bước nhập mã từ ứng dụng Authenticator mỗi khi đăng nhập.</p></div><div class="set__body">${tfaCard()}</div></section>
+    <section class="set__row" aria-labelledby="role-t"><div class="set__intro"><h3 id="role-t" class="set__t">Chế độ xem theo vai trò</h3><p class="set__d">Chỉ đổi giao diện xem thử, không đổi quyền của tài khoản.</p></div><div class="set__body"><label for="preview-role">Vai trò xem thử</label><select id="preview-role" onchange="previewRole(this.value)"><option value="admin" ${S.role==='admin'?'selected':''}>Quản trị viên</option><option value="gv" ${S.role==='gv'?'selected':''}>Giảng viên</option></select>${gv?`<small>${gv.trim()}</small>`:''}</div></section>
+    <section class="set__row" aria-labelledby="opt-t"><div class="set__intro"><h3 id="opt-t" class="set__t">Thông báo và xác nhận</h3><p class="set__d">Lưu tự động khi bạn bật hoặc tắt.</p></div><div class="set__body">${sopt('notifyTasks','Thông báo khi tác vụ AI hoàn tất','Hiện thông báo khi một yêu cầu kiểm định kết thúc.','Đổi tùy chọn thông báo')}${sopt('confirmDelete','Hỏi xác nhận trước khi xóa câu hỏi','Hiện hộp thoại xác nhận để tránh xóa nhầm.','Đổi tùy chọn xác nhận xóa')}</div></section>
+  </div>`}
 };
 
 /* ===== Trang Thông tin tài khoản: dữ liệu mẫu khớp ntt_admins + ntt_courses (FK course_id) + ntt_totp_credentials ===== */
@@ -1519,10 +1600,10 @@ function idToggle(){S.idShow=!S.idShow;clearTimeout(S._idT);if(S.idShow)S._idT=s
 const tfaLeft=()=>{const t=Math.max(0,Math.ceil((S.tfa.until-Date.now())/1000));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
 function tfaCard(){
   const st=S.tfa.st,v=TFA_VIEW[st],ic={NOT_ENABLED:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',PENDING:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',ENABLED:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>'}[st];
-  return`<article class="icard" aria-labelledby="tfa-t"><div class="icard__hdr"><span class="icard__ic">${icoSvg(ACI.lock)}</span><h3 id="tfa-t" class="icard__title">Xác thực hai yếu tố</h3></div>
+  return`<div class="set__tfa">
   <div class="tfa tfa--${v.cls}"><div class="tfa__main"><span class="tfa__ic">${icoSvg(ic)}</span><div class="tfa__txt"><p class="tfa__st" role="status"><span>Trạng thái:</span><span class="ubd ubd--${v.bd}">${v.text}</span></p><p class="tfa__desc">${v.desc}</p>${st=='PENDING'?`<p class="tfa__hint">Còn <b id="tfa-cd">${tfaLeft()}</b> để hoàn tất. Trong lúc chờ, đăng nhập chưa yêu cầu mã xác thực.</p>`:''}</div></div>
   ${st=='NOT_ENABLED'?'<button type="button" class="btn pri" onclick="tfaOpen()">Kích hoạt 2FA</button>':st=='PENDING'?'<button type="button" class="btn" onclick="tfaAsk()">Hủy và cài lại</button>':''}</div>
-  ${st=='PENDING'?'<p class="mut" style="margin:0;font-size:var(--fs-sm)">Bản demo: <button type="button" class="btn sm" onclick="tfaDone()">Mô phỏng ứng dụng đã xác nhận</button></p>':''}</article>`}
+  ${st=='PENDING'?'<p class="mut" style="margin:0;font-size:var(--fs-sm)">Bản demo: <button type="button" class="btn sm" onclick="tfaDone()">Mô phỏng ứng dụng đã xác nhận</button></p>':''}</div>`}
 function tfaOpen(){
   S.tfaSec=Array.from({length:16},()=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.random()*32|0]).join('');dlgDirty=false;
   $('#dlg').innerHTML=`<h3>Kích hoạt xác thực hai yếu tố</h3><p class="mut" style="margin:0">Mở ứng dụng Authenticator trên điện thoại, chọn <b>Thêm tài khoản</b> rồi nhập khóa bí mật dưới đây.</p>
@@ -1716,15 +1797,95 @@ function usave(){fReset();const id=$('#u-id').value.trim(),n=$('#u-n').value.tri
   if(!cc)bad+=fErr($('#u-cccd'),'Số CCCD đang trống.');else if(!/^\d{12}$/.test(cc))bad+=fErr($('#u-cccd'),'Số CCCD phải gồm đúng 12 chữ số.');else if(S.users.some(u=>u.idCard===cc))bad+=fErr($('#u-cccd'),'Số CCCD này đã có tài khoản.');
   if(bad)return fFocus();const pw=tmpPwd(),subs=r==='Giảng viên'?[...$('#u-sub').querySelectorAll('input:checked')].map(x=>x.value):[];
   S.users.push({adminId:id,idCard:cc,name:n,role:r,totp:'NOT_ENABLED',status:'pending',passwordChangedAt:null,subjects:subs});log('Tạo tài khoản '+n+' ('+r+')','ok');render();pwShow(S.users.length-1,pw,'Đã tạo tài khoản')}
-function lmEye(i,b){const t=$('#tk'+i);t.type=t.type=='password'?'text':'password';b.textContent=t.type=='password'?'Hiện':'Ẩn'}
-function lmSave(i){
-  fReset($('#lm'+i));
-  const c=S.lm[i],u=(c.url||'').trim(),t=(c.tok||'').trim();let bad=0;
-  if(!u)bad+=fErr($('#lu'+i),'URL đang trống. Hãy nhập địa chỉ dịch vụ suy luận.');else if(!/^https?:\/\/\S+$/.test(u))bad+=fErr($('#lu'+i),'URL phải bắt đầu bằng http:// hoặc https:// và không chứa khoảng trắng.');
-  if(!t)bad+=fErr($('#tk'+i),'Token đang trống. Hãy dán token của LLM này.');
-  if(bad)return fFocus($('#lm'+i));
-  c.url=u;c.tok=t;log('Lưu cấu hình LLM '+(i+1),'ok');render();toast('Đã lưu LLM '+(i+1),'ok');
-}
+
+
+/* ===== Cài đặt LLM (UI theo node-colab): Server 2, dán kết quả, 5 node ===== */
+S.api={base:'http://localhost:8082/api',jwt:'demo-internal-token',on:true,busy:false};
+(()=>{const D=[['https://calm-otter-star.trycloudflare.com','k3F9xQ7mZp2LwR8tVb5NcY1dHs6JgA4e',18.4],['https://quiet-river-1042.trycloudflare.com','Wm8Zt2QxL5vN9cRb4YpD7sHk1JfA3gTe',17.1],['https://amber-fox-run.trycloudflare.com','Pq6Ls9XaV3nB8cTr2MdY5wHj7KfG4zEu',16.8]];
+  S.lm.forEach((c,i)=>{const d=D[i];if(d){c.url=d[0];c.tok=d[1];c.tps=d[2]}Object.assign(c,{en:!!d,sv:{url:c.url,tok:c.tok,en:!!d},ok:null,busy:false,note:'',nk:''})})})();
+const lmNorm=u=>(u||'').trim().replace(/\/(api\/chat|health)\/?$/i,'').replace(/\/+$/,'');
+function lmIssue(u){if(!u)return null;let p;try{p=new URL(u)}catch{return['er','URL chưa đúng dạng. Ví dụ: https://ten-ngau-nhien.trycloudflare.com']}
+  if(p.protocol!=='https:')return['er','URL phải bắt đầu bằng https://'];
+  if(!p.hostname.endsWith('.trycloudflare.com'))return['wa','Không phải địa chỉ trycloudflare.com, Server 2 có thể từ chối.'];return null}
+const lmDirty=c=>c.url!==c.sv.url||c.tok!==c.sv.tok||c.en!==c.sv.en;
+const lmBad=c=>{const x=lmIssue(lmNorm(c.url));return !c.url||!!(x&&x[0]=='er')};
+function lmCalc(c){
+  const has=c.url||c.tok,d=lmDirty(c),is=lmIssue(lmNorm(c.url));let led,tx;
+  if(c.busy){led='checking';tx='Đang kiểm tra…'}
+  else if(!has){led='empty';tx='Chưa nhập'}
+  else if(c.ok===false){led='fail';tx='Lỗi kết nối'}
+  else if(d){led=c.ok?'ok':'draft';tx=c.ok?'Dùng được · chưa lưu':'Chưa lưu'}
+  else{led=c.en?'ok':'off';tx=c.en?'Sẵn sàng':'Đã tắt'}
+  const n=c.note?[c.nk,c.note]:is?is:(c.tok&&c.tok.length<20)?['wa','Token thường dài 32 ký tự. Kiểm tra có bị cắt không.']:(d&&S.api.on)?['','Chưa lưu lên Server 2.']:['',''];
+  const off=!S.api.on||c.busy;
+  return{led,tx,n,tps:led=='ok'&&!d&&c.tps?c.tps+' tok/s':'',chk:off||lmBad(c)||!c.tok,sav:off||!d||lmBad(c)||!c.tok,clr:c.busy||!has}}
+function lmPaint(i){const c=S.lm[i],x=lmCalc(c),el=$('#slot'+i);if(!el)return;
+  el.dataset.led=x.led;$('.slot__st',el).textContent=x.tx;$('.slot__tps',el).textContent=x.tps;
+  const n=$('.slot__note',el);n.className='slot__note '+x.n[0];n.textContent=x.n[1];
+  $('[data-b=chk]',el).disabled=x.chk;$('[data-b=sav]',el).disabled=x.sav;$('[data-b=clr]',el).disabled=x.clr;lmBar()}
+const lmAll=()=>S.lm.forEach((_,i)=>lmPaint(i));
+function lmBar(){const s=$('#lm-sum');if(!s)return;const f=S.lm.filter(c=>c.url&&c.tok).length,d=S.lm.filter(c=>lmDirty(c)&&!lmBad(c)&&c.tok).length;
+  s.textContent=S.api.on?`${f} node có URL và token · ${d} chưa lưu`:`${f} node có URL và token`;$('#lm-all').disabled=!S.api.on||!d;const fr=$('#lm-free');if(fr)fr.textContent=`${S.lm.filter(c=>!(c.url||c.tok)).length}/${S.lm.length} ô trống`;$('#lm-env').disabled=!f}
+function lmSet(i,f,v){const c=S.lm[i];c[f]=v;c.ok=null;c.note='';c.nk='';lmPaint(i)}
+function lmEye(id,b){const t=$('#'+id),h=t.type=='password';t.type=h?'text':'password';b.textContent=h?'Ẩn':'Hiện';b.setAttribute('aria-pressed',h)}
+function lmCheck(i){const c=S.lm[i];c.busy=true;c.note='';lmPaint(i);
+  setTimeout(()=>{c.busy=false;const up=S.colab;c.ok=up;c.nk=up?'ok':'er';
+    c.note=up?`Node phản hồi bình thường (độ trễ ${(.3+Math.random()*.6).toFixed(1)} giây).`:'Không kết nối được tới node: hết thời gian chờ. Kiểm tra phiên Colab còn chạy.';
+    if(up&&!c.tps)c.tps=+(14+Math.random()*6).toFixed(1);
+    log(`Kiểm tra LLM ${i+1}: ${up?'dùng được':'lỗi kết nối'}`,up?'ok':'er');lmPaint(i)},700+Math.random()*600)}
+function lmSave(i,quiet){const c=S.lm[i];if(!S.api.on||lmBad(c)||!c.tok)return 0;c.url=lmNorm(c.url);const u=$('#lu'+i);if(u)u.value=c.url;
+  c.sv={url:c.url,tok:c.tok,en:c.en};log(`Lưu cấu hình LLM ${i+1} lên Server 2`,'ok');if(!quiet)toast(`Đã lưu LLM ${i+1}`,'ok');lmPaint(i);return 1}
+function lmSaveAll(){const n=S.lm.reduce((a,c,i)=>a+(lmDirty(c)&&c.url&&c.tok?lmSave(i,1):0),0);if(n)toast(`Đã lưu ${n} node`,'ok')}
+function lmClear(i){const c=S.lm[i],b={url:c.url,tok:c.tok,en:c.en,sv:{...c.sv},tps:c.tps};
+  Object.assign(c,{url:'',tok:'',en:false,sv:{url:'',tok:'',en:false},ok:null,note:'',nk:'',tps:0});log(`Xóa cấu hình LLM ${i+1}`,'wa');render();
+  toast(`Đã xóa LLM ${i+1}`,'wa','Hoàn tác',()=>{Object.assign(c,b);render()})}
+function lmConn(){const a=S.api;
+  if(a.on){a.on=false;log('Ngắt kết nối Server 2','wa');render();return toast('Đã ngắt kết nối Server 2','wa')}
+  a.base=$('#lm-base').value.trim();a.jwt=$('#lm-jwt').value.trim();
+  if(!/^https?:\/\//i.test(a.base))return toast('Địa chỉ API chưa đúng dạng, ví dụ http://localhost:8082/api','er');
+  if(!a.jwt)return toast('Hãy nhập JWT hoặc Internal Token.','er');
+  a.busy=true;render();setTimeout(()=>{a.busy=false;a.on=true;log('Kết nối Server 2 thành công','ok');render();toast('Đã kết nối Server 2','ok')},700)}
+function lmParse(t){const u=[],k=[];
+  for(const m of t.matchAll(/URL\s*[:=]\s*(https?:\/\/[^\s"'<>]+)|(https:\/\/[a-z0-9-]+\.trycloudflare\.com)/gi)){const x=lmNorm((m[1]||m[2]).replace(/[),.;]+$/,''));if(x&&!u.includes(x))u.push(x)}
+  for(const m of t.matchAll(/TOKEN\s*[:=]\s*([A-Za-z0-9_\-]{16,})/gi))if(!k.includes(m[1]))k.push(m[1]);
+  return u.slice(0,Math.min(u.length,k.length)).map((x,j)=>({url:x,tok:k[j]}))}
+function lmFill(){const ta=$('#lm-paste'),pr=lmParse(ta.value);
+  if(!pr.length)return toast('Chưa nhận ra cặp URL và TOKEN. Mỗi node cần một dòng URL và một dòng TOKEN.','wa');
+  const tg=$('#lm-tg').value,idx=tg==='free'?S.lm.map((c,i)=>c.url||c.tok?-1:i).filter(i=>i>=0):S.lm.map((_,i)=>i).slice(+tg),n=Math.min(pr.length,idx.length);
+  if(!n)return toast('Không còn ô trống. Hãy chọn “Từ LLM … (ghi đè)”.','wa');
+  for(let k=0;k<n;k++)Object.assign(S.lm[idx[k]],{url:pr[k].url,tok:pr[k].tok,en:true,ok:null,note:'',nk:''});
+  ta.value='';render();idx.slice(0,n).forEach(i=>$('#slot'+i)?.classList.add('flash'));
+  toast(n<pr.length?`Đã điền ${n}/${pr.length} node, còn ${pr.length-n} cặp chưa có ô.`:`Đã điền ${n} node. Nội dung dán đã được xóa.`,n<pr.length?'wa':'ok')}
+async function lmEnv(){const L=['# Dán vào .env của Server 2 (AI Worker) rồi khởi động lại'];
+  S.lm.forEach((c,i)=>{if(!(c.url&&c.tok))return;const n=i+1;L.push(`AI_NODE_${n}_URL=${lmNorm(c.url)}`,`AI_NODE_${n}_TOKEN=${c.tok.trim()}`);if(n>1)L.push(`AI_NODE_${n}_ENABLED=${c.en}`)});
+  try{await navigator.clipboard.writeText(L.join('\n')+'\n');toast('Đã sao chép .env','ok')}catch{toast('Trình duyệt chặn clipboard. Hãy dùng HTTPS hoặc sao chép thủ công.','wa')}}
+const lmSlot=(c,i)=>`<article class="slot" id="slot${i}" data-led="empty">
+  <div class="slot__rail"><div class="slot__id"><span class="led" aria-hidden="true"></span><b>LLM ${i+1}</b></div><span class="slot__st"></span><span class="slot__tps"></span></div>
+  <div class="slot__body">
+    <label>URL dịch vụ suy luận<input id="lu${i}" class="mono" type="url" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://ten-ngau-nhien.trycloudflare.com" value="${esc(c.url)}" oninput="lmSet(${i},'url',this.value)"></label>
+    <label>Token<div class="pw"><input id="tk${i}" class="mono" type="password" spellcheck="false" autocomplete="off" placeholder="Dán token từ Colab" value="${esc(c.tok)}" oninput="lmSet(${i},'tok',this.value)"><button class="btn sm" type="button" aria-pressed="false" onclick="lmEye('tk${i}',this)">Hiện</button></div></label>
+    <small class="slot__note" aria-live="polite"></small>
+  </div>
+  <div class="slot__acts">
+    <label class="sw"><input type="checkbox" role="switch" ${c.en?'checked':''} onchange="lmSet(${i},'en',this.checked)"><span class="sw__ui" aria-hidden="true"></span><span>Dùng node này</span></label>
+    <div class="slot__btns"><button class="btn sm" data-b="chk" onclick="lmCheck(${i})">Kiểm tra</button><button class="btn sm pri" data-b="sav" onclick="lmSave(${i})">Lưu</button><button class="btn sm del" data-b="clr" onclick="lmClear(${i})">Xóa</button></div>
+  </div></article>`;
+function lmView(){const a=S.api,st=a.busy?['wa','Đang kết nối…']:a.on?['ok','Đã kết nối']:['n','Chưa nối'];
+  return`<div class="lmhead">
+  <section class="card" aria-labelledby="lm-t1"><div class="card__head"><h3 id="lm-t1">Server 2 · AI Worker</h3><span class="b ${st[0]}" role="status">${a.busy?'<i class="spin"></i>':''}${st[1]}</span></div>
+    <div class="lmpills"><span class="b code n">model: ${a.on?'qwen2.5-14b-instruct-q4_K_M':'chưa kết nối'}</span><span class="b code n">mode: ${a.on?'async · Redis queue':'-'}</span></div>
+    <label>Địa chỉ API<input id="lm-base" class="mono" inputmode="url" spellcheck="false" autocomplete="off" value="${esc(a.base)}" ${a.on?'readonly':''}></label>
+    <label>JWT hoặc Internal Token (Bearer)<div class="pw"><input id="lm-jwt" class="mono" type="password" spellcheck="false" autocomplete="off" placeholder="Nhập ACCESS JWT hoặc AI_INTERNAL_TOKEN" value="${esc(a.jwt)}" ${a.on?'readonly':''}><button class="btn sm" type="button" aria-pressed="false" onclick="lmEye('lm-jwt',this)">Hiện</button></div></label>
+    <button class="btn w100 lmact ${a.on?'':'pri'}" ${a.busy?'disabled':''} onclick="lmConn()">${a.on?'Ngắt kết nối':'Kết nối'}</button>
+  </section>
+  <section class="card" aria-labelledby="lm-t2"><div class="card__head"><h3 id="lm-t2">Dán kết quả từ Colab</h3><span class="b n" id="lm-free"></span></div>
+    <p class="mut">Dán hai dòng URL và TOKEN mà notebook Colab in ra. Hỗ trợ dán nhiều node cùng lúc. Nội dung dán tự xóa ngay sau khi điền.</p>
+    <textarea id="lm-paste" class="area" spellcheck="false" autocomplete="off" aria-label="Kết quả từ Colab" placeholder="URL  : https://ten-ngau-nhien.trycloudflare.com&#10;TOKEN: dán token ở đây"></textarea>
+    <div class="bar lmact"><label class="lmtg">Điền vào<select id="lm-tg"><option value="free">Ô trống đầu tiên</option>${S.lm.map((_,i)=>`<option value="${i}">Từ LLM ${i+1} (ghi đè)</option>`).join('')}</select></label><button class="btn pri" onclick="lmFill()">Điền vào ô</button></div>
+  </section></div>
+  <p class="lmwarn" ${a.on?'hidden':''}>Chưa nối Server 2. Bạn vẫn dán và xuất dạng .env được; muốn kiểm tra và lưu vào bộ nhớ worker thì hãy kết nối ở trên.</p>
+  <div class="rack" aria-label="Các node Colab">${S.lm.map(lmSlot).join('')}</div>
+  <div class="lmbar"><span id="lm-sum" class="mut" role="status"></span><div class="bar"><button id="lm-env" class="btn" onclick="lmEnv()">Sao chép dạng .env</button><button id="lm-all" class="btn pri" onclick="lmSaveAll()">Lưu tất cả</button></div></div>`}
 
 function render(){
   if(/^(admin|llm)$/.test(S.page)&&S.role!='admin')S.page='dash';
@@ -1768,7 +1929,7 @@ function render(){
   const ae=document.activeElement,aid=ae&&ae.id&&!ae.classList.contains('cb-in')&&$('#view').contains(ae)?ae.id:'',ss=aid?ae.selectionStart:null;$('#view').innerHTML=P[S.page]();
   if(/^(bank|course)$/.test(S.page)&&$('#tb'))rows();else cnt();
   const nf=aid&&document.getElementById(aid);if(nf&&nf!==document.activeElement){nf.focus();try{if(ss!=null)nf.setSelectionRange(ss,ss)}catch(e){}}
-  fitSearch();
+  fitSearch();if(S.page=='llm')lmAll();
 }
 
 function previewRole(v){const[r,id]=String(v).split(':');if(!['admin','gv'].includes(r))return;S.role=r;S.asId=r==='gv'?id:null;S.cq='';render();const pr=$('#preview-role');if(pr)pr.focus();toast('Đã đổi chế độ xem','ok')}
