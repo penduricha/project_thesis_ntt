@@ -92,7 +92,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
     <aside class="sidebar" id="side">
       <nav id="menu" aria-label="Chức năng">
         <template v-for="([k, g, t], i) in menu" :key="k">
-          <p v-if="i && g !== menu[i - 1][1]" class="nav-group">{{ g }}</p>
+          <p v-if="i && g != menu[i - 1][1]" class="nav-group">{{ g }}</p>
           <button type="button" class="nv" :class="{ on: k === page || (k === 'courses' && page === 'course') }" @click="go(k)">
             <svg viewBox="0 0 24 24" aria-hidden="true" v-html="ICO[k]"></svg><span>{{ t }}</span>
             <em v-if="badge(k)" :aria-label="badge(k) + ' mục mới'">{{ badge(k) }}</em>
