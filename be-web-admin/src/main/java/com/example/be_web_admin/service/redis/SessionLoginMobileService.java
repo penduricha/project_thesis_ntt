@@ -7,9 +7,12 @@ import java.util.Optional;
 public interface SessionLoginMobileService {
 
     /**
-     * Tạo phiên mobile mới cho admin (ghi đè nếu đã có, nên kiểm tra trước bằng findByAdminId).
+     * Giành phiên mobile cho admin: kiểm tra tồn tại rồi tạo phiên MỘT THẦN TẮC (atomic) và trả về true.
+     * Nếu phiên đã tồn tại (thiết bị khác) thì KHÔNG ghi đè, trả về false — caller phải thu hồi token mới cấp.
+     * Tránh race khi 2 thiết bị cùng đăng nhập: nếu không kiểm tra nguyên tử, cả 2 đều thấy chưa có phiên
+     * rồi ghi đè, để lại 2 cặp token sống trong Redis.
      */
-    public void createSession(Long adminId, String deviceName, String platform, String ip);
+    public boolean claimSession(Long adminId, String deviceName, String platform, String ip);
 
     public Optional<SessionLoginMobile> findByAdminId(Long adminId);
 

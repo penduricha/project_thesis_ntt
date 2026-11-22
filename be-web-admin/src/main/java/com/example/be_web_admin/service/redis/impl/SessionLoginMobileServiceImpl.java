@@ -23,17 +23,25 @@ public class SessionLoginMobileServiceImpl implements SessionLoginMobileService 
     }
 
     @Override
-    public void createSession(Long adminId, String deviceName, String platform, String ip) {
-        Instant now = Instant.now();
-        SessionLoginMobile session = new SessionLoginMobile(
-                adminId,
-                truncate(deviceName, MAX_DEVICE_NAME_LENGTH),
-                truncate(platform, MAX_PLATFORM_LENGTH),
-                ip,
-                now,
-                now
-        );
-        sessionLoginMobileRepository.save(session);
+    public boolean claimSession(Long adminId, String deviceName, String platform, String ip) {
+        // Khóa theo toàn thể service (đơn lẻ instance): kiểm tra tồn tại + tạo phiên là một cặp
+        // nguyên tử, để 2 thiết bị cùng đăng nhập không bao giờ đều qua được bước kiểm tra.
+        synchronized (this) {
+            if (sessionLoginMobileRepository.existsById(adminId)) {
+                return false;
+            }
+            Instant now = Instant.now();
+            SessionLoginMobile session = new SessionLoginMobile(
+                    adminId,
+                    truncate(deviceName, MAX_DEVICE_NAME_LENGTH),
+                    truncate(platform, MAX_PLATFORM_LENGTH),
+                    ip,
+                    now,
+                    now
+            );
+            sessionLoginMobileRepository.save(session);
+            return true;
+        }
     }
 
     @Override

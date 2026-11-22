@@ -7,6 +7,7 @@ import com.example.be_web_admin.service.jpa.impl.AdminLoginServiceImpl;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/web/admin")
 public class AdminControllerMgmtWeb {
@@ -37,70 +39,30 @@ public class AdminControllerMgmtWeb {
         this.adminLoginService = adminLoginService;
     }
 
-    //    {
-    //  "adminId": 2500021772,
-    //  "password": "1234"
-    //}
-
-    //Login successfully
-    //        {
-    //            "success": true,
-    //                "message": "Đăng nhập thành công",
-    //                "data": {
-    //            "adminId": 2500021772,
-    //                    "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    //        }
-    //        }
-
-    //Login fail
-    //    {
-    //        "success": false,
-    //            "message": "Mã sinh viên hoặc mật khẩu không chính xác",
-    //            "data": null
-    //    }
-//    @PostMapping("/auth/login")
-//    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, Object> adminRequestLogin) throws RuntimeException {
-//        Number adminIdInt = (Number) adminRequestLogin.get("adminId");
-//        Long adminId = adminIdInt != null ? adminIdInt.longValue() : null;
-//        String password = (String) adminRequestLogin.get("password");
-//
-//        AdminLoginDTO loginRequestAdminDTO = new AdminLoginDTO();
-//        loginRequestAdminDTO.setAdminId(adminId);
-//        loginRequestAdminDTO.setPassword(password);
-//
-//        // Gọi service trả về kết quả (ví dụ trả về Map, Token, hoặc DTO)
-//        Object result = adminService.loginAdmin(
-//                loginRequestAdminDTO.getAdminId(),
-//                loginRequestAdminDTO.getPassword()
-//        );
-//
-//        return ResponseEntity.ok(result);
-//    }
-
-//    @PostMapping("/auth/login/mobile")
-//    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, Object> adminRequestLogin) throws RuntimeException {
-//
-//    }
-
-    //    @PostMapping("/auth/logout/mobile")
-//    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, Object> adminRequestLogin) throws RuntimeException {
-//
-//    }
-
-
     @PostMapping("/auth/logout")
     public ResponseEntity<?> logoutAdmin(@RequestBody Map<String, Object> adminRequestLogout) {
 
-        String accessToken = (String) adminRequestLogout.get("accessToken");
-        String refreshToken = (String) adminRequestLogout.get("refreshToken");
+        String accessToken = toNonBlank(adminRequestLogout.get("accessToken"));
+        String refreshToken = toNonBlank(adminRequestLogout.get("refreshToken"));
 
         Map<String, Object> responseReturn = new HashMap<>();
 
+        // Khớp bản mobile: thiếu cả hai token -> 400, không phải 401 như trước.
+        if (accessToken == null && refreshToken == null) {
+            responseReturn.put("status", HttpStatus.BAD_REQUEST.value());
+            responseReturn.put("message", "Missing access token and refresh token.");
+            return ResponseEntity.badRequest().body(responseReturn);
+        }
+
         try {
-            adminTokenService.removeAdminAccessTokenByJwtToken(accessToken);
-            adminTokenService.removeAdminRefreshTokenByJwtToken(refreshToken);
-        } catch(Exception e) {
-            System.out.println("Exception logout:"+ e.getMessage());
+            if (accessToken != null) {
+                adminTokenService.removeAdminAccessTokenByJwtToken(accessToken);
+            }
+            if (refreshToken != null) {
+                adminTokenService.removeAdminRefreshTokenByJwtToken(refreshToken);
+            }
+        } catch (Exception e) {
+            log.error("Exception logout web: {}", e.getMessage());
             responseReturn.put("status", 401);
             responseReturn.put("message", "Can't remove access token or refresh token.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseReturn);
@@ -109,6 +71,14 @@ public class AdminControllerMgmtWeb {
         responseReturn.put("status", HttpStatus.OK.value());
         responseReturn.put("message", "Log out successfully.");
         return ResponseEntity.ok(responseReturn);
+    }
+
+    private static String toNonBlank(Object value) {
+        if (value instanceof String text) {
+            String trimmed = text.trim();
+            return trimmed.isEmpty() ? null : trimmed;
+        }
+        return null;
     }
 
     @GetMapping("/auth/login/auto/access-token")
@@ -285,20 +255,6 @@ public class AdminControllerMgmtWeb {
         }
         return null;
     }
-
-//    @PostMapping("/login")   // giữ đường dẫn hiện tại: Vue gọi /admin/auth/login
-//    public ResponseEntity<?> login(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
-//        LoginOutcome r = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
-//        return switch (r.status()) {
-//            case OK -> ResponseEntity.ok(Map.of("success", true,
-//                    "data", Map.of("accessToken", r.accessToken(), "refreshToken", r.refreshToken())));
-//            case TOTP_REQUIRED, TOTP_INVALID -> ResponseEntity.ok(Map.of("success", false,
-//                    "data", Map.of("code", r.status().name())));
-//            case LOCKED -> ResponseEntity.ok(Map.of("success", false,
-//                    "data", Map.of("code", "LOCKED", "retryAfterSeconds", r.retryAfterSeconds())));
-//            default -> ResponseEntity.ok(Map.of("success", false));   // BAD_CREDENTIALS: giữ như cũ
-//        };
-//    }
 
     // Đăng nhập 1 request: adminId + password + totpCode (totpCode có thể trống).
     //  - Chưa bật 2FA                -> totpCode để trống vẫn success=true kèm token

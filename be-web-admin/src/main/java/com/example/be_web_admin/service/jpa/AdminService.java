@@ -10,11 +10,9 @@ public interface AdminService {
 
     public boolean addAdmin(Admin admin, Long courseId) throws JpaSystemException;
 
-    public Object loginAdmin(Long adminId, String password) throws Exception;
+    public Map<String, Object> getAdminInfo(Long adminId) throws JpaSystemException;
 
-    public Map<String, Object> getAdminInfo(Long adminId) throws Exception;
-
-    public Map<String, Object> getAdminDetailInformation(Long adminId) throws Exception;
+    public Map<String, Object> getAdminDetailInformation(Long adminId) throws JpaSystemException;
 
     public List<Admin> getAllAdmins() throws JpaSystemException;
 

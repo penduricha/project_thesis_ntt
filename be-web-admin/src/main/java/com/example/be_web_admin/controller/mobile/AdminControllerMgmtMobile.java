@@ -100,16 +100,17 @@ public class AdminControllerMgmtMobile {
             return ResponseEntity.ok(buildLoginFailure(outcome));
         }
 
-        // 2. Đã có phiên mobile ở thiết bị khác thì thu hồi cặp token vừa cấp và cảnh báo.
-        Optional<SessionLoginMobile> existingSession = sessionLoginMobileService.findByAdminId(adminId);
-        if (existingSession.isPresent()) {
+        // 2+3. Giành phiên mobile: kiểm tra tồn tại + tạo phiên nguyên tử (một khóa theo service).
+        //      Nếu đã có phiên ở thiết bị khác thì thu hồi cặp token vừa cấp và cảnh báo.
+        //      Trước đây: kiểm tra xong mới tạo phiên trong 2 bước riêng -> race khi 2 thiết bị đăng nhập cùng lúc.
+        boolean claimed = sessionLoginMobileService.claimSession(
+                adminId, deviceName, platform, httpRequest.getRemoteAddr());
+        if (!claimed) {
             revokeIssuedTokens(outcome);
+            Optional<SessionLoginMobile> existingSession = sessionLoginMobileService.findByAdminId(adminId);
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(buildAlreadyLoggedInWarning(existingSession.get()));
+                    .body(buildAlreadyLoggedInWarning(existingSession.orElse(null)));
         }
-
-        // 3. Chưa có phiên thì lưu phiên đăng nhập mobile.
-        sessionLoginMobileService.createSession(adminId, deviceName, platform, httpRequest.getRemoteAddr());
 
         return ResponseEntity.ok(buildLoginSuccess(adminId, outcome));
     }
@@ -303,9 +304,15 @@ public class AdminControllerMgmtMobile {
 
     private Map<String, Object> buildAlreadyLoggedInWarning(SessionLoginMobile session) {
         Map<String, Object> data = new HashMap<>();
-        data.put("deviceName", session.getDeviceName());
-        data.put("platform", session.getPlatform());
-        data.put("loggedInAt", session.getCreatedAt() == null ? null : session.getCreatedAt().toString());
+        if (session != null) {
+            data.put("deviceName", session.getDeviceName());
+            data.put("platform", session.getPlatform());
+            data.put("loggedInAt", session.getCreatedAt() == null ? null : session.getCreatedAt().toString());
+        } else {
+            data.put("deviceName", null);
+            data.put("platform", null);
+            data.put("loggedInAt", null);
+        }
 
         Map<String, Object> body = new HashMap<>();
         body.put("success", false);
