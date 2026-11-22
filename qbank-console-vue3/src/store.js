@@ -5,7 +5,7 @@ import { questionRepository as repo } from './repositories/questionRepository.js
 
 export const blankF = (hideAns = false) => ({ q: '', c: '', tp: '', l: '', s: '', sort: 'id', page: 1, hideAns })
 export const S = reactive({
-  ci: 0, role: 'admin', name: 'Từ Quang Nhật', colab: true, tn: 1, status: 'idle',
+  ci: 0, role: 'admin', name: 'Demo Admin', colab: true, tn: 1, status: 'idle',
   q: [], sug: [], tasks: [], sel: new Set(), f: blankF(),
   log: [['09:45:12', 'Khởi tạo phiên làm việc và đồng bộ ngân hàng câu hỏi từ MariaDB', 'ok']],
   toast: { on: false, msg: '', tone: '', label: '', cb: null },

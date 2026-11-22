@@ -1,4 +1,5 @@
-/* Dữ liệu mẫu trích từ UI_Accept_v9_Thesis.html – thay bằng API thật qua repositories/ */
+/* DỮ LIỆU GIẢ TOÀN BỘ – bản demo giao diện. Mọi tên, mã admin và mốc thời gian trong file này đều không phải dữ liệu thật.
+   Khi mở rộng lên feature thật, thay file này bằng dữ liệu lấy từ API Spring Boot/MariaDB. */
 /* Phân cấp Môn học (Course) -> Chương / Chủ đề con (Topics) chuẩn Moodle */
 export const COURSES=[
   {
@@ -95,24 +96,24 @@ export const TS={pending:['Đã tiếp nhận','n'],running:['Đang xử lý','w
 export const IC={'Chính tả':'wa','Ngữ pháp':'wa','Logic':'er','Phương án nhiễu':'er'};
 
 export const QUESTIONS=[
-    {id:1,text:'Spring Boot được phát triển dựa trên ngôn ngử lập trình nào?',o:['Java','Python','Go','Rust'],a:0,c:0,tp:2,l:0,st:'draft',updatedAt:'18/11 08:15',by:'Từ Quang Nhật'},
-    {id:2,text:'Khóa chính trong cơ sở dử liệu quan hệ dùng để làm gì?',o:['Xác định duy nhất mỗi bản ghi','Mã hóa dữ liệu','Sao lưu bảng','Tăng dung lượng'],a:0,c:1,tp:0,l:0,st:'draft',updatedAt:'18/11 08:20',by:'Giảng viên A'},
-    {id:3,text:'Phương thức HTTP nào thường dùng để tạo mới tài nguyên trong RESTful API?',o:['GET','POST','DELETE','HEAD'],a:1,c:2,tp:1,l:0,st:'ok',updatedAt:'17/11 16:40',by:'Từ Quang Nhật'},
-    {id:4,text:'Redis thuộc loại hệ lưu trữ nào',o:['Khóa–giá trị trong bộ nhớ','Quan hệ','Đồ thị','Cột rộng'],a:0,c:1,tp:2,l:1,st:'draft',updatedAt:'17/11 15:10',by:'Giảng viên A'},
-    {id:5,text:'Cơ chế nào giúp Transformer xác định mức liên quan giữa các token?',o:['Self-Attention','Pooling','Dropout','Padding'],a:0,c:3,tp:2,l:1,st:'draft',updatedAt:'17/11 14:05',by:'Từ Quang Nhật'},
-    {id:6,text:'Thuật toán TOTP mặc định tạo mã mới sau bao lâu?',o:['30 giây','5 giây','10 phút','1 giờ'],a:0,c:2,tp:2,l:1,st:'ok',updatedAt:'16/11 11:30',by:'Từ Quang Nhật'},
-    {id:7,text:'Lượng tử hóa Q4_K_M ảnh hưởng thế nào đến mô hình ngôn ngữ lớn?',o:['Giảm dung lượng bộ nhớ nhưng có thể làm giảm chất lượng đầu ra','Luôn tăng độ chính xác','Không thay đổi gì','Tăng số tham số'],a:0,c:3,tp:2,l:2,st:'draft',updatedAt:'16/11 10:12',by:'Giảng viên B'},
-    {id:8,text:'Lệnh SQL nào dùng để xóa các bản ghi thỏa điều kiện?',o:['DELETE','DELETE','DROP','SELECT'],a:0,c:1,tp:1,l:0,st:'draft',updatedAt:'15/11 17:00',by:'Giảng viên A'},
-    {id:9,text:'Vấn đề cơ bản của triết học là mối quan hệ giữa hai phạm trù nào?',o:['Vật chất và ý thức','Chân lý và sai lầm','Thiện và ác','Lý thuyết và thực tiễn'],a:0,c:4,tp:0,l:1,st:'draft',updatedAt:'15/11 09:45',by:'Giảng viên B'},
-    {id:10,text:'Theo chủ nghĩa duy vật, yếu tố nào quyết định ý thức?',o:['Vật chất','Thượng đế','Ý niệm tuyệt đối','Cảm giác thuần túy'],a:0,c:4,tp:0,l:1,st:'ok',updatedAt:'14/11 16:20',by:'Từ Quang Nhật'},
-    {id:11,text:'Phép biện chứng duy vật nghiên cứu điều gì?',o:['Những quy luật chung nhất của sự vận động và phát triển','Cấu tạo của nguyên tử','Cách viết văn bản hành chính','Lịch sử các triều đại'],a:0,c:4,tp:1,l:2,st:'draft',updatedAt:'14/11 14:10',by:'Giảng viên B'}
+    {id:1,text:'Spring Boot được phát triển dựa trên ngôn ngử lập trình nào?',o:['Java','Python','Go','Rust'],a:0,c:0,tp:2,l:0,st:'draft',updatedAt:'18/11 08:15',by:'Demo Admin'},
+    {id:2,text:'Khóa chính trong cơ sở dử liệu quan hệ dùng để làm gì?',o:['Xác định duy nhất mỗi bản ghi','Mã hóa dữ liệu','Sao lưu bảng','Tăng dung lượng'],a:0,c:1,tp:0,l:0,st:'draft',updatedAt:'18/11 08:20',by:'Giảng viên A (demo)'},
+    {id:3,text:'Phương thức HTTP nào thường dùng để tạo mới tài nguyên trong RESTful API?',o:['GET','POST','DELETE','HEAD'],a:1,c:2,tp:1,l:0,st:'ok',updatedAt:'17/11 16:40',by:'Demo Admin'},
+    {id:4,text:'Redis thuộc loại hệ lưu trữ nào',o:['Khóa–giá trị trong bộ nhớ','Quan hệ','Đồ thị','Cột rộng'],a:0,c:1,tp:2,l:1,st:'draft',updatedAt:'17/11 15:10',by:'Giảng viên A (demo)'},
+    {id:5,text:'Cơ chế nào giúp Transformer xác định mức liên quan giữa các token?',o:['Self-Attention','Pooling','Dropout','Padding'],a:0,c:3,tp:2,l:1,st:'draft',updatedAt:'17/11 14:05',by:'Demo Admin'},
+    {id:6,text:'Thuật toán TOTP mặc định tạo mã mới sau bao lâu?',o:['30 giây','5 giây','10 phút','1 giờ'],a:0,c:2,tp:2,l:1,st:'ok',updatedAt:'16/11 11:30',by:'Demo Admin'},
+    {id:7,text:'Lượng tử hóa Q4_K_M ảnh hưởng thế nào đến mô hình ngôn ngữ lớn?',o:['Giảm dung lượng bộ nhớ nhưng có thể làm giảm chất lượng đầu ra','Luôn tăng độ chính xác','Không thay đổi gì','Tăng số tham số'],a:0,c:3,tp:2,l:2,st:'draft',updatedAt:'16/11 10:12',by:'Giảng viên B (demo)'},
+    {id:8,text:'Lệnh SQL nào dùng để xóa các bản ghi thỏa điều kiện?',o:['DELETE','DELETE','DROP','SELECT'],a:0,c:1,tp:1,l:0,st:'draft',updatedAt:'15/11 17:00',by:'Giảng viên A (demo)'},
+    {id:9,text:'Vấn đề cơ bản của triết học là mối quan hệ giữa hai phạm trù nào?',o:['Vật chất và ý thức','Chân lý và sai lầm','Thiện và ác','Lý thuyết và thực tiễn'],a:0,c:4,tp:0,l:1,st:'draft',updatedAt:'15/11 09:45',by:'Giảng viên B (demo)'},
+    {id:10,text:'Theo chủ nghĩa duy vật, yếu tố nào quyết định ý thức?',o:['Vật chất','Thượng đế','Ý niệm tuyệt đối','Cảm giác thuần túy'],a:0,c:4,tp:0,l:1,st:'ok',updatedAt:'14/11 16:20',by:'Demo Admin'},
+    {id:11,text:'Phép biện chứng duy vật nghiên cứu điều gì?',o:['Những quy luật chung nhất của sự vận động và phát triển','Cấu tạo của nguyên tử','Cách viết văn bản hành chính','Lịch sử các triều đại'],a:0,c:4,tp:1,l:2,st:'draft',updatedAt:'14/11 14:10',by:'Giảng viên B (demo)'}
 ];
 
-export const MY_ADMIN_ID='2500021770';
+export const MY_ADMIN_ID='DEMO-0001';
 export const USERS=[
-    {adminId:MY_ADMIN_ID,name:'Từ Quang Nhật',role:'Quản trị viên',totp:'ENABLED',status:'active',passwordChangedAt:'12/11 09:00'},
-    {adminId:'2500021771',name:'Admin hệ thống',role:'Quản trị viên',totp:'ENABLED',status:'active',passwordChangedAt:'10/11 14:30'},
-    {adminId:'2500021772',name:'Giảng viên A',role:'Giảng viên',totp:'ENABLED',status:'active',passwordChangedAt:'08/11 08:15'},
-    {adminId:'2500021773',name:'Giảng viên B',role:'Giảng viên',totp:'NOT_ENABLED',status:'active',passwordChangedAt:'05/11 16:40'},
-    {adminId:'2500021774',name:'Giảng viên C',role:'Giảng viên',totp:'PENDING',status:'pending',passwordChangedAt:null}
+    {adminId:MY_ADMIN_ID,name:'Demo Admin',role:'Quản trị viên',totp:'ENABLED',status:'active',passwordChangedAt:'12/11 09:00'},
+    {adminId:'DEMO-0002',name:'Admin hệ thống (demo)',role:'Quản trị viên',totp:'ENABLED',status:'active',passwordChangedAt:'10/11 14:30'},
+    {adminId:'DEMO-0003',name:'Giảng viên A (demo)',role:'Giảng viên',totp:'ENABLED',status:'active',passwordChangedAt:'08/11 08:15'},
+    {adminId:'DEMO-0004',name:'Giảng viên B (demo)',role:'Giảng viên',totp:'NOT_ENABLED',status:'active',passwordChangedAt:'05/11 16:40'},
+    {adminId:'DEMO-0005',name:'Giảng viên C (demo)',role:'Giảng viên',totp:'PENDING',status:'pending',passwordChangedAt:null}
 ];
