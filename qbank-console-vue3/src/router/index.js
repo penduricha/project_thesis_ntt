@@ -11,7 +11,10 @@ const router = createRouter({
     { path: '/dash', name: 'dash', component: Dashboard },
     { path: '/bank', name: 'bank', component: Bank },
     { path: '/course/:ci(\\d+)', name: 'course', component: Bank },
-    ...['courses', 'search', 'review', 'tasks', 'moodle', 'admin', 'llm', 'account', 'settings']
+    { path: '/courses', name: 'courses', component: () => import('../views/CoursesView.vue') },
+    { path: '/review', name: 'review', component: () => import('../views/ReviewView.vue') },
+    { path: '/tasks', name: 'tasks', component: () => import('../views/TasksView.vue') },
+    ...['search', 'moodle', 'admin', 'llm', 'account', 'settings']
       .map(n => ({ path: '/' + n, name: n, component: Soon })),
   ],
 })

@@ -1,8 +1,9 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NAV, EXTRA, SUB, ICO, COURSES } from './data/mock.js'
-import { S, act, busy, list, toast, notYet, loadQuestions, runAI, removeQuestions } from './store.js'
+import { NAV, EXTRA, SUB, ICO } from './data/mock.js'
+import ModalHost from './components/ModalHost.vue'
+import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse } from './store.js'
 
 const route = useRoute(), router = useRouter()
 const mq = matchMedia('(min-width:768px)')
@@ -33,7 +34,7 @@ function bulk(k) {
 function bulkDel() {
   const ids = [...S.sel].filter(id => !busy({ id }))
   if (!ids.length) return toast('Các câu đang chọn đều đang kiểm định, không thể xóa', 'er')
-  if (confirm(`Xóa ${ids.length} câu hỏi đã chọn?\nHành động này sẽ xóa các câu hỏi và đề xuất AI liên quan khỏi ngân hàng.`)) removeQuestions(ids)
+  openDialog('confirm', { title: `Xóa ${ids.length} câu hỏi đã chọn?`, text: 'Hành động này sẽ xóa các câu hỏi và đề xuất AI liên quan khỏi ngân hàng.', cancel: 'Giữ lại', ok: `Xóa ${ids.length} câu`, danger: true, action: () => removeQuestions(ids) })
 }
 function undo() { const cb = S.toast.cb; S.toast.on = false; cb && cb() }
 
@@ -55,9 +56,9 @@ const onKey = e => {
   if (e.key === 'Escape' && amOpen.value) { amOpen.value = false; document.getElementById('ab')?.focus() }
   const typing = /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.target.isContentEditable
   if (e.key === '/' && onBank.value && !typing) { e.preventDefault(); document.getElementById('q-srch')?.focus() }
-  if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && !S.dlg.kind) {
     if (e.key === '?') { e.preventDefault(); notYet('Bảng phím tắt') }
-    else if (e.key === 'n' && onBank.value) { e.preventDefault(); notYet('Hộp thoại thêm câu hỏi') }
+    else if (e.key === 'n' && onBank.value) { e.preventDefault(); editQuestion(0, page.value === 'course' ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0 } : {}) }
   }
 }
 onMounted(() => {
@@ -92,7 +93,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
     <aside class="sidebar" id="side">
       <nav id="menu" aria-label="Chức năng">
         <template v-for="([k, g, t], i) in menu" :key="k">
-          <p v-if="i && g != menu[i - 1][1]" class="nav-group">{{ g }}</p>
+          <p v-if="i && g !== menu[i - 1][1]" class="nav-group">{{ g }}</p>
           <button type="button" class="nv" :class="{ on: k === page || (k === 'courses' && page === 'course') }" @click="go(k)">
             <svg viewBox="0 0 24 24" aria-hidden="true" v-html="ICO[k]"></svg><span>{{ t }}</span>
             <em v-if="badge(k)" :aria-label="badge(k) + ' mục mới'">{{ badge(k) }}</em>
@@ -110,11 +111,11 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
         <div class="page__head">
           <div><h1 class="page__title" id="ttl">{{ title }}</h1><p class="page__sub" id="sub">{{ subtitle }}</p></div>
           <div id="pact">
-            <button v-if="page === 'dash'" class="btn pri" @click="notYet('Hộp thoại thêm câu hỏi')">Thêm câu hỏi</button>
-            <button v-else-if="page === 'courses'" class="btn pri" @click="notYet('Hộp thoại thêm môn học')">Thêm môn học</button>
+            <button v-if="page === 'dash'" class="btn pri" @click="editQuestion(0)">Thêm câu hỏi</button>
+            <button v-else-if="page === 'courses'" class="btn pri" @click="openDialog('course', { index: -1 })">Thêm môn học</button>
             <template v-else-if="page === 'course'">
-              <button class="btn sm" @click="notYet('Hộp thoại sửa môn học')">Sửa môn học</button>
-              <button class="btn sm dan" @click="notYet('Hộp thoại xóa môn học')">Xóa môn học</button>
+              <button class="btn sm" @click="openDialog('course', { index: S.ci })">Sửa môn học</button>
+              <button class="btn sm dan" @click="askDeleteCourse(S.ci, () => go('courses'))">Xóa môn học</button>
             </template>
             <button v-else-if="page === 'moodle'" class="btn pri" @click="notYet('Hộp thoại nhập Moodle XML')">Nhập Moodle XML</button>
           </div>
@@ -135,6 +136,8 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
       <button class="btn sm" @click="S.sel.clear()">Bỏ chọn tất cả</button>
     </div>
   </div>
+
+  <ModalHost />
 
   <div id="toast" role="status" aria-live="polite" :class="S.toast.on ? ['on', S.toast.tone] : ''" @click="S.toast.on = false">
     <span>{{ S.toast.msg }}</span>

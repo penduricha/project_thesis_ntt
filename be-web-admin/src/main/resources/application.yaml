@@ -46,6 +46,16 @@ app:
     confirm-max-attempts: 5         # số lần nhập sai mã xác nhận tối đa
 #    enroll-session-ttl-seconds: 300 # thời gian sống của khóa chờ ở Redis (modal)
 
+  # ===================== SERVER 2 (AI worker / Colab Ollama) =====================
+  # Dùng cho module ngân hàng câu hỏi: POST /web/ai/tasks rồi poll trạng thái.
+  # Bỏ trống base-url => tính năng "Kiểm định AI" trả 503 AI_WORKER_NOT_CONFIGURED,
+  # KHÔNG tạo task "treo" trong ntt_ai_tasks (task không ai xử lý còn tệ hơn lỗi rõ ràng).
+  ai-worker:
+    base-url: ${AI_WORKER_BASE_URL:}          # vd http://127.0.0.1:8082/api (worker có context-path /api)
+    internal-token: ${AI_INTERNAL_TOKEN:}     # phải trùng app.ai.security.internal-token của worker
+    connect-timeout-ms: 3000
+    read-timeout-ms: 20000
+
 spring:
   config:
     import:

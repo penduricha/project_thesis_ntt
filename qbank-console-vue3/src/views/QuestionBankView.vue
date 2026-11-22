@@ -2,8 +2,8 @@
 import { computed, watchEffect, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import CourseCombobox from '../components/CourseCombobox.vue'
-import { COURSES, LV, stB } from '../data/mock.js'
-import { S, list, code, topicName, busy, runAI, clearFilters, loadQuestions, notYet } from '../store.js'
+import { LV, stB } from '../data/mock.js'
+import { COURSES, S, list, code, topicName, busy, runAI, clearFilters, loadQuestions, editQuestion, askDeleteQuestion, openDialog } from '../store.js'
 
 const route = useRoute()
 const isCourse = computed(() => route.name === 'course')
@@ -33,6 +33,7 @@ const loc = q => {
 }
 const selAll = on => L.value.forEach(q => (on ? S.sel.add(q.id) : S.sel.delete(q.id)))
 const setPage = () => { S.f.page = 1 }
+const addQ = () => editQuestion(0, isCourse.value ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0 } : {})
 
 /* Đo độ rộng placeholder để ô tìm kiếm không bị cắt chữ (port fitSearch) */
 const srch = ref(null)
@@ -46,13 +47,21 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
 </script>
 
 <template>
+  <template v-if="isCourse && crs && !courseQ.length">
+    <div class="subtopic-bar">
+      <div class="chips"><span class="mut" style="font-size:var(--fs-sm)">Cấu trúc môn học gồm <b>{{ crs.topics.length }}</b> chương/chủ đề:</span><span v-for="(t, i) in crs.topics" :key="i" class="b n">{{ t }}</span></div>
+      <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">Quản lý chương</button>
+    </div>
+    <div class="empty-box"><p class="mut">Môn học <b>{{ crs.id }} – {{ crs.name }}</b> chưa có câu hỏi nào.</p><button class="btn pri" @click="addQ">Thêm câu hỏi đầu tiên</button></div>
+  </template>
+  <template v-else>
   <div v-if="isCourse && crs" class="subtopic-bar">
     <div class="chips" style="flex:1">
       <button type="button" class="chip" :class="{ on: S.f.tp === '' }" @click="S.f.tp = ''; setPage()">Tất cả chương ({{ courseQ.length }})</button>
       <button v-for="(t, idx) in crs.topics" :key="idx" type="button" class="chip" :class="{ on: S.f.tp === String(idx) }"
               @click="S.f.tp = String(idx); setPage()">{{ t }} ({{ courseQ.filter(q => q.tp == idx).length }})</button>
     </div>
-    <button type="button" class="btn sm" @click="notYet('Hộp thoại quản lý chương')">Quản lý chương ({{ crs.topics.length }})</button>
+    <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">Quản lý chương ({{ crs.topics.length }})</button>
   </div>
 
   <div class="card tools">
@@ -77,7 +86,7 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
         <option value="level">Khó → Dễ</option>
         <option value="recent">Mới nhất</option>
       </select>
-      <button class="btn pri" @click="notYet('Hộp thoại thêm/sửa câu hỏi')">Thêm câu hỏi</button>
+      <button class="btn pri" @click="addQ">Thêm câu hỏi</button>
     </div>
     <div v-if="chips.length" class="bar">
       <span class="mut" style="font-size:var(--fs-xs)">Bộ lọc đang áp dụng:</span>
@@ -116,8 +125,8 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
           </div>
           <div class="acts">
             <button class="btn sm pri" :disabled="busy(q)" @click="runAI([q.id])">Kiểm định</button>
-            <button class="btn sm" :disabled="busy(q)" @click="notYet('Hộp thoại sửa câu hỏi')">Sửa</button>
-            <button class="btn sm dan" :disabled="busy(q)" @click="notYet('Hộp thoại xóa câu hỏi')">Xóa</button>
+            <button class="btn sm" :disabled="busy(q)" @click="editQuestion(q.id)">Sửa</button>
+            <button class="btn sm dan" :disabled="busy(q)" @click="askDeleteQuestion(q.id)">Xóa</button>
           </div>
         </div>
         <div v-if="totalPages > 1" class="bar" style="justify-content:center;margin-top:.5rem">
@@ -128,4 +137,5 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
       </template>
     </div>
   </div>
+  </template>
 </template>

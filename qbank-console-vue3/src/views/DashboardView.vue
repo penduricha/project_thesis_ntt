@@ -1,15 +1,14 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { COURSES } from '../data/mock.js'
-import { S, act, clearFilters, log } from '../store.js'
+import { COURSES, S, act, clearFilters, log } from '../store.js'
 const router = useRouter()
 const total = computed(() => S.q.length)
 const okC = computed(() => S.q.filter(x => x.st == 'ok').length)
 const pct = computed(() => (total.value ? Math.round(okC.value / total.value * 100) : 0))
 const sugC = computed(() => S.sug.length)
 const actC = computed(() => act())
-const totalTopics = COURSES.reduce((a, c) => a + c.topics.length, 0)
+const totalTopics = computed(() => COURSES.reduce((a, c) => a + c.topics.length, 0))
 const now = computed(() => { S.log.length; return new Date().toLocaleTimeString('vi-VN') })
 const toBank = () => { clearFilters(); router.push('/bank') }
 const toOk = () => { clearFilters(); S.f.s = 'ok'; router.push('/bank') }

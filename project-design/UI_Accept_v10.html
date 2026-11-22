@@ -1,13 +1,24 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+<!-- v10 (từ v9): hộp thoại không còn phụ thuộc CDN Bootstrap (nạp bất đồng bộ, có bản dự phòng đầy đủ); Enter trong hộp quản lý chương không đóng hộp thoại;
+     khóa 2FA/mật khẩu tạm không đóng bằng Esc/X/nền; .env chỉ xuất node có URL hợp lệ; Cài đặt dùng container query (hết tràn ngang 768–943px) và hai công tắc đã có tác dụng;
+     giữ focus sau khi vẽ lại; lưu không đổi thì không đánh dấu "cũ"; route theo #/trang (Back/F5 hoạt động, mặc định DEFAULT_PAGE='dash');
+     drawer mobile inert + Esc; thanh chọn nhiều gọn hơn và không che hàng cuối; bảng Tác vụ thành thẻ trên điện thoại; toast tạm dừng khi rê chuột, Ctrl+Z hoàn tác xóa. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>QBank Console – Kiểm định ngân hàng câu hỏi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-@import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css") layer(bootstrap);
+/* v10: chuẩn hóa để giao diện giống nhau dù Bootstrap có tải được hay không.
+   Các giá trị dưới đây trùng với phần reboot của Bootstrap 5.3 mà thiết kế đã dựa vào; các luật sau chúng trong file vẫn ghi đè được. */
+button,input,select,textarea{margin:0;font-family:inherit;font-size:inherit;line-height:inherit}
+svg{vertical-align:middle}
+h1,h2,h3,h4,h5,h6{line-height:1.2;color:inherit}
+.btn{vertical-align:middle;-webkit-user-select:none;user-select:none}
+.card{position:relative;color:inherit}
+dt{font-weight:700}
 
 :root{
   --primary:#004b87;--primary-hover:#003a69;--primary-soft:#e8f1fa;
@@ -520,7 +531,7 @@ body.modal-open{overflow:hidden}
 .modal-body label small:not(.fe){font-weight:400}
 .modal-body label>small:not(.fe){margin-top:.4rem;font-size:.875rem;line-height:1.45}
 .modal-body input:not([type=checkbox]):not([type=radio]),.modal-body textarea,.modal-body select{font-size:1rem;font-weight:400;padding:.65rem .875rem;min-height:2.875rem}
-.modal-body ::placeholder{color:#6b7a90;opacity:1}
+.modal-body ::placeholder{color:#5f6e84;opacity:1}
 .modal-body input:not([type=checkbox]):not([type=radio]):focus,.modal-body textarea:focus,.modal-body select:focus{outline:0;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 22%,transparent)}
 .modal-body .invalid:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--danger-strong) 22%,transparent)}
 /* Danh sách môn học: 2 cột, không cuộn lồng, dòng rộng dễ chạm */
@@ -602,7 +613,12 @@ body.modal-open{overflow:hidden}
 .sopt+.sopt{border-top:1px solid var(--border)}
 .sopt__t{display:grid;gap:.15rem;min-width:0}.sopt__t b{font-weight:600}
 .sopt .sw{position:relative;flex:none;min-height:0}
-@media(min-width:768px){.set__row{grid-template-columns:minmax(13rem,1fr) minmax(0,2fr);gap:var(--space-4);padding:var(--space-4)}}
+/* v10: bố cục theo bề rộng của chính thẻ (container query) thay vì bề rộng cửa sổ, vì sidebar mở chiếm ~250px */
+.set{container:set/inline-size}.set__body{container:setb/inline-size}
+@container set (min-width:40rem){.set__row{grid-template-columns:minmax(13rem,1fr) minmax(0,2fr);gap:var(--space-4);padding:var(--space-4)}}
+.set .tfa{flex-direction:column;align-items:stretch}.set .tfa>.btn{align-self:flex-start}
+@container setb (min-width:34rem){.set .tfa{flex-direction:row;align-items:center;justify-content:space-between}.set .tfa>.btn{align-self:center}}
+.set__body>label.sopt{font-weight:400}
 
 /* ===== v9: mũi tên dropdown thống nhất cho <select> và combobox .cb (cùng icon, cùng cỡ, cùng vị trí) ===== */
 :root{--chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235b6b82' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");--chev-on:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23004b87' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")} /* stroke trùng --text-muted / --primary; đổi theme thì đổi mã màu trong data-URI */
@@ -613,10 +629,49 @@ select option{color:var(--text);background:var(--surface)}
 .cb-btn{display:block;font-size:0;background-color:transparent;background-image:var(--chev);background-repeat:no-repeat;background-position:center;background-size:1rem;transition:transform .15s ease,background-color .15s ease}
 .cb-btn:hover,.cb-in:focus+.cb-btn{background-image:var(--chev-on)}
 .cb-in[aria-expanded=true]+.cb-btn{transform:translateY(-50%) rotate(180deg)}
+
+/* ===== v10 ===== */
+/* Drawer đóng trên điện thoại: không cho focus/đọc được các mục nằm ngoài màn hình */
+@media(max-width:47.99rem){
+  .sidebar{visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
+  [data-nav=open] .sidebar{visibility:visible;transition-delay:0s}
+}
+/* Thanh chọn nhiều: gọn trên điện thoại + chừa chỗ để không che hàng cuối */
+@media(max-width:47.99rem){
+  #selbar{gap:.4rem;padding:.6rem .75rem}
+  #selbar #sn{font-size:var(--fs-sm)}
+  #selbar .x-long{display:none}
+  #selbar .sel-acts{grid-template-columns:repeat(6,minmax(0,1fr));gap:.4rem}
+  #selbar .sel-acts .btn{min-height:2.625rem;font-size:var(--fs-sm)}
+  #selbar .sel-acts .btn:nth-child(2){grid-column:span 2;order:1}
+  #selbar .sel-acts .btn:nth-child(3){grid-column:span 2;order:2}
+  #selbar .sel-acts .btn:nth-child(4){grid-column:span 2;order:3}
+  #selbar #sb-all{grid-column:span 3;order:4}
+  #selbar .sel-acts .btn:nth-child(5){grid-column:span 3;order:5}
+}
+body.has-sel .page{padding-bottom:calc(var(--selbar-h,0px) + 1.5rem + env(safe-area-inset-bottom,0px))}
+/* Bảng Tác vụ trên điện thoại: mỗi tác vụ là một thẻ, không cuộn ngang */
+@media(max-width:47.99rem){
+  .tw--tasks{border:0;overflow:visible;max-height:none}
+  .tw--tasks table,.tw--tasks tbody,.tw--tasks tr,.tw--tasks td{display:block}
+  .tw--tasks thead{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .tw--tasks tr{margin-bottom:.75rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden}
+  .tw--tasks td{display:grid;grid-template-columns:6.25rem minmax(0,1fr);gap:.5rem;align-items:start;padding:.55rem .85rem;border-bottom:1px solid var(--border)}
+  .tw--tasks td::before{content:attr(data-l);color:var(--text-muted);font-weight:700}
+  .tw--tasks tbody tr:hover{background:var(--surface)}
+}
+/* Thông báo luôn nằm trên hộp thoại (Bootstrap .modal có z-index 1055) */
+#toast{z-index:2000}
+/* Tiêu đề nhận focus bằng mã sau khi chuyển trang: vòng focus ôm sát chữ */
+.page__title,#tfa-t{width:fit-content;max-width:100%}
+.page__title:focus-visible,#tfa-t:focus-visible{outline:2px solid var(--primary);outline-offset:4px;border-radius:4px}
+/* Vùng bấm */
+.crumb-bar button{min-height:1.75rem;padding-block:.25rem}
+@media(pointer:coarse){.qrow__sel input[type=checkbox]{width:1.5rem;height:1.5rem}.chip{min-height:2.5rem}.logo-link{min-height:2.75rem}}
 </style>
 </head>
 <body>
-<a href="#view" class="skip">Bỏ qua điều hướng</a>
+<a href="#view" class="skip" onclick="event.preventDefault();const v=document.getElementById('view');v.tabIndex=-1;v.focus()">Bỏ qua điều hướng</a>
 <div id="app" class="shell" data-nav="open">
 <header class="topbar">
   <button class="topbar__toggle" id="mt" aria-label="Mở hoặc đóng menu" aria-expanded="true" aria-controls="side" onclick="tm()"><span></span><span></span><span></span></button>
@@ -625,14 +680,14 @@ select option{color:var(--text);background:var(--surface)}
     <span class="logo-text"><strong>QBank Console</strong><span>NTTU · Kiểm định LLM</span></span>
   </a>
   <div class="acct" id="acct-wrap">
-    <button class="acct__btn" id="ab" aria-haspopup="true" aria-expanded="false" aria-controls="am" aria-label="Menu tài khoản" onclick="ta()"><span class="av js-av"></span><span class="acct__chev" aria-hidden="true"></span></button>
-    <div class="acct__menu" id="am" hidden>
+    <button class="acct__btn" id="ab" aria-haspopup="menu" aria-expanded="false" aria-controls="am" aria-label="Menu tài khoản" onclick="ta()"><span class="av js-av"></span><span class="acct__chev" aria-hidden="true"></span></button>
+    <div class="acct__menu" id="am" role="menu" aria-label="Tài khoản" hidden>
       <div class="acct__head"><div class="who"><span class="av av--lg js-av"></span><div><b id="acn"></b><small id="acr"></small></div></div></div>
-      <button class="acct__item" onclick="go('account')">Thông tin tài khoản</button>
-      <button class="acct__item" onclick="go('settings')">Cài đặt</button>
-      <button class="acct__item" onclick="am(false);kbdHelp()">Phím tắt</button>
-      <div class="acct__sep"></div>
-      <button class="acct__item out" onclick="am(false);toast('Bản demo không có màn hình đăng nhập nên chưa đăng xuất thật','wa')">Đăng xuất</button>
+      <button class="acct__item" role="menuitem" onclick="go('account')">Thông tin tài khoản</button>
+      <button class="acct__item" role="menuitem" onclick="go('settings')">Cài đặt</button>
+      <button class="acct__item" role="menuitem" onclick="am(false);kbdHelp()">Phím tắt</button>
+      <div class="acct__sep" role="separator"></div>
+      <button class="acct__item out" role="menuitem" onclick="am(false);toast('Bản demo không có màn hình đăng nhập nên chưa đăng xuất thật','wa')">Đăng xuất</button>
     </div>
   </div>
 </header>
@@ -658,7 +713,7 @@ select option{color:var(--text);background:var(--surface)}
   <div class="sel-acts">
     <button class="btn sm" id="sb-all" onclick="selAll(true)">Chọn tất cả</button>
     <button class="btn sm pri" onclick="bulk('ai')">Kiểm định AI</button>
-    <button class="btn sm" onclick="bulk('xml')">Xuất Moodle XML</button>
+    <button class="btn sm" onclick="bulk('xml')">Xuất <span class="x-long">Moodle </span>XML</button>
     <button class="btn sm dan" onclick="bulkDel()" aria-label="Xóa các câu hỏi đã chọn">Xóa</button>
     <button class="btn sm" onclick="selAll(false,1)">Bỏ chọn tất cả</button>
   </div>
@@ -667,7 +722,13 @@ select option{color:var(--text);background:var(--surface)}
 <div class="modal fade" id="bsm" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content" id="dlg"></div></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<script>
+/* Bootstrap chỉ là phần nâng cao cho hộp thoại. Nạp bất đồng bộ nên mạng chậm hoặc mất CDN cũng không làm treo trang.
+   Chưa tải xong (hoặc lỗi) thì hộp thoại dùng bản dự phòng tích hợp sẵn, cùng hành vi: khóa focus, Esc, nút Đóng. */
+(function(){var B='https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/',h=document.head;
+  var c=document.createElement('style');c.textContent='@import url("'+B+'css/bootstrap.min.css") layer(bootstrap);';h.appendChild(c);
+  var j=document.createElement('script');j.src=B+'js/bootstrap.bundle.min.js';j.async=true;j.crossOrigin='anonymous';h.appendChild(j)})();
+</script>
 <script>
 const $=(s,e=document)=>e.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -827,10 +888,12 @@ function toast(m,tone='',actionLabel='',actionCb=null){
   const t=$('#toast');
   t.className='on'+(tone?' '+tone:'');
   undoFn=actionCb;
-  t.innerHTML=`<span>${esc(m)}</span>${actionLabel&&actionCb?`<button type="button" onclick="if(undoFn){undoFn();undoFn=null;$('#toast').classList.remove('on')}">${esc(actionLabel)}</button>`:''}`;
-  clearTimeout(toast.h);
-  toast.h=setTimeout(()=>t.classList.remove('on'),actionCb?5000:3500);
+  t.innerHTML=`<span>${esc(m)}</span>${actionLabel&&actionCb?`<button type="button" title="Ctrl+Z" aria-keyshortcuts="Control+Z" onclick="if(undoFn){undoFn();undoFn=null;$('#toast').classList.remove('on')}">${esc(actionLabel)}</button>`:''}`;
+  toastArm(actionCb?8000:4000);
 }
+const toastArm=ms=>{clearTimeout(toast.h);toast.h=setTimeout(()=>$('#toast').classList.remove('on'),ms)};
+['mouseenter','focusin'].forEach(ev=>$('#toast').addEventListener(ev,()=>clearTimeout(toast.h)));
+['mouseleave','focusout'].forEach(ev=>$('#toast').addEventListener(ev,()=>toastArm(2500)));
 $('#toast').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')$('#toast').classList.remove('on')});
 
 const act=()=>S.tasks.filter(t=>/pending|running/.test(t.st)).length;
@@ -910,9 +973,11 @@ function runAI(ids){
           S.sug.push({qid:id,tx:r.tx,is:r.is,diff:r.diff,sev:r.sev,tid:t.id});
           q.st='flag';
           log(`Hoàn tất ${t.id} (${code(q)}): có ${r.is.length} đề xuất AI`,'wa');
+          if(S.notifyTasks)toast(`${t.id} hoàn tất: ${code(q)} có ${r.is.length} đề xuất AI`,'wa');
         }else{
           q.st='ok';
           log(`Hoàn tất ${t.id} (${code(q)}): câu hỏi đạt chuẩn`,'ok');
+          if(S.notifyTasks)toast(`${t.id} hoàn tất: ${code(q)} đạt chuẩn`,'ok');
         }
       }
       draw();
@@ -951,6 +1016,8 @@ const qrow=q=>{
   </div>`;
 };
 
+function selbarFit(){const sb=$('#selbar');document.body.classList.toggle('has-sel',!sb.hidden);if(!sb.hidden)document.documentElement.style.setProperty('--selbar-h',sb.offsetHeight+'px')}
+if(window.ResizeObserver)new ResizeObserver(()=>selbarFit()).observe($('#selbar'));
 function cnt(){
   const L=list(),qa=$('#qall-cb'),ql=$('#qall-lbl');
   if(ql)ql.textContent=`Chọn tất cả (${L.length} đang lọc)`;
@@ -960,7 +1027,7 @@ function cnt(){
     qa.indeterminate=inView>0&&inView<L.length;
   }
   const onBank=/^(bank|course)$/.test(S.page);
-  $('#selbar').hidden=!(onBank&&S.sel.size);
+  $('#selbar').hidden=!(onBank&&S.sel.size);selbarFit();
   $('#sn').textContent='Đã chọn '+S.sel.size+' câu';
   const sbAll=$('#sb-all');
   if(sbAll)sbAll.textContent=`Chọn tất cả ${L.length}`;
@@ -972,11 +1039,13 @@ function rows(){
   const slice=L.slice((S.f.page-1)*perPage,S.f.page*perPage);
   const tb=$('#tb');
   if(!tb)return;
+  const fk=fcap(document.activeElement);
   if(!slice.length){
     tb.innerHTML=`<div class="empty-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><p class="mut">Không có câu hỏi nào khớp với điều kiện lọc hiện tại.</p><button class="btn sm pri" onclick="clearFilters()">Xóa bộ lọc</button></div>`;
   }else{
     tb.innerHTML=slice.map(qrow).join('')+(totalPages>1?`<div class="bar" style="justify-content:center;margin-top:.5rem"><button class="btn sm" ${S.f.page<=1?'disabled':''} onclick="S.f.page--;rows()">‹ Trước</button><span class="mut" style="font-size:var(--fs-sm)">Trang ${S.f.page} / ${totalPages}</span><button class="btn sm" ${S.f.page>=totalPages?'disabled':''} onclick="S.f.page++;rows()">Sau ›</button></div>`:'');
   }
+  if(fk&&document.activeElement===document.body)frest(fk);
   cnt();
 }
 
@@ -1024,7 +1093,7 @@ $('#dlg').addEventListener('cancel',e=>{
     if(confirm('Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?')){dlgDirty=false;$('#dlg').close()}
   }
 });
-function kbdHelp(){dlgDirty=false;$('#dlg').innerHTML=`<h3>Phím tắt</h3><dl class="keys"><dt><kbd>/</kbd></dt><dd>Tìm kiếm câu hỏi</dd><dt><kbd>n</kbd></dt><dd>Thêm câu hỏi mới</dd><dt><kbd>?</kbd></dt><dd>Mở bảng phím tắt</dd><dt><kbd>Esc</kbd></dt><dd>Đóng hộp thoại, danh sách xổ xuống hoặc menu</dd><dt><kbd>Enter</kbd></dt><dd>Xác nhận hành động chính trong hộp thoại</dd><dt><kbd>Ctrl</kbd> + <kbd>Enter</kbd></dt><dd>Xác nhận khi đang nhập ở ô nhiều dòng</dd><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Chọn môn học trong danh sách xổ xuống</dd></dl><div class="end"><button class="btn pri" style="grid-column:1/-1" onclick="closeDlg()">Đóng</button></div>`;$('#dlg').showModal()}
+function kbdHelp(){dlgDirty=false;$('#dlg').innerHTML=`<h3>Phím tắt</h3><dl class="keys"><dt><kbd>/</kbd></dt><dd>Tìm kiếm câu hỏi</dd><dt><kbd>n</kbd></dt><dd>Thêm câu hỏi mới</dd><dt><kbd>?</kbd></dt><dd>Mở bảng phím tắt</dd><dt><kbd>Esc</kbd></dt><dd>Đóng hộp thoại, danh sách xổ xuống hoặc menu</dd><dt><kbd>Enter</kbd></dt><dd>Xác nhận ở hộp thoại ngắn (không có ô nhiều dòng)</dd><dt><kbd>Ctrl</kbd> + <kbd>Enter</kbd></dt><dd>Xác nhận ở form có ô nhiều dòng (ví dụ: câu hỏi)</dd><dt><kbd>Ctrl</kbd> + <kbd>Z</kbd></dt><dd>Hoàn tác thao tác vừa xóa (khi thông báo còn hiện)</dd><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Chọn môn học trong danh sách xổ xuống</dd></dl><div class="end"><button class="btn pri" style="grid-column:1/-1" onclick="closeDlg()">Đóng</button></div>`;$('#dlg').showModal()}
 function closeDlg(){
   if(dlgDirty&&!confirm('Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?'))return;
   dlgDirty=false;$('#dlg').close();
@@ -1071,7 +1140,7 @@ function ccT(p,commit){
 /* Ô chọn môn học có lọc khi gõ (không dấu cũng được); danh sách chỉ hiện TÊN môn, không có mã */
 const norm=t=>(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase();
 const CB={flt:{cur:()=>S.f.c===''?-1:+S.f.c,pick:i=>{S.f.c=i<0?'':String(i);S.f.page=1;render()},all:true}};
-function cbHtml(p,cur,ph,cls=''){return`<div class="cb${cls}"><input id="${p}-c" class="cb-in ${p=='flt'?'flt-sel':''}" role="combobox" aria-expanded="false" aria-controls="${p}-lb" aria-autocomplete="list" autocomplete="off" placeholder="${ph}" value="${esc(COURSES[cur]?.name||'')}" onfocus="this.select();cbOpen('${p}',1)" onclick="cbOpen('${p}',1)" oninput="cbOpen('${p}')" onkeydown="cbKey(event,'${p}')" onblur="cbClose('${p}',1)"><button type="button" class="cb-btn" tabindex="-1" aria-label="Mở danh sách môn học" onmousedown="event.preventDefault()" onclick="cbToggle('${p}')"></button><ul id="${p}-lb" class="cb-list" role="listbox" hidden onmousedown="cbDown(event,'${p}')" onclick="event.preventDefault()"></ul></div>`}
+function cbHtml(p,cur,ph,cls=''){return`<div class="cb${cls}"><input id="${p}-c" class="cb-in ${p=='flt'?'flt-sel':''}" role="combobox" aria-expanded="false" aria-controls="${p}-lb" aria-autocomplete="list" autocomplete="off" placeholder="${ph}" value="${esc(COURSES[cur]?.name||'')}" onfocus="this.select();cbOpen('${p}',1)" onclick="cbOpen('${p}',1)" oninput="cbOpen('${p}')" onkeydown="cbKey(event,'${p}')" onblur="cbClose('${p}',1)"><button type="button" class="cb-btn" tabindex="-1" aria-label="Mở danh sách môn học" onmousedown="event.preventDefault()" onclick="cbToggle('${p}')"></button><ul id="${p}-lb" class="cb-list" role="listbox" tabindex="-1" hidden onmousedown="cbDown(event,'${p}')" onclick="event.preventDefault()"></ul></div>`}
 function cbOpen(p,all){const el=$('#'+p+'-c'),lb=$('#'+p+'-lb');if(!el||!lb)return;const c=CB[p],q=all?'':norm(el.value.trim()),cur=c.cur();
   const li=COURSES.map((x,i)=>[x,i]).filter(([x,i])=>subjOk(i)&&(c.all||x.active!==false||i==cur)&&(!q||norm(x.name).includes(q)||norm(x.id).includes(q)));
   lb.innerHTML=(c.all&&!q?`<li role="option" data-i="" class="${cur<0?'on':''}">Tất cả môn học</li>`:'')+li.map(([x,i])=>`<li role="option" id="${p}-o${i}" data-i="${i}" class="${i==cur?'on':''}">${esc(x.name)}</li>`).join('')||'<li class="none">Không tìm thấy môn học phù hợp</li>';
@@ -1150,6 +1219,9 @@ function save(){
   else if(!COURSES[ci].topics[tp])bad+=fErr($('#cf-chips'),'Môn học này chưa có chương. Hãy thêm chương cho môn học trước khi lưu câu hỏi.');
   if(bad)return fFocus();
   const d={text:tx,o,a,c:ci,tp,l:+$('#f-l').value,title:$('#f-ti').value.trim(),fb:$('#f-fb').value.trim(),updatedAt:nowStr(),by:S.name};
+  if(S.eid){const cur=S.q.find(x=>x.id==S.eid);
+    if(cur&&cur.text===d.text&&cur.o.every((x,i)=>x===d.o[i])&&cur.a===d.a&&cur.c===d.c&&(cur.tp||0)===d.tp&&cur.l===d.l&&(cur.title||'')===d.title&&(cur.fb||'')===d.fb){dlgDirty=false;$('#dlg').close();return toast('Không có thay đổi nào để lưu')}
+  }
   if(S.eid){
     Object.assign(S.q.find(x=>x.id==S.eid),d,{st:S.q.find(x=>x.id==S.eid).st=='draft'?'draft':'stale',ver:(S.q.find(x=>x.id==S.eid).ver||1)+1});
     S.sug=S.sug.filter(s=>s.qid!=S.eid);
@@ -1165,6 +1237,7 @@ function del(id){
   const q=S.q.find(x=>x.id==id);
   if(!q)return;
   if(busy(q))return toast('Không thể xóa khi câu hỏi đang kiểm định','er');
+  if(S.confirmDelete===false)return execDel(id);
   dlgDirty=false;
   $('#dlg').innerHTML=`<h3>Xóa câu hỏi ${code(q)}?</h3><p>Câu hỏi và đề xuất AI liên quan sẽ bị xóa khỏi ngân hàng.</p><div class="end"><button class="btn" onclick="$('#dlg').close()">Giữ lại</button><button class="btn dan" onclick="execDel(${id})">Xóa câu hỏi</button></div>`;
   $('#dlg').showModal();
@@ -1513,16 +1586,16 @@ const P={
         <button type="button" class="chip ${S.tf==='succeeded'?'on':''}" onclick="S.tf='succeeded';render()">Hoàn tất (${counts.succeeded})</button>
         <button type="button" class="chip ${S.tf==='failed'?'on':''}" onclick="S.tf='failed';render()">Thất bại (${counts.failed})</button>
       </div>
-      ${filtered.length?`<div class="tw"><table><thead><tr><th>Mã tác vụ</th><th>Câu hỏi</th><th>Bắt đầu</th><th>Trạng thái</th><th>Thời lượng</th><th>Kết quả</th><th>Hành động</th></tr></thead><tbody>${filtered.map(t=>{
+      ${filtered.length?`<div class="tw tw--tasks"><table><thead><tr><th>Mã tác vụ</th><th>Câu hỏi</th><th>Bắt đầu</th><th>Trạng thái</th><th>Thời lượng</th><th>Kết quả</th><th>Hành động</th></tr></thead><tbody>${filtered.map(t=>{
         const hasSug=S.sug.some(s=>s.qid==t.qid);
         return`<tr>
-          <td><b>${t.id}</b></td>
-          <td><b>${code({id:t.qid})}</b></td>
-          <td>${esc(t.started||'—')}</td>
-          <td><span class="b ${TS[t.st][1]}">${/pending|running/.test(t.st)?'<i class="spin"></i> ':''}${TS[t.st][0]}</span></td>
-          <td>${t.ms?(t.ms/1000).toFixed(1)+' giây':'…'}</td>
-          <td>${esc(t.msg)||'Đang chờ worker xử lý…'}</td>
-          <td>${t.st==='failed'?`<button class="btn sm pri" onclick="runAI([${t.qid}])">Thử lại</button>`:t.st==='succeeded'&&hasSug?`<button class="btn sm" onclick="go('review')">Xem đề xuất</button>`:'—'}</td>
+          <td data-l="Mã tác vụ"><b>${t.id}</b></td>
+          <td data-l="Câu hỏi"><b>${code({id:t.qid})}</b></td>
+          <td data-l="Bắt đầu">${esc(t.started||'—')}</td>
+          <td data-l="Trạng thái"><span class="b ${TS[t.st][1]}">${/pending|running/.test(t.st)?'<i class="spin"></i> ':''}${TS[t.st][0]}</span></td>
+          <td data-l="Thời lượng">${t.ms?(t.ms/1000).toFixed(1)+' giây':'…'}</td>
+          <td data-l="Kết quả">${esc(t.msg)||'Đang chờ worker xử lý…'}</td>
+          <td data-l="Hành động">${t.st==='failed'?`<button class="btn sm pri" onclick="runAI([${t.qid}])">Thử lại</button>`:t.st==='succeeded'&&hasSug?`<button class="btn sm" onclick="go('review')">Xem đề xuất</button>`:'—'}</td>
         </tr>`;
       }).join('')}</tbody></table></div>`:
       `<div class="empty-box"><p class="mut">Chưa có tác vụ nào thuộc trạng thái này.</p><button class="btn sm pri" onclick="go('bank')">Chọn câu hỏi để kiểm định</button></div>`}
@@ -1562,7 +1635,7 @@ const P={
     return`<div class="card set">
     <section class="set__row" aria-labelledby="tfa-t"><div class="set__intro"><h3 id="tfa-t" class="set__t">Xác thực hai yếu tố</h3><p class="set__d">Thêm bước nhập mã từ ứng dụng Authenticator mỗi khi đăng nhập.</p></div><div class="set__body">${tfaCard()}</div></section>
     <section class="set__row" aria-labelledby="role-t"><div class="set__intro"><h3 id="role-t" class="set__t">Chế độ xem theo vai trò</h3><p class="set__d">Chỉ đổi giao diện xem thử, không đổi quyền của tài khoản.</p></div><div class="set__body"><label for="preview-role">Vai trò xem thử</label><select id="preview-role" onchange="previewRole(this.value)"><option value="admin" ${S.role==='admin'?'selected':''}>Quản trị viên</option><option value="gv" ${S.role==='gv'?'selected':''}>Giảng viên</option></select>${gv?`<small>${gv.trim()}</small>`:''}</div></section>
-    <section class="set__row" aria-labelledby="opt-t"><div class="set__intro"><h3 id="opt-t" class="set__t">Thông báo và xác nhận</h3><p class="set__d">Lưu tự động khi bạn bật hoặc tắt.</p></div><div class="set__body">${sopt('notifyTasks','Thông báo khi tác vụ AI hoàn tất','Hiện thông báo khi một yêu cầu kiểm định kết thúc.','Đổi tùy chọn thông báo')}${sopt('confirmDelete','Hỏi xác nhận trước khi xóa câu hỏi','Hiện hộp thoại xác nhận để tránh xóa nhầm.','Đổi tùy chọn xác nhận xóa')}</div></section>
+    <section class="set__row" aria-labelledby="opt-t"><div class="set__intro"><h3 id="opt-t" class="set__t">Thông báo và xác nhận</h3><p class="set__d">Lưu tự động khi bạn bật hoặc tắt.</p></div><div class="set__body">${sopt('notifyTasks','Thông báo khi tác vụ AI hoàn tất','Hiện thông báo khi một yêu cầu kiểm định kết thúc (lỗi luôn được báo).','Đổi tùy chọn thông báo')}${sopt('confirmDelete','Hỏi xác nhận trước khi xóa câu hỏi','Tắt đi thì câu hỏi bị xóa ngay và vẫn có nút Hoàn tác. Xóa nhiều câu cùng lúc luôn hỏi xác nhận.','Đổi tùy chọn xác nhận xóa')}</div></section>
   </div>`}
 };
 
@@ -1607,19 +1680,19 @@ function tfaCard(){
 function tfaOpen(){
   S.tfaSec=Array.from({length:16},()=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.random()*32|0]).join('');dlgDirty=false;
   $('#dlg').innerHTML=`<h3>Kích hoạt xác thực hai yếu tố</h3><p class="mut" style="margin:0">Mở ứng dụng Authenticator trên điện thoại, chọn <b>Thêm tài khoản</b> rồi nhập khóa bí mật dưới đây.</p>
-  <div class="tfa-key"><span id="tfa-k">${S.tfaSec.replace(/(.{4})/g,'$1 ').trim()}</span><button type="button" class="btn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(S.tfaSec);toast('Đã sao chép khóa bí mật','ok')">Sao chép</button></div>
+  <div class="tfa-key"><span id="tfa-k">${S.tfaSec.replace(/(.{4})/g,'$1 ').trim()}</span><button type="button" class="btn sm" data-af onclick="navigator.clipboard&&navigator.clipboard.writeText(S.tfaSec);toast('Đã sao chép khóa bí mật','ok')">Sao chép</button></div>
   <p class="mut" style="margin:0;font-size:var(--fs-sm)">Khóa chỉ hiển thị một lần. Sau khi nhập vào ứng dụng, bấm “Tiếp tục” và xác nhận trong ứng dụng trong vòng 5 phút.</p>
   <div class="end"><button class="btn" onclick="closeDlg()">Hủy</button><button class="btn pri" onclick="tfaStart()">Tiếp tục</button></div>`;
   $('#dlg').showModal();
 }
-function tfaStart(){S.tfa={st:'PENDING',until:Date.now()+300000};$('#dlg').close();clearInterval(S._tt);
+function tfaStart(){S.tfa={st:'PENDING',until:Date.now()+300000};$('#dlg')._alt='#tfa-t';$('#dlg').close();clearInterval(S._tt);
   S._tt=setInterval(()=>{if(S.tfa.st!='PENDING'){clearInterval(S._tt);return}
     if(S.tfa.until-Date.now()<=0){S.tfa={st:'NOT_ENABLED',until:0};clearInterval(S._tt);if(/^(account|settings)$/.test(S.page))render();toast('Khóa chờ xác nhận đã hết hạn, hãy kích hoạt lại','wa');return}
     const e=$('#tfa-cd');if(e)e.textContent=tfaLeft()},1000);
   log('Bắt đầu kích hoạt xác thực hai yếu tố','info');render();toast('Đã tạo khóa, đang chờ xác nhận từ ứng dụng','ok')}
 function tfaAsk(){dlgDirty=false;$('#dlg').innerHTML=`<h3>Hủy kích hoạt xác thực hai yếu tố?</h3><p class="mut" style="margin:0">Khóa bí mật hiện tại sẽ bị xóa. Nếu muốn cài lại, bạn cần tạo khóa mới và nhập lại vào ứng dụng Authenticator.</p><div class="end"><button class="btn" onclick="closeDlg()">Quay lại</button><button class="btn pri" onclick="tfaReset()">Hủy kích hoạt</button></div>`;$('#dlg').showModal()}
-function tfaReset(){clearInterval(S._tt);S.tfa={st:'NOT_ENABLED',until:0};$('#dlg').close();log('Hủy kích hoạt xác thực hai yếu tố đang chờ','wa');render();toast('Đã hủy, bạn có thể kích hoạt lại','ok')}
-function tfaDone(){clearInterval(S._tt);S.tfa={st:'ENABLED',until:0};log('Xác thực hai yếu tố đã được kích hoạt','ok');render();toast('Đã kích hoạt xác thực hai yếu tố','ok')}
+function tfaReset(){clearInterval(S._tt);S.tfa={st:'NOT_ENABLED',until:0};$('#dlg')._alt='#tfa-t';$('#dlg').close();log('Hủy kích hoạt xác thực hai yếu tố đang chờ','wa');render();toast('Đã hủy, bạn có thể kích hoạt lại','ok')}
+function tfaDone(){clearInterval(S._tt);S.tfa={st:'ENABLED',until:0};log('Xác thực hai yếu tố đã được kích hoạt','ok');render();const th=$('#tfa-t');if(th){th.tabIndex=-1;th.focus({preventScroll:true})}toast('Đã kích hoạt xác thực hai yếu tố','ok')}
 /* Course CRUD (Quản lý Môn học) */
 function cdlg(){
   dlgDirty=false;
@@ -1685,17 +1758,18 @@ function cdok(i){
 /* Sub-topic Manager inside a Course (Quản lý Chương / Chủ đề con) */
 function topicMgrDlg(ci){
   const crs=COURSES[ci];
+  const dd=$('#dlg');if(!dd._tmL){dd._tmL=1;dd.addEventListener('close',()=>{dd._tmL=0;render()},{once:true})}
   dlgDirty=false;
   $('#dlg').innerHTML=`<h3>Chương / Chủ đề của môn ${esc(crs.id)} – ${esc(crs.name)}</h3>
     <div class="bar">
-      <input id="new-tp-name" class="grow" maxlength="80" placeholder="Nhập tên chương / chủ đề mới (VD: Chương 4: Bảo mật)..." onkeydown="if(event.key=='Enter')addCourseTopic(${ci})">
+      <input id="new-tp-name" class="grow" maxlength="80" placeholder="Nhập tên chương / chủ đề mới (VD: Chương 4: Bảo mật)..." data-enter="none" onkeydown="if(event.key=='Enter'){event.preventDefault();addCourseTopic(${ci})}">
       <button type="button" class="btn pri" onclick="addCourseTopic(${ci})">Thêm</button>
     </div>
     <div class="topic-list-mgr">
       ${crs.topics.map((t,idx)=>{
         const qCount=S.q.filter(q=>q.c==ci&&q.tp==idx).length;
         return`<div class="topic-item">
-          <input value="${esc(t)}" onchange="renameCourseTopic(${ci},${idx},this.value)" aria-label="Tên chương">
+          <input value="${esc(t)}" data-enter="none" onchange="renameCourseTopic(${ci},${idx},this.value)" aria-label="Tên chương">
           <span class="b n">${qCount} câu</span>
           ${crs.topics.length>1?`<button type="button" class="btn sm del" onclick="delCourseTopic(${ci},${idx})">Xóa</button>`:''}
         </div>`;
@@ -1704,6 +1778,7 @@ function topicMgrDlg(ci){
     <small>Lưu ý: Khi xóa một chương, các câu hỏi thuộc chương đó sẽ tự động chuyển về chương đầu tiên của môn học.</small>
     <div class="end" style="grid-template-columns:1fr"><button type="button" class="btn pri" onclick="$('#dlg').close();render()">Hoàn tất</button></div>`;
   $('#dlg').showModal();
+  if($('#dlg').open&&document.activeElement===document.body)$('#new-tp-name')?.focus();
 }
 function addCourseTopic(ci){
   const inp=$('#new-tp-name'),v=inp.value.trim().replace(/\s+/g,' ');
@@ -1788,7 +1863,7 @@ function pwDo(i){const pw=tmpPwd();S.users[i].passwordChangedAt=null;log('Cấp 
 function pwShow(i,pw,title){const u=S.users[i];if($('#dlg').open)$('#dlg').close();dlgDirty=false;
   $('#dlg').innerHTML=`<h3>${title}</h3><p class="mut" style="margin:0">Thông tin đăng nhập tạm của <b>${esc(u.name)}</b>. Mật khẩu chỉ hiển thị một lần, hãy gửi cho người dùng qua kênh an toàn. Người dùng phải đổi mật khẩu ở lần đăng nhập đầu tiên.</p>
   <div class="tfa-key"><span>Mã đăng nhập: ${u.adminId}</span></div>
-  <div class="tfa-key"><span id="pw-t">${pw}</span><button type="button" class="btn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText('${pw}');toast('Đã sao chép mật khẩu tạm','ok')">Sao chép</button></div>
+  <div class="tfa-key"><span id="pw-t">${pw}</span><button type="button" class="btn sm" data-af onclick="navigator.clipboard&&navigator.clipboard.writeText($('#pw-t').textContent);toast('Đã sao chép mật khẩu tạm','ok')">Sao chép</button></div>
   <div class="end"><button class="btn pri" style="grid-column:1/-1" onclick="closeDlg()">Đã lưu lại</button></div>`;$('#dlg').showModal()}
 function udlg(){dlgDirty=false;$('#dlg').innerHTML=`<h3>Thêm tài khoản</h3><label>Mã đăng nhập (admin_id) <span style="color:var(--danger-strong)">*</span><input id="u-id" inputmode="numeric" maxlength="18" autocomplete="off" placeholder="Ví dụ: 2500021780"><small>Mã có sẵn do nhà trường cấp, dùng để đăng nhập.</small></label><label>Họ và tên <span style="color:var(--danger-strong)">*</span><input id="u-n" autocomplete="off"></label><label>Số CCCD (12 chữ số) <span style="color:var(--danger-strong)">*</span><input id="u-cccd" inputmode="numeric" maxlength="12" autocomplete="off"></label><label>Vai trò<select id="u-r" onchange="$('#u-sub').hidden=this.value!=='Giảng viên'"><option>Giảng viên</option><option>Quản trị viên</option></select></label><fieldset id="u-sub" class="subj-box"><legend>Môn học được phân công</legend>${subjChecks([])}<small class="mut">Giảng viên chỉ thấy và thao tác trong các môn được phân công. Quản trị viên xem được tất cả.</small></fieldset><div class="end"><button class="btn" onclick="$('#dlg').close()">Hủy</button><button class="btn pri" onclick="usave()">Tạo tài khoản</button></div>`;$('#dlg').showModal();$('#u-id').focus()}
 function usave(){fReset();const id=$('#u-id').value.trim(),n=$('#u-n').value.trim(),cc=$('#u-cccd').value.trim(),r=$('#u-r').value;let bad=0;
@@ -1824,8 +1899,8 @@ function lmPaint(i){const c=S.lm[i],x=lmCalc(c),el=$('#slot'+i);if(!el)return;
   const n=$('.slot__note',el);n.className='slot__note '+x.n[0];n.textContent=x.n[1];
   $('[data-b=chk]',el).disabled=x.chk;$('[data-b=sav]',el).disabled=x.sav;$('[data-b=clr]',el).disabled=x.clr;lmBar()}
 const lmAll=()=>S.lm.forEach((_,i)=>lmPaint(i));
-function lmBar(){const s=$('#lm-sum');if(!s)return;const f=S.lm.filter(c=>c.url&&c.tok).length,d=S.lm.filter(c=>lmDirty(c)&&!lmBad(c)&&c.tok).length;
-  s.textContent=S.api.on?`${f} node có URL và token · ${d} chưa lưu`:`${f} node có URL và token`;$('#lm-all').disabled=!S.api.on||!d;const fr=$('#lm-free');if(fr)fr.textContent=`${S.lm.filter(c=>!(c.url||c.tok)).length}/${S.lm.length} ô trống`;$('#lm-env').disabled=!f}
+function lmBar(){const s=$('#lm-sum');if(!s)return;const f=S.lm.filter(c=>c.url&&c.tok&&!lmBad(c)).length,b=S.lm.filter(c=>c.url&&c.tok&&lmBad(c)).length,d=S.lm.filter(c=>lmDirty(c)&&!lmBad(c)&&c.tok).length;
+  s.textContent=(S.api.on?`${f} node hợp lệ · ${d} chưa lưu`:`${f} node hợp lệ`)+(b?` · ${b} node sai URL`:'');$('#lm-all').disabled=!S.api.on||!d;const fr=$('#lm-free');if(fr)fr.textContent=`${S.lm.filter(c=>!(c.url||c.tok)).length}/${S.lm.length} ô trống`;$('#lm-env').disabled=!f}
 function lmSet(i,f,v){const c=S.lm[i];c[f]=v;c.ok=null;c.note='';c.nk='';lmPaint(i)}
 function lmEye(id,b){const t=$('#'+id),h=t.type=='password';t.type=h?'text':'password';b.textContent=h?'Ẩn':'Hiện';b.setAttribute('aria-pressed',h)}
 function lmCheck(i){const c=S.lm[i];c.busy=true;c.note='';lmPaint(i);
@@ -1837,7 +1912,7 @@ function lmSave(i,quiet){const c=S.lm[i];if(!S.api.on||lmBad(c)||!c.tok)return 0
   c.sv={url:c.url,tok:c.tok,en:c.en};log(`Lưu cấu hình LLM ${i+1} lên Server 2`,'ok');if(!quiet)toast(`Đã lưu LLM ${i+1}`,'ok');lmPaint(i);return 1}
 function lmSaveAll(){const n=S.lm.reduce((a,c,i)=>a+(lmDirty(c)&&c.url&&c.tok?lmSave(i,1):0),0);if(n)toast(`Đã lưu ${n} node`,'ok')}
 function lmClear(i){const c=S.lm[i],b={url:c.url,tok:c.tok,en:c.en,sv:{...c.sv},tps:c.tps};
-  Object.assign(c,{url:'',tok:'',en:false,sv:{url:'',tok:'',en:false},ok:null,note:'',nk:'',tps:0});log(`Xóa cấu hình LLM ${i+1}`,'wa');render();
+  Object.assign(c,{url:'',tok:'',en:false,sv:{url:'',tok:'',en:false},ok:null,note:'',nk:'',tps:0});log(`Xóa cấu hình LLM ${i+1}`,'wa');render();$('#lu'+i)?.focus();
   toast(`Đã xóa LLM ${i+1}`,'wa','Hoàn tác',()=>{Object.assign(c,b);render()})}
 function lmConn(){const a=S.api;
   if(a.on){a.on=false;log('Ngắt kết nối Server 2','wa');render();return toast('Đã ngắt kết nối Server 2','wa')}
@@ -1856,9 +1931,10 @@ function lmFill(){const ta=$('#lm-paste'),pr=lmParse(ta.value);
   for(let k=0;k<n;k++)Object.assign(S.lm[idx[k]],{url:pr[k].url,tok:pr[k].tok,en:true,ok:null,note:'',nk:''});
   ta.value='';render();idx.slice(0,n).forEach(i=>$('#slot'+i)?.classList.add('flash'));
   toast(n<pr.length?`Đã điền ${n}/${pr.length} node, còn ${pr.length-n} cặp chưa có ô.`:`Đã điền ${n} node. Nội dung dán đã được xóa.`,n<pr.length?'wa':'ok')}
-async function lmEnv(){const L=['# Dán vào .env của Server 2 (AI Worker) rồi khởi động lại'];
-  S.lm.forEach((c,i)=>{if(!(c.url&&c.tok))return;const n=i+1;L.push(`AI_NODE_${n}_URL=${lmNorm(c.url)}`,`AI_NODE_${n}_TOKEN=${c.tok.trim()}`);if(n>1)L.push(`AI_NODE_${n}_ENABLED=${c.en}`)});
-  try{await navigator.clipboard.writeText(L.join('\n')+'\n');toast('Đã sao chép .env','ok')}catch{toast('Trình duyệt chặn clipboard. Hãy dùng HTTPS hoặc sao chép thủ công.','wa')}}
+async function lmEnv(){const L=['# Dán vào .env của Server 2 (AI Worker) rồi khởi động lại'],skip=[];
+  S.lm.forEach((c,i)=>{if(!(c.url&&c.tok))return;if(lmBad(c)){skip.push(i+1);return}const n=i+1;L.push(`AI_NODE_${n}_URL=${lmNorm(c.url)}`,`AI_NODE_${n}_TOKEN=${c.tok.trim()}`);if(n>1)L.push(`AI_NODE_${n}_ENABLED=${c.en}`)});
+  if(L.length==1)return toast('Chưa có node hợp lệ để xuất. URL phải bắt đầu bằng https://','er');
+  try{await navigator.clipboard.writeText(L.join('\n')+'\n');toast(skip.length?`Đã sao chép .env, bỏ qua LLM ${skip.join(', ')} vì URL chưa hợp lệ. Tệp có chứa token, đừng gửi qua kênh công khai.`:'Đã sao chép .env. Tệp có chứa token, đừng gửi qua kênh công khai.',skip.length?'wa':'ok')}catch{toast('Trình duyệt chặn clipboard. Hãy dùng HTTPS hoặc sao chép thủ công.','wa')}}
 const lmSlot=(c,i)=>`<article class="slot" id="slot${i}" data-led="empty">
   <div class="slot__rail"><div class="slot__id"><span class="led" aria-hidden="true"></span><b>LLM ${i+1}</b></div><span class="slot__st"></span><span class="slot__tps"></span></div>
   <div class="slot__body">
@@ -1887,6 +1963,10 @@ function lmView(){const a=S.api,st=a.busy?['wa','Đang kết nối…']:a.on?['o
   <div class="rack" aria-label="Các node Colab">${S.lm.map(lmSlot).join('')}</div>
   <div class="lmbar"><span id="lm-sum" class="mut" role="status"></span><div class="bar"><button id="lm-env" class="btn" onclick="lmEnv()">Sao chép dạng .env</button><button id="lm-all" class="btn pri" onclick="lmSaveAll()">Lưu tất cả</button></div></div>`}
 
+/* Giữ focus khi vẽ lại: nhận diện phần tử theo thẻ + nhãn + thứ tự (select bộ lọc, nút Xóa… không có id) */
+const fkey=e=>e.tagName+'|'+(e.getAttribute('aria-label')||e.getAttribute('name')||(e.textContent||'').trim().slice(0,40));
+const fcap=a=>{if(!a||a===document.body||!$('#view').contains(a)||a.classList.contains('cb-in'))return null;const k=fkey(a);return{k,tag:a.tagName,n:[...$('#view').querySelectorAll(a.tagName)].filter(x=>fkey(x)===k).indexOf(a)}};
+const frest=f=>{const c=[...$('#view').querySelectorAll(f.tag)].filter(x=>fkey(x)===f.k&&!x.disabled);const t=c[f.n]||c[c.length-1];if(t)t.focus({preventScroll:true})};
 function render(){
   if(/^(admin|llm)$/.test(S.page)&&S.role!='admin')S.page='dash';
   const cur=NAV.concat(EXTRA).find(n=>n[0]==S.page),nm=S.name||'Từ Quang Nhật',w=nm.split(' '),ini=(w.length>1?w[0][0]+w[w.length-1][0]:nm.slice(0,2)).toUpperCase();
@@ -1926,19 +2006,27 @@ function render(){
     if(f.s!=='')window._rmf.push(()=>{S.f.s='';render()});
   }
 
-  const ae=document.activeElement,aid=ae&&ae.id&&!ae.classList.contains('cb-in')&&$('#view').contains(ae)?ae.id:'',ss=aid?ae.selectionStart:null;$('#view').innerHTML=P[S.page]();
+  const ae=document.activeElement,aid=ae&&ae.id&&!ae.classList.contains('cb-in')&&$('#view').contains(ae)?ae.id:'',ss=aid?ae.selectionStart:null,fk=aid?null:fcap(ae);$('#view').innerHTML=P[S.page]();
   if(/^(bank|course)$/.test(S.page)&&$('#tb'))rows();else cnt();
-  const nf=aid&&document.getElementById(aid);if(nf&&nf!==document.activeElement){nf.focus();try{if(ss!=null)nf.setSelectionRange(ss,ss)}catch(e){}}
+  const nf=aid&&document.getElementById(aid);if(nf&&nf!==document.activeElement){nf.focus();try{if(ss!=null)nf.setSelectionRange(ss,ss)}catch(e){}}else if(fk)frest(fk);
   fitSearch();if(S.page=='llm')lmAll();
 }
 
 function previewRole(v){const[r,id]=String(v).split(':');if(!['admin','gv'].includes(r))return;S.role=r;S.asId=r==='gv'?id:null;S.cq='';render();const pr=$('#preview-role');if(pr)pr.focus();toast('Đã đổi chế độ xem','ok')}
 const mq=matchMedia('(min-width:768px)');
-const setNav=o=>{$('#app').dataset.nav=o?'open':'closed';$('#mt').setAttribute('aria-expanded',o)};
-const tm=()=>setNav($('#app').dataset.nav!='open');
-const am=o=>{$('#am').hidden=!o;$('#ab').setAttribute('aria-expanded',o)};
+const setNav=o=>{$('#app').dataset.nav=o?'open':'closed';$('#mt').setAttribute('aria-expanded',o);document.querySelector('main.content').inert=!!(o&&!mq.matches)};
+const tm=()=>{const o=$('#app').dataset.nav!='open';setNav(o);if(o&&!mq.matches)requestAnimationFrame(()=>($('#menu .nv.on')||$('#menu .nv'))?.focus())};
+const am=o=>{$('#am').hidden=!o;$('#ab').setAttribute('aria-expanded',o);if(o)$('#am .acct__item')?.focus()};
+$('#am').addEventListener('keydown',e=>{const it=[...$('#am').querySelectorAll('.acct__item')],i=it.indexOf(document.activeElement);let n=-1;
+  if(e.key==='ArrowDown')n=(i+1)%it.length;else if(e.key==='ArrowUp')n=(i-1+it.length)%it.length;else if(e.key==='Home')n=0;else if(e.key==='End')n=it.length-1;
+  if(n>=0){e.preventDefault();it[n].focus()}});
+$('#ab').addEventListener('keydown',e=>{if(e.key==='ArrowDown'&&$('#am').hidden){e.preventDefault();am(true)}});
 const ta=()=>am($('#am').hidden);
-const go=p=>{if(p!=S.page&&p!='bank')S.f={q:'',c:'',tp:'',l:'',s:'',sort:'id',page:1,hideAns:S.f.hideAns};S.page=p;am(false);if(!mq.matches)setNav(false);render();scrollTo(0,0);const h=$('#ttl');if(h){document.title=h.textContent.trim()+' · QBank Console';if(S.booted){h.tabIndex=-1;h.focus({preventScroll:true})}}S.booted=true};
+const DEFAULT_PAGE='dash';/* trang mở đầu khi không có #/trang trên URL */
+const routeHash=()=>{const m=location.hash.match(/^#\/([a-z]+)(?:\/(\d+))?$/);if(!m)return null;if(m[1]=='course'){const i=+m[2];return COURSES[i]?{p:'course',ci:i}:null}return NAV.concat(EXTRA).some(n=>n[0]==m[1])?{p:m[1]}:null};
+const syncHash=()=>{const h='#/'+S.page+(S.page=='course'?'/'+S.ci:'');if(location.hash!==h){S._hn=1;location.hash=h}};
+addEventListener('hashchange',()=>{if(S._hn){S._hn=0;return}const r=routeHash();if(r){if(r.ci!=null)S.ci=r.ci;go(r.p)}});
+const go=p=>{if(p!=S.page&&p!='bank')S.f={q:'',c:'',tp:'',l:'',s:'',sort:'id',page:1,hideAns:S.f.hideAns};S.page=p;am(false);if(!mq.matches)setNav(false);render();scrollTo(0,0);const h=$('#ttl');if(h){document.title=h.textContent.trim()+' · QBank Console';if(S.booted){h.tabIndex=-1;h.focus({preventScroll:true})}}S.booted=true;syncHash()};
 
 mq.addEventListener('change',e=>setNav(e.matches));
 document.addEventListener('click',e=>{if(!e.target.closest('.acct'))am(false)});
@@ -1947,6 +2035,8 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!$('#am').hidden){am(false);$('#ab').focus()}
   if(e.key==='/'&&/^(bank|course)$/.test(S.page)&&!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)){e.preventDefault();$('#q-srch')?.focus()}
   const typing=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.target.isContentEditable;
+  if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&String(e.key).toLowerCase()==='z'&&!typing&&undoFn&&$('#toast').classList.contains('on')){e.preventDefault();const f=undoFn;undoFn=null;$('#toast').classList.remove('on');f()}
+  if(e.key==='Escape'&&!mq.matches&&$('#app').dataset.nav==='open'&&!$('#dlg').open){setNav(false);$('#mt').focus()}
   if(!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!$('#dlg').open){
     if(e.key==='?'){e.preventDefault();kbdHelp()}
     else if(e.key==='n'&&/^(bank|course)$/.test(S.page)){e.preventDefault();edit(0)}
@@ -1955,10 +2045,13 @@ document.addEventListener('keydown',e=>{
 
 /* Modal: Bootstrap Modal JS bọc quanh #dlg; giữ API cũ showModal / close / open để các hàm khác không đổi.
    Không tải được Bootstrap (offline) thì dùng bản dự phòng tối giản. */
-(()=>{const el=$('#bsm'),d=$('#dlg'),has=!!(window.bootstrap&&bootstrap.Modal);
-  const inst=has?new bootstrap.Modal(el,{backdrop:true,keyboard:true,focus:true}):null;
-  let isOpen=false,force=false,timer=0,bd=null;
+(()=>{const el=$('#bsm'),d=$('#dlg');
+  /* Dùng Bootstrap Modal khi cả JS lẫn CSS đã tải xong; chưa tải được thì dùng bản dự phòng với cùng hành vi
+     (role=dialog, khóa focus, Esc, nút Đóng, nền inert). Chọn theo thời điểm mở, nên không phụ thuộc thứ tự tải. */
+  const bsOk=()=>!!(window.bootstrap&&bootstrap.Modal)&&!!getComputedStyle(document.documentElement).getPropertyValue('--bs-blue').trim();
+  let inst=null,useBs=false,isOpen=false,force=false,timer=0,bd=null;
   Object.defineProperty(d,'open',{get:()=>isOpen});
+  el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');
   const struct=()=>{if(d.querySelector(':scope>.modal-body'))return;
     const h3=d.querySelector(':scope>h3'),end=d.querySelector(':scope>.end'),body=document.createElement('div'),head=document.createElement('div');
     body.className='modal-body';[...d.childNodes].forEach(n=>{if(n!==h3&&n!==end)body.appendChild(n)});
@@ -1966,25 +2059,42 @@ document.addEventListener('keydown',e=>{
     head.insertAdjacentHTML('beforeend','<button type="button" class="dlg-x" data-bs-dismiss="modal" aria-label="Đóng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>');
     d.replaceChildren(head,body);if(end){end.classList.add('modal-footer');d.appendChild(end)}el.setAttribute('aria-labelledby','dlg-t')};
   const askHide=()=>{const ev=new Event('hide.bs.modal',{cancelable:true});el.dispatchEvent(ev);if(!ev.defaultPrevented)fbHide()};
-  const fbShow=()=>{el.style.display='block';el.classList.add('show');el.removeAttribute('aria-hidden');el.setAttribute('aria-modal','true');document.body.classList.add('modal-open');bd=document.createElement('div');bd.className='modal-backdrop show';document.body.appendChild(bd);setTimeout(()=>el.dispatchEvent(new Event('shown.bs.modal')),0)};
+  const lock=on=>['#app','#selbar'].forEach(q=>{const n=$(q);if(n)n.inert=on});
+  const fbShow=()=>{el.style.display='block';el.classList.add('show');el.removeAttribute('aria-hidden');document.body.classList.add('modal-open');bd=document.createElement('div');bd.className='modal-backdrop show';document.body.appendChild(bd);setTimeout(()=>el.dispatchEvent(new Event('shown.bs.modal')),0)};
   const fbHide=()=>{el.style.display='none';el.classList.remove('show');el.setAttribute('aria-hidden','true');document.body.classList.remove('modal-open');if(bd){bd.remove();bd=null}el.dispatchEvent(new Event('hidden.bs.modal'))};
-  if(!has)el.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();askHide()}});
+  /* Bản dự phòng: Esc đóng, Tab quay vòng trong hộp thoại (Bootstrap tự làm việc này khi có) */
+  const items=()=>[...el.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].filter(n=>!n.disabled&&n.tabIndex>=0&&n.type!=='hidden'&&!n.closest('[hidden]')&&n.getClientRects().length);
+  document.addEventListener('keydown',e=>{if(useBs||!isOpen||e.defaultPrevented)return;
+    if(e.key==='Escape'){e.preventDefault();askHide();return}
+    if(e.key==='Tab'){const f=items();if(!f.length){e.preventDefault();return}const a=document.activeElement,inside=el.contains(a);
+      if(e.shiftKey&&(a===f[0]||!inside)){e.preventDefault();f[f.length-1].focus()}
+      else if(!e.shiftKey&&(a===f[f.length-1]||!inside)){e.preventDefault();f[0].focus()}}});
+  el.addEventListener('click',e=>{if(!useBs&&e.target.closest('.dlg-x'))askHide()});
   /* Chạm/nhấp ra ngoài modal thì đóng (qua hide.bs.modal nên vẫn hỏi xác nhận khi form nhập dở).
-     Hộp thoại chứa bí mật chỉ hiện một lần (khóa 2FA, mật khẩu tạm) thì không đóng, chỉ rung nhẹ. */
+     Hộp thoại chứa bí mật chỉ hiện một lần (khóa 2FA, mật khẩu tạm) thì không đóng bằng nền, Esc hay nút X: chỉ rung nhẹ và nhắc. */
   const locked=()=>!!d.querySelector('.tfa-key');let down=false;
+  const nudge=()=>{el.classList.add('modal-static');setTimeout(()=>el.classList.remove('modal-static'),300);toast('Thông tin này chỉ hiển thị một lần. Hãy sao chép lại, rồi dùng nút bên dưới để đóng.','wa')};
   el.addEventListener('mousedown',e=>{down=e.target===el},true);
   el.addEventListener('click',e=>{const out=down&&e.target===el;down=false;if(!out)return;
-    if(locked()){e.stopImmediatePropagation();el.classList.add('modal-static');setTimeout(()=>el.classList.remove('modal-static'),300);return}
-    if(!has)askHide()},true);
-  d.showModal=function(){clearTimeout(timer);timer=0;struct();if(isOpen)return;isOpen=true;d._op=document.activeElement;has?inst.show():fbShow()};
-  d.close=function(){if(!isOpen)return;force=true;clearTimeout(timer);timer=setTimeout(()=>{timer=0;has?inst.hide():fbHide()},0)};
-  el.addEventListener('hide.bs.modal',e=>{if(force)return;if(dlgDirty){if(!confirm('Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?')){e.preventDefault();return}dlgDirty=false}});
+    if(locked()){e.stopImmediatePropagation();nudge();return}
+    if(!useBs)askHide()},true);
+  d.showModal=function(){if(timer){clearTimeout(timer);timer=0;force=false}struct();if(isOpen)return;isOpen=true;d._op=document.activeElement;
+    useBs=bsOk();if(useBs&&!inst)inst=new bootstrap.Modal(el,{backdrop:true,keyboard:true,focus:true});
+    lock(true);useBs?inst.show():fbShow()};
+  d.close=function(){if(!isOpen)return;force=true;clearTimeout(timer);timer=setTimeout(()=>{timer=0;useBs?inst.hide():fbHide()},0)};
+  el.addEventListener('hide.bs.modal',e=>{if(force)return;if(locked()){e.preventDefault();nudge();return}if(dlgDirty){if(!confirm('Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?')){e.preventDefault();return}dlgDirty=false}});
   el.addEventListener('shown.bs.modal',()=>{const t=d.querySelector('[data-af],.modal-body input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([disabled]),.modal-body textarea,.modal-body select')||d.querySelector('.modal-footer .btn');if(t)t.focus({preventScroll:true})});
-  el.addEventListener('hidden.bs.modal',()=>{isOpen=false;force=false;const o=d._op;d._op=null;d.dispatchEvent(new Event('close'));if(o&&o!==document.body&&document.contains(o))o.focus();else{const h=$('#ttl');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}}});
-  d.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.defaultPrevented||e.isComposing)return;const t=e.target,ok=(t.tagName==='INPUT'&&!/^(checkbox|radio|button|submit)$/.test(t.type))||(t.tagName==='TEXTAREA'&&(e.ctrlKey||e.metaKey));if(!ok)return;const b=d.querySelector('.modal-footer .btn.pri:not(:disabled)');if(b){e.preventDefault();b.click()}});
+  el.addEventListener('hidden.bs.modal',()=>{isOpen=false;force=false;lock(false);const o=d._op,alt=d._alt;d._op=d._alt=null;d.dispatchEvent(new Event('close'));
+    if(o&&o!==document.body&&document.contains(o)&&!o.disabled)o.focus();
+    else{const a=alt&&$(alt),h=a||$('#ttl');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}}});
+  /* Enter: ở hộp thoại ngắn thì xác nhận; ở form có ô nhiều dòng thì cần Ctrl/⌘+Enter. Ô có data-enter="none" tự xử lý Enter. */
+  d.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.defaultPrevented||e.isComposing)return;const t=e.target;if(t.closest&&t.closest('[data-enter="none"]'))return;
+    const multi=!!d.querySelector('.modal-body textarea'),mod=e.ctrlKey||e.metaKey,
+      ok=(t.tagName==='INPUT'&&!/^(checkbox|radio|button|submit)$/.test(t.type)&&(!multi||mod))||(t.tagName==='TEXTAREA'&&mod);
+    if(!ok)return;const b=d.querySelector('.modal-footer .btn.pri:not(:disabled)');if(b){e.preventDefault();b.click()}});
 })();
 $('#yr').textContent=new Date().getFullYear();S.name='Từ Quang Nhật';S.t0=new Date().toLocaleTimeString('vi-VN');
-setNav(mq.matches);go('admin');
+setNav(mq.matches);{const r=routeHash();if(r&&r.ci!=null)S.ci=r.ci;go(r?r.p:DEFAULT_PAGE)}
 $('#dlg').addEventListener('input',apiPrev);$('#dlg').addEventListener('change',apiPrev);
 document.addEventListener('input',e=>fClr(e.target));document.addEventListener('change',e=>fClr(e.target));
 document.fonts?.addEventListener('loadingdone',fitSearch);document.fonts?.load('400 14px "Be Vietnam Pro"').then(fitSearch,()=>{});
