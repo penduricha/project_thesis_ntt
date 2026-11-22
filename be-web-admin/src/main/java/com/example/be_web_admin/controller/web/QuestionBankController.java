@@ -2,6 +2,8 @@ package com.example.be_web_admin.controller.web;
 
 import com.example.be_web_admin.dto.qbank.AiJobView;
 import com.example.be_web_admin.dto.qbank.AiSuggestionView;
+import com.example.be_web_admin.dto.qbank.BulkQuestionIdsRequest;
+import com.example.be_web_admin.dto.qbank.BulkQuestionResult;
 import com.example.be_web_admin.dto.qbank.CreateQuestionRequest;
 import com.example.be_web_admin.dto.qbank.PageResponse;
 import com.example.be_web_admin.dto.qbank.QuestionDetail;
@@ -96,6 +98,33 @@ public class QuestionBankController {
     public QuestionDetail archive(@PathVariable("questionId") Long questionId,
                                   Authentication authentication) {
         return questionService.archive(questionId, WebPrincipal.adminId(authentication));
+    }
+
+    /**
+     * Khôi phục câu hỏi đã lưu trữ (nút "Hoàn tác" của giao diện).
+     * 409 NOT_ARCHIVED khi câu hỏi chưa từng bị lưu trữ.
+     */
+    @PostMapping("/{questionId}/restore")
+    public QuestionDetail restore(@PathVariable("questionId") Long questionId,
+                                  Authentication authentication) {
+        return questionService.restore(questionId, WebPrincipal.adminId(authentication));
+    }
+
+    /**
+     * Lưu trữ hàng loạt — thay cho việc gọi DELETE /{id} N lần khi người dùng chọn nhiều dòng.
+     * Trả về id nào đã xong và id nào bị bỏ qua kèm mã lỗi (không rollback cả lô).
+     */
+    @PostMapping("/bulk-archive")
+    public BulkQuestionResult archiveMany(@Valid @RequestBody BulkQuestionIdsRequest request,
+                                          Authentication authentication) {
+        return questionService.archiveMany(request, WebPrincipal.adminId(authentication));
+    }
+
+    /** Khôi phục hàng loạt (hoàn tác thao tác xoá nhiều dòng). */
+    @PostMapping("/bulk-restore")
+    public BulkQuestionResult restoreMany(@Valid @RequestBody BulkQuestionIdsRequest request,
+                                          Authentication authentication) {
+        return questionService.restoreMany(request, WebPrincipal.adminId(authentication));
     }
 
     /** Đề xuất của lần kiểm định gần nhất — dữ liệu cho bảng duyệt. */

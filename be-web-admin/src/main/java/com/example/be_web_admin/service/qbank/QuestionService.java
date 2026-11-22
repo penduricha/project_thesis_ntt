@@ -1,6 +1,8 @@
 package com.example.be_web_admin.service.qbank;
 
 import com.example.be_web_admin.dto.qbank.AiSuggestionView;
+import com.example.be_web_admin.dto.qbank.BulkQuestionIdsRequest;
+import com.example.be_web_admin.dto.qbank.BulkQuestionResult;
 import com.example.be_web_admin.dto.qbank.CreateQuestionRequest;
 import com.example.be_web_admin.dto.qbank.PageResponse;
 import com.example.be_web_admin.dto.qbank.QuestionDetail;
@@ -306,6 +308,51 @@ public class QuestionService {
     /** Xoá mềm: chuyển status = archived, giữ nguyên dữ liệu cho thống kê và lịch sử. */
     @Transactional
     public QuestionDetail archive(Long questionId, Long adminId) {
+        return archiveInternal(questionId, adminId);
+    }
+
+    /**
+     * Khôi phục câu hỏi đã lưu trữ — phục vụ nút "Hoàn tác" của giao diện (Ctrl+Z / toast Hoàn tác).
+     * Dùng {@link ChangeSourceD#RESTORE} đã có trong CSDL v4 nên lịch sử vẫn phân biệt được
+     * "lưu trữ" và "khôi phục".
+     */
+    @Transactional
+    public QuestionDetail restore(Long questionId, Long adminId) {
+        return restoreInternal(questionId, adminId);
+    }
+
+    /** Lưu trữ nhiều câu hỏi trong một lượt (chọn nhiều dòng rồi xoá). */
+    @Transactional
+    public BulkQuestionResult archiveMany(BulkQuestionIdsRequest request, Long adminId) {
+        return applyMany(request.ids(), adminId, true);
+    }
+
+    /** Khôi phục nhiều câu hỏi trong một lượt (hoàn tác thao tác xoá hàng loạt). */
+    @Transactional
+    public BulkQuestionResult restoreMany(BulkQuestionIdsRequest request, Long adminId) {
+        return applyMany(request.ids(), adminId, false);
+    }
+
+    private BulkQuestionResult applyMany(List<Long> ids, Long adminId, boolean archive) {
+        List<Long> done = new ArrayList<>();
+        List<BulkQuestionResult.Failure> skipped = new ArrayList<>();
+        for (Long id : ids) {
+            try {
+                if (archive) {
+                    archiveInternal(id, adminId);
+                } else {
+                    restoreInternal(id, adminId);
+                }
+                done.add(id);
+            } catch (QbankException ex) {
+                // Một id hỏng không làm hỏng cả lô: giao diện hiển thị đúng id nào đã xong.
+                skipped.add(new BulkQuestionResult.Failure(id, ex.getCode(), ex.getMessage()));
+            }
+        }
+        return new BulkQuestionResult(ids.size(), done, skipped);
+    }
+
+    private QuestionDetail archiveInternal(Long questionId, Long adminId) {
         Question question = requireQuestion(questionId);
         if (question.getStatus() == QuestionStatusD.ARCHIVED) {
             throw QbankException.conflict("ALREADY_ARCHIVED", "Câu hỏi đã ở trạng thái lưu trữ.");
@@ -322,6 +369,28 @@ public class QuestionService {
 
         uiState.pushActivity(adminId, com.example.be_web_admin.dto.qbank.ActivityItem.of(
                 "QUESTION_ARCHIVED", "Lưu trữ câu hỏi #" + questionId, "QUESTION", questionId));
+        uiState.evictDashboard(question.getSubjectId());
+
+        long pending = suggestions.countByDecisionForQuestion(questionId, SuggestionDecisionD.PENDING);
+        return toDetail(question, subject, topic, revNo, pending);
+    }
+
+    private QuestionDetail restoreInternal(Long questionId, Long adminId) {
+        Question question = requireQuestion(questionId);
+        if (question.getStatus() != QuestionStatusD.ARCHIVED) {
+            throw QbankException.conflict("NOT_ARCHIVED", "Câu hỏi không ở trạng thái lưu trữ.");
+        }
+        question.setStatus(QuestionStatusD.ACTIVE);
+        question.setUpdatedBy(adminId);
+        questions.saveAndFlush(question);
+
+        Subject subject = subjects.findById(question.getSubjectId()).orElse(null);
+        Topic topic = question.getTopicId() == null ? null : topics.findById(question.getTopicId()).orElse(null);
+        int revNo = revisions.findMaxRevNo(questionId) + 1;
+        appendRevision(question, revNo, ChangeSourceD.RESTORE, adminId, "Khôi phục câu hỏi", subject, topic);
+
+        uiState.pushActivity(adminId, com.example.be_web_admin.dto.qbank.ActivityItem.of(
+                "QUESTION_RESTORED", "Khôi phục câu hỏi #" + questionId, "QUESTION", questionId));
         uiState.evictDashboard(question.getSubjectId());
 
         long pending = suggestions.countByDecisionForQuestion(questionId, SuggestionDecisionD.PENDING);

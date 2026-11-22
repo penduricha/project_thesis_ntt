@@ -1,5 +1,6 @@
 package com.example.be_web_admin.dto.qbank;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -11,6 +12,8 @@ import jakarta.validation.constraints.Size;
  * giữ; lệch với DB thì trả 409 kèm version hiện tại (khoá lạc quan của ntt_questions.version).
  */
 public record UpdateQuestionRequest(
+        // Frontend demo gửi "version"; giữ "expectedVersion" cho client khác.
+        @JsonAlias({"version"})
         @NotNull Integer expectedVersion,
         Long topicId,
         @Size(max = 255) String title,
