@@ -46,6 +46,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+                        // Lỗi xảy ra khi request đã bị đẩy sang /error (DispatcherType.ERROR) phải đi qua được,
+                        // nếu không mọi lỗi 400/404/405 đều bị đổi thành 401 "Unauthorized".
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/web/admin/auth/login",

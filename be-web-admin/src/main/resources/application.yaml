@@ -82,6 +82,12 @@ spring:
       database: ${REDIS_DBS}
       connect-timeout: 2000ms
       timeout: 1000ms
+    rest:
+      # Spring Data REST tự xuất MỌI repository public thành API CRUD dưới /api/<tên-miền>
+      # (admins, courses, totpCredentials, backupCodes, authAuditLogs...) và chỉ cần ĐĂNG NHẬP là
+      # POST/PUT/DELETE được, tức là đi vòng qua service, kiểm tra dữ liệu và audit.
+      # "annotated": chỉ xuất repository có khai báo @RepositoryRestResource → hiện không có cái nào.
+      detection-strategy: annotated
 
   datasource:
     # MariaDB Connector/J bỏ qua serverTimezone, useUnicode, characterEncoding (đó là tham số của MySQL
