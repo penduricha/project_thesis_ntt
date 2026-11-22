@@ -1,6 +1,7 @@
-# Đối chiếu `UI_Accept_v10.html` + `qbank-console-vue3` với backend
+# Đối chiếu `UI_Accept_v11.html` (bản chốt) + `qbank-console-vue3` với backend
 
-- **Ngày**: 2026-11-22 · **Nền**: `feature/apply-ui-project-thesis` @ `4925cfc77` (đã gồm patch ORM v1).
+- **Ngày**: 2026-11-22 · **Nền**: `feature/apply-ui-project-thesis` @ `36a697583` (UI_v11 chốt) · đã gồm patch ORM.
+- **Trạng thái**: phần giao diện đã được ghép vào `fe_web_admin` — xem mục 7.
 - **Mục đích**: chỉ ra chính xác giao diện mới cần những API nào, cái nào đã có, cái nào thiếu — để khi ghép demo vào `fe_web_admin` không phải đoán.
 
 ---
@@ -62,7 +63,7 @@ restoreMany(items)   // hoàn tác xoá
 
 | Việc FE cần | API backend | Trạng thái |
 |---|---|---|
-| `loadQuestions()` | `GET /api/web/admin/questions` (trả `PageResponse`) | ✅ có, **FE phải bóc `items`** thay vì coi là mảng |
+| `loadQuestions()` | `GET /api/web/admin/questions` (trả `PageResponse`) | ✅ có, **FE phải bóc `content`** (`PageResponse` của Spring) thay vì coi là mảng |
 | `saveQuestion` khi tạo | `POST /api/web/admin/questions` | ✅ có |
 | `saveQuestion` khi sửa | `PUT /api/web/admin/questions/{id}` + `expectedVersion` | ✅ có; FE gửi `version` → đã thêm `@JsonAlias` |
 | `removeQuestions(ids)` | **`POST /questions/bulk-archive`** `{ids:[...]}` | 🆕 **thêm trong patch này** |
@@ -105,7 +106,7 @@ Quy tắc đã cài:
 
 1. **Đường dẫn**: `QuestionDialog.vue` ghi "gửi Server 1 (`POST /api/questions`)" nhưng thật là `POST /api/web/admin/questions`. Sửa phía FE, **không** tạo alias ở backend.
 2. **Thang độ khó**: demo `LV_DB = [1,2,3]`, DDL `CHECK (1..5)` và DTO `@Min(1) @Max(5)`. Backend đúng theo CSDL → **sửa demo**. Nếu nhóm muốn chốt 3 mức thì phải sửa DDL (thay đổi CSDL, không phải vá code).
-3. **Dạng dữ liệu danh sách**: `findAll()` của demo trả **mảng**, backend trả `{items, page, size, total, totalPages}`. Khi thay thân hàm mock bằng `fetch`, phải map `res.items` — nếu không giao diện sẽ trắng bảng.
+3. **Dạng dữ liệu danh sách**: `findAll()` của demo trả **mảng**, backend trả `{content, page, size, totalElements, totalPages}`. Khi thay thân hàm mock bằng `fetch`, phải map `res.content` — nếu không giao diện sẽ trắng bảng.
 
 ---
 
@@ -137,3 +138,28 @@ curl -i -X POST localhost:8080/api/web/admin/questions/1/restore -H "Authorizati
 ```
 
 Sau khi áp, `ntt_question_revisions` phải có bản ghi mới với `change_source = 'archive'` / `'restore'`, và `GET /questions/{id}/revisions` hiển thị đúng hai loại này.
+
+---
+
+## 7. Trạng thái ghép giao diện vào `fe_web_admin` (đã làm)
+
+Đã hiện thực trong `fe_web_admin/src` (build `vite build` chạy qua, 1.770 module):
+
+| File | Nội dung |
+|---|---|
+| `services/spring/QbankService.js` | 1 hàm / endpoint, dùng chung `getAuthorizedAPIClient` (Bearer + silent refresh) |
+| `repository/QbankRepository.js` | nghiệp vụ + chuẩn hoá `PageResponse.content` → `items` + map `code` lỗi sang thông điệp tiếng Việt |
+| `model/qbank/constants.js` | nhãn enum (1..5 độ khó, trạng thái kiểm định, mức nghiêm trọng, task status) |
+| `model/qbank/sessionRole.js` | đọc claim `role` của access token để ẩn/hiện menu (backend vẫn là nơi chặn thật) |
+| `components/qbank/QbankLayout.vue` | khung sidebar theo NAV của v11 + ẩn mục quản trị với LECTURER |
+| `components/qbank/QuestionFormDialog.vue` | tạo/sửa câu hỏi, gửi `version` khi sửa, tự lưu nháp Redis sau 800ms |
+| `pages/qbank/DashboardPage.vue` | thẻ số liệu + trạng thái kiểm định + hoạt động gần đây |
+| `pages/qbank/QuestionListPage.vue` | lọc, phân trang, chọn nhiều, lưu trữ/khôi phục, chạy kiểm định AI |
+| `pages/qbank/SubjectListPage.vue` | danh sách môn + chương (chỉ đọc) |
+| `pages/qbank/AiReviewPage.vue` | poll tác vụ AI (dùng `pollAfterMs`), xem đề xuất, nhận/từ chối |
+| `pages/qbank/PlaceholderPage.vue` | 5 màn chưa có API — hiển thị rõ phần còn thiếu, không dùng dữ liệu giả |
+| `router/routers_after_login.js` / `routers_before_login.js` | 9 route (`/dashboard`, `/qbank/*`), bản trước đăng nhập để `allow:false` |
+| `assets/style/qbank.scss` | style tiền tố `qb-`, nạp trong `main.js` |
+
+Còn lại: CRUD môn/chương, tìm kiếm ngữ nghĩa, Moodle XML, cài đặt LLM, quản trị tài khoản (mục 5),
+và dọn `qbank-console-vue3/` sau khi PR giao diện được chấp nhận.

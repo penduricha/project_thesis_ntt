@@ -1,7 +1,7 @@
 # ORM (Spring JPA) cho CSDL v4 + trạng thái giao diện trên Redis
 
 - **Ngày**: 2026-11-22 · **Nhánh**: `arena/aa735601-project-thesis-ntt` · **Nền**: commit `8bc435e`
-- **Phạm vi**: hiện thực tầng ánh xạ ORM cho **14 bảng mới** của CSDL v4 trong `be-web-admin` (Server 1) và tầng Redis cho các tác vụ giao diện mà `project-design/UI_Accept_v9_Thesis.html` mô tả.
+- **Phạm vi**: hiện thực tầng ánh xạ ORM cho **14 bảng mới** của CSDL v4 trong `be-web-admin` (Server 1) và tầng Redis cho các tác vụ giao diện mà `project-design/UI_Accept_v11.html` mô tả.
 - **Không sửa** file migration SQL nào: DDL vẫn là nguồn chân lý, entity bám theo đúng cột/kiểu/NOT NULL/ENUM của DDL (đã kiểm bằng script, xem §7).
 - **Tài liệu liên quan**: `docs/review-csdl-v4-chot-vs-code.md` (đối chiếu 3 tầng + 17 rủi ro), `docs/review-latest-commit-2026-11-22.md` (rà mã nguồn).
 
