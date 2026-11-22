@@ -139,6 +139,14 @@ public class AdminLoginServiceImpl {
         if (accessToken == null || refreshToken == null) {
             throw new IllegalStateException("Không tạo được token cho admin " + admin.getAdminId());
         }
+        // Ghi mốc đăng nhập cuối (chỉ bước đăng nhập tương tác mới ghi).
+        // Best-effort: lỗi ghi không được làm hỏng luồng đăng nhập đã thành công.
+        try {
+            admin.setLastLoginAt(Instant.now());
+            adminRepository.save(admin);
+        } catch (Exception e) {
+            log.warn("Can't record lastLoginAt of admin {}: {}", admin.getAdminId(), e.getMessage());
+        }
         return LoginOutcome.ok(String.valueOf(accessToken), String.valueOf(refreshToken));
     }
 }
