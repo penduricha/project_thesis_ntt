@@ -91,7 +91,9 @@ watch(() => route.fullPath, async () => {
   if (!mq.matches) nav.value = 'closed'
   scrollTo(0, 0)
   await nextTick()
-  document.title = title.value + ' · QBank Console'
+  // Trang đăng nhập tự đặt tiêu đề riêng; nếu ghép theo mẫu ' · QBank Console' thì
+  // route login không có title -> tab trình duyệt hiện ' · QBank Console' (dư dấu chấm).
+  document.title = isLoginPage.value ? 'Đăng nhập' : (title.value ? `${title.value} · QBank Console` : 'QBank Console')
   if (booted) { const h = document.getElementById('ttl'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }
   booted = true
 }, { immediate: true })

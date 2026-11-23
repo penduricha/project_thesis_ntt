@@ -253,6 +253,22 @@ function onLockVisibilityChange() {
 }
 
 /* ------------------------------ Gửi đăng nhập ------------------------------ */
+/**
+ * ISSUE 1 — phím ENTER phải chạy đúng hàm của nút "Đăng nhập".
+ * Vì sao cần xử lý tay thay vì dựa vào submit mặc định của trình duyệt:
+ *  - Form có NHIỀU ô text (mã, mật khẩu, 6 ô OTP) nên một số trình duyệt/extension
+ *    không kích hoạt implicit submission như mong đợi.
+ *  - Ô OTP chặn keydown để điều hướng Backspace/Arrow, dễ "nuốt" luôn Enter.
+ * Cách làm: chặn mặc định (preventDefault) rồi gọi handleLoginEvent() để chỉ chạy MỘT lần,
+ * không bị double-submit với sự kiện submit của form.
+ */
+function onFormEnter(e) {
+  if (e.isComposing || e.keyCode === 229) return          // đang gõ IME tiếng Việt/Trung
+  const t = e.target
+  if (t?.tagName === 'BUTTON' || t?.tagName === 'TEXTAREA') return  // nút/textarea tự xử lý
+  e.preventDefault()
+  handleLoginEvent()
+}
 async function handleLoginEvent() {
   if (isFormDisabled.value) return
   errors.value = { adminId: '', password: '', totp: '' }
@@ -308,7 +324,7 @@ async function handleLoginEvent() {
 watch(isLocked, (locked) => { if (!locked) nextTick(() => focusField('totp')) })
 
 onMounted(() => {
-  document.title = 'Đăng nhập · QBank Console'
+  document.title = 'Đăng nhập'
   document.addEventListener('visibilitychange', onLockVisibilityChange)
   const saved = new AdminStorage().getLocalStorageRememberMe()
   if (saved?.adminId) { rememberMe.value = true; adminId.value = String(saved.adminId) }
@@ -371,7 +387,8 @@ onBeforeUnmount(() => {
           </span>
         </div>
 
-        <form class="lform" novalidate :aria-busy="isSubmitting" @submit.prevent="handleLoginEvent">
+        <form class="lform" novalidate :aria-busy="isSubmitting"
+          @submit.prevent="handleLoginEvent" @keydown.enter="onFormEnter">
           <header class="lform__head">
             <p class="lform__eyebrow">Chào mừng trở lại</p>
             <h1 class="lform__title">Đăng nhập</h1>
@@ -472,10 +489,7 @@ onBeforeUnmount(() => {
             <button type="submit" class="lsubmit" :disabled="isFormDisabled">
               <template v-if="isSubmitting"><i class="spin" aria-hidden="true"></i> Đang đăng nhập…</template>
               <template v-else-if="isLocked">Thử lại sau {{ lockCountdownLabel }}</template>
-              <template v-else>
-                Đăng nhập
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg>
-              </template>
+              <template v-else>Đăng nhập</template>
             </button>
           </fieldset>
 
@@ -730,9 +744,8 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 22px -12px rgba(0, 75, 135, 0.95);
   transition: filter 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
 }
-.lsubmit svg { width: 1.05rem; height: 1.05rem; transition: transform 0.18s ease; }
+.lsubmit svg { width: 1.05rem; height: 1.05rem; }
 .lsubmit:hover:not(:disabled) { filter: brightness(1.08); box-shadow: 0 14px 28px -12px rgba(0, 75, 135, 1); }
-.lsubmit:hover:not(:disabled) svg { transform: translateX(2px); }
 .lsubmit:active:not(:disabled) { transform: translateY(1px); }
 .lsubmit:focus-visible { outline: 2px solid var(--primary, #004b87); outline-offset: 3px; }
 .lsubmit:disabled { cursor: not-allowed; opacity: 0.92; filter: grayscale(0.4) brightness(0.95); box-shadow: none; }
