@@ -39,6 +39,8 @@ const LOGIN_TIMEOUT_MS = 20000
 const LOCK_DEFAULT_SECONDS = 5 * 60
 const LOCK_STORAGE_KEY = 'login.totpLock'
 const OTP_LENGTH = 6
+// admin_id là BIGINT (tối đa 19 chữ số) — không giới hạn 10 như dữ liệu mẫu.
+const ADMIN_ID_MAX = 19
 
 const router = useRouter()
 const adminId = ref('')
@@ -323,7 +325,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="login">
+  <div class="login" data-login-ui="v2">
     <!-- Cột thương hiệu: chỉ hiện từ 960px, thuần trang trí (aria-hidden) -->
     <aside class="login__brand" aria-hidden="true">
       <div class="brand__glow"></div>
@@ -402,11 +404,11 @@ onBeforeUnmount(() => {
           <fieldset class="lform__fields" :disabled="isFormDisabled">
             <!-- Mã quản trị viên -->
             <div class="field" :class="{ 'is-error': invalidAdminId }">
-              <label for="login-admin-id">Mã quản trị viên</label>
+              <label for="login-admin-id">Mã quản trị viên <span class="req" aria-hidden="true">*</span></label>
               <div ref="boxAdminId" class="control">
                 <svg class="control__ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <input id="login-admin-id" ref="inputAdminId" type="text" inputmode="numeric" autocomplete="username"
-                       maxlength="10" placeholder="Ví dụ: 2500021774" :value="adminId"
+                       :maxlength="ADMIN_ID_MAX" placeholder="Ví dụ: 2500021774" :value="adminId"
                        :aria-invalid="invalidAdminId" :aria-describedby="errors.adminId ? 'errorAdminId' : null"
                        @input="setInputAdminId">
               </div>
@@ -416,7 +418,7 @@ onBeforeUnmount(() => {
             <!-- Mật khẩu -->
             <div class="field" :class="{ 'is-error': invalidPassword }">
               <div class="field__row">
-                <label for="login-password">Mật khẩu</label>
+                <label for="login-password">Mật khẩu <span class="req" aria-hidden="true">*</span></label>
                 <span v-if="capsLockOn && !isFormDisabled" class="caps" role="status">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l7 8h-4v4H9v-4H5z"/><path d="M9 20h6"/></svg>
                   Caps Lock đang bật
@@ -491,6 +493,8 @@ onBeforeUnmount(() => {
           <span>©{{ new Date().getFullYear() }} - Nguyen Tat Thanh University</span>
           <span class="panel__dot" aria-hidden="true">·</span>
           <span>All Rights Reserved.</span>
+          <span class="panel__dot" aria-hidden="true">·</span>
+          <span class="panel__ver" title="Nếu bạn thấy giao diện cũ, hãy xoá cache và tải lại">giao diện v2</span>
         </footer>
       </div>
     </main>
@@ -615,6 +619,7 @@ onBeforeUnmount(() => {
 /* ---------------- Ô nhập ---------------- */
 .field { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
 .field__row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.field .req { color: #c62828; font-weight: 700; }
 .field > label, .field__row > label {
   font-size: 0.8125rem; font-weight: 600; color: #33415c; letter-spacing: 0.005em;
 }
@@ -767,6 +772,7 @@ onBeforeUnmount(() => {
   font-size: 0.75rem; color: var(--text-muted, #5b6b82); text-align: center;
 }
 .panel__dot { opacity: 0.6; }
+.panel__ver { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em; color: #9aabc4; }
 
 .visually-hidden {
   position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
