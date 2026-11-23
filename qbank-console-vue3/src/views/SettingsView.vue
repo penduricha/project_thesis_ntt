@@ -1,12 +1,16 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { TFA_VIEW, TFA_ICON } from '../data/account.js'
-import { S, asUser, previewRole, log, toast, tfaOpen, tfaAsk, tfaDone } from '../store.js'
+import { S, asUser, previewRole, log, toast, tfaOpen, tfaAsk, tfaDone, loadTfaStatus } from '../store.js'
+import { auth } from '../auth/authStore.js'
 import Ico from '../components/Ico.vue'
 
 const st = computed(() => S.tfa.st), v = computed(() => TFA_VIEW[st.value])
 const left = computed(() => { const t = Math.max(0, Math.ceil((S.tfa.until - S.now) / 1000)); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') })
 const gv = computed(() => (S.role === 'gv' && asUser() ? `Đang mô phỏng phạm vi môn của ${asUser().name}.` : ''))
+// Chỉ chế độ demo mới có nút "mô phỏng ứng dụng đã xác nhận"; bản thật chờ Flutter xác nhận qua SSE/poll.
+const demo = computed(() => auth.isDemo || S.dataMode === 'mock')
+onMounted(loadTfaStatus)
 const opts = [
   ['notifyTasks', 'Thông báo khi tác vụ AI hoàn tất', 'Hiện thông báo khi một yêu cầu kiểm định kết thúc (lỗi luôn được báo).', 'Đổi tùy chọn thông báo'],
   ['confirmDelete', 'Hỏi xác nhận trước khi xóa câu hỏi', 'Tắt đi thì câu hỏi bị xóa ngay và vẫn có nút Hoàn tác. Xóa nhiều câu cùng lúc luôn hỏi xác nhận.', 'Đổi tùy chọn xác nhận xóa'],
@@ -32,7 +36,8 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy
             <button v-if="st == 'NOT_ENABLED'" type="button" class="btn pri" @click="tfaOpen">Kích hoạt 2FA</button>
             <button v-else-if="st == 'PENDING'" type="button" class="btn" @click="tfaAsk">Hủy và cài lại</button>
           </div>
-          <p v-if="st == 'PENDING'" class="mut" style="margin:0;font-size:var(--fs-sm)">Bản demo: <button type="button" class="btn sm" @click="tfaDone">Mô phỏng ứng dụng đã xác nhận</button></p>
+          <p v-if="st == 'PENDING' && demo" class="mut" style="margin:0;font-size:var(--fs-sm)">Bản demo: <button type="button" class="btn sm" @click="tfaDone">Mô phỏng ứng dụng đã xác nhận</button></p>
+          <p v-else-if="st == 'PENDING'" class="mut" style="margin:0;font-size:var(--fs-sm)">Đang chờ ứng dụng trên điện thoại xác nhận. Trang tự cập nhật khi xác nhận xong.</p>
         </div>
       </div>
     </section>

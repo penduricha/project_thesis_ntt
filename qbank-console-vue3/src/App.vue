@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { NAV, EXTRA, SUB, ICO } from './data/mock.js'
 import ModalHost from './components/ModalHost.vue'
 import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse, toastHold, toastRelease } from './store.js'
+import { auth, logout } from './auth/authStore.js'
+import { REQUEST_STATUS } from './auth/AdminRepository.js'
 
 const route = useRoute(), router = useRouter()
 const mq = matchMedia('(min-width:768px)')
@@ -13,6 +15,7 @@ const desk = ref(mq.matches)
 const selbar = ref(null)
 const yr = new Date().getFullYear()
 
+const isLoginPage = computed(() => route.name === 'login')
 const page = computed(() => route.name || 'dash')
 const onBank = computed(() => /^(bank|course)$/.test(page.value))
 const crs = computed(() => COURSES[S.ci])
@@ -58,6 +61,29 @@ function bulkDel() {
 }
 function undo() { const cb = S.toast.cb; S.toast.on = false; cb && cb() }
 
+const loggingOut = ref(false)
+async function doLogout() {
+  if (loggingOut.value) return
+  loggingOut.value = true
+  amOpen.value = false
+  try {
+    const status = await logout()
+    if (status === REQUEST_STATUS.OK) {
+      S.sel.clear()
+      await router.push('/login')
+    } else {
+      toast('Không thể đăng xuất lúc này. Vui lòng thử lại.', 'er')
+    }
+  } catch {
+    toast('Không thể kết nối máy chủ để đăng xuất.', 'er')
+  } finally {
+    loggingOut.value = false
+  }
+}
+// Đồng bộ tên/vai trò thật từ backend vào store dùng chung (App.vue + các view đang đọc S.name/S.role)
+watch(() => auth.adminName, (v) => { if (v) S.name = v }, { immediate: true })
+watch(() => auth.role, (v) => { if (v) S.role = v }, { immediate: true })
+
 let booted = false
 watch(() => route.fullPath, async () => {
   if (!route.name) return
@@ -85,14 +111,26 @@ const onKey = e => {
 }
 onMounted(() => {
   document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey); mq.addEventListener('change', onMq)
-  loadQuestions()
   if (window.ResizeObserver && selbar.value) new ResizeObserver(fitSel).observe(selbar.value)
 })
+
+// Chỉ tải dữ liệu sau khi biết chắc đã đăng nhập (đừng gọi API qbank khi còn ở trang /login),
+// và tải lại đúng một lần mỗi khi trạng thái đăng nhập chuyển sang true.
+let loadedFor = null
+watch(() => auth.isAuthenticated, (ok) => {
+  if (!ok) { loadedFor = null; return }
+  if (loadedFor === auth.adminId) return
+  loadedFor = auth.adminId
+  loadQuestions()
+}, { immediate: true })
 onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey); mq.removeEventListener('change', onMq) })
 </script>
 
 <template>
+  <RouterView v-if="isLoginPage" />
+  <template v-else>
   <a href="#view" class="skip" @click.prevent="focusView">Bỏ qua điều hướng</a>
+  <div v-if="auth.isDemo" class="demo-banner" role="status">Chế độ demo (VITE_DEMO_MODE=true): dùng dữ liệu mẫu, không gọi Spring Boot. Production phải tắt.</div>
   <div id="app" class="shell" :data-nav="nav" :inert="S.dlg.kind ? '' : undefined">
     <header class="topbar">
       <button class="topbar__toggle" id="mt" aria-label="Mở hoặc đóng menu" :aria-expanded="String(nav === 'open')" aria-controls="side" @click="toggleNav"><span></span><span></span><span></span></button>
@@ -108,7 +146,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
           <button role="menuitem" class="acct__item" @click="go('settings')">Cài đặt</button>
           <button role="menuitem" class="acct__item" @click="amOpen = false; openDialog('keys')">Phím tắt</button>
           <div class="acct__sep" role="separator"></div>
-          <button role="menuitem" class="acct__item out" @click="amOpen = false; toast('Bản demo không có màn hình đăng nhập nên chưa đăng xuất thật', 'wa')">Đăng xuất</button>
+          <button role="menuitem" class="acct__item out" :disabled="loggingOut" @click="doLogout">{{ loggingOut ? 'Đang đăng xuất…' : 'Đăng xuất' }}</button>
         </div>
       </div>
     </header>
@@ -166,4 +204,5 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
     <span>{{ S.toast.msg }}</span>
     <button v-if="S.toast.label && S.toast.cb" type="button" title="Ctrl+Z" aria-keyshortcuts="Control+Z" @click.stop="undo">{{ S.toast.label }}</button>
   </div>
+  </template>
 </template>

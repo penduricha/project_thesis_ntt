@@ -1,18 +1,26 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { COURSES, S, act, clearFilters, log } from '../store.js'
+import { COURSES, S, act, clearFilters, log, loadDashboard } from '../store.js'
 const router = useRouter()
-const total = computed(() => S.q.length)
-const okC = computed(() => S.q.filter(x => x.st == 'ok').length)
+// Dashboard ưu tiên số liệu thật của GET /dashboard/summary (cache Redis 30s) khi đã ghép backend;
+// chưa ghép / demo thì tính từ mảng câu hỏi mẫu như cũ.
+const dash = computed(() => S.dashboard)
+const total = computed(() => (dash.value ? dash.value.totalActive : S.q.length))
+const okC = computed(() => (dash.value ? (dash.value.byValidation?.clean ?? 0) : S.q.filter(x => x.st == 'ok').length))
 const pct = computed(() => (total.value ? Math.round(okC.value / total.value * 100) : 0))
-const sugC = computed(() => S.sug.length)
-const actC = computed(() => act())
+const sugC = computed(() => (dash.value ? dash.value.pendingSuggestions : S.sug.length))
+const actC = computed(() => (dash.value ? dash.value.runningTasks : act()))
+const archived = computed(() => dash.value?.totalArchived ?? 0)
 const totalTopics = computed(() => COURSES.reduce((a, c) => a + c.topics.length, 0))
 const now = computed(() => { S.log.length; return new Date().toLocaleTimeString('vi-VN') })
 const toBank = () => { clearFilters(); router.push('/bank') }
 const toOk = () => { clearFilters(); S.f.s = 'ok'; router.push('/bank') }
-const toggleColab = () => { S.colab = !S.colab; log(S.colab ? 'Kết nối lại dịch vụ LLM' : 'Tạm ngắt kết nối dịch vụ LLM', S.colab ? 'ok' : 'er') }
+// Ở chế độ thật, trạng thái dịch vụ do backend/Server 2 quyết định: không cho bật/tắt giả lập.
+const toggleColab = () => {
+  if (S.dataMode === 'real') return
+  S.colab = !S.colab; log(S.colab ? 'Kết nối lại dịch vụ LLM' : 'Tạm ngắt kết nối dịch vụ LLM', S.colab ? 'ok' : 'er')
+}
 </script>
 
 <template>
@@ -20,7 +28,7 @@ const toggleColab = () => { S.colab = !S.colab; log(S.colab ? 'Kết nối lại
     <button type="button" class="card stat" @click="toBank">
       <span class="mut">Tổng số câu hỏi</span>
       <b :class="total ? '' : 'zero'">{{ total }}</b>
-      <span class="stat__sub">{{ COURSES.length }} môn học · {{ totalTopics }} chương</span>
+      <span class="stat__sub">{{ COURSES.length }} môn học · {{ totalTopics }} chương<template v-if="archived"> · {{ archived }} đã lưu trữ</template></span>
     </button>
     <button type="button" class="card stat" @click="toOk">
       <span class="mut">Đã kiểm định</span>
@@ -49,8 +57,9 @@ const toggleColab = () => { S.colab = !S.colab; log(S.colab ? 'Kết nối lại
           <p class="two_fa__desc">{{ S.colab ? 'Hệ thống sẵn sàng tiếp nhận yêu cầu kiểm định câu hỏi và tìm kiếm ngôn ngữ tự nhiên.' : 'Dịch vụ AI tạm ngắt: các tác vụ mới sẽ báo lỗi có kiểm soát, chức năng quản lý câu hỏi vẫn hoạt động.' }}</p>
         </div>
         <div>
-          <button class="btn" :class="S.colab ? '' : 'pri'" @click="toggleColab">{{ S.colab ? 'Tạm ngắt kết nối' : 'Kết nối lại' }}</button>
-          <small style="margin-top:.35rem;text-align:center">Mô phỏng sự cố dịch vụ suy luận</small>
+          <button class="btn" :class="S.colab ? '' : 'pri'" :disabled="S.dataMode === 'real'" @click="toggleColab">{{ S.colab ? 'Tạm ngắt kết nối' : 'Kết nối lại' }}</button>
+          <small style="margin-top:.35rem;text-align:center">{{ S.dataMode === 'real' ? 'Trạng thái do máy chủ báo (không mô phỏng)' : 'Mô phỏng sự cố dịch vụ suy luận' }}</small>
+          <button v-if="S.dataMode === 'real'" class="btn sm" style="margin-top:.35rem" @click="loadDashboard">Làm mới số liệu</button>
         </div>
       </div>
     </div>

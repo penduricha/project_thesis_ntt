@@ -1,0 +1,103 @@
+// Lớp gọi API ngân hàng câu hỏi của Spring Boot (be-web-admin).
+// API_BASE = {host}:{port}/api/web  (context-path /api + prefix /web), nên mọi đường dẫn ở đây
+// phải đi qua ADMIN = '/admin' để khớp @RequestMapping("/web/admin/...") của backend.
+//   vd: GET {API_BASE}/admin/questions -> http://localhost:8080/api/web/admin/questions
+import SpringConfigHeader from '../auth/http.js'
+import { TokenLogin } from '../auth/TokenLogin.js'
+
+const header = new SpringConfigHeader()
+const tokenLogin = new TokenLogin()
+const client = () => header.getAuthorizedAPIClient(tokenLogin)
+// Tiền tố chung: /web/admin/questions, /web/admin/catalog, /web/admin/ai, /web/admin/dashboard.
+const ADMIN = '/admin'
+const url = (path) => `${ADMIN}${path}`
+
+// QbankExceptionHandler của backend trả { success:false, code, message } kèm HTTP status.
+// Helper này trích message/code để UI hiển thị, thay vì chỉ hiện "Request failed".
+export function apiErrorMessage(error, fallback = 'Không gọi được máy chủ. Vui lòng kiểm tra mạng rồi thử lại.') {
+  const body = error?.response?.data
+  if (body && typeof body === 'object') {
+    if (body.message) return body.message
+    if (body.code) return body.code
+  }
+  if (error?.response?.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+  if (error?.response?.status === 503) return 'Dịch vụ AI (Server 2) chưa được cấu hình. Vui lòng liên hệ quản trị viên.'
+  return fallback
+}
+
+export const qbankApi = {
+  // ---------- Danh mục ----------
+  async subjects(includeInactive = false) {
+    const { data } = await client().get(url('/catalog/subjects'), { params: { includeInactive } })
+    return data
+  },
+  async topics(subjectId) {
+    const { data } = await client().get(url(`/catalog/subjects/${subjectId}/topics`))
+    return data
+  },
+  async issueTypes() {
+    const { data } = await client().get(url('/catalog/issue-types'))
+    return data
+  },
+
+  // ---------- Câu hỏi ----------
+  // GET /questions?subjectId&topicId&status&validationStatus&q&page&size -> PageResponse
+  async listQuestions(params = {}) {
+    const { data } = await client().get(url('/questions'), { params })
+    return data
+  },
+  async getQuestion(questionId) {
+    const { data } = await client().get(url(`/questions/${questionId}`))
+    return data
+  },
+  async createQuestion(body) {
+    const { data } = await client().post(url('/questions'), body)
+    return data
+  },
+  async updateQuestion(questionId, body) {
+    const { data } = await client().put(url(`/questions/${questionId}`), body)
+    return data
+  },
+  // DELETE = lưu trữ mềm (archive), không xóa cứng (FK RESTRICT với task/eval).
+  async archiveQuestion(questionId) {
+    const { data } = await client().delete(url(`/questions/${questionId}`))
+    return data
+  },
+  async revisions(questionId) {
+    const { data } = await client().get(url(`/questions/${questionId}/revisions`))
+    return data
+  },
+  async latestSuggestions(questionId) {
+    const { data } = await client().get(url(`/questions/${questionId}/ai-suggestions`))
+    return data
+  },
+
+  // ---------- Kiểm định AI ----------
+  // POST -> 202 AiJobView { taskId, questionId, status, pollAfterMs, ... }
+  async aiCheck(questionId) {
+    const { data } = await client().post(url(`/questions/${questionId}/ai-check`))
+    return data
+  },
+  async job(taskId) {
+    const { data } = await client().get(url(`/ai/jobs/${taskId}`))
+    return data
+  },
+  async jobSuggestions(taskId) {
+    const { data } = await client().get(url(`/ai/jobs/${taskId}/suggestions`))
+    return data
+  },
+  async decideSuggestion(suggestionId, body) {
+    const { data } = await client().post(url(`/ai/suggestions/${suggestionId}/decision`), body)
+    return data
+  },
+
+  // ---------- Dashboard ----------
+  async dashboardSummary(subjectId) {
+    const { data } = await client().get(url('/dashboard/summary'), { params: subjectId ? { subjectId } : {} })
+    return data
+  },
+  async dashboardActivity(limit = 10) {
+    const { data } = await client().get(url('/dashboard/activity'), { params: { limit } })
+    return data
+  },
+}

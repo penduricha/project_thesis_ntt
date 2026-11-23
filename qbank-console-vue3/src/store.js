@@ -3,6 +3,11 @@ import { COURSES as RAW_COURSES, USERS, MY_ADMIN_ID } from './data/mock.js'
 import { nextTick } from 'vue'
 import { llm } from './services/llmSimulator.js'
 import { questionRepository as repo } from './repositories/questionRepository.js'
+import { auth } from './auth/authStore.js'
+import { qbankApi, apiErrorMessage } from './api/qbankApi.js'
+import { subjectToCourse, detailToQuestion, questionToCreate, questionToUpdate, suggestionsToUi } from './api/mappers.js'
+import { TokenLogin } from './auth/TokenLogin.js'
+import { EnrollmentRepository } from './auth/EnrollmentRepository.js'
 
 /* Danh sách môn học dạng reactive để thêm/sửa/xóa là giao diện tự cập nhật */
 export const COURSES = reactive(RAW_COURSES)
@@ -18,12 +23,15 @@ export const blankF = (hideAns = false) => ({ q: '', c: '', tp: '', l: '', s: ''
 export const S = reactive({
   ci: 0, n: 12, cq: '', rf: 'all', tf: 'all', rsel: new Set(),
   notifyTasks: true, confirmDelete: true, nl: '', nlKw: '', imp: { c: 0, tp: 0, l: 1 }, xmlName: 'qbank-export-2026-11-18.xml', xml: '',
-  asId: null, userQuery: '', userStatus: '', meReady: false, idShow: false, tfa: { st: 'NOT_ENABLED', until: 0 }, tfaSec: '', now: Date.now(),
+  asId: null, userQuery: '', userStatus: '', meReady: false, idShow: false,
+  tfa: { st: 'NOT_ENABLED', until: 0 }, tfaSec: '', tfaPeriod: 30, tfaKeyExpiresAt: 0, tfaBusy: false, now: Date.now(),
   users: USERS.map((u, i) => ({ ...u, idCard: u.adminId === MY_ADMIN_ID ? '060203000027' : '0792010' + String(10000 + i),
     subjects: ({ 'Giảng viên A': ['INT3306', 'INT3202'], 'Giảng viên B': ['INT3304', 'INT3401'], 'Giảng viên C': ['INT3306'] })[u.name] || [] })),
   api: { base: 'http://localhost:8082/api', jwt: 'demo-internal-token', on: true, busy: false },
   lm: lmInit(), dlg: { kind: null, props: {}, n: 0 }, role: 'admin', name: 'Từ Quang Nhật', colab: true, tn: 1, status: 'idle',
   q: [], sug: [], tasks: [], sel: new Set(), f: blankF(),
+  // Chế độ dữ liệu: 'real' = gọi Spring Boot, 'mock' = dữ liệu mẫu (demo hoặc backend chưa sẵn sàng).
+  dataMode: 'mock', dashboard: null, activity: [],
   log: [['09:45:12', 'Khởi tạo phiên làm việc và đồng bộ ngân hàng câu hỏi từ MariaDB', 'ok']],
   toast: { on: false, msg: '', tone: '', label: '', cb: null },
 })
@@ -62,14 +70,116 @@ export function list(isCourse) {
   return arr
 }
 
+/* ---------- Chế độ real/mock ---------- */
+// Real khi đã đăng nhập thật (không phải demo). Lỗi mạng/401 lần đầu -> rớt về mock để UI vẫn xem được,
+// nhưng luôn báo rõ cho người dùng (không giả vờ là dữ liệu thật).
+export const useRealApi = () => auth.isAuthenticated && !auth.isDemo
+function fallbackToMock(reason) {
+  if (S.dataMode !== 'mock') {
+    S.dataMode = 'mock'
+    toast(reason || 'Không kết nối được Spring Boot, đang dùng dữ liệu mẫu.', 'wa')
+    log('Rớt về dữ liệu mẫu: ' + (reason || 'backend không sẵn sàng'), 'wa')
+  }
+}
+
+/* Danh mục môn/chương thật: GET /catalog/subjects + /subjects/{id}/topics.
+   Backend CHƯA có API tạo/sửa/xóa môn/chương nên CoursesView vẫn là mock cục bộ (xem REVIEW). */
+export async function loadCatalog() {
+  if (!useRealApi()) return false
+  try {
+    const subjects = await qbankApi.subjects(true)
+    const courses = subjects.map(subjectToCourse)
+    await Promise.all(courses.map(async (c) => {
+      try {
+        const topics = await qbankApi.topics(c.subjectId)
+        c.topics = topics.map((t) => t.topicName)
+        c.topicIds = topics.map((t) => t.topicId)
+      } catch { c.topics = []; c.topicIds = [] }
+    }))
+    if (courses.length) {
+      COURSES.splice(0, COURSES.length, ...courses)
+      S.dataMode = 'real'
+      return true
+    }
+    return false
+  } catch (e) {
+    console.warn('[qbank] loadCatalog failed:', e?.message)
+    return false
+  }
+}
+
+export async function loadDashboard() {
+  if (!useRealApi()) return
+  try {
+    const [summary, activity] = await Promise.all([
+      qbankApi.dashboardSummary().catch(() => null),
+      qbankApi.dashboardActivity(10).catch(() => []),
+    ])
+    if (summary) S.dashboard = summary
+    if (Array.isArray(activity)) S.activity = activity
+  } catch (e) {
+    console.warn('[qbank] loadDashboard failed:', e?.message)
+  }
+}
+
+/* Tải đề xuất đang chờ duyệt: backend không có endpoint "liệt kê tất cả pending",
+   nên lấy các câu has_issues rồi gọi GET /questions/{id}/ai-suggestions cho từng câu. */
+export async function loadSuggestions() {
+  if (!useRealApi()) return
+  try {
+    const flagged = S.q.filter((q) => q.st === 'flag')
+    const loaded = await Promise.all(flagged.map(async (q) => {
+      try {
+        const list = await qbankApi.latestSuggestions(q.id)
+        const pending = (list || []).filter((s) => !s.decision || s.decision === 'pending')
+        return pending.length ? suggestionsToUi(pending, q, pending[0]?.taskId) : null
+      } catch { return null }
+    }))
+    S.sug = loaded.filter(Boolean)
+  } catch (e) {
+    console.warn('[qbank] loadSuggestions failed:', e?.message)
+  }
+}
+
 /* Vòng đời API: idle -> loading -> ready | error */
 export async function loadQuestions() {
   S.status = 'loading'
+  if (useRealApi()) {
+    try {
+      const catalogOk = await loadCatalog()
+      // Danh sách phân trang: gom các trang (size=100) rồi lấy chi tiết từng câu để đủ 4 phương án.
+      const items = []
+      let page = 0
+      for (;;) {
+        const res = await qbankApi.listQuestions({ status: 'active', page, size: 100 })
+        items.push(...(res.content || []))
+        if (page + 1 >= (res.totalPages || 1)) break
+        page++
+      }
+      const details = await Promise.all(items.map((it) => qbankApi.getQuestion(it.questionId).catch(() => null)))
+      const mapped = details.filter(Boolean).map((d) => {
+        const ci = COURSES.findIndex((c) => c.subjectId === d.subjectId)
+        const course = COURSES[ci]
+        const tp = course ? Math.max(0, course.topicIds.indexOf(d.topicId)) : 0
+        return detailToQuestion(d, ci >= 0 ? ci : 0, tp)
+      })
+      S.q = mapped
+      S.dataMode = 'real'
+      S.status = 'ready'
+      await loadDashboard()
+      await loadSuggestions()
+      return
+    } catch (e) {
+      console.warn('[qbank] loadQuestions (real) failed, fallback mock:', e?.message)
+      fallbackToMock(apiErrorMessage(e, 'Không kết nối được Spring Boot, đang dùng dữ liệu mẫu.'))
+    }
+  }
   try { S.q = await repo.findAll(); S.status = 'ready' }
   catch { S.status = 'error'; toast('Không tải được ngân hàng câu hỏi', 'er') }
 }
 
 export function runAI(ids) {
+  if (useRealApi() && S.dataMode === 'real') return runAiReal(ids)
   let n = 0
   ids.forEach(id => {
     const q = S.q.find(x => x.id == id)
@@ -101,10 +211,78 @@ export function runAI(ids) {
   toast(`Đã tiếp nhận ${n} tác vụ – theo dõi ở mục “Tác vụ AI”`, 'ok')
 }
 
+/* Kiểm định AI thật: POST /questions/{id}/ai-check (202) rồi poll GET /ai/jobs/{taskId}
+   theo pollAfterMs của backend cho tới khi succeeded/failed/cancelled. */
+async function runAiReal(ids) {
+  let n = 0
+  for (const id of ids) {
+    const q = S.q.find((x) => x.id == id)
+    if (!q || S.tasks.some((t) => t.qid == id && live.test(t.st))) continue
+    n++
+    const t = reactive({ id: '…', qid: id, st: 'pending', ms: 0, t0: Date.now(), started: new Date().toLocaleTimeString('vi-VN'), msg: 'Đang gửi yêu cầu…' })
+    S.tasks.unshift(t); if (S.tasks.length > 50) S.tasks.length = 50
+    try {
+      const job = await qbankApi.aiCheck(id)
+      t.id = job.taskId
+      t.st = String(job.status || 'pending').toLowerCase()
+      // Poll tới khi kết thúc (giới hạn 2 phút để không treo tab).
+      const deadline = Date.now() + 120000
+      while (live.test(t.st) && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, job.pollAfterMs || 1500))
+        const cur = await qbankApi.job(job.taskId)
+        t.st = String(cur.status || t.st).toLowerCase()
+        t.msg = cur.errorCode ? `Lỗi: ${cur.errorCode}` : ''
+      }
+      t.ms = Date.now() - t.t0
+      if (t.st === 'succeeded') {
+        const list = await qbankApi.jobSuggestions(job.taskId).catch(() => [])
+        const pending = (list || []).filter((s) => !s.decision || s.decision === 'pending')
+        if (pending.length) {
+          S.sug = S.sug.filter((s) => s.qid != id)
+          S.sug.push(suggestionsToUi(pending, q, job.taskId))
+          q.st = 'flag'
+          t.msg = `Phát hiện ${pending.length} vấn đề`
+          log(`Hoàn tất ${job.taskId} (${code(q)}): có ${pending.length} đề xuất AI`, 'wa')
+          if (S.notifyTasks) toast(`${job.taskId} hoàn tất: ${code(q)} có ${pending.length} đề xuất AI`, 'wa')
+        } else {
+          q.st = 'ok'; t.msg = 'Đạt chuẩn, không phát hiện lỗi'
+          log(`Hoàn tất ${job.taskId} (${code(q)}): câu hỏi đạt chuẩn`, 'ok')
+          if (S.notifyTasks) toast(`${job.taskId} hoàn tất: ${code(q)} đạt chuẩn`, 'ok')
+        }
+      } else if (t.st === 'failed' || t.st === 'cancelled') {
+        t.msg = t.msg || 'Tác vụ thất bại'
+        log(`Tác vụ ${job.taskId} (${code(q)}) thất bại`, 'er')
+        toast(`${job.taskId} thất bại có kiểm soát – quản lý câu hỏi vẫn hoạt động`, 'er')
+      }
+      await loadDashboard()
+    } catch (e) {
+      t.st = 'failed'; t.ms = Date.now() - t.t0
+      t.msg = apiErrorMessage(e, 'Không gửi được yêu cầu kiểm định.')
+      log(`Gửi kiểm định cho ${code(q)} thất bại: ${t.msg}`, 'er')
+      toast(t.msg, 'er')
+    }
+  }
+  if (!n) return toast('Các câu hỏi được chọn đang có tác vụ chạy, không tạo trùng', 'wa')
+  log(`Tiếp nhận ${n} tác vụ kiểm định AI`, 'info')
+  toast(`Đã tiếp nhận ${n} tác vụ – theo dõi ở mục “Tác vụ AI”`, 'ok')
+}
+
 export async function removeQuestions(ids) {
   const bq = S.q.filter(q => ids.includes(q.id)), bs = S.sug.filter(s => ids.includes(s.qid))
   S.q = S.q.filter(q => !ids.includes(q.id)); S.sug = S.sug.filter(s => !ids.includes(s.qid)); ids.forEach(id => S.sel.delete(id))
   log(`Xóa hàng loạt ${ids.length} câu hỏi`, 'wa')
+  if (useRealApi() && S.dataMode === 'real') {
+    // Backend chỉ có lưu trữ mềm (archive); không có "hoàn tác" nên không hiện nút Hoàn tác ở chế độ real.
+    try {
+      await Promise.all(ids.map((id) => qbankApi.archiveQuestion(id)))
+      toast(`Đã lưu trữ ${ids.length} câu hỏi`, 'wa')
+      await loadDashboard()
+    } catch (e) {
+      S.q.push(...bq); S.sug.push(...bs)
+      toast(apiErrorMessage(e, 'Lưu trữ thất bại, đã khôi phục.'), 'er')
+    }
+    return
+  }
   try { await repo.removeMany(ids) } catch { S.q.push(...bq); return toast('Xóa thất bại, đã khôi phục', 'er') }
   toast(`Đã xóa ${ids.length} câu hỏi`, 'wa', 'Hoàn tác', async () => {
     await repo.restoreMany(bq); S.q.push(...bq); S.sug.push(...bs); toast('Đã khôi phục các câu hỏi vừa xóa', 'ok')
@@ -122,7 +300,49 @@ export function editQuestion(id, ctx = {}) {
   if (id && busy({ id })) return toast('Câu hỏi đang được kiểm định, vui lòng đợi hoàn tất', 'wa')
   openDialog('question', { id, ctx })
 }
+/** Đọc lại 1 câu hỏi từ backend rồi cập nhật tại chỗ (giữ nguyên object để Vue không mất tham chiếu). */
+async function refreshFromServer(q) {
+  try {
+    const d = await qbankApi.getQuestion(q.id)
+    const ci = COURSES.findIndex((c) => c.subjectId === d.subjectId)
+    const course = COURSES[ci]
+    const tp = course ? Math.max(0, course.topicIds.indexOf(d.topicId)) : q.tp
+    Object.assign(q, detailToQuestion(d, ci >= 0 ? ci : q.c, tp))
+    return d
+  } catch (e) {
+    console.warn('[qbank] refreshFromServer failed:', e?.message)
+    return null
+  }
+}
+
 export async function saveQuestion(d, eid) {
+  if (useRealApi() && S.dataMode === 'real') {
+    const course = COURSES[d.c]
+    if (!course || course.subjectId == null) return toast('Môn học chưa gắn với danh mục trên máy chủ.', 'er')
+    try {
+      if (eid) {
+        const cur = S.q.find((x) => x.id == eid)
+        const body = questionToUpdate({ ...cur, ...d }, course)
+        const res = await qbankApi.updateQuestion(eid, body)
+        Object.assign(cur, detailToQuestion(res, d.c, d.tp))
+        S.sug = S.sug.filter((s) => s.qid != eid)
+        log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
+      } else {
+        const res = await qbankApi.createQuestion(questionToCreate(d, course))
+        const q = detailToQuestion(res, d.c, d.tp)
+        S.q.push(q)
+        log('Thêm câu hỏi mới ' + code(q), 'ok')
+      }
+      toast('Đã lưu câu hỏi vào cơ sở dữ liệu', 'ok')
+      await loadDashboard()
+    } catch (e) {
+      const status = e?.response?.status
+      toast(status === 409
+        ? 'Câu hỏi vừa bị người khác sửa (xung đột phiên bản). Hãy tải lại rồi sửa lại.'
+        : apiErrorMessage(e, 'Lưu câu hỏi thất bại.'), 'er')
+    }
+    return
+  }
   if (eid) {
     const cur = S.q.find(x => x.id == eid)
     const next = { ...cur, ...d, st: cur.st == 'draft' ? 'draft' : 'stale', ver: (cur.ver || 1) + 1 }
@@ -173,7 +393,50 @@ export function askDeleteCourse(i, after) {
 }
 
 /* ---------- Xem xét đề xuất AI (có hoàn tác) ---------- */
+/* Chế độ thật: mỗi đề xuất là 1 dòng trong ntt_ai_suggestions -> gọi POST /ai/suggestions/{id}/decision.
+   Backend KHÔNG cho áp đề xuất target_field='question' (AI không được đổi cấu trúc/đáp án),
+   nên các đề xuất đó được giữ nguyên và người duyệt phải sửa tay trong form câu hỏi. */
+async function decideReal(id, ok) {
+  const s = S.sug.find((x) => x.qid == id), q = S.q.find((x) => x.id == id)
+  if (!s || !q) return
+  const list = (s.raw || []).filter((x) => !x.decision || x.decision === 'pending')
+  if (!list.length) return toast('Đề xuất này đã được xử lý ở nơi khác.', 'wa')
+
+  const applicable = ok ? list.filter((x) => String(x.targetField) !== 'question') : list
+  const manual = ok ? list.filter((x) => String(x.targetField) === 'question') : []
+  if (!applicable.length) {
+    return toast('Đề xuất ở mức toàn câu phải sửa tay: hãy mở câu hỏi và chỉnh nội dung.', 'wa')
+  }
+
+  try {
+    let last = null
+    for (const r of applicable) {
+      last = await qbankApi.decideSuggestion(r.suggestionId, {
+        decision: ok ? 'accepted' : 'rejected',
+        finalText: ok ? r.proposedText || undefined : undefined,
+        rejectReason: ok ? undefined : 'Người duyệt giữ bản gốc',
+        expectedVersion: ok ? q.ver : undefined,
+      })
+    }
+    if (last) {
+      const ci = COURSES.findIndex((c) => c.subjectId === last.subjectId)
+      const tp = COURSES[ci]?.topicIds.indexOf(last.topicId) ?? q.tp
+      Object.assign(q, detailToQuestion(last, ci >= 0 ? ci : q.c, Math.max(0, tp)))
+    }
+    S.sug = S.sug.filter((x) => x.qid != id); S.rsel.delete(id)
+    log(ok ? `Chấp nhận đề xuất AI cho ${code(q)} (đã sinh revision)` : `Từ chối đề xuất AI cho ${code(q)}, giữ nội dung gốc`, ok ? 'ok' : 'info')
+    toast(ok ? `Đã áp ${applicable.length} đề xuất vào ${code(q)} và sinh revision mới` : `Đã giữ nguyên bản gốc ${code(q)}`, ok ? 'ok' : '')
+    if (manual.length) toast(`Còn ${manual.length} đề xuất mức toàn câu cần sửa tay (AI không được đổi cấu trúc)`, 'wa')
+    await loadDashboard()
+  } catch (e) {
+    toast(apiErrorMessage(e, 'Không gửi được quyết định duyệt đề xuất.'), 'er')
+    const fresh = await refreshFromServer(q)
+    if (fresh) S.sug = S.sug.filter((x) => x.qid != id)
+  }
+}
+
 export function decide(id, ok) {
+  if (useRealApi() && S.dataMode === 'real') return decideReal(id, ok)
   const s = S.sug.find(x => x.qid == id), q = S.q.find(x => x.id == id); if (!s || !q) return
   const prev = { text: q.text, st: q.st, updatedAt: q.updatedAt, by: q.by }, bak = { ...s }
   if (ok) { q.text = s.tx; q.updatedAt = nowStr(); q.by = S.name + ' (Duyệt AI)'; log(`Chấp nhận đề xuất AI cho ${code(q)} (có lưu vết)`, 'ok') }
@@ -184,9 +447,25 @@ export function decide(id, ok) {
     Object.assign(q, prev); S.sug.push(bak); repo.upsert({ ...q, o: [...q.o] }); toast(`Đã hoàn tác quyết định cho ${code(q)}`, 'info')
   })
 }
-export function bulkDecide(ok) {
+export async function bulkDecide(ok) {
   const ids = [...S.rsel].filter(id => S.sug.some(s => s.qid == id))
   if (!ids.length) return toast('Hãy chọn ít nhất một đề xuất để xử lý', 'wa')
+  if (useRealApi() && S.dataMode === 'real') {
+    // Duyệt hàng loạt tuần tự (không Promise.all) để backend xử lý từng câu một,
+    // tránh nhiều revision đụng nhau trên cùng khoá lạc quan.
+    let doneCount = 0, failCount = 0
+    for (const id of ids) {
+      try {
+        const before = S.sug.find(s => s.qid == id)
+        await decideReal(id, ok)   // eslint-disable-line no-await-in-loop
+        if (!S.sug.some(s => s.qid == id) && before) doneCount++
+        else failCount++
+      } catch { failCount++ }
+    }
+    log(`${ok ? 'Chấp nhận' : 'Từ chối'} hàng loạt: ${doneCount} thành công, ${failCount} cần xử lý tay`, ok ? 'ok' : 'info')
+    if (failCount) toast(`${failCount} đề xuất chưa xử lý được (cần sửa tay hoặc đã đổi ở nơi khác)`, 'wa')
+    return
+  }
   ids.forEach(id => {
     const s = S.sug.find(x => x.qid == id), q = S.q.find(x => x.id == id)
     if (ok && s && q) { q.text = s.tx; q.updatedAt = nowStr(); q.by = S.name + ' (Duyệt AI)' }
@@ -244,11 +523,92 @@ export function removeUser(id) {
   log((used ? 'Vô hiệu hóa tài khoản ' : 'Xóa tài khoản ') + u.name, 'wa'); toast(used ? 'Đã vô hiệu hóa tài khoản' : 'Đã xóa tài khoản', 'ok')
 }
 
-/* ---------- Xác thực hai yếu tố (NOT_ENABLED → PENDING → ENABLED) ---------- */
-let tt
+/* ---------- Xác thực hai yếu tố (NOT_ENABLED → PENDING → ENABLED) ----------
+   Mock: sinh khóa cục bộ, PENDING tự hết hạn sau 5 phút, nút "mô phỏng" để sang ENABLED.
+   Real: dùng đúng API của be-web-admin —
+     POST /2fa/enrollment            -> khóa Base32, Redis TTL 5 phút
+     POST /2fa/enrollment/activate   -> ghi ntt_totp_credentials (pending), chờ Flutter xác nhận
+     GET  /2fa/status                -> { totpEnabled, pending, expiresInSeconds, periodSeconds }
+     DELETE /2fa/enrollment/pending  -> hủy chờ
+     GET  /2fa/events (SSE)          -> server báo ngay khi mobile xác nhận
+   Poll 3s chỉ là lưới an toàn cho trường hợp SSE bị proxy chặn. */
+let tt, stopSse = null
+const enrollmentRepo = new EnrollmentRepository()
+const currentTokens = () => new TokenLogin()
 const focusTfa = () => nextTick(() => setTimeout(() => { const h = document.getElementById('tfa-t'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }, 60))
-export function tfaOpen() { S.tfaSec = Array.from({ length: 16 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.random() * 32 | 0]).join(''); openDialog('tfa') }
-export function tfaStart() {
+function stopTfaWatch() { clearInterval(tt); tt = null; if (stopSse) { stopSse(); stopSse = null } }
+
+/** Đọc trạng thái 2FA hiện tại (mở trang Cài đặt, hoặc khi SSE báo đổi). */
+export async function loadTfaStatus() {
+  if (!useRealApi()) return
+  const res = await enrollmentRepo.getTwoFaStatus(currentTokens())
+  if (!res.success) return
+  S.tfa = { st: res.status, until: res.status === 'PENDING' ? Date.now() + (res.pendingExpiresInSeconds || 0) * 1000 : 0 }
+  S.now = Date.now()
+  if (res.status === 'PENDING') watchTfaReal()
+  else stopTfaWatch()
+}
+
+function watchTfaReal() {
+  clearInterval(tt)
+  tt = setInterval(async () => {
+    S.now = Date.now()
+    if (S.tfa.st !== 'PENDING') return stopTfaWatch()
+    if (S.tfa.until - S.now <= 0) { await loadTfaStatus(); return }
+    await loadTfaStatus()
+  }, 3000)
+  if (!stopSse) {
+    stopSse = enrollmentRepo.watchTwoFaStatus(currentTokens(), {
+      onChange: () => { loadTfaStatus() },
+    })
+  }
+}
+
+export async function tfaOpen() {
+  if (!useRealApi()) {
+    S.tfaSec = Array.from({ length: 16 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.random() * 32 | 0]).join('')
+    return openDialog('tfa')
+  }
+  S.tfaBusy = true
+  try {
+    const res = await enrollmentRepo.startEnrollment(currentTokens(), 30)
+    if (!res.success) {
+      if (res.status === 409) { await loadTfaStatus(); toast('Xác thực hai yếu tố đã được bật.', 'wa') }
+      else toast(res.message, 'er')
+      return
+    }
+    S.tfaSec = res.data.secretKey
+    S.tfaPeriod = res.data.periodSeconds || 30
+    S.tfaKeyExpiresAt = Date.now() + (res.data.expiresInSeconds || 300) * 1000
+    openDialog('tfa')
+  } finally {
+    S.tfaBusy = false
+  }
+}
+
+/** "Tiếp tục" trong modal: ghi khóa xuống MariaDB ở trạng thái chờ xác nhận. */
+export async function tfaStart() {
+  if (useRealApi()) {
+    S.tfaBusy = true
+    try {
+      const res = await enrollmentRepo.activateEnrollment(currentTokens(), S.tfaPeriod || 30)
+      if (!res.success) {
+        toast(res.message, 'er')
+        // Khóa chờ ở Redis đã hết hạn (410): xin khóa mới để người dùng nhập lại.
+        if (res.expired) { closeDialog(); await tfaOpen() }
+        return false
+      }
+      S.tfa = { st: 'PENDING', until: Date.now() + (res.data.expiresInSeconds || 600) * 1000 }
+      S.now = Date.now()
+      log('Đã ghi khóa TOTP, đang chờ ứng dụng di động xác nhận', 'info')
+      toast('Đang chờ xác nhận từ ứng dụng Authenticator (tối đa 10 phút)', 'ok')
+      watchTfaReal()
+      focusTfa()
+      return true
+    } finally {
+      S.tfaBusy = false
+    }
+  }
   S.tfa = { st: 'PENDING', until: Date.now() + 300000 }; S.now = Date.now(); clearInterval(tt)
   tt = setInterval(() => {
     S.now = Date.now(); if (S.tfa.st != 'PENDING') return clearInterval(tt)
@@ -256,8 +616,32 @@ export function tfaStart() {
   }, 1000)
   log('Bắt đầu kích hoạt xác thực hai yếu tố', 'info'); toast('Đã tạo khóa, đang chờ xác nhận từ ứng dụng', 'ok'); focusTfa()
 }
+
 export function tfaAsk() {
   openDialog('confirm', { title: 'Hủy kích hoạt xác thực hai yếu tố?', text: 'Khóa bí mật hiện tại sẽ bị xóa. Nếu muốn cài lại, bạn cần tạo khóa mới và nhập lại vào ứng dụng Authenticator.', cancel: 'Quay lại', ok: 'Hủy kích hoạt', action: tfaReset })
 }
-export function tfaReset() { clearInterval(tt); S.tfa = { st: 'NOT_ENABLED', until: 0 }; log('Hủy kích hoạt xác thực hai yếu tố đang chờ', 'wa'); toast('Đã hủy, bạn có thể kích hoạt lại', 'ok'); focusTfa() }
-export function tfaDone() { clearInterval(tt); S.tfa = { st: 'ENABLED', until: 0 }; log('Xác thực hai yếu tố đã được kích hoạt', 'ok'); toast('Đã kích hoạt xác thực hai yếu tố', 'ok'); focusTfa() }
+
+export async function tfaReset() {
+  stopTfaWatch()
+  if (useRealApi()) {
+    const ok = await enrollmentRepo.cancelPendingEnrollment(currentTokens())
+    S.tfa = { st: 'NOT_ENABLED', until: 0 }
+    S.tfaSec = ''
+    log('Hủy phần chờ xác nhận 2FA', 'wa')
+    toast(ok ? 'Đã hủy, bạn có thể kích hoạt lại' : 'Đã hủy cục bộ, nhưng máy chủ chưa xác nhận', ok ? 'ok' : 'wa')
+    focusTfa()
+    return
+  }
+  S.tfa = { st: 'NOT_ENABLED', until: 0 }; log('Hủy kích hoạt xác thực hai yếu tố đang chờ', 'wa'); toast('Đã hủy, bạn có thể kích hoạt lại', 'ok'); focusTfa()
+}
+
+/** Chỉ dùng ở chế độ demo: mô phỏng ứng dụng di động đã xác nhận. */
+export function tfaDone() { stopTfaWatch(); S.tfa = { st: 'ENABLED', until: 0 }; log('Xác thực hai yếu tố đã được kích hoạt', 'ok'); toast('Đã kích hoạt xác thực hai yếu tố', 'ok'); focusTfa() }
+
+/* Đóng modal/hủy trang khi còn khóa chờ ở Redis: dọn để không để rác 5 phút.
+   (pagehide dùng keepalive giống ModalActivate2FA của fe_web_admin) */
+export async function tfaDiscardKey() {
+  if (!useRealApi()) return
+  S.tfaSec = ''
+  try { await enrollmentRepo.cancelEnrollment(currentTokens()) } catch { /* bỏ qua */ }
+}
