@@ -36,6 +36,20 @@ chỉ ghi "đã sửa X".
 
 #### Sửa lỗi
 
+- **`Column 'question_id' cannot be null` — ứng dụng KHÔNG khởi động được.**
+  *Triệu chứng:* log Spring ném `DataIntegrityViolationException` khi insert
+  `ntt_question_revisions` (SQLState 23000, errno 1048), tại `QbankDataInitializer.createQuestion`.
+  *Nguyên nhân:* `Question` có `@Version`; Spring Data chọn `persist()` hay `merge()` theo
+  `isNew()`, mà với `@Version` thì `isNew() = (version == null)`. Code cũ gán
+  `question.setVersion(0)` **trước** khi lưu, khiến Spring Data coi entity đã tồn tại và gọi
+  `merge()`. `merge()` **không gán id vào entity gốc** — nó trả về bản copy. Vì vậy
+  `question.getQuestionId()` vẫn `null`, và bước tạo revision ghi NULL vào cột `question_id`.
+  *Cách sửa:* bỏ `setVersion(0)` để Hibernate tự khởi tạo version khi `persist()`, và luôn dùng
+  entity **trả về** từ `save()` (`Question saved = questions.saveAndFlush(question)`).
+  *Phạm vi quan trọng:* lỗi này **không chỉ ở seed** — `QuestionService.create()` có cùng
+  đoạn code, nghĩa là tạo câu hỏi qua `POST /web/admin/questions` **cũng hỏng y như vậy**.
+  Đã sửa cả hai nơi. Khóa lạc quan vẫn hoạt động bình thường.
+
 - **Phân quyền phía UI sai: mọi tài khoản đều thấy menu Quản trị.**
   `GET /information/basic` trước đây **không trả `role`**, nên `authStore.js` luôn để
   `auth.role = 'admin'` và `App.vue` hiện mọi mục cho cả giảng viên.
