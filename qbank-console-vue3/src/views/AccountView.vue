@@ -27,7 +27,7 @@ const me = computed(() => {
   }
 })
 const c = computed(() => me.value.course || {})
-const adm = computed(() => S.role == 'admin'), ld = computed(() => !S.meReady), who = computed(() => (adm.value ? 'quản trị viên' : 'giảng viên'))
+const adm = computed(() => S.role === 'admin'), ld = computed(() => !S.meReady), who = computed(() => (adm.value ? 'quản trị viên' : 'giảng viên'))
 const dob = computed(() => (me.value.dob ? String(me.value.dob).split('-').reverse().join('/') : '—'))
 const shown = computed(() => (S.idShow ? me.value.idCard : me.value.idCard.slice(0, 6) + '•'.repeat(Math.max(0, me.value.idCard.length - 8)) + me.value.idCard.slice(-2)))
 let idT
