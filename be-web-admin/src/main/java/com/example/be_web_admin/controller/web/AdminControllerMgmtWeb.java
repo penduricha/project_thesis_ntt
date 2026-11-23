@@ -6,6 +6,7 @@ import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.jpa.impl.AdminLoginServiceImpl;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -262,7 +263,7 @@ public class AdminControllerMgmtWeb {
     //  - Đã bật 2FA, mã sai/hết hạn  -> success=false, data.code="TOTP_INVALID"
     //  - Nhập sai quá nhiều lần      -> success=false, data.code="LOCKED", data.retryAfterSeconds
     @PostMapping({"/auth/login", "/auth/login/totp"}) // /auth/login/totp giữ lại cho client cũ
-    public ResponseEntity<?> loginAdmin(@RequestBody AdminLoginDTO req, HttpServletRequest http) {
+    public ResponseEntity<?> loginAdmin(@Valid @RequestBody AdminLoginDTO req, HttpServletRequest http) {
         LoginOutcome outcome = adminLoginService.login(req, http.getRemoteAddr(), http.getHeader("User-Agent"));
         return ResponseEntity.ok(buildLoginResponse(outcome, req.getAdminId()));
     }
