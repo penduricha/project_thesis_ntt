@@ -1,5 +1,11 @@
 /* modules.less */
 
+// Thay thế: public/theme/boost/scss/moodle/modules.scss
+// Thay đổi so với bản gốc: chỉ THÊM 3 khối [FIX] (phần còn lại giữ nguyên):
+//  - [FIX 1] [FIX 2] [FIX 3] ngay sau khối ".path-mod-quiz #mod_quiz_navblock": căn giữa số Quiz navigation,
+//    căn giữa chữ dòng đáp án, sửa vòng focus bị kẹt khi click chuột vào radio/checkbox đáp án.
+//  - [FIX 4] trước "// Quiz module": nút Log out trong user menu màu đỏ (cả khi hover).
+
 // The home for small tweaks to modules that don't require
 // changes drastic enough to pull in the full module css
 // and replace it completely
@@ -1314,6 +1320,29 @@ img.userpicture {
     }
 }
 
+// [FIX 4] User menu: mục Log out màu đỏ (màu danger của theme) và hover cũng đỏ (nền đỏ nhạt + chữ đỏ),
+// đồng bộ quy ước UI/UX: hành động thoát/phá huỷ dùng màu danger ở cả trạng thái thường, hover và focus.
+// Nhận diện bằng href vì mục này không có class riêng.
+.dropdown-menu .dropdown-item[href*="/login/logout.php"] {
+    color: $danger;
+
+    @include dark-mode {
+        color: var(--#{$prefix}danger-text-emphasis);
+    }
+
+    &:hover,
+    &:focus,
+    &:focus-visible {
+        color: $danger;
+        background-color: rgba($danger, 0.1);
+
+        @include dark-mode {
+            color: var(--#{$prefix}danger-text-emphasis);
+            background-color: rgba($danger, 0.25);
+        }
+    }
+}
+
 // Quiz module
 #page-mod-quiz-mod #id_reviewoptionshdr .col-md-3,
 #page-mod-quiz-mod #id_reviewoptionshdr .col-md-9 {
@@ -1486,6 +1515,83 @@ img.userpicture {
     .qnbutton.answersaved .trafficlight,
     .qnbutton.requiresgrading .trafficlight {
         background-color: var(--#{$prefix}gray-300);
+    }
+}
+
+// [FIX 1] Quiz navigation ở trang làm bài: số câu nằm chính giữa ô 30x40.
+// Nguyên nhân số bị dính trên: .qnbutton có line-height 20px nên số nằm ở nửa trên,
+// nửa dưới là .trafficlight (margin-top 20px). Nếu chỉ căn giữa số mà không xử lý
+// .trafficlight thì lớp này (absolute, có nền) sẽ che mất nửa dưới chữ số, vì vậy ở trang
+// làm bài ta bỏ nền .trafficlight (màu nền đã có sẵn ở chính .qnbutton).
+// Trang xem lại (review) KHÔNG bị đổi: số vẫn ở nửa trên, dải đúng/sai ở nửa dưới.
+// Selector có 2 ID để thắng các rule gốc như ".path-mod-quiz #mod_quiz_navblock .qnbutton.complete .trafficlight".
+#page-mod-quiz-attempt #mod_quiz_navblock .qnbutton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    text-align: center;
+
+    .trafficlight {
+        background-color: transparent;
+    }
+}
+
+// [FIX 2] Dòng đáp án trắc nghiệm: chữ, số thứ tự (a. b. c.) và radio cùng nằm giữa dòng.
+// Không phụ thuộc margin/padding sẵn có: đặt padding dọc đối xứng và bỏ margin dọc của mọi
+// phần tử trong nội dung đáp án (format_text() hay sinh <p> có margin-bottom).
+// Chiều cao dòng giữ ~48px như hiện tại (0.75rem + 24px chữ + 0.75rem).
+.que .answer div.r0,
+.que .answer div.r1 {
+    display: flex;
+    align-items: center;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+
+    [data-region="answer-label"] {
+        align-items: center;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .answernumber {
+        line-height: 1.5;
+    }
+
+    .flex-fill {
+        margin-top: 0;
+        margin-bottom: 0;
+        line-height: 1.5;
+
+        :where(p, div, ul, ol, span, h1, h2, h3, h4, h5, h6) {
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+    }
+}
+
+// [FIX 3] Radio/checkbox đáp án: không để vòng focus "kẹt" sau khi click chuột.
+// Triệu chứng: click vào đáp án thì radio bị bao bởi vòng viền xanh đậm dày + quầng sáng (nhìn như lỗi nền),
+// trong khi bấm ra ngoài thì trở lại bình thường. Đó là kiểu focus (box-shadow/outline) gắn vào :focus,
+// nên chuột cũng kích hoạt. Sửa: chuột (:focus nhưng không :focus-visible) không vẽ vòng;
+// bàn phím (:focus-visible) vẫn có viền rõ ràng, gọn, đúng chuẩn khả năng truy cập.
+// accent-color: chấm radio/checkbox lấy màu primary của theme thay vì xanh mặc định của trình duyệt.
+.que .answer input[type="radio"],
+.que .answer input[type="checkbox"] {
+    accent-color: var(--#{$prefix}primary);
+
+    &:focus:not(:focus-visible) {
+        outline: 0;
+        box-shadow: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--#{$prefix}primary);
+        outline-offset: 2px;
+        box-shadow: none;
     }
 }
 

@@ -13,7 +13,7 @@ const active = computed(() => COURSES.filter(c => c.active !== false))
 const copyId = async () => { try { await navigator.clipboard.writeText(String(u.adminId)); toast('Đã sao chép mã đăng nhập', 'ok') } catch { toast('Không thể sao chép tự động. Hãy chọn ID và sao chép thủ công.', 'wa') } }
 function save() { err.value = saveRole(u.adminId, role.value, subs.value); if (!err.value) emit('close') }
 function del() {
-  if (u.role == 'Quản trị viên' && adminCount() < 2) return toast('Không thể xóa quản trị viên cuối cùng', 'wa')
+  if (u.role === 'Quản trị viên' && adminCount() < 2) return toast('Không thể xóa quản trị viên cuối cùng', 'wa')
   openDialog('user-confirm', { adminId: u.adminId, mode: 'del' })
 }
 </script>
