@@ -12,7 +12,7 @@ $CFG->dbtype = 'mariadb';
 // Set the database library driver to use native PHP extensions
 $CFG->dblibrary = 'native';
 
-
+// $CFG->themedesignermode = true;
 
 
 

@@ -1,12 +1,20 @@
+// Thay thế: public/theme/boost/scss/moodle/popover-region.scss
+// Thay đổi so với bản gốc (đánh dấu [FIX]):
+//  - Hover item thông báo dùng nền nhạt + chữ tối thay vì nền primary + chữ trắng.
+//  - Item .selected vẫn giữ nền xanh nên có biến chữ trắng riêng.
+
 $standard-border: 1px solid $popover-standard-border-color;
 $region-container-height: 500px;
 $region-container-width: 380px;
 $region-container-z-index: 1;
 $region-header-height: 25px;
 $region-footer-height: 30px;
-$content-item-hover-colour-bg: $primary;
-$content-item-hover-colour-text: $white;
+// [FIX] Hover: nền primary nhạt (8%) + chữ theo màu body, tự đổi theo dark mode.
+$content-item-hover-colour-bg: rgba(var(--#{$prefix}primary-rgb), 0.08);
+$content-item-hover-colour-text: var(--#{$prefix}body-color);
 $content-item-selected-colour-bg: #3279b3;
+// [FIX] Biến riêng cho .selected (nền xanh nên cần chữ trắng).
+$content-item-selected-colour-text: $white;
 $content-item-unread-colour: #f4f4f4;
 $content-header-footer-height: $region-header-height + $region-footer-height;
 
@@ -227,7 +235,8 @@ $content-header-footer-height: $region-header-height + $region-footer-height;
         }
 
         .view-more {
-            color: inherit;
+            // [FIX] Trước là inherit; nay dùng màu link để vẫn nhận ra là liên kết.
+            color: var(--#{$prefix}link-color);
         }
     }
 
@@ -310,12 +319,13 @@ $content-header-footer-height: $region-header-height + $region-footer-height;
 
     &.selected {
         background-color: $content-item-selected-colour-bg;
-        color: $content-item-hover-colour-text;
+        // [FIX] Nền .selected vẫn xanh nên dùng biến chữ trắng riêng.
+        color: $content-item-selected-colour-text;
         border-color: $content-item-selected-colour-bg;
 
         .content-item-footer {
             .timestamp {
-                color: $content-item-hover-colour-text;
+                color: $content-item-selected-colour-text;
             }
         }
     }
