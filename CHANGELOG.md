@@ -14,6 +14,55 @@ chỉ ghi "đã sửa X".
 
 ## [Chưa phát hành] — 2026-11-23
 
+### Nối API Spring Boot ↔ CSDL và nạp 500 câu hỏi mẫu
+
+#### Thêm mới
+
+- **`be-web-admin/src/main/java/.../data_init/QbankDataInitializer.java`** — seed 5 môn × 3 chương
+  × 100 câu = **500 câu trắc nghiệm thật** vào `ntt_subjects`, `ntt_topics`, `ntt_questions`,
+  `ntt_question_revisions`.
+  * Bật bằng cùng cờ `APP_SEED_ENABLED=true` như `DataInitializer`.
+  * **Không ghi đè dữ liệu thật**: nếu `ntt_subjects` đã có bất kỳ môn nào thì thoát ngay.
+  * Dùng chính `QuestionContentHasher` và `QuestionSnapshotFactory` của production, nên câu
+    seed có đúng `content_hash` và `snapshot_json` như câu tạo qua API.
+  * 10 mẫu nội dung/chương được xoay vòng thành 33–34 câu bằng **kỹ thuật đảo phương án**
+    (4 kiểu đảo), nên 500 `content_hash` khác nhau hoàn toàn và chống học vẹt theo vị trí
+    đáp án. Đáp án đúng được dịch theo phép đảo, đã kiểm chứng không sai lệch.
+
+- **`be-web-admin/sql/2026-11-23-qbank-seed-500-cau.sql`** — bản SQL tương đương (2173 dòng)
+  để nạp khi không muốn chạy Spring Boot.
+  `mysql -u root -p <db> < be-web-admin/sql/2026-11-23-qbank-seed-500-cau.sql`
+  Idempotent bằng `INSERT IGNORE` trên `subject_code`; có sẵn script reset ở cuối file.
+
+#### Sửa lỗi
+
+- **Phân quyền phía UI sai: mọi tài khoản đều thấy menu Quản trị.**
+  `GET /information/basic` trước đây **không trả `role`**, nên `authStore.js` luôn để
+  `auth.role = 'admin'` và `App.vue` hiện mọi mục cho cả giảng viên.
+  *Backend:* `AdminServiceImpl.getAdminInfo()` trả thêm `role` = `ADMIN` | `LECTURER`
+  (lấy từ cột `ntt_admins.role`).
+  *Frontend:* `authStore.loadMe()` ánh xạ `ADMIN → 'admin'`, `LECTURER → 'gv'`.
+  Không có trường `role` (backend cũ) thì **giữ nguyên** giá trị hiện tại — không hạ quyền ngầm.
+
+- **Tìm kiếm chưa dùng API thật.**
+  `SearchView` chỉ lọc mảng đã tải trong bộ nhớ. Nay khi `dataMode === 'real'` nó gọi
+  `GET /questions?q=…&subjectId=…` trên Spring Boot rồi lấy chi tiết từng câu; chế độ demo
+  vẫn giữ nguyên đường phân tích cục bộ. Giao diện có nhãn phân biệt "kết quả từ máy chủ"
+  với kết quả cục bộ, và hiện lỗi API nếu gọi thất bại.
+  *Lưu ý:* tham số tìm kiếm của backend tên là **`q`** (`@RequestParam(name = "q")`),
+  **không phải `keyword`** — gửi sai tên sẽ bị bỏ qua im lặng vì `required = false`.
+
+#### Chưa xử lý (ghi nhận, cần làm tiếp)
+
+- **AdminView** vẫn đọc `S.users` từ `src/data/mock.js` — backend **chưa có API liệt kê admin**.
+- **CoursesView** tạo/sửa môn vẫn là mock — backend chưa có API CRUD môn/chương.
+- **N+1 khi tải câu hỏi**: `store.js` gọi `GET /questions` rồi `GET /questions/{id}` từng câu
+  để lấy 4 phương án. Với 500 câu seed, mở màn Ngân hàng câu hỏi sẽ phát sinh ~505 request.
+  Hướng sửa: thêm `options[]` vào `QuestionListItem` (xem §5.1
+  `docs/review-api-contract-vue3-springboot.md`).
+
+## [Chưa phát hành] — 2026-11-23
+
 ### Thêm mới
 
 - **`docs/review-api-contract-vue3-springboot.md`** — tài liệu đối chiếu hợp đồng API giữa

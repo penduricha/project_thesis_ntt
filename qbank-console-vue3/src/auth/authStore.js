@@ -103,6 +103,12 @@ export async function loadMe() {
       auth.basic = basic
       auth.adminId = basic.adminId ?? auth.adminId
       auth.adminName = basic.adminName ?? ''
+      // Backend trả 'ADMIN' | 'LECTURER' (cột ntt_admins.role). Giao diện dùng 'admin' | 'gv'.
+      // Không có trường role (backend cũ) thì giữ nguyên giá trị hiện tại — không hạ quyền
+      // ngầm, tránh trường hợp giảng viên bị khoá oan khỏi màn hình họ vẫn được dùng.
+      const backendRole = String(basic.role ?? '').toUpperCase()
+      if (backendRole === 'ADMIN') auth.role = 'admin'
+      else if (backendRole === 'LECTURER') auth.role = 'gv'
     }
   } catch (e) {
     console.warn('[auth] Không tải được thông tin cơ bản:', e?.message)

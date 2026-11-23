@@ -3,23 +3,66 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { LV } from '../data/mock.js'
 import { COURSES, S, code, topicName, editQuestion } from '../store.js'
+import { qbankApi, apiErrorMessage } from '../api/qbankApi.js'
+import { detailToQuestion } from '../api/mappers.js'
 
 const router = useRouter()
 const busy = ref(false), res = ref(null)
 const samples = ['câu hỏi dễ môn cơ sở dữ liệu', 'câu hỏi khó môn trí tuệ nhân tạo', 'câu hỏi môn mạng chứa "HTTP"']
 const RULES = [[/java|spring|int3306/, 0], [/cơ sở dữ liệu|sql|mariadb|redis|int3202/, 1], [/mạng|http|rest|int3304/, 2], [/trí tuệ|llm|transformer|qwen|int3401/, 3], [/triết|bas1150/, 4]]
 
+/* Dùng API thật khi đã đăng nhập thật và dữ liệu đến từ Spring Boot */
+const useReal = () => S.dataMode === 'real'
+
 function run(relax = false) {
   const s = (S.nl || '').trim(); if (!s) return
   if (!S.colab) { res.value = { off: true }; return }
   busy.value = true
-  setTimeout(() => { busy.value = false; analyze(s, relax) }, 450)
+  setTimeout(async () => {
+    analyzeRules(s, relax)          // phân tích câu lệnh -> bộ lọc (luôn chạy: cho thấy ý định)
+    if (useReal()) await runReal(s, relax)   // nếu có backend thì lấy dữ liệu thật
+    busy.value = false
+  }, 450)
 }
-function analyze(s, relax) {
+
+/**
+ * Gọi Spring Boot để tìm thật. Backend dùng tên tham số `q` (xem QuestionBankController:
+ * @RequestParam(name = "q")), KHÔNG phải `keyword` — gửi sai tên sẽ bị bỏ qua im lặng.
+ * Lọc thêm theo môn/độ khó ở phía client vì API hiện chưa nhận `difficulty`.
+ */
+async function runReal(s, relax) {
+  const intent = lastIntent
+  try {
+    const params = { q: intent.keyword || s, page: 0, size: 100 }
+    if (intent.course !== undefined) {
+      const course = COURSES[intent.course]
+      if (course?.subjectId != null) params.subjectId = course.subjectId
+    }
+    const page = await qbankApi.listQuestions(params)
+    const items = page?.content || []
+    const details = await Promise.all(items.map((it) => qbankApi.getQuestion(it.questionId).catch(() => null)))
+    let rows = details.filter(Boolean).map((d) => {
+      const ci = COURSES.findIndex((c) => c.subjectId === d.subjectId)
+      const course = COURSES[ci]
+      const tp = course ? Math.max(0, course.topicIds.indexOf(d.topicId)) : 0
+      return detailToQuestion(d, ci >= 0 ? ci : 0, tp)
+    })
+    if (intent.level !== undefined) rows = rows.filter((q) => q.l == intent.level)
+    res.value = { ...res.value, rows, real: true, total: page?.totalElements ?? rows.length }
+    S.nlKw = intent.keyword || s
+  } catch (e) {
+    res.value = { ...res.value, real: false, apiError: apiErrorMessage(e, 'Không tìm được trên máy chủ, đang hiển thị kết quả cục bộ.') }
+  }
+}
+
+let lastIntent = {}
+
+function analyzeRules(s, relax) {
   const n = s.toLowerCase(), F = {}
   RULES.forEach(([r, i]) => { if (F.course === undefined && r.test(n)) F.course = i })
   if (!relax) F.level = /khó/.test(n) ? 2 : /dễ/.test(n) ? 0 : /trung bình/.test(n) ? 1 : undefined
   const m = s.match(/chứa\s+[“"]?([^”"]+)[”"]?/i); if (m) F.keyword = m[1].trim()
+  lastIntent = F
   const rows = S.q.filter(q => (F.course === undefined || q.c == F.course) && (F.level === undefined || q.l == F.level) && (!F.keyword || (q.text + q.o.join(' ')).toLowerCase().includes(F.keyword.toLowerCase())))
   S.nlKw = F.keyword || s
   const c = [F.course !== undefined && 'course_id = ?', F.level !== undefined && 'level = ?', F.keyword && 'content LIKE ?'].filter(Boolean)
@@ -58,6 +101,12 @@ const byKeyword = () => { S.f.q = S.nlKw; S.f.page = 1; router.push('/bank') }
       </div>
       <div class="card">
         <h3>Bước 3 · Kết quả tìm kiếm ({{ res.rows.length }})</h3>
+        <p v-if="res.real" class="mut" style="margin:.15rem 0 .6rem;font-size:var(--fs-sm)">
+          Kết quả lấy trực tiếp từ Spring Boot (MariaDB) — gọi <code>GET /questions?q=…</code>.
+        </p>
+        <p v-else-if="res.apiError" class="err" style="margin:.15rem 0 .6rem;font-size:var(--fs-sm)">
+          {{ res.apiError }}
+        </p>
         <div v-if="res.rows.length" class="tw">
           <table>
             <thead><tr><th>Mã</th><th>Nội dung câu hỏi (bấm để sửa)</th><th>Môn học &amp; Chương</th><th>Mức độ</th></tr></thead>

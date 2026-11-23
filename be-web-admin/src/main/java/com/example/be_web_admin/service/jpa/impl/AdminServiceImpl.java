@@ -48,6 +48,13 @@ public class AdminServiceImpl implements AdminService {
             responseData.put("adminName", adminFound.getAdminName());
             responseData.put("gender", adminFound.getGender());
             responseData.put("dateOfBirthAdmin", adminFound.getDateOfBirthAdmin());
+            // Vai trò để giao diện ẩn/hiện menu theo quyền.
+            // Cột ntt_admins.role là ENUM('ADMIN','LECTURER'); trả nguyên tên hằng để phía
+            // Vue ánh xạ 1-1, không phải đoán chuỗi. Trước đây trường này bị thiếu nên
+            // QBank Console luôn mặc định 'admin' và hiện mọi mục cho cả giảng viên.
+            if (adminFound.getRole() != null) {
+                responseData.put("role", adminFound.getRole().name());
+            }
         }
         return responseData;
     }
