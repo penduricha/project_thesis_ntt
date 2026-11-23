@@ -242,15 +242,27 @@ public class QbankDataInitializer {
         q.setSource(QuestionSourceD.MANUAL);
         q.setContentHash(QuestionContentHasher.hash(bp.stem(), rotated[0], rotated[1],
                 rotated[2], rotated[3], label, format));
-        q.setVersion(0);
         q.setCreatedBy(creatorAdminId);
         q.setUpdatedBy(creatorAdminId);
-        questions.saveAndFlush(q);
+        /*
+         * KHÔNG set q.setVersion(0) ở đây.
+         *
+         * Question có @Version (khoá lạc quan). Spring Data quyết định persist hay merge bằng
+         * isNew(): với @Version thì isNew = (version == null). Nếu ta gán version = 0 trước khi
+         * lưu, Spring Data coi đây là entity ĐÃ TỒN TẠI và gọi em.merge() thay vì em.persist().
+         * merge() trả về một BẢN COPY đã có id, còn biến `q` gốc vẫn giữ questionId = null —
+         * vì vậy bước tạo revision sau đó ghi NULL vào cột question_id và sinh lỗi:
+         *     Column 'question_id' cannot be null (SQLState 23000, errno 1048)
+         *
+         * Để Hibernate tự khởi tạo version khi persist, và luôn dùng entity TRẢ VỀ từ save().
+         */
+        Question saved = questions.saveAndFlush(q);
 
         QuestionRevision rev = new QuestionRevision();
-        rev.setQuestionId(q.getQuestionId());
+        rev.setQuestionId(saved.getQuestionId());
         rev.setRevNo(1);
-        rev.setSnapshotJson(snapshots.build(q, subject, topic));
+        // Dùng `saved` (bản đã có id) chứ không dùng `q`, để snapshot phản ánh đúng entity đã lưu.
+        rev.setSnapshotJson(snapshots.build(saved, subject, topic));
         rev.setChangeSource(ChangeSourceD.CREATE);
         rev.setChangeNote("Seed dữ liệu mẫu");
         rev.setChangedBy(creatorAdminId);

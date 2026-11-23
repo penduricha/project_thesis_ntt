@@ -233,25 +233,35 @@ public class QuestionService {
         question.setValidationStatus(ValidationStatusD.NOT_CHECKED);
         question.setSource(QuestionSourceD.MANUAL);
         question.setContentHash(hash);
-        question.setVersion(0);
+        /*
+         * KHÔNG setVersion(0) trước khi lưu.
+         *
+         * Question có @Version, và Spring Data quyết định persist hay merge bằng
+         * isNew() — với @Version thì isNew = (version == null). Gán version = 0 khiến
+         * Spring Data coi entity ĐÃ TỒN TẠI, gọi em.merge(); merge() trả về bản copy
+         * có id còn biến `question` gốc vẫn null questionId. Bước appendRevision sau
+         * đó sẽ ghi NULL vào cột question_id và nổ:
+         *     Column 'question_id' cannot be null (SQLState 23000, errno 1048)
+         * Để Hibernate tự khởi tạo version, và luôn dùng entity TRẢ VỀ từ save().
+         */
         question.setCreatedBy(adminId);
         question.setUpdatedBy(adminId);
-        questions.saveAndFlush(question);
+        Question saved = questions.saveAndFlush(question);
 
         // D3: revision 1 là điều kiện để task AI có thể tham chiếu (question_id, revision_id).
-        appendRevision(question, 1, ChangeSourceD.CREATE, adminId, null, subject, topic);
+        appendRevision(saved, 1, ChangeSourceD.CREATE, adminId, null, subject, topic);
 
         uiState.deleteDraft(adminId, "new");
         uiState.pushActivity(adminId, com.example.be_web_admin.dto.qbank.ActivityItem.of(
-                "QUESTION_CREATED", "Tạo câu hỏi #" + question.getQuestionId() + " (" + subject.getSubjectCode() + ")",
-                "QUESTION", question.getQuestionId()));
+                "QUESTION_CREATED", "Tạo câu hỏi #" + saved.getQuestionId() + " (" + subject.getSubjectCode() + ")",
+                "QUESTION", saved.getQuestionId()));
         uiState.evictDashboard(subject.getSubjectId());
 
         if (duplicate) {
-            log.info("Câu hỏi #{} trùng nội dung với câu đã có trong môn {}", question.getQuestionId(),
+            log.info("Câu hỏi #{} trùng nội dung với câu đã có trong môn {}", saved.getQuestionId(),
                     subject.getSubjectCode());
         }
-        return toDetail(question, subject, topic, 1, 0);
+        return toDetail(saved, subject, topic, 1, 0);
     }
 
     @Transactional
