@@ -17,6 +17,11 @@
 /**
  * Multiple choice question renderer classes.
  *
+ * Thay thế: public/question/type/multichoice/renderer.php
+ * Thay đổi so với bản gốc (đánh dấu [FIX]), chỉ nằm trong formulation_and_controls():
+ *  - Radio/checkbox căn giữa theo chiều dọc của dòng đáp án.
+ *  - Bấm bất kỳ đâu trong dòng đáp án (kể cả phần viền/padding) đều chọn được đáp án.
+ *
  * @package    qtype
  * @subpackage multichoice
  * @copyright  2009 The Open University
@@ -34,7 +39,8 @@ defined('MOODLE_INTERNAL') || die();
  * @copyright  2009 The Open University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedback_renderer {
+abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedback_renderer
+{
 
     /**
      * Method to generating the bits of output after question choices.
@@ -63,8 +69,10 @@ abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedb
 
     abstract protected function prompt();
 
-    public function formulation_and_controls(question_attempt $qa,
-            question_display_options $options) {
+    public function formulation_and_controls(
+        question_attempt $qa,
+        question_display_options $options
+    ) {
 
         $question = $qa->get_question();
         $response = $question->get_response($qa);
@@ -90,6 +98,8 @@ abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedb
             $inputattributes['value'] = $this->get_input_value($value);
             $inputattributes['id'] = $this->get_input_id($qa, $value);
             $inputattributes['aria-labelledby'] = $inputattributes['id'] . '_label';
+            // [FIX] Bỏ margin dọc để radio/checkbox căn giữa dòng; z-1 để nằm trên lớp phủ bấm-cả-dòng bên dưới.
+            $inputattributes['class'] = 'my-0 position-relative z-1';
             $isselected = $question->is_choice_selected($response, $value);
             if ($isselected) {
                 $inputattributes['checked'] = 'checked';
@@ -108,29 +118,54 @@ abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedb
             $choicenumber = '';
             if ($question->answernumbering !== 'none') {
                 $choicenumber = html_writer::span(
-                        $this->number_in_style($value, $question->answernumbering), 'answernumber');
+                    $this->number_in_style($value, $question->answernumbering),
+                    'answernumber'
+                );
             }
             $choicetext = $question->format_text($ans->answer, $ans->answerformat, $qa, 'question', 'answer', $ansid);
             $choice = html_writer::div($choicetext, 'flex-fill ms-1');
 
-            $radiobuttons[] = $hidden . html_writer::empty_tag('input', $inputattributes) .
-                    html_writer::div($choicenumber . $choice, 'd-flex w-auto', [
-                        'id' => $inputattributes['id'] . '_label',
-                        'data-region' => 'answer-label',
-                    ]);
+            // [FIX] Lớp phủ trong suốt phủ kín dòng: <label for> nên bấm vào đâu cũng bật/tắt đúng input,
+            // không cần JS. Nằm dưới (z-0) nội dung nên chữ, link và JS có sẵn của câu hỏi vẫn hoạt động.
+            // Không tạo khi readonly (xem lại bài) vì input đã bị khóa.
+            $rowoverlay = '';
+            if (!$options->readonly) {
+                $rowoverlay = html_writer::tag('label', '', [
+                    'for' => $inputattributes['id'],
+                    'class' => 'position-absolute top-0 start-0 w-100 h-100 m-0 z-0',
+                    'style' => 'cursor: pointer;',
+                    'aria-hidden' => 'true',
+                ]);
+            }
+
+            $radiobuttons[] = $hidden . $rowoverlay . html_writer::empty_tag('input', $inputattributes) .
+                html_writer::div($choicenumber . $choice, 'd-flex w-auto position-relative z-1', [
+                    'id' => $inputattributes['id'] . '_label',
+                    'data-region' => 'answer-label',
+                ]);
 
             qtype_multichoice::support_legacy_review_options_hack($options);
-            if ($options->feedback && $options->feedback !== qtype_multichoice::COMBINED_BUT_NOT_CHOICE_FEEDBACK &&
-                    $isselected && trim($ans->feedback)) {
-                $feedback[] = html_writer::tag('div',
-                        $question->make_html_inline($question->format_text(
-                                $ans->feedback, $ans->feedbackformat,
-                                $qa, 'question', 'answerfeedback', $ansid)),
-                        array('class' => 'specificfeedback'));
+            if (
+                $options->feedback && $options->feedback !== qtype_multichoice::COMBINED_BUT_NOT_CHOICE_FEEDBACK &&
+                $isselected && trim($ans->feedback)
+            ) {
+                $feedback[] = html_writer::tag(
+                    'div',
+                    $question->make_html_inline($question->format_text(
+                        $ans->feedback,
+                        $ans->feedbackformat,
+                        $qa,
+                        'question',
+                        'answerfeedback',
+                        $ansid
+                    )),
+                    array('class' => 'specificfeedback')
+                );
             } else {
                 $feedback[] = '';
             }
-            $class = 'r' . ($value % 2);
+            // [FIX] position-relative: làm mốc cho lớp phủ; align-items-center: căn giữa dọc radio và nội dung.
+            $class = 'r' . ($value % 2) . ' position-relative align-items-center';
             if ($options->correctness && $isselected) {
                 // Feedback images will be rendered using Font awesome.
                 // Font awesome icons are actually characters(text) with special glyphs,
@@ -165,28 +200,37 @@ abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedb
 
         $result .= html_writer::start_tag('div', array('class' => 'answer'));
         foreach ($radiobuttons as $key => $radio) {
-            $result .= html_writer::tag('div', $radio . ' ' . $feedbackimg[$key] . $feedback[$key],
-                    array('class' => $classes[$key])) . "\n";
+            $result .= html_writer::tag(
+                'div',
+                $radio . ' ' . $feedbackimg[$key] . $feedback[$key],
+                array('class' => $classes[$key])
+            ) . "\n";
         }
         $result .= html_writer::end_tag('div'); // Answer.
 
         // Load JS module for the question answers.
-        $this->page->requires->js_call_amd('qtype_multichoice/answers', 'init',
-            [$qa->get_outer_question_div_unique_id()]);
+        $this->page->requires->js_call_amd(
+            'qtype_multichoice/answers',
+            'init',
+            [$qa->get_outer_question_div_unique_id()]
+        );
         $result .= $this->after_choices($qa, $options);
 
         $result .= html_writer::end_tag('fieldset'); // Ablock.
 
         if ($qa->get_state() == question_state::$invalid) {
-            $result .= html_writer::nonempty_tag('div',
-                    $question->get_validation_error($qa->get_last_qt_data()),
-                    array('class' => 'validationerror'));
+            $result .= html_writer::nonempty_tag(
+                'div',
+                $question->get_validation_error($qa->get_last_qt_data()),
+                array('class' => 'validationerror')
+            );
         }
 
         return $result;
     }
 
-    protected function number_html($qnum) {
+    protected function number_html($qnum)
+    {
         return $qnum . '. ';
     }
 
@@ -196,8 +240,9 @@ abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedb
      * options returned by {@link qtype_multichoice:;get_numbering_styles()}.
      * @return string the number $num in the requested style.
      */
-    protected function number_in_style($num, $style) {
-        switch($style) {
+    protected function number_in_style($num, $style)
+    {
+        switch ($style) {
             case 'abc':
                 $number = chr(ord('a') + $num);
                 break;
@@ -221,7 +266,8 @@ abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedb
         return $this->number_html($number);
     }
 
-    public function specific_feedback(question_attempt $qa) {
+    public function specific_feedback(question_attempt $qa)
+    {
         return $this->combined_feedback($qa);
     }
 
@@ -230,16 +276,23 @@ abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedb
      * @param array $right An Array of correct responses to the current question
      * @return string based on number of correct responses
      */
-    protected function correct_choices(array $right) {
+    protected function correct_choices(array $right)
+    {
         // Return appropriate string for single/multiple correct answer(s).
         if (count($right) == 1) {
-                return get_string('correctansweris', 'qtype_multichoice',
-                        implode(', ', $right));
+            return get_string(
+                'correctansweris',
+                'qtype_multichoice',
+                implode(', ', $right)
+            );
         } else if (count($right) > 1) {
-                return get_string('correctanswersare', 'qtype_multichoice',
-                        implode(', ', $right));
+            return get_string(
+                'correctanswersare',
+                'qtype_multichoice',
+                implode(', ', $right)
+            );
         } else {
-                return "";
+            return "";
         }
     }
 }
@@ -252,47 +305,64 @@ abstract class qtype_multichoice_renderer_base extends qtype_with_combined_feedb
  * @copyright  2009 The Open University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class qtype_multichoice_single_renderer extends qtype_multichoice_renderer_base {
-    protected function get_input_type() {
+class qtype_multichoice_single_renderer extends qtype_multichoice_renderer_base
+{
+    protected function get_input_type()
+    {
         return 'radio';
     }
 
-    protected function get_input_name(question_attempt $qa, $value) {
+    protected function get_input_name(question_attempt $qa, $value)
+    {
         return $qa->get_qt_field_name('answer');
     }
 
-    protected function get_input_value($value) {
+    protected function get_input_value($value)
+    {
         return $value;
     }
 
-    protected function get_input_id(question_attempt $qa, $value) {
+    protected function get_input_id(question_attempt $qa, $value)
+    {
         return $qa->get_qt_field_name('answer' . $value);
     }
 
-    protected function is_right(question_answer $ans) {
+    protected function is_right(question_answer $ans)
+    {
         return $ans->fraction;
     }
 
-    protected function prompt() {
+    protected function prompt()
+    {
         return get_string('selectone', 'qtype_multichoice');
     }
 
-    public function correct_response(question_attempt $qa) {
+    public function correct_response(question_attempt $qa)
+    {
         $question = $qa->get_question();
 
         // Put all correct answers (100% grade) into $right.
         $right = array();
         foreach ($question->answers as $ansid => $ans) {
-            if (question_state::graded_state_for_fraction($ans->fraction) ==
-                    question_state::$gradedright) {
-                $right[] = $question->make_html_inline($question->format_text($ans->answer, $ans->answerformat,
-                        $qa, 'question', 'answer', $ansid));
+            if (
+                question_state::graded_state_for_fraction($ans->fraction) ==
+                question_state::$gradedright
+            ) {
+                $right[] = $question->make_html_inline($question->format_text(
+                    $ans->answer,
+                    $ans->answerformat,
+                    $qa,
+                    'question',
+                    'answer',
+                    $ansid
+                ));
             }
         }
         return $this->correct_choices($right);
     }
 
-    public function after_choices(question_attempt $qa, question_display_options $options) {
+    public function after_choices(question_attempt $qa, question_display_options $options)
+    {
         // Only load the clear choice feature if it's not read only.
         if ($options->readonly) {
             return '';
@@ -335,16 +405,22 @@ class qtype_multichoice_single_renderer extends qtype_multichoice_renderer_base 
         }
         // Adds an hidden radio that will be checked to give the impression the choice has been cleared.
         $clearchoiceradio = html_writer::empty_tag('input', $clearchoiceradioattrs);
-        $clearchoice = html_writer::link('#', get_string('clearchoice', 'qtype_multichoice'),
-            ['tabindex' => $linktabindex, 'role' => 'button', 'class' => 'btn btn-link ms-3 mt-n1']);
+        $clearchoice = html_writer::link(
+            '#',
+            get_string('clearchoice', 'qtype_multichoice'),
+            ['tabindex' => $linktabindex, 'role' => 'button', 'class' => 'btn btn-link ms-3 mt-n1']
+        );
         $clearchoiceradio .= html_writer::label($clearchoice, $clearchoiceid);
 
         // Now wrap the radio and label inside a div.
         $result = html_writer::tag('div', $clearchoiceradio, $clearchoicewrapperattrs);
 
         // Load required clearchoice AMD module.
-        $this->page->requires->js_call_amd('qtype_multichoice/clearchoice', 'init',
-            [$qa->get_outer_question_div_unique_id(), $clearchoicefieldname]);
+        $this->page->requires->js_call_amd(
+            'qtype_multichoice/clearchoice',
+            'init',
+            [$qa->get_outer_question_div_unique_id(), $clearchoicefieldname]
+        );
 
         return $result;
     }
@@ -358,28 +434,35 @@ class qtype_multichoice_single_renderer extends qtype_multichoice_renderer_base 
  * @copyright  2009 The Open University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class qtype_multichoice_multi_renderer extends qtype_multichoice_renderer_base {
-    protected function after_choices(question_attempt $qa, question_display_options $options) {
+class qtype_multichoice_multi_renderer extends qtype_multichoice_renderer_base
+{
+    protected function after_choices(question_attempt $qa, question_display_options $options)
+    {
         return '';
     }
 
-    protected function get_input_type() {
+    protected function get_input_type()
+    {
         return 'checkbox';
     }
 
-    protected function get_input_name(question_attempt $qa, $value) {
+    protected function get_input_name(question_attempt $qa, $value)
+    {
         return $qa->get_qt_field_name('choice' . $value);
     }
 
-    protected function get_input_value($value) {
+    protected function get_input_value($value)
+    {
         return 1;
     }
 
-    protected function get_input_id(question_attempt $qa, $value) {
+    protected function get_input_id(question_attempt $qa, $value)
+    {
         return $this->get_input_name($qa, $value);
     }
 
-    protected function is_right(question_answer $ans) {
+    protected function is_right(question_answer $ans)
+    {
         if ($ans->fraction > 0) {
             return 1;
         } else {
@@ -387,26 +470,37 @@ class qtype_multichoice_multi_renderer extends qtype_multichoice_renderer_base {
         }
     }
 
-    protected function prompt() {
+    protected function prompt()
+    {
         return get_string('selectmulti', 'qtype_multichoice');
     }
 
-    public function correct_response(question_attempt $qa) {
+    public function correct_response(question_attempt $qa)
+    {
         $question = $qa->get_question();
 
         $right = array();
         foreach ($question->answers as $ansid => $ans) {
             if ($ans->fraction > 0) {
-                $right[] = $question->make_html_inline($question->format_text($ans->answer, $ans->answerformat,
-                        $qa, 'question', 'answer', $ansid));
+                $right[] = $question->make_html_inline($question->format_text(
+                    $ans->answer,
+                    $ans->answerformat,
+                    $qa,
+                    'question',
+                    'answer',
+                    $ansid
+                ));
             }
         }
         return $this->correct_choices($right);
     }
 
-    protected function num_parts_correct(question_attempt $qa) {
-        if ($qa->get_question()->get_num_selected_choices($qa->get_last_qt_data()) >
-                $qa->get_question()->get_num_correct_choices()) {
+    protected function num_parts_correct(question_attempt $qa)
+    {
+        if (
+            $qa->get_question()->get_num_selected_choices($qa->get_last_qt_data()) >
+            $qa->get_question()->get_num_correct_choices()
+        ) {
             return get_string('toomanyselected', 'qtype_multichoice');
         }
 

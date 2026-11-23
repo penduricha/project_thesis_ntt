@@ -1,5 +1,9 @@
 /* modules.less */
 
+// Thay thế: public/theme/boost/scss/moodle/modules.scss
+// Thay đổi so với bản gốc: chỉ THÊM 2 khối [FIX] ngay sau khối ".path-mod-quiz #mod_quiz_navblock"
+// (căn giữa số Quiz navigation và chữ trong dòng đáp án). Phần còn lại giữ nguyên.
+
 // The home for small tweaks to modules that don't require
 // changes drastic enough to pull in the full module css
 // and replace it completely
@@ -1486,6 +1490,61 @@ img.userpicture {
     .qnbutton.answersaved .trafficlight,
     .qnbutton.requiresgrading .trafficlight {
         background-color: var(--#{$prefix}gray-300);
+    }
+}
+
+// [FIX 1] Quiz navigation ở trang làm bài: số câu nằm chính giữa ô 30x40.
+// Nguyên nhân số bị dính trên: .qnbutton có line-height 20px nên số nằm ở nửa trên,
+// nửa dưới là .trafficlight (margin-top 20px). Nếu chỉ căn giữa số mà không xử lý
+// .trafficlight thì lớp này (absolute, có nền) sẽ che mất nửa dưới chữ số, vì vậy ở trang
+// làm bài ta bỏ nền .trafficlight (màu nền đã có sẵn ở chính .qnbutton).
+// Trang xem lại (review) KHÔNG bị đổi: số vẫn ở nửa trên, dải đúng/sai ở nửa dưới.
+// Selector có 2 ID để thắng các rule gốc như ".path-mod-quiz #mod_quiz_navblock .qnbutton.complete .trafficlight".
+#page-mod-quiz-attempt #mod_quiz_navblock .qnbutton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    text-align: center;
+
+    .trafficlight {
+        background-color: transparent;
+    }
+}
+
+// [FIX 2] Dòng đáp án trắc nghiệm: chữ, số thứ tự (a. b. c.) và radio cùng nằm giữa dòng.
+// Không phụ thuộc margin/padding sẵn có: đặt padding dọc đối xứng và bỏ margin dọc của mọi
+// phần tử trong nội dung đáp án (format_text() hay sinh <p> có margin-bottom).
+// Chiều cao dòng giữ ~48px như hiện tại (0.75rem + 24px chữ + 0.75rem).
+.que .answer div.r0,
+.que .answer div.r1 {
+    display: flex;
+    align-items: center;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+
+    [data-region="answer-label"] {
+        align-items: center;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .answernumber {
+        line-height: 1.5;
+    }
+
+    .flex-fill {
+        margin-top: 0;
+        margin-bottom: 0;
+        line-height: 1.5;
+
+        :where(p, div, ul, ol, span, h1, h2, h3, h4, h5, h6) {
+            margin-top: 0;
+            margin-bottom: 0;
+        }
     }
 }
 

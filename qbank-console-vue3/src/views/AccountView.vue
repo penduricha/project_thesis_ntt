@@ -7,7 +7,7 @@ import Ico from '../components/Ico.vue'
 import InfoVal from '../components/InfoVal.vue'
 
 const router = useRouter(), c = ME.course
-const adm = computed(() => S.role == 'admin'), ld = computed(() => !S.meReady), who = computed(() => (adm.value ? 'quản trị viên' : 'giảng viên'))
+const adm = computed(() => S.role === 'admin'), ld = computed(() => !S.meReady), who = computed(() => (adm.value ? 'quản trị viên' : 'giảng viên'))
 const dob = ME.dob.split('-').reverse().join('/')
 const shown = computed(() => (S.idShow ? ME.idCard : ME.idCard.slice(0, 6) + '•'.repeat(Math.max(0, ME.idCard.length - 8)) + ME.idCard.slice(-2)))
 let idT
