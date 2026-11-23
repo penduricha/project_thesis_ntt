@@ -33,19 +33,29 @@ function run(relax = false) {
 async function runReal(s, relax) {
   const intent = lastIntent
   try {
-    const params = { q: intent.keyword || s, page: 0, size: 100 }
+    // includeOptions=true: một lượt gọi là đủ 4 phương án, không cần GET /questions/{id} từng câu.
+    const params = { q: intent.keyword || s, page: 0, size: 100, includeOptions: true }
     if (intent.course !== undefined) {
       const course = COURSES[intent.course]
       if (course?.subjectId != null) params.subjectId = course.subjectId
     }
     const page = await qbankApi.listQuestions(params)
     const items = page?.content || []
-    const details = await Promise.all(items.map((it) => qbankApi.getQuestion(it.questionId).catch(() => null)))
-    let rows = details.filter(Boolean).map((d) => {
-      const ci = COURSES.findIndex((c) => c.subjectId === d.subjectId)
+    let rows = items.map((it) => {
+      const detail = {
+        questionId: it.questionId, subjectId: it.subjectId, topicId: it.topicId,
+        title: it.title, stem: it.stem ?? it.stemPreview ?? '',
+        optionA: it.options?.[0] ?? '', optionB: it.options?.[1] ?? '',
+        optionC: it.options?.[2] ?? '', optionD: it.options?.[3] ?? '',
+        correctLabel: it.correctLabel ?? 'A', contentFormat: it.contentFormat ?? 'plain',
+        generalFeedback: it.generalFeedback ?? '', difficulty: it.difficulty,
+        status: it.status, validationStatus: it.validationStatus, source: it.source,
+        updatedAt: it.updatedAt, updatedBy: null, version: it.version, revisionNo: null,
+      }
+      const ci = COURSES.findIndex((c) => c.subjectId === detail.subjectId)
       const course = COURSES[ci]
-      const tp = course ? Math.max(0, course.topicIds.indexOf(d.topicId)) : 0
-      return detailToQuestion(d, ci >= 0 ? ci : 0, tp)
+      const tp = course ? Math.max(0, course.topicIds.indexOf(detail.topicId)) : 0
+      return detailToQuestion(detail, ci >= 0 ? ci : 0, tp)
     })
     if (intent.level !== undefined) rows = rows.filter((q) => q.l == intent.level)
     res.value = { ...res.value, rows, real: true, total: page?.totalElements ?? rows.length }

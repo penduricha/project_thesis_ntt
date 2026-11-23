@@ -106,6 +106,19 @@ public class QuestionService {
                                                String keyword,
                                                int page,
                                                int size) {
+        return list(subjectId, topicId, status, validationStatus, keyword, page, size, false);
+    }
+
+    /** @param includeOptions true = kèm 4 phương án + đáp án đúng (màn danh sách đầy đủ). */
+    @Transactional(readOnly = true)
+    public PageResponse<QuestionListItem> list(Long subjectId,
+                                               Long topicId,
+                                               String status,
+                                               String validationStatus,
+                                               String keyword,
+                                               int page,
+                                               int size,
+                                               boolean includeOptions) {
         QuestionStatusD statusFilter = parseQuestionStatus(status);
         ValidationStatusD validationFilter = parseValidationStatus(validationStatus);
 
@@ -121,7 +134,7 @@ public class QuestionService {
         Map<Long, Topic> topicMap = loadTopics(result.getContent());
 
         return PageResponse.of(result, q -> toListItem(q, subjectMap.get(q.getSubjectId()),
-                q.getTopicId() == null ? null : topicMap.get(q.getTopicId())));
+                q.getTopicId() == null ? null : topicMap.get(q.getTopicId()), includeOptions));
     }
 
     @Transactional(readOnly = true)
@@ -392,6 +405,11 @@ public class QuestionService {
     }
 
     private static QuestionListItem toListItem(Question q, Subject subject, Topic topic) {
+        return toListItem(q, subject, topic, false);
+    }
+
+    private static QuestionListItem toListItem(Question q, Subject subject, Topic topic,
+                                               boolean includeOptions) {
         return new QuestionListItem(
                 q.getQuestionId(),
                 q.getSubjectId(),
@@ -405,7 +423,12 @@ public class QuestionService {
                 q.getDifficulty(),
                 q.getSource() == null ? null : q.getSource().dbValue(),
                 q.getUpdatedAt(),
-                q.getVersion());
+                q.getVersion(),
+                includeOptions ? q.getStem() : null,
+                includeOptions ? List.of(q.getOptionA(), q.getOptionB(), q.getOptionC(), q.getOptionD()) : null,
+                includeOptions && q.getCorrectLabel() != null ? q.getCorrectLabel().dbValue() : null,
+                includeOptions ? q.getGeneralFeedback() : null,
+                includeOptions && q.getContentFormat() != null ? q.getContentFormat().dbValue() : null);
     }
 
     private static QuestionDetail toDetail(Question q, Subject subject, Topic topic, int revNo, long pending) {

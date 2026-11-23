@@ -58,8 +58,12 @@ public class QuestionBankController {
             @RequestParam(name = "validationStatus", required = false) String validationStatus,
             @RequestParam(name = "q", required = false) String keyword,
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "20") int size) {
-        return questionService.list(subjectId, topicId, status, validationStatus, keyword, page, size);
+            @RequestParam(name = "size", defaultValue = "20") int size,
+            // includeOptions=true: trả kèm 4 phương án + đáp án đúng để màn danh sách
+            // không phải gọi GET /questions/{id} cho từng câu (tránh N+1).
+            @RequestParam(name = "includeOptions", defaultValue = "false") boolean includeOptions) {
+        return questionService.list(subjectId, topicId, status, validationStatus, keyword,
+                page, size, includeOptions);
     }
 
     @GetMapping("/{questionId}")

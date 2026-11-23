@@ -147,21 +147,46 @@ export async function loadQuestions() {
   if (useRealApi()) {
     try {
       const catalogOk = await loadCatalog()
-      // Danh sách phân trang: gom các trang (size=100) rồi lấy chi tiết từng câu để đủ 4 phương án.
+      /* Một lượt gọi thay cho N+1: includeOptions=true khiến mỗi dòng đã có sẵn 4 phương án
+         và đáp án đúng, nên KHÔNG cần gọi GET /questions/{id} cho từng câu nữa.
+         Trước đây 500 câu sinh ra ~505 request (5 trang + 500 chi tiết) => màn hình treo
+         cả chục giây. Nay còn đúng 5 request. */
       const items = []
       let page = 0
       for (;;) {
-        const res = await qbankApi.listQuestions({ status: 'active', page, size: 100 })
+        const res = await qbankApi.listQuestions({ status: 'active', page, size: 100, includeOptions: true })
         items.push(...(res.content || []))
         if (page + 1 >= (res.totalPages || 1)) break
         page++
       }
-      const details = await Promise.all(items.map((it) => qbankApi.getQuestion(it.questionId).catch(() => null)))
-      const mapped = details.filter(Boolean).map((d) => {
-        const ci = COURSES.findIndex((c) => c.subjectId === d.subjectId)
+      const mapped = items.map((it) => {
+        // Dựng QuestionDetail tối thiểu từ QuestionListItem đã kèm phương án.
+        const detail = {
+          questionId: it.questionId,
+          subjectId: it.subjectId,
+          topicId: it.topicId,
+          title: it.title,
+          stem: it.stem ?? it.stemPreview ?? '',
+          optionA: it.options?.[0] ?? '',
+          optionB: it.options?.[1] ?? '',
+          optionC: it.options?.[2] ?? '',
+          optionD: it.options?.[3] ?? '',
+          correctLabel: it.correctLabel ?? 'A',
+          contentFormat: it.contentFormat ?? 'plain',
+          generalFeedback: it.generalFeedback ?? '',
+          difficulty: it.difficulty,
+          status: it.status,
+          validationStatus: it.validationStatus,
+          source: it.source,
+          updatedAt: it.updatedAt,
+          updatedBy: null,
+          version: it.version,
+          revisionNo: null,
+        }
+        const ci = COURSES.findIndex((c) => c.subjectId === detail.subjectId)
         const course = COURSES[ci]
-        const tp = course ? Math.max(0, course.topicIds.indexOf(d.topicId)) : 0
-        return detailToQuestion(d, ci >= 0 ? ci : 0, tp)
+        const tp = course ? Math.max(0, course.topicIds.indexOf(detail.topicId)) : 0
+        return detailToQuestion(detail, ci >= 0 ? ci : 0, tp)
       })
       S.q = mapped
       S.dataMode = 'real'
