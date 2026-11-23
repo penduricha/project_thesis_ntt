@@ -1,9 +1,24 @@
 <script setup>
-// Form đăng nhập ghép từ fe_web_admin/pages/login-page/LoginPage.vue,
-// viết lại bằng <script setup> + CSS của QBank Console (không dùng Bootstrap/Vuetify/SCSS của fe).
-// Logic giữ nguyên: validate từng ô, TOTP tùy chọn (server quyết định bắt buộc hay không),
-// khóa form khi LOCKED (đếm ngược + lưu localStorage), timeout 20s, remember-me chỉ lưu adminId.
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+// =============================================================================
+// TRANG ĐĂNG NHẬP — giao diện mới (UI/UX pass), LOGIC GIỮ NGUYÊN 100% fe_web_admin.
+//
+// Luồng nghiệp vụ không đổi:
+//   login(adminId, password, totp|null) -> AdminRepository -> AdminService
+//     POST /api/web/admin/auth/login        (bước 1: mã + mật khẩu)
+//     POST /api/web/admin/auth/login/totp   (bước 2: kèm mã 6 số khi TOTP_REQUIRED)
+//   Kết quả: OK | TOTP_REQUIRED | TOTP_INVALID | LOCKED(retryAfterSeconds) | FAILED
+//   Giữ nguyên: validate từng ô, timeout 20s, khóa form khi LOCKED + đếm ngược lưu localStorage,
+//   remember-me chỉ lưu adminId, focus/aria cho trình đọc màn hình.
+//
+// Vòng đời Vue 3 được dùng đúng chỗ:
+//   onMounted              : khôi phục "ghi nhớ đăng nhập" + khôi phục khóa còn hiệu lực,
+//                            gắn listener visibilitychange, focus ô đầu tiên (chỉ desktop).
+//   onBeforeUnmount        : gỡ listener + dừng interval đếm ngược (không rò rỉ timer khi rời route).
+//   watch(isLocked)        : mở khóa -> tự focus lại ô mã xác thực.
+//   nextTick / rAF         : chờ DOM cập nhật rồi mới focus/select (tránh focus vào node cũ).
+//   computed               : trạng thái suy ra từ ref, không giữ state trùng lặp.
+// =============================================================================
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { login } from '../auth/authStore.js'
 import { REQUEST_STATUS } from '../auth/AdminRepository.js'
@@ -23,13 +38,14 @@ const MESSAGE = {
 const LOGIN_TIMEOUT_MS = 20000
 const LOCK_DEFAULT_SECONDS = 5 * 60
 const LOCK_STORAGE_KEY = 'login.totpLock'
+const OTP_LENGTH = 6
 
 const router = useRouter()
 const adminId = ref('')
 const password = ref('')
-const totp = ref('')
 const rememberMe = ref(false)
 const showPassword = ref(false)
+const capsLockOn = ref(false)
 const isSubmitting = ref(false)
 const isInitializing = ref(true)
 const errors = ref({ adminId: '', password: '', totp: '' })
@@ -38,23 +54,44 @@ const loginFailed = ref(false)
 const lockUntil = ref(0)
 const lockRemainingSeconds = ref(0)
 let lockTimer = null
+// Cờ sống/chết của component: request đăng nhập có thể trả về SAU khi người dùng rời route
+// (timeout 20s). Không được gán state cho component đã unmount (Vue sẽ cảnh báo + rò rỉ).
+let alive = true
 
+// --- Mã xác thực: 6 ô nhưng chỉ một nguồn dữ liệu (mảng ký tự) -> không bao giờ lệch `totp` ---
+const otpChars = ref(Array(OTP_LENGTH).fill(''))
+const otpValue = computed(() => otpChars.value.join(''))
+const lockStartedAt = ref(0)
 const isLocked = computed(() => lockRemainingSeconds.value > 0)
 const isFormDisabled = computed(() => isInitializing.value || isSubmitting.value || isLocked.value)
 const lockCountdownLabel = computed(() => {
   const t = Math.max(0, lockRemainingSeconds.value)
   return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
 })
+// Vòng tiến trình cho đồng hồ đếm ngược (0 -> 100%)
+const lockProgress = computed(() => {
+  if (!isLocked.value || !lockUntil.value) return 0
+  const total = Math.max(1, Math.round((lockUntil.value - lockStartedAt.value) / 1000))
+  return Math.min(100, Math.max(0, (lockRemainingSeconds.value / total) * 100))
+})
 const isCredentialError = computed(() => loginFailed.value && !!validateLogin.value)
 const invalidAdminId = computed(() => !!errors.value.adminId || isCredentialError.value)
 const invalidPassword = computed(() => !!errors.value.password || isCredentialError.value)
+const otpFilled = computed(() => otpChars.value.filter(Boolean).length)
 
 const boxAdminId = ref(null), boxPassword = ref(null), boxTotp = ref(null)
-const inputAdminId = ref(null), inputPassword = ref(null), inputTotp = ref(null)
+const inputAdminId = ref(null), inputPassword = ref(null)
+const otpRefs = ref([])
+function setOtpRef(el, i) { if (el) otpRefs.value[i] = el }
 
+/* ------------------------------ Tiện ích UI ------------------------------ */
 async function focusField(field) {
   await new Promise((r) => requestAnimationFrame(r))
-  ;({ adminId: inputAdminId.value, password: inputPassword.value, totp: inputTotp.value })[field]?.focus()
+  if (field === 'totp') {
+    const i = otpChars.value.findIndex((c) => !c)
+    return otpRefs.value[i === -1 ? OTP_LENGTH - 1 : i]?.focus()
+  }
+  ;({ adminId: inputAdminId.value, password: inputPassword.value })[field]?.focus()
 }
 function shake(el) {
   if (!el || typeof el.animate !== 'function') return
@@ -73,23 +110,79 @@ function setInputAdminId(e) {
   adminId.value = e.target.value.replace(/[^0-9]/g, '')
   clearFieldError('adminId')
 }
-function setInputTotp(e) {
-  totp.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6)
-  errors.value.totp = ''
-  validateLogin.value = ''
-}
 function togglePassword() {
   showPassword.value = !showPassword.value
   focusField('password')
 }
+function onPasswordKey(e) {
+  if (typeof e.getModifierState !== 'function') return
+  capsLockOn.value = e.getModifierState('CapsLock')
+}
+
+/* --------------------------- Mã xác thực 6 ô --------------------------- */
+function setOtp(value) {
+  const s = String(value ?? '').replace(/\D/g, '').slice(0, OTP_LENGTH)
+  otpChars.value = Array.from({ length: OTP_LENGTH }, (_, i) => s[i] || '')
+  errors.value.totp = ''
+  validateLogin.value = ''
+}
+function commitOtp(chars) {
+  otpChars.value = Array.from({ length: OTP_LENGTH }, (_, i) => (chars[i] || '').slice(-1))
+  errors.value.totp = ''
+  validateLogin.value = ''
+}
+function onOtpInput(i, e) {
+  const raw = String(e.target.value || '').replace(/\D/g, '')
+  if (!raw) { const next = [...otpChars.value]; next[i] = ''; commitOtp(next); return }
+  // Dán / autofill dồn nhiều số vào 1 ô -> rải tiếp sang các ô sau
+  if (raw.length > 1) {
+    const next = [...otpChars.value]
+    for (let k = 0; k < raw.length && i + k < OTP_LENGTH; k++) next[i + k] = raw[k]
+    commitOtp(next)
+    return focusField('totp')
+  }
+  const next = [...otpChars.value]
+  next[i] = raw
+  commitOtp(next)
+  if (i < OTP_LENGTH - 1) otpRefs.value[i + 1]?.focus()
+  else e.target.blur()
+}
+function onOtpKey(i, e) {
+  if (e.key === 'Backspace') {
+    if (otpChars.value[i]) return // để input tự xóa rồi @input xử lý
+    e.preventDefault()
+    if (i === 0) return
+    const next = [...otpChars.value]
+    next[i - 1] = ''
+    commitOtp(next)
+    return otpRefs.value[i - 1]?.focus()
+  }
+  if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); otpRefs.value[i - 1]?.focus() }
+  if (e.key === 'ArrowRight' && i < OTP_LENGTH - 1) { e.preventDefault(); otpRefs.value[i + 1]?.focus() }
+  if (e.key === 'Delete') { e.preventDefault(); const next = [...otpChars.value]; next[i] = ''; commitOtp(next) }
+}
+function onOtpPaste(e) {
+  const text = (e.clipboardData || window.clipboardData)?.getData('text') || ''
+  const digits = text.replace(/\D/g, '')
+  if (!digits) return
+  e.preventDefault()
+  const start = Math.max(0, otpRefs.value.indexOf(document.activeElement))
+  const next = [...otpChars.value]
+  for (let k = 0; k < digits.length && start + k < OTP_LENGTH; k++) next[start + k] = digits[k]
+  commitOtp(next)
+  focusField('totp')
+}
+function onOtpFocus(e) { e.target.select?.() }
+
+/* ------------------------------- Validate ------------------------------- */
 function validateForm() {
   const id = String(adminId.value ?? '').trim()
   errors.value.adminId = id ? '' : MESSAGE.ADMIN_ID_REQUIRED
   errors.value.password = password.value ? '' : MESSAGE.PASSWORD_REQUIRED
   if (errors.value.adminId) { shake(boxAdminId.value); focusField('adminId'); return false }
   if (errors.value.password) { shake(boxPassword.value); focusField('password'); return false }
-  const code = String(totp.value ?? '').trim()
-  if (code !== '' && !/^\d{6}$/.test(code)) {
+  const code = otpValue.value.trim()
+  if (code !== '' && !new RegExp(`^\\d{${OTP_LENGTH}}$`).test(code)) {
     errors.value.totp = MESSAGE.TOTP_FORMAT
     shake(boxTotp.value); focusField('totp'); return false
   }
@@ -107,7 +200,8 @@ function withTimeout(promise, ms) {
   const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Login request timeout')), ms) })
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
-// --- Khóa form khi LOCKED (giữ nguyên fe_web_admin) ---
+
+/* ---------------------- Khóa form khi LOCKED (nguyên bản) ---------------------- */
 function persistLock() {
   try { localStorage.setItem(LOCK_STORAGE_KEY, JSON.stringify({ adminId: adminId.value ? String(adminId.value) : null, until: lockUntil.value })) } catch { /* bỏ qua */ }
 }
@@ -123,26 +217,30 @@ function onLockTick() {
 function runLockTimer() { stopLockTimer(); lockTimer = setInterval(onLockTick, 1000) }
 function startLock(seconds) {
   const total = Math.max(1, Math.ceil(Number(seconds) || LOCK_DEFAULT_SECONDS))
-  lockUntil.value = Date.now() + total * 1000
+  const now = Date.now()
+  lockUntil.value = now + total * 1000
+  lockStartedAt.value = now
   lockRemainingSeconds.value = total
   persistLock(); runLockTimer()
 }
 function releaseLock() {
   stopLockTimer()
-  lockUntil.value = 0; lockRemainingSeconds.value = 0
+  lockUntil.value = 0; lockRemainingSeconds.value = 0; lockStartedAt.value = 0
   clearPersistedLock()
-  validateLogin.value = ''; errors.value.totp = ''; totp.value = ''
-  focusField('totp')
+  validateLogin.value = ''; errors.value.totp = ''
+  setOtp('')
 }
 function restoreLock() {
   try {
     const raw = localStorage.getItem(LOCK_STORAGE_KEY)
     if (!raw) return
     const saved = JSON.parse(raw)
-    const remaining = Math.ceil((Number(saved?.until) || 0) - Date.now()) / 1000
+    const until = Number(saved?.until) || 0
+    const remaining = Math.ceil((until - Date.now()) / 1000)
     if (remaining > 0) {
-      if (!adminId.value && saved.adminId) adminId.value = saved.adminId
-      lockUntil.value = Number(saved.until)
+      if (!adminId.value && saved.adminId) adminId.value = String(saved.adminId)
+      lockUntil.value = until
+      lockStartedAt.value = until - LOCK_DEFAULT_SECONDS * 1000
       lockRemainingSeconds.value = Math.ceil(remaining)
       runLockTimer()
     } else clearPersistedLock()
@@ -152,6 +250,7 @@ function onLockVisibilityChange() {
   if (document.visibilityState === 'visible' && lockUntil.value > 0) onLockTick()
 }
 
+/* ------------------------------ Gửi đăng nhập ------------------------------ */
 async function handleLoginEvent() {
   if (isFormDisabled.value) return
   errors.value = { adminId: '', password: '', totp: '' }
@@ -163,9 +262,10 @@ async function handleLoginEvent() {
   let fieldToFocus = null
   try {
     const result = await withTimeout(
-      login(adminId.value, password.value, String(totp.value ?? '').trim() || null),
+      login(adminId.value, password.value, otpValue.value.trim() || null),
       LOGIN_TIMEOUT_MS,
     )
+    if (!alive) return
     switch (result.getStatus()) {
       case REQUEST_STATUS.OK:
         if (rememberMe.value) new AdminStorage().saveLocalStorageRememberMe(adminId.value)
@@ -178,11 +278,11 @@ async function handleLoginEvent() {
         break
       case REQUEST_STATUS.TOTP_INVALID:
         errors.value.totp = MESSAGE.TOTP_INVALID
-        totp.value = ''
+        setOtp('')
         shake(boxTotp.value); fieldToFocus = 'totp'
         break
       case REQUEST_STATUS.LOCKED:
-        totp.value = ''; errors.value.totp = ''
+        setOtp(''); errors.value.totp = ''
         validateLogin.value = ''
         startLock(result.getRetryAfterSeconds())
         break
@@ -193,13 +293,17 @@ async function handleLoginEvent() {
         validateLogin.value = MESSAGE.SERVER_ERROR
     }
   } catch (e) {
+    if (!alive) return
     console.error('Login error:', e)
     validateLogin.value = MESSAGE.SERVER_ERROR
   } finally {
-    isSubmitting.value = false
+    if (alive) isSubmitting.value = false
   }
-  if (fieldToFocus) focusField(fieldToFocus)
+  if (alive && fieldToFocus) focusField(fieldToFocus)
 }
+
+/* ------------------------------- Lifecycle ------------------------------- */
+watch(isLocked, (locked) => { if (!locked) nextTick(() => focusField('totp')) })
 
 onMounted(() => {
   document.title = 'Đăng nhập · QBank Console'
@@ -212,93 +316,487 @@ onMounted(() => {
   if (isDesktopLike && !isLocked.value) focusField(adminId.value ? 'password' : 'adminId')
 })
 onBeforeUnmount(() => {
+  alive = false
   document.removeEventListener('visibilitychange', onLockVisibilityChange)
   stopLockTimer()
 })
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-top">
-      <span class="logo-badge">QB</span>
-      <span class="logo-text"><strong>QBank Console</strong><span>NTTU · Kiểm định LLM</span></span>
-    </div>
-
-    <form class="card login-card" novalidate :aria-busy="isSubmitting" @submit.prevent="handleLoginEvent">
-      <header class="login-heading">
-        <h1>Đăng nhập</h1>
-        <p class="mut">Dành cho quản trị viên hệ thống</p>
-      </header>
-
-      <div v-if="DEMO_MODE" class="login-banner login-banner--demo" role="status">
-        <b>Chế độ demo (VITE_DEMO_MODE=true):</b> đăng nhập bằng bất kỳ mã/mật khẩu nào, dùng dữ liệu mẫu. Production phải tắt.
+  <div class="login">
+    <!-- Cột thương hiệu: chỉ hiện từ 960px, thuần trang trí (aria-hidden) -->
+    <aside class="login__brand" aria-hidden="true">
+      <div class="brand__glow"></div>
+      <div class="brand__top">
+        <span class="brand__mark">QB</span>
+        <span class="brand__wordmark">
+          <strong>QBank Console</strong>
+          <small>Trường Đại học Nguyễn Tất Thành</small>
+        </span>
       </div>
 
-      <div v-if="validateLogin" class="login-banner login-banner--error" role="alert">
-        <span aria-hidden="true">!</span><p>{{ validateLogin }}</p>
-      </div>
-      <div v-if="isLocked" class="login-banner login-banner--locked" role="alert">
-        <span aria-hidden="true">!</span><p>{{ MESSAGE.LOCKED }}</p><strong>{{ lockCountdownLabel }}</strong>
+      <div class="brand__body">
+        <p class="brand__eyebrow">Hệ thống quản trị</p>
+        <h2 class="brand__title">Ngân hàng câu hỏi<br>trắc nghiệm tích hợp AI</h2>
+        <p class="brand__lead">Kiểm định chất lượng câu hỏi bằng mô hình ngôn ngữ lớn — con người quyết định, mọi thay đổi đều lưu vết.</p>
+        <ul class="brand__list">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V7z"/><path d="M9 12l2 2 4-4"/></svg>
+            <span>Đăng nhập bảo vệ 2 lớp (TOTP)</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v12H4z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+            <span>Kiểm định AI và duyệt đề xuất có kiểm soát</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><circle cx="12" cy="12" r="9"/></svg>
+            <span>Phiên bản lịch sử đầy đủ, khôi phục được</span>
+          </li>
+        </ul>
       </div>
 
-      <fieldset class="login-fieldset" :disabled="isFormDisabled">
-        <div class="login-fields">
-          <div class="field-group">
-            <div ref="boxAdminId" :class="{ 'has-error': invalidAdminId }">
-              <label for="login-admin-id">Mã quản trị viên</label>
-              <input id="login-admin-id" ref="inputAdminId" type="text" inputmode="numeric" autocomplete="username"
-                     maxlength="10" placeholder="Mã quản trị viên" :value="adminId"
-                     :class="{ invalid: invalidAdminId }" :aria-invalid="invalidAdminId"
-                     :aria-describedby="errors.adminId ? 'errorAdminId' : null" @input="setInputAdminId">
-            </div>
-            <p v-if="errors.adminId" id="errorAdminId" class="fe" role="alert">{{ errors.adminId }}</p>
+      <p class="brand__foot">©{{ new Date().getFullYear() }} Nguyen Tat Thanh University</p>
+    </aside>
+
+    <!-- Cột form -->
+    <main class="login__panel">
+      <div class="panel__inner">
+        <div class="mobile-brand">
+          <span class="brand__mark brand__mark--sm">QB</span>
+          <span class="brand__wordmark">
+            <strong>QBank Console</strong>
+            <small>NTTU · Kiểm định LLM</small>
+          </span>
+        </div>
+
+        <form class="lform" novalidate :aria-busy="isSubmitting" @submit.prevent="handleLoginEvent">
+          <header class="lform__head">
+            <p class="lform__eyebrow">Chào mừng trở lại</p>
+            <h1 class="lform__title">Đăng nhập</h1>
+            <p class="lform__sub">Dành cho quản trị viên hệ thống</p>
+          </header>
+
+          <div v-if="DEMO_MODE" class="note note--info" role="status">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+            <p><b>Chế độ demo.</b> Đăng nhập bằng bất kỳ mã/mật khẩu nào, dùng dữ liệu mẫu. Tắt <code>VITE_DEMO_MODE</code> khi chạy thật.</p>
           </div>
 
-          <div class="field-group">
-            <div ref="boxPassword" :class="{ 'has-error': invalidPassword }">
-              <label for="login-password">Mật khẩu</label>
-              <div class="login-pw">
-                <input id="login-password" ref="inputPassword" :type="showPassword ? 'text' : 'password'"
-                       autocomplete="current-password" placeholder="Mật khẩu" v-model="password"
-                       :class="{ invalid: invalidPassword }" :aria-invalid="invalidPassword"
-                       :aria-describedby="errors.password ? 'errorPassword' : null" @input="clearFieldError('password')">
-                <button type="button" class="btn sm" :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
-                        :aria-pressed="showPassword" @click="togglePassword">{{ showPassword ? 'Ẩn' : 'Hiện' }}</button>
+          <Transition name="alert">
+            <div v-if="validateLogin && !isLocked" class="note note--error" role="alert">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+              <p>{{ validateLogin }}</p>
+            </div>
+          </Transition>
+
+          <div v-if="isLocked" class="note note--locked" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <div class="note__body">
+              <p>{{ MESSAGE.LOCKED }}</p>
+              <div class="locked-timer">
+                <span class="locked-timer__value">{{ lockCountdownLabel }}</span>
+                <span class="locked-timer__track"><i :style="{ width: lockProgress + '%' }"></i></span>
               </div>
             </div>
-            <p v-if="errors.password" id="errorPassword" class="fe" role="alert">{{ errors.password }}</p>
           </div>
 
-          <div class="field-group">
-            <div ref="boxTotp" :class="{ 'has-error': !!errors.totp }">
-              <label for="login-totp">Mã xác thực 6 số</label>
-              <input id="login-totp" ref="inputTotp" type="text" inputmode="numeric" autocomplete="one-time-code"
-                     maxlength="6" placeholder="Mã xác thực 6 số" :value="totp"
-                     :class="{ invalid: !!errors.totp }" :aria-invalid="!!errors.totp"
-                     :aria-describedby="errors.totp ? 'errorTotp' : 'hintTotp'" @input="setInputTotp">
+          <fieldset class="lform__fields" :disabled="isFormDisabled">
+            <!-- Mã quản trị viên -->
+            <div class="field" :class="{ 'is-error': invalidAdminId }">
+              <label for="login-admin-id">Mã quản trị viên</label>
+              <div ref="boxAdminId" class="control">
+                <svg class="control__ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input id="login-admin-id" ref="inputAdminId" type="text" inputmode="numeric" autocomplete="username"
+                       maxlength="10" placeholder="Ví dụ: 2500021774" :value="adminId"
+                       :aria-invalid="invalidAdminId" :aria-describedby="errors.adminId ? 'errorAdminId' : null"
+                       @input="setInputAdminId">
+              </div>
+              <p v-if="errors.adminId" id="errorAdminId" class="fe" role="alert">{{ errors.adminId }}</p>
             </div>
-            <p v-if="!errors.totp" id="hintTotp" class="mut login-hint">Để trống nếu tài khoản chưa bật xác thực 2 lớp (2FA).</p>
-            <p v-if="errors.totp" id="errorTotp" class="fe" role="alert">{{ errors.totp }}</p>
-          </div>
 
-          <label class="qall login-remember">
-            <input id="rememberMe" type="checkbox" v-model="rememberMe">
-            <span>Ghi nhớ đăng nhập</span>
-          </label>
+            <!-- Mật khẩu -->
+            <div class="field" :class="{ 'is-error': invalidPassword }">
+              <div class="field__row">
+                <label for="login-password">Mật khẩu</label>
+                <span v-if="capsLockOn && !isFormDisabled" class="caps" role="status">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l7 8h-4v4H9v-4H5z"/><path d="M9 20h6"/></svg>
+                  Caps Lock đang bật
+                </span>
+              </div>
+              <div ref="boxPassword" class="control">
+                <svg class="control__ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                <input id="login-password" ref="inputPassword" :type="showPassword ? 'text' : 'password'"
+                       autocomplete="current-password" placeholder="Nhập mật khẩu" v-model="password"
+                       :aria-invalid="invalidPassword" :aria-describedby="errors.password ? 'errorPassword' : null"
+                       @input="clearFieldError('password')" @keydown="onPasswordKey" @keyup="onPasswordKey">
+                <button type="button" class="control__btn" :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                        :aria-pressed="showPassword" tabindex="0" @click="togglePassword">
+                  <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 6.2A10.9 10.9 0 0 1 12 5c6.4 0 10 7 10 7a18 18 0 0 1-3.2 4.1"/><path d="M6.6 6.7A17.8 17.8 0 0 0 2 12s3.6 7 10 7a10.9 10.9 0 0 0 4.3-.9"/><path d="M9.9 10.1a3 3 0 0 0 4.2 4.2"/></svg>
+                </button>
+              </div>
+              <p v-if="errors.password" id="errorPassword" class="fe" role="alert">{{ errors.password }}</p>
+            </div>
 
-          <button type="submit" class="btn pri w100 login-submit" :disabled="isFormDisabled">
-            <template v-if="isSubmitting"><i class="spin" aria-hidden="true"></i> Đang đăng nhập…</template>
-            <template v-else-if="isLocked">Thử lại sau {{ lockCountdownLabel }}</template>
-            <template v-else>Đăng nhập</template>
-          </button>
-        </div>
-      </fieldset>
+            <!-- Mã xác thực 2 lớp -->
+            <div class="field" :class="{ 'is-error': !!errors.totp }">
+              <div class="field__row">
+                <label id="login-totp-label">Mã xác thực 2 lớp</label>
+                <span class="field__optional" :class="{ 'is-filled': otpFilled === OTP_LENGTH }">{{ otpFilled }}/{{ OTP_LENGTH }}</span>
+              </div>
+              <div ref="boxTotp" class="otp" role="group" aria-labelledby="login-totp-label"
+                   :aria-describedby="errors.totp ? 'errorTotp' : 'hintTotp'">
+                <input v-for="i in OTP_LENGTH" :key="i - 1" :ref="(el) => setOtpRef(el, i - 1)"
+                       class="otp__box" type="text" inputmode="numeric" maxlength="1"
+                       :autocomplete="i === 1 ? 'one-time-code' : 'off'"
+                       :aria-label="`Chữ số thứ ${i} của mã xác thực`"
+                       :value="otpChars[i - 1]"
+                       @input="onOtpInput(i - 1, $event)" @keydown="onOtpKey(i - 1, $event)"
+                       @paste="onOtpPaste" @focus="onOtpFocus">
+              </div>
+              <p v-if="!errors.totp" id="hintTotp" class="hint">Để trống nếu tài khoản chưa bật xác thực 2 lớp (2FA).</p>
+              <p v-if="errors.totp" id="errorTotp" class="fe" role="alert">{{ errors.totp }}</p>
+            </div>
 
-      <span class="visually-hidden" role="status" aria-live="polite">
-        {{ isSubmitting ? 'Đang đăng nhập...' : (isLocked ? 'Biểu mẫu đang tạm khóa do nhập sai quá nhiều lần.' : '') }}
-      </span>
-    </form>
+            <div class="lform__meta">
+              <label class="check">
+                <input id="rememberMe" type="checkbox" v-model="rememberMe">
+                <span class="check__box" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>
+                </span>
+                <span>Ghi nhớ đăng nhập</span>
+              </label>
+            </div>
 
-    <footer class="login-foot">©{{ new Date().getFullYear() }} - Nguyen Tat Thanh University - All Rights Reserved.</footer>
+            <button type="submit" class="lsubmit" :disabled="isFormDisabled">
+              <template v-if="isSubmitting"><i class="spin" aria-hidden="true"></i> Đang đăng nhập…</template>
+              <template v-else-if="isLocked">Thử lại sau {{ lockCountdownLabel }}</template>
+              <template v-else>
+                Đăng nhập
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg>
+              </template>
+            </button>
+          </fieldset>
+
+          <p class="lform__tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 4v5c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V7z"/></svg>
+            Phiên đăng nhập được bảo vệ bằng JWT và tự động làm mới.
+          </p>
+
+          <span class="visually-hidden" role="status" aria-live="polite">
+            {{ isSubmitting ? 'Đang đăng nhập...' : (isLocked ? 'Biểu mẫu đang tạm khóa do nhập sai quá nhiều lần.' : '') }}
+          </span>
+        </form>
+
+        <footer class="panel__foot">
+          <span>©{{ new Date().getFullYear() }} - Nguyen Tat Thanh University</span>
+          <span class="panel__dot" aria-hidden="true">·</span>
+          <span>All Rights Reserved.</span>
+        </footer>
+      </div>
+    </main>
   </div>
 </template>
+
+<style scoped>
+/* =============================================================
+   LOGIN — thiết kế 2 cột: thương hiệu (>=960px) + form.
+   Dùng token của main.css (--primary, --text, --border...) để đồng bộ.
+   ============================================================= */
+.login {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg, #f8faff);
+}
+@media (min-width: 960px) {
+  .login { grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr); }
+}
+
+/* ---------------- Cột thương hiệu ---------------- */
+.login__brand {
+  position: relative;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(2rem, 4vw, 3.5rem);
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(120% 90% at 8% 0%, rgba(0, 132, 214, 0.55), transparent 60%),
+    radial-gradient(90% 70% at 100% 100%, rgba(0, 196, 180, 0.25), transparent 65%),
+    linear-gradient(158deg, #002744 0%, #003a69 45%, #004b87 100%);
+}
+@media (min-width: 960px) { .login__brand { display: flex; } }
+.brand__glow {
+  position: absolute;
+  inset: -30% -20% auto auto;
+  width: 34rem; height: 34rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(94, 210, 255, 0.22), transparent 62%);
+  pointer-events: none;
+}
+.login__brand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(75% 60% at 75% 20%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(75% 60% at 75% 20%, #000 0%, transparent 75%);
+  pointer-events: none;
+}
+.brand__top, .brand__body, .brand__foot { position: relative; z-index: 1; }
+.brand__top { display: flex; align-items: center; gap: 0.8rem; }
+.brand__mark {
+  display: grid; place-items: center;
+  width: 2.75rem; height: 2.75rem;
+  border-radius: 12px;
+  background: #fff; color: var(--primary, #004b87);
+  font-size: 1.0625rem; font-weight: 800; letter-spacing: -0.02em;
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6);
+}
+.brand__mark--sm { width: 2.25rem; height: 2.25rem; border-radius: 10px; font-size: 0.9rem; }
+.brand__wordmark { display: flex; flex-direction: column; line-height: 1.25; }
+.brand__wordmark strong { font-size: 1.0625rem; letter-spacing: -0.01em; }
+.brand__wordmark small { font-size: 0.75rem; color: rgba(255, 255, 255, 0.72); }
+.brand__body { max-width: 30rem; }
+.brand__eyebrow {
+  margin: 0 0 0.9rem;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #7fd7ff;
+}
+.brand__title {
+  margin: 0 0 1rem;
+  font-size: clamp(1.75rem, 1.2rem + 1.4vw, 2.35rem);
+  line-height: 1.22; letter-spacing: -0.02em; color: #fff;
+}
+.brand__lead { margin: 0 0 1.75rem; color: rgba(255, 255, 255, 0.78); font-size: 0.9375rem; line-height: 1.65; }
+.brand__list { display: flex; flex-direction: column; gap: 0.85rem; margin: 0; padding: 0; list-style: none; }
+.brand__list li { display: flex; align-items: center; gap: 0.7rem; font-size: 0.9rem; color: rgba(255, 255, 255, 0.92); }
+.brand__list svg { flex: none; width: 1.15rem; height: 1.15rem; color: #7fd7ff; }
+.brand__foot { margin: 0; font-size: 0.75rem; color: rgba(255, 255, 255, 0.55); }
+
+/* ---------------- Cột form ---------------- */
+.login__panel {
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(1.5rem, 5vw, 3.5rem) clamp(1rem, 4vw, 2.5rem);
+}
+.panel__inner { width: 100%; max-width: 27rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.mobile-brand { display: flex; align-items: center; gap: 0.7rem; color: var(--text, #1b2a41); }
+.mobile-brand .brand__mark { background: var(--primary, #004b87); color: #fff; box-shadow: 0 8px 20px -12px rgba(0, 75, 135, 0.9); }
+.mobile-brand .brand__wordmark small { color: var(--text-muted, #5b6b82); }
+@media (min-width: 960px) { .mobile-brand { display: none; } }
+
+.lform {
+  display: flex; flex-direction: column; gap: 1.35rem;
+  padding: clamp(1.5rem, 3.2vw, 2.25rem);
+  background: #fff;
+  border: 1px solid var(--border, #e3ebf5);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(16, 42, 80, 0.05), 0 24px 56px -22px rgba(16, 42, 80, 0.28);
+}
+.lform__head { display: flex; flex-direction: column; gap: 0.3rem; }
+.lform__eyebrow {
+  margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--primary, #004b87); opacity: 0.85;
+}
+.lform__title { margin: 0; font-size: clamp(1.45rem, 1.2rem + 0.7vw, 1.7rem); letter-spacing: -0.02em; line-height: 1.2; }
+.lform__sub { margin: 0; color: var(--text-muted, #5b6b82); font-size: 0.9rem; }
+.lform__fields { display: flex; flex-direction: column; gap: 1.15rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.lform__meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: -0.15rem; }
+.lform__tip {
+  display: flex; align-items: flex-start; gap: 0.45rem; margin: -0.35rem 0 0;
+  color: var(--text-muted, #5b6b82); font-size: 0.78rem; line-height: 1.5;
+}
+.lform__tip svg { flex: none; width: 0.95rem; height: 0.95rem; margin-top: 0.1rem; color: #4c9a72; }
+
+/* ---------------- Ô nhập ---------------- */
+.field { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
+.field__row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.field > label, .field__row > label {
+  font-size: 0.8125rem; font-weight: 600; color: #33415c; letter-spacing: 0.005em;
+}
+.field__optional {
+  font-size: 0.72rem; font-weight: 700; color: var(--text-muted, #5b6b82);
+  padding: 0.1rem 0.45rem; border-radius: 999px; background: #f0f4fa;
+  font-variant-numeric: tabular-nums;
+}
+.field__optional.is-filled { background: var(--success-soft, #e8f6ee); color: var(--success-strong, #166534); }
+.caps {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.72rem; font-weight: 700; color: #9a5b00;
+  background: #fff8e1; border: 1px solid #f2cf7a; border-radius: 999px; padding: 0.12rem 0.5rem;
+}
+.caps svg { width: 0.8rem; height: 0.8rem; }
+
+.control { position: relative; display: flex; align-items: center; min-width: 0; }
+.control__ic {
+  position: absolute; left: 0.85rem; width: 1.1rem; height: 1.1rem;
+  color: #8b9cb5; pointer-events: none; transition: color 0.18s ease;
+}
+.control input {
+  width: 100%; height: 3rem;
+  padding: 0 2.85rem 0 2.55rem;
+  border: 1.5px solid #dbe4f0; border-radius: 11px;
+  background: #fbfcfe; color: var(--text, #1b2a41);
+  font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+.control input::placeholder { color: #9aabc4; font-weight: 400; }
+.control input:hover:not(:disabled) { border-color: #c3d2e6; }
+.control input:focus {
+  outline: none; border-color: var(--primary, #004b87);
+  background: #fff; box-shadow: 0 0 0 4px rgba(0, 75, 135, 0.13);
+}
+.control input:disabled { background: #f2f5f9; color: #8a9ab0; cursor: not-allowed; }
+.control input:-webkit-autofill,
+.control input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text, #1b2a41);
+  -webkit-box-shadow: 0 0 0 1000px #fbfcfe inset;
+  transition: background-color 9999s ease-out;
+}
+.control__btn {
+  position: absolute; right: 0.35rem;
+  display: grid; place-items: center;
+  width: 2.25rem; height: 2.25rem;
+  border: 0; border-radius: 9px;
+  background: transparent; color: #7a8ca6; cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.control__btn svg { width: 1.1rem; height: 1.1rem; }
+.control__btn:hover { background: #eef3f9; color: var(--primary, #004b87); }
+.control__btn:focus-visible { outline: 2px solid var(--primary, #004b87); outline-offset: 1px; }
+
+.field.is-error .control input { border-color: #c62828; background: #fffafa; }
+.field.is-error .control input:focus { box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.14); }
+.field.is-error .control__ic { color: #c62828; }
+
+.hint { margin: 0; font-size: 0.78rem; line-height: 1.45; color: var(--text-muted, #5b6b82); }
+.fe { display: block; margin: 0; color: var(--danger-strong, #a51818); font-size: 0.78rem; font-weight: 600; line-height: 1.4; }
+
+/* ---------------- Mã xác thực 6 ô ---------------- */
+.otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.45rem; }
+.otp__box {
+  width: 100%; height: 3rem; padding: 0;
+  border: 1.5px solid #dbe4f0; border-radius: 11px;
+  background: #fbfcfe; color: var(--text, #1b2a41);
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 1.15rem; font-weight: 700; text-align: center;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, transform 0.12s ease;
+  -moz-appearance: textfield;
+}
+.otp__box::-webkit-outer-spin-button, .otp__box::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.otp__box:hover:not(:disabled) { border-color: #c3d2e6; }
+.otp__box:focus {
+  outline: none; border-color: var(--primary, #004b87);
+  background: #fff; box-shadow: 0 0 0 3px rgba(0, 75, 135, 0.13);
+  transform: translateY(-1px);
+}
+.otp__box:disabled { background: #f2f5f9; color: #8a9ab0; cursor: not-allowed; }
+.field.is-error .otp__box { border-color: #c62828; background: #fffafa; }
+.field.is-error .otp__box:focus { box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.14); }
+
+/* ---------------- Ghi nhớ đăng nhập ---------------- */
+.check { display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; user-select: none; color: var(--text, #1b2a41); font-size: 0.86rem; font-weight: 500; }
+.check input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.check__box {
+  display: grid; place-items: center;
+  width: 1.15rem; height: 1.15rem;
+  border: 1.5px solid #c3d2e6; border-radius: 5px; background: #fff;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.check__box svg { width: 0.75rem; height: 0.75rem; color: #fff; opacity: 0; transform: scale(0.6); transition: opacity 0.15s ease, transform 0.15s ease; }
+.check input:checked + .check__box { background: var(--primary, #004b87); border-color: var(--primary, #004b87); }
+.check input:checked + .check__box svg { opacity: 1; transform: scale(1); }
+.check input:focus-visible + .check__box { box-shadow: 0 0 0 3px rgba(0, 75, 135, 0.2); }
+.check input:disabled + .check__box { background: #f2f5f9; border-color: #dbe4f0; }
+.check:hover .check__box { border-color: var(--primary, #004b87); }
+
+/* ---------------- Nút đăng nhập ---------------- */
+.lsubmit {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem;
+  width: 100%; height: 3.125rem; margin-top: 0.15rem;
+  border: 0; border-radius: 11px;
+  background: linear-gradient(135deg, #00599f 0%, #004b87 55%, #00447b 100%);
+  color: #fff; font-family: inherit; font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 10px 22px -12px rgba(0, 75, 135, 0.95);
+  transition: filter 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+}
+.lsubmit svg { width: 1.05rem; height: 1.05rem; transition: transform 0.18s ease; }
+.lsubmit:hover:not(:disabled) { filter: brightness(1.08); box-shadow: 0 14px 28px -12px rgba(0, 75, 135, 1); }
+.lsubmit:hover:not(:disabled) svg { transform: translateX(2px); }
+.lsubmit:active:not(:disabled) { transform: translateY(1px); }
+.lsubmit:focus-visible { outline: 2px solid var(--primary, #004b87); outline-offset: 3px; }
+.lsubmit:disabled { cursor: not-allowed; opacity: 0.92; filter: grayscale(0.4) brightness(0.95); box-shadow: none; }
+.lsubmit .spin { width: 1rem; height: 1rem; border-width: 2.5px; }
+
+/* ---------------- Thông báo ---------------- */
+.note {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid transparent; border-radius: 11px;
+  font-size: 0.83rem; line-height: 1.5; color: var(--text, #1b2a41);
+}
+.note p { margin: 0; }
+.note > svg { flex: none; width: 1.05rem; height: 1.05rem; margin-top: 0.1rem; }
+.note--info { background: #f1f7fd; border-color: #cfe2f3; }
+.note--info > svg { color: var(--primary, #004b87); }
+.note--info code { padding: 0.05rem 0.3rem; border-radius: 4px; background: #e2eefa; font-size: 0.78rem; }
+.note--error { background: var(--danger-soft, #fdeeee); border-color: var(--danger-border, #f3c3c3); color: var(--danger-strong, #a51818); }
+.note--error > svg { color: var(--danger-strong, #a51818); }
+.note--locked { background: #fff8e1; border-color: #f2cf7a; color: #7a4a00; }
+.note--locked > svg { color: #b07a00; }
+.note__body { flex: 1; min-width: 0; }
+.locked-timer { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
+.locked-timer__value { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 1rem; letter-spacing: 0.02em; }
+.locked-timer__track { flex: 1; height: 0.35rem; border-radius: 999px; background: rgba(154, 91, 0, 0.18); overflow: hidden; }
+.locked-timer__track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f0b429, #d18700); transition: width 0.9s linear; }
+
+/* Hiệu ứng xuất hiện của thông báo */
+.alert-enter-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.alert-leave-active { transition: opacity 0.15s ease; }
+.alert-enter-from { opacity: 0; transform: translateY(-4px); }
+.alert-leave-to { opacity: 0; }
+
+/* ---------------- Chân trang ---------------- */
+.panel__foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem;
+  font-size: 0.75rem; color: var(--text-muted, #5b6b82); text-align: center;
+}
+.panel__dot { opacity: 0.6; }
+
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------------- Responsive nhỏ ---------------- */
+@media (max-width: 380px) {
+  .lform { padding: 1.15rem; border-radius: 14px; }
+  .otp { gap: 0.3rem; }
+  .otp__box { height: 2.75rem; font-size: 1rem; border-radius: 9px; }
+  .control input { height: 2.85rem; }
+  .lsubmit { height: 2.95rem; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .login__panel { align-items: flex-start; padding-block: 1rem; }
+}
+
+/* Tôn trọng người dùng giảm chuyển động */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Chế độ tối của hệ điều hành: giữ nền sáng để tương phản chữ ổn định,
+   nhưng dịu viền/đổ bóng cho đỡ chói */
+@media (prefers-color-scheme: dark) {
+  .lform { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 24px 56px -22px rgba(0, 0, 0, 0.55); }
+}
+</style>

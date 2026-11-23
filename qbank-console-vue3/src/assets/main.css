@@ -655,3 +655,6 @@ body.has-sel .page{padding-bottom:calc(var(--selbar-h,0px) + 1.5rem + env(safe-a
 /* Vùng bấm */
 .crumb-bar button{min-height:1.75rem;padding-block:.25rem}
 @media(pointer:coarse){.qrow__sel input[type=checkbox]{width:1.5rem;height:1.5rem}.chip{min-height:2.5rem}.logo-link{min-height:2.75rem}}
+
+/* Banner chế độ demo: nằm trên topbar, luôn hiện để không ai tưởng là dữ liệu thật */
+.demo-banner{padding:.5rem var(--page-padding-x);background:var(--warning-badge-bg);border-bottom:1px solid var(--warning-border);color:#7a4a00;font-size:var(--fs-xs);font-weight:600;text-align:center;line-height:1.4}

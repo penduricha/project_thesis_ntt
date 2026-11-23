@@ -5,3 +5,8 @@
 node_modules
 
 .env
+
+# Ảnh chụp/HTML preview sinh tự động khi review giao diện
+dist/
+.ssr-out*/
+preview-login.html
