@@ -52,14 +52,27 @@ chỉ ghi "đã sửa X".
   *Lưu ý:* tham số tìm kiếm của backend tên là **`q`** (`@RequestParam(name = "q")`),
   **không phải `keyword`** — gửi sai tên sẽ bị bỏ qua im lặng vì `required = false`.
 
+#### Hiệu năng — giảm 99% số request
+
+- **N+1 request khi tải ngân hàng câu hỏi.**
+  *Vấn đề:* `store.js` tải danh sách rồi gọi `GET /questions/{id}` cho **từng** câu để lấy 4
+  phương án (vì `QuestionListItem` chỉ trả `stemPreview` cắt ngắn). Với 500 câu: 5 request danh
+  sách + 500 request chi tiết = **505 request**; trình duyệt giới hạn ~6 kết nối/domain nên
+  phải chạy ~83 lượt tuần tự, màn hình treo hàng chục giây.
+  *Cách xử lý:* thêm `stem`, `options[]`, `correctLabel`, `generalFeedback`, `contentFormat`
+  vào `QuestionListItem`, kèm tham số `includeOptions` (mặc định `false` để không đổi kích
+  thước response cho nơi chỉ cần xem nhanh). Giữ constructor 13 tham số cũ nên code đang gọi
+  không vỡ. Vue gửi `includeOptions=true` và dùng thẳng dữ liệu trả về.
+  *Kết quả:* **505 → 5 request (−99%)**. Vẫn gọi `GET /questions/{id}` khi cần làm mới **một**
+  câu sau khi sửa — đúng thiết kế.
+  *Kiểm chứng:* 18 component của record / 13 tham số constructor phụ / 18 đối số `this(...)`
+  khớp nhau; Vue build 139 modules, `[OK] 55 file`.
+
 #### Chưa xử lý (ghi nhận, cần làm tiếp)
 
 - **AdminView** vẫn đọc `S.users` từ `src/data/mock.js` — backend **chưa có API liệt kê admin**.
 - **CoursesView** tạo/sửa môn vẫn là mock — backend chưa có API CRUD môn/chương.
-- **N+1 khi tải câu hỏi**: `store.js` gọi `GET /questions` rồi `GET /questions/{id}` từng câu
-  để lấy 4 phương án. Với 500 câu seed, mở màn Ngân hàng câu hỏi sẽ phát sinh ~505 request.
-  Hướng sửa: thêm `options[]` vào `QuestionListItem` (xem §5.1
-  `docs/review-api-contract-vue3-springboot.md`).
+- ~~**N+1 khi tải câu hỏi**~~ — **đã sửa** (xem mục Hiệu năng bên dưới).
 
 ## [Chưa phát hành] — 2026-11-23
 

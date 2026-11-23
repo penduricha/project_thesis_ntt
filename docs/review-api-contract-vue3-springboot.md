@@ -14,8 +14,8 @@ nghiệp vụ và hình dạng JSON đều nhất quán. Đã đối chiếu **5
 DTO** — không phát hiện lỗi tích hợp nghiêm trọng nào.
 
 Tuy nhiên, review ghi nhận **7 vấn đề thiết kế** cần xử lý trước khi bảo vệ đồ án (xem §5).
-Rủi ro nghiêm trọng nhất là **N+1 request khi tải ngân hàng câu hỏi** (§5.1) và
-**thiếu kiểm thử hợp đồng tự động** giữa hai phía (§5.7).
+Vấn đề nghiêm trọng nhất — **N+1 request khi tải ngân hàng câu hỏi** (§5.1) — **đã được sửa**.
+Vấn đề còn lại đáng chú ý nhất là **thiếu kiểm thử hợp đồng tự động** (§5.7).
 
 ---
 
@@ -332,7 +332,13 @@ lại. Đây là thiết kế phòng thủ đúng, nên ghi rõ trong báo cáo.
 
 ## 5. Rủi ro thiết kế — cần xử lý trước khi bảo vệ
 
-### 5.1 ⚠️ NGHIÊM TRỌNG — N+1 request khi tải ngân hàng câu hỏi
+### 5.1 ✅ ĐÃ SỬA — N+1 request khi tải ngân hàng câu hỏi
+
+> **Đã khắc phục (commit `311bb081e`).** `QuestionListItem` nay có thêm `stem`, `options[]`,
+> `correctLabel`, `generalFeedback`, `contentFormat`. Client truyền `includeOptions=true` là một
+> lượt gọi lấy đủ 4 phương án, không cần `GET /questions/{id}` cho từng câu.
+> **Kết quả: 500 câu giảm từ 505 request xuống 5 request (−99%).**
+> Phần phân tích dưới đây giữ lại làm hồ sơ vấn đề và hướng xử lý.
 
 `store.js` tải **toàn bộ** câu hỏi rồi gọi chi tiết từng câu:
 
@@ -380,7 +386,7 @@ phải gọi chi tiết để lấy.
 
 Với đồ án, hướng **1** là đủ và thể hiện hiểu biết về N+1 — một điểm cộng khi bảo vệ.
 
-### 5.2 ⚠️ Tham số tìm kiếm: tên `q` vs `keyword`
+### 5.2 ⚠️ Một phần — Tham số tìm kiếm: tên `q` vs `keyword`
 
 ```java
 // QuestionBankController.java:53 — tên tham số trên URL là "q"
@@ -403,7 +409,7 @@ và trả toàn bộ danh sách — lỗi rất khó phát hiện vì không có
 const SEARCH_PARAM = 'q'   // khớp @RequestParam(name="q") của QuestionBankController
 ```
 
-### 5.3 ⚠️ Màn hình tìm kiếm chưa nối API thật
+### 5.3 ✅ ĐÃ SỬA — Màn hình tìm kiếm chưa nối API thật
 
 `SearchView.vue:22` chỉ tách từ khoá từ câu lệnh tiếng Việt bằng regex:
 
@@ -430,7 +436,7 @@ chế song song cùng tồn tại — khi có sự cố 401, phải kiểm tra h
 lời gọi cần token. Riêng SSE (`/2fa/events`) cần `fetch()` thô vì `EventSource` không gắn được
 header `Authorization` — trường hợp này hợp lý, nên ghi chú rõ trong mã.
 
-### 5.5 ℹ️ Biến thừa trong `loadQuestions`
+### 5.5 ℹ️ Biến thừa trong `loadQuestions` (đã bỏ khi refactor `311bb081e`)
 
 ```js
 // store.js:149
@@ -494,9 +500,9 @@ SQL migration nằm ở `be-web-admin/sql/…`, không ép schema bằng Hiberna
 
 ## 7. Danh sách kiểm tra trước khi bảo vệ
 
-- [ ] **§5.1** Giảm N+1: thêm `options[]` vào `QuestionListItem` (hoặc `includeOptions=true`)
+- [x] **§5.1** Giảm N+1: đã thêm `options[]` + `includeOptions` (`311bb081e`)
 - [ ] **§5.2** Hằng số `SEARCH_PARAM='q'` trong `qbankApi.js`
-- [ ] **§5.3** Nối `F.keyword` trong `SearchView.vue` lên server
+- [x] **§5.3** `SearchView.vue` đã gọi API thật khi `dataMode==='real'`
 - [ ] **§5.4** Thống nhất lời gọi có token qua `SpringConfigHeader` (ghi chú ngoại lệ SSE)
 - [ ] **§5.7** Thêm test hợp đồng cho 5 endpoint chính
 - [ ] Chạy `npm run check:syntax` trong `qbank-console-vue3` → phải `[OK] 55 file sach cu phap`
