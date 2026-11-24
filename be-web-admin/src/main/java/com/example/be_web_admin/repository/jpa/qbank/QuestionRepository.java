@@ -22,32 +22,22 @@ public interface QuestionRepository extends JpaRepository<Question, Long>, JpaSp
     boolean existsBySubjectIdAndContentHash(Long subjectId, String contentHash);
 
     /**
-     * Chặn trùng tiêu đề trong CÙNG một môn (yêu cầu nghiệp vụ: tiêu đề phải khác nhau).
+     * Tìm câu đã dùng tiêu đề này trong CÙNG một môn, dùng để <b>chặn khi thêm mới</b>.
      *
-     * <p>So sánh sau khi đã trim và bỏ khoảng trắng ở hai đầu — tầng service chuẩn hoá trước
-     * khi gọi. Không phân biệt hoa/thường để "Câu 1" và "câu 1" bị coi là trùng (tránh lách
-     * quy tắc chỉ bằng cách đổi kiểu chữ).</p>
+     * <p>So sánh trên {@code lower(title)} sau khi service đã trim hai đầu — không phân biệt
+     * hoa/thường, để "Câu 1" và "câu 1" bị coi là trùng (không lách được quy tắc bằng cách
+     * đổi kiểu chữ). Bỏ qua câu đã lưu trữ ({@code ARCHIVED}) để tiêu đề của câu lưu trữ vẫn
+     * dùng lại được.</p>
      *
-     * @param subjectId môn đang xét
-     * @param title     tiêu đề đã trim
-     * @param excludeId câu đang sửa — không tự so với chính nó.
-     *                  <b>Khi tạo mới phải truyền -1</b> (không có question_id âm), KHÔNG truyền
-     *                  null: so sánh {@code <> null} trong SQL luôn cho UNKNOWN nên query sẽ
-     *                  không trả dòng nào và việc chặn trùng trở nên vô hiệu trong im lặng.
+     * <p>Trả về danh sách (không phải {@code boolean}) để tầng service báo được mã câu đang
+     * giữ tiêu đề, thay vì chỉ nói "đã trùng".</p>
+     *
+     * @param excludeId <b>luôn truyền một số, không truyền null</b>. Hiện chỉ gọi khi thêm mới nên
+     *                  truyền {@code -1} (không có {@code question_id} âm ⇒ không loại trừ dòng
+     *                  nào). Nếu về sau cần dùng cho đường cập nhật thì truyền id câu đang sửa;
+     *                  truyền {@code null} sẽ hỏng trong im lặng vì {@code question_id <> NULL}
+     *                  luôn cho {@code UNKNOWN} ⇒ query không trả dòng nào ⇒ mất tác dụng chặn.
      */
-    @Query("""
-            select count(q) > 0 from Question q
-            where q.subjectId = :subjectId
-              and q.status <> :archived
-              and lower(q.title) = lower(:title)
-              and q.questionId <> :excludeId
-            """)
-    boolean existsDuplicateTitleInSubject(@Param("subjectId") Long subjectId,
-                                          @Param("title") String title,
-                                          @Param("excludeId") Long excludeId,
-                                          @Param("archived") QuestionStatusD archived);
-
-    /** Tìm câu trùng tiêu đề để báo mã cho người dùng biết đang trùng với câu nào. */
     @Query("""
             select q from Question q
             where q.subjectId = :subjectId

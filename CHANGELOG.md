@@ -42,20 +42,36 @@ chỉ ghi "đã sửa X".
   *Xử lý:* `store.js` đổi thành **"Đã thêm câu hỏi"** / **"Đã cập nhật câu hỏi"** (nhánh thật và
   nhánh mock đều sửa). Môn học giữ nguyên "Đã lưu môn học mới" / "Đã cập nhật thông tin môn học".
 
-- **Tiêu đề câu hỏi trùng trong cùng môn — chặn ở cả backend lẫn UI.**
+- **Tiêu đề câu hỏi trùng trong cùng môn — chặn khi THÊM MỚI, không chặn khi SỬA.**
   *Vấn đề:* trước đây có thể tạo hai câu hỏi cùng môn với tiêu đề giống hệt nhau (khác
   hoa/thường, thừa khoảng trắng), khiến danh sách tra cứu không phân biệt được.
   *Xử lý:*
-  * `QuestionRepository` thêm `existsDuplicateTitleInSubject` / `findDuplicateTitleInSubject`,
-    so `lower(q.title)` trong cùng `subject_id`, **bỏ qua câu `ARCHIVED`** và **loại chính câu
-    đang sửa** (`excludeId`, truyền `-1` khi tạo mới — xem ghi chú dưới).
+  * `QuestionRepository.findDuplicateTitleInSubject` — so `lower(q.title)` trong cùng
+    `subject_id`, **bỏ qua câu `ARCHIVED`**, trả về danh sách để service báo được mã câu trùng.
   * `QuestionService.assertTitleAvailable(...)` ném **409 `TITLE_DUPLICATED`** kèm câu trùng
-    (`"Tiêu đề "X" đã được dùng cho câu hỏi #N trong cùng môn học"`).
+    (`"Tiêu đề "X" đã được dùng cho câu hỏi #N trong cùng môn học"`). **Chỉ gọi từ `create()`**.
   * `QuestionDialog.vue` chặn trước khi gọi API (`dupTitle`), báo lỗi ngay tại ô tiêu đề.
   * Tiêu đề **để trống không coi là trùng** — cột `title` nullable và không bắt buộc.
   * *Ghi chú kỹ thuật:* tham số `excludeId` **phải truyền `-1`, không được truyền `null`**,
     vì `question_id <> NULL` trong SQL luôn cho `UNKNOWN` ⇒ query trả rỗng ⇒ việc chặn trùng
     mất tác dụng trong im lặng.
+
+- **Sửa lỗi logic: form SỬA câu hỏi vẫn báo trùng tiêu đề, khoá không lưu được câu cũ.**
+  *Triệu chứng:* mở form "Sửa CH010" với tiêu đề `Interface` thì báo đỏ
+  `"Tiêu đề này đã dùng cho CH030 trong cùng môn"` và **nút Lưu câu hỏi không có tác dụng**.
+  *Nguyên nhân:* quy tắc chặn trùng bị áp cho **cả `update()`**, trong khi yêu cầu chỉ là
+  *"câu hỏi **thêm mới** phải khác tiêu đề câu khác"*. Những câu đã trùng tiêu đề từ **trước**
+  khi có quy tắc (CH010 và CH030 cùng tên `Interface`) rơi vào thế khoá vĩnh viễn: mở câu nào
+  cũng bị chính câu kia chặn, muốn sửa nội dung buộc phải đổi tiêu đề.
+  *Xử lý:*
+  * Backend: bỏ hẳn `assertTitleAvailable(...)` khỏi `update()`, chỉ giữ ở `create()`
+    (có chú thích giải thích tại sao **không** được kiểm tra khi cập nhật).
+  * UI: tách thành `dupTitle` (chỉ khác `null` khi **thêm mới**) và `dupTitleWarn` (luôn tính).
+    Form sửa hiện **cảnh báo mềm** `"Cảnh báo ... — vẫn lưu được, nhưng nên đặt tiêu đề khác."`
+    thay vì lỗi chặn.
+  * Chế độ mock (`store.js`): thêm kiểm tra ở nhánh thêm mới, vì trước đó mock ghi thẳng —
+    lời gọi `saveQuestion` không qua form sẽ lách được quy tắc.
+  * Xoá `existsDuplicateTitleInSubject` (đã thành dead code, không nơi nào dùng).
 
 - **Môn học / chương: chuẩn hoá cả hai phía khi so trùng.**
   *Vấn đề:* `CourseDialog.vue` và `TopicManagerDialog.vue` chỉ `trim()` dữ liệu **vừa nhập**,

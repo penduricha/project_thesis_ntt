@@ -384,6 +384,14 @@ export async function saveQuestion(d, eid) {
     S.sug = S.sug.filter(s => s.qid != eid); log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
     toast('Đã cập nhật câu hỏi', 'ok')
   } else {
+    // Chế độ mock không có backend kiểm tra, phải chặn tại đây — nếu chỉ dựa vào UI thì mọi lời
+    // gọi saveQuestion không qua form (nhập hàng loạt, hoàn tác, script) đều lách được quy tắc.
+    // Chỉ chặn khi THÊM MỚI, đúng phạm vi yêu cầu; form sửa không bị ảnh hưởng.
+    const title = (d.title || '').trim().replace(/\s+/g, ' ').toLowerCase()
+    if (title) {
+      const clash = S.q.find((x) => x.c == d.c && (x.title || '').trim().replace(/\s+/g, ' ').toLowerCase() === title)
+      if (clash) return toast(`Tiêu đề này đã dùng cho ${code(clash)} trong cùng môn. Hãy đặt tiêu đề khác.`, 'er')
+    }
     const q = { id: S.n++, st: 'draft', src: 'manual', ver: 1, ...d }
     await repo.upsert(q); S.q.push(q); log('Thêm câu hỏi mới ' + code(q), 'ok')
     toast('Đã thêm câu hỏi', 'ok')

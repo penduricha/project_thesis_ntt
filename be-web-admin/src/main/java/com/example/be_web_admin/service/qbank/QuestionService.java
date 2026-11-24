@@ -216,8 +216,9 @@ public class QuestionService {
         String hash = QuestionContentHasher.hash(stem, a, b, c, d, correctLabel, contentFormat);
         boolean duplicate = questions.existsBySubjectIdAndContentHash(subject.getSubjectId(), hash);
 
-        // Tiêu đề phải khác các câu khác trong cùng môn (bỏ khoảng trắng hai đầu, không phân biệt
-        // hoa/thường). Tiêu đề không bắt buộc: để trống thì bỏ qua kiểm tra.
+        // Quy tắc CHỈ áp cho THÊM MỚI: tiêu đề của câu mới phải khác mọi câu đang có trong cùng
+        // môn (bỏ khoảng trắng hai đầu, không phân biệt hoa/thường). Tiêu đề không bắt buộc —
+        // để trống thì bỏ qua kiểm tra.
         String title = trimToNull(request.title());
         assertTitleAvailable(subject.getSubjectId(), title, -1L);
 
@@ -295,9 +296,13 @@ public class QuestionService {
         String newHash = QuestionContentHasher.hash(stem, a, b, c, d, correctLabel, contentFormat);
         boolean contentChanged = !QuestionContentHasher.sameContent(question.getContentHash(), newHash);
 
-        // Cùng quy tắc với create, nhưng bỏ qua chính câu đang sửa.
+        // KHÔNG kiểm tra trùng tiêu đề ở đây — cố ý.
+        // Quy tắc "câu thêm mới phải khác tiêu đề câu khác" chỉ chặn ở đường tạo mới.
+        // Chặn cả khi sửa sẽ khoá vĩnh viễn những câu đã có tiêu đề trùng từ TRƯỚC khi có quy
+        // tắc: người dùng mở một trong số đó ra sửa nội dung thì bị chặn bởi chính câu kia,
+        // buộc phải đổi tiêu đề mới lưu được. Đó là hành vi sai: sửa nội dung không làm phát
+        // sinh thêm bản trùng nào, mà lại cản người dùng sửa được chính câu hỏng.
         String title = trimToNull(request.title());
-        assertTitleAvailable(question.getSubjectId(), title, questionId);
 
         question.setTopicId(topic == null ? null : topic.getTopicId());
         question.setTitle(title);
@@ -539,22 +544,27 @@ public class QuestionService {
     }
 
     /**
-     * Chặn trùng tiêu đề câu hỏi trong cùng một môn.
+     * Chặn trùng tiêu đề khi <b>thêm mới</b> câu hỏi.
      *
-     * <p>Quy tắc (theo góp ý nghiệp vụ): tiêu đề phải <b>khác</b> tiêu đề các câu khác trong môn,
-     * không tính khoảng trắng hai đầu và không phân biệt hoa/thường. Tiêu đề để trống là hợp lệ
-     * (cột {@code title} cho phép NULL, giao diện hiển thị mã CHxxx thay thế), nên bỏ qua kiểm tra.</p>
+     * <p>Quy tắc (theo góp ý nghiệp vụ): tiêu đề của câu <b>thêm mới</b> phải khác tiêu đề các câu
+     * đã có trong môn, không tính khoảng trắng hai đầu và không phân biệt hoa/thường. Tiêu đề để
+     * trống là hợp lệ (cột {@code title} cho phép NULL, giao diện hiển thị mã CHxxx thay thế) nên
+     * bỏ qua kiểm tra.</p>
      *
-     * @param excludeQuestionId câu đang sửa; <b>tạo mới thì truyền -1</b> (không phải null) để
-     *                          tránh bẫy {@code <> NULL} luôn UNKNOWN trong SQL
+     * <p><b>Chỉ gọi từ {@link #create}</b>, tuyệt đối không gọi khi cập nhật: xem chú thích trong
+     * {@code update(...)} — chặn ở đó sẽ khoá vĩnh viễn các câu đã trùng tiêu đề từ trước.</p>
+     *
      * @throws QbankException 409 TITLE_DUPLICATED kèm mã câu bị trùng để UI báo rõ
      */
     private void assertTitleAvailable(Long subjectId, String title, Long excludeQuestionId) {
         if (title == null || title.isBlank()) {
             return;
         }
+        // -1 khi thêm mới (không có question_id âm), KHÔNG truyền null: "question_id <> NULL"
+        // luôn UNKNOWN trong SQL nên query sẽ không trả dòng nào và việc chặn trùng vô hiệu.
         List<Question> clashes = questions.findDuplicateTitleInSubject(
-                subjectId, title, excludeQuestionId, QuestionStatusD.ARCHIVED);
+                subjectId, title, excludeQuestionId == null ? -1L : excludeQuestionId,
+                QuestionStatusD.ARCHIVED);
         if (clashes.isEmpty()) {
             return;
         }
