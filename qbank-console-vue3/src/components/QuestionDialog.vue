@@ -18,24 +18,37 @@ const err = reactive({}), dirty = ref(false), saving = ref(false), apiErr = ref(
 watch(f, () => { dirty.value = true }, { deep: true })
 
 const dupOpt = computed(() => { const v = f.o.map(x => x.trim().toLowerCase()).filter(Boolean); return new Set(v).size < v.length })
+
+/* ===== Kiểm tra trùng lặp CHỈ áp cho form THÊM MỚI =====
+   Yêu cầu nghiệp vụ chỉ đặt ra cho câu hỏi thêm mới: "câu hỏi thêm mới phải khác tiêu đề câu
+   khác". Form Sửa KHÔNG kiểm tra và KHÔNG cảnh báo trùng lặp với câu khác — sửa nội dung một
+   câu có sẵn không tạo ra bản trùng mới, mà lại đang sửa chính câu đó.
+
+   Vì sao trước đây phải nới: những câu đã trùng tiêu đề/câu dẫn từ TRƯỚC khi có quy tắc
+   (CH010 & CH030 cùng tiêu đề "Interface") rơi vào thế khoá vĩnh viễn nếu form Sửa chặn —
+   mở câu nào cũng bị câu kia chặn. Nhưng hiện cảnh báo mềm ở form Sửa cũng là sai: người dùng
+   đang sửa CH003 lại thấy "trùng với CH033" trong khi không hỏi gì về chuyện đó.
+
+   Backend tương ứng: QuestionService chỉ gọi assertTitleAvailable() trong create(). */
+const isNew = computed(() => !props.id)
 const nstem = t => norm(t).replace(/\s+/g, ' ').trim()
-const dupStem = computed(() => {
-  const t = nstem(f.text), d = t ? S.q.find(x => x.id != props.id && x.c == f.c && nstem(x.text) == t) : null
-  return d ? `Câu dẫn trùng với ${code(d)} trong cùng môn học. Đây chỉ là cảnh báo, bạn vẫn có thể lưu.` : ''
-})
-/* Quy tắc trùng tiêu đề CHỈ áp cho THÊM MỚI (props.id == 0) — khớp đúng yêu cầu nghiệp vụ
-   và đúng phần backend (QuestionService chỉ gọi assertTitleAvailable trong create()).
-   KHÔNG được chặn ở form sửa: nếu chặn, những câu đã trùng tiêu đề từ TRƯỚC khi có quy tắc
-   (ví dụ CH010 và CH030 cùng tiêu đề "Interface") sẽ vĩnh viễn không sửa được, vì mở câu nào
-   cũng bị chính câu kia báo trùng.
-   Ở form sửa, trùng tiêu đề vẫn được CẢNH BÁO mềm qua dupTitleWarn — vẫn lưu được. */
 const ntitle = t => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase()
-const dupTitleWarn = computed(() => {
+
+/* Trùng tiêu đề với câu khác trong cùng môn — CHẶN lưu (chỉ form thêm mới). */
+const dupTitle = computed(() => {
+  if (!isNew.value) return null
   const t = ntitle(f.title)
   if (!t) return null                       // tiêu đề không bắt buộc: để trống thì bỏ qua
-  return S.q.find(x => x.id != props.id && x.c == f.c && ntitle(x.title) === t) || null
+  return S.q.find(x => x.c == f.c && ntitle(x.title) === t) || null
 })
-const dupTitle = computed(() => (props.id ? null : dupTitleWarn.value))
+
+/* Trùng câu dẫn — chỉ CẢNH BÁO, vẫn lưu được (chỉ form thêm mới). */
+const dupStem = computed(() => {
+  if (!isNew.value) return null
+  const t = nstem(f.text)
+  if (!t) return null
+  return S.q.find(x => x.c == f.c && nstem(x.text) === t) || null
+})
 const dto = computed(() => {
   const c = COURSES[f.c] || {}, o = f.o.map(x => x.trim())
   return { subjectId: c.subjectId ?? null, topicId: c.topicIds?.[f.tp] ?? null, topicName: c.topics?.[f.tp] ?? null, title: f.title.trim() || null, stem: f.text.trim(),
@@ -58,8 +71,8 @@ async function save() {
   if (!c) err.c = 'Hãy chọn môn học trong danh sách.'
   else if (!subjOk(f.c)) err.c = 'Bạn chưa được phân công môn học này.'
   else if (!c.topics[f.tp]) err.chips = 'Môn học này chưa có chương. Hãy thêm chương cho môn học trước khi lưu câu hỏi.'
-  // Chỉ chặn khi THÊM MỚI (dupTitle đã trả null ở form sửa nên điều kiện dưới là đủ rõ nghĩa).
-  if (!props.id && dupTitle.value) err.ti = `Tiêu đề này đã dùng cho ${code(dupTitle.value)} trong cùng môn. Hãy đặt tiêu đề khác.`
+  // Chặn trùng tiêu đề — chỉ ở form THÊM MỚI (dupTitle tự trả null ở form sửa).
+  if (dupTitle.value) err.ti = `Tiêu đề này đã dùng cho ${code(dupTitle.value)} trong cùng môn. Hãy đặt tiêu đề khác.`
   if (Object.keys(err).length) { await nextTick(); return focusFirstInvalid() }
   if (cur && cur.text === text && cur.o.every((x, i) => x === o[i]) && cur.a === f.a && cur.c === f.c && (cur.tp || 0) === f.tp && cur.l === +f.l && (cur.title || '') === f.title.trim() && (cur.fb || '') === f.fb.trim()) {
     dirty.value = false; emit('close'); return toast('Không có thay đổi nào để lưu')
@@ -80,13 +93,12 @@ async function save() {
              :placeholder="id ? code({ id }) : 'Để trống sẽ dùng mã CHxxx'" autocomplete="off"
              @input="err.ti = ''">
       <small v-if="err.ti" class="fe" role="alert">{{ err.ti }}</small>
-      <small v-else-if="dupTitleWarn" class="warn-inline">{{ id ? 'Cảnh báo' : 'Tiêu đề trùng với' }} {{ code(dupTitleWarn) }} trong cùng môn học.{{ id ? ' — vẫn lưu được, nhưng nên đặt tiêu đề khác.' : '' }}</small>
     </label>
     <label>Câu dẫn <span style="color:var(--danger-strong)">*</span>
       <textarea id="f-t" rows="3" maxlength="500" v-model="f.text" :class="{ invalid: err.t }" :aria-invalid="err.t ? 'true' : null" @input="err.t = ''"></textarea>
       <small v-if="err.t" class="fe" role="alert">{{ err.t }}</small>
       <small id="f-len" style="text-align:right;margin-top:.25rem">{{ f.text.length }}/500</small>
-      <p id="f-sdup" class="warn-inline">{{ dupStem }}</p>
+      <p v-if="dupStem" id="f-sdup" class="warn-inline">Câu dẫn trùng với {{ code(dupStem) }} trong cùng môn học. Đây chỉ là cảnh báo, bạn vẫn có thể lưu.</p>
     </label>
     <div class="opt-list">
       <h4>Bốn phương án – chọn vòng tròn của đáp án đúng <span style="color:var(--danger-strong)">*</span></h4>

@@ -66,12 +66,23 @@ chỉ ghi "đã sửa X".
   *Xử lý:*
   * Backend: bỏ hẳn `assertTitleAvailable(...)` khỏi `update()`, chỉ giữ ở `create()`
     (có chú thích giải thích tại sao **không** được kiểm tra khi cập nhật).
-  * UI: tách thành `dupTitle` (chỉ khác `null` khi **thêm mới**) và `dupTitleWarn` (luôn tính).
-    Form sửa hiện **cảnh báo mềm** `"Cảnh báo ... — vẫn lưu được, nhưng nên đặt tiêu đề khác."`
-    thay vì lỗi chặn.
+  * UI: `dupTitle` và `dupStem` chỉ tính khi `isNew` (form **thêm mới**). Form sửa **không
+    kiểm tra, không cảnh báo** trùng lặp với câu khác — kể cả trùng câu dẫn. Sửa nội dung một
+    câu có sẵn không tạo ra bản trùng mới, và chính câu đó đang được sửa.
   * Chế độ mock (`store.js`): thêm kiểm tra ở nhánh thêm mới, vì trước đó mock ghi thẳng —
     lời gọi `saveQuestion` không qua form sẽ lách được quy tắc.
   * Xoá `existsDuplicateTitleInSubject` (đã thành dead code, không nơi nào dùng).
+
+- **Cảnh báo trùng lặp hiện cả ở form SỬA — phải chỉ hiện ở form THÊM.**
+  *Triệu chứng:* mở `Sửa CH003` thấy **hai** dòng cảnh báo: ô tiêu đề báo
+  `"Cảnh báo CH033 trong cùng môn học — vẫn lưu được…"` và ô câu dẫn báo
+  `"Câu dẫn trùng với CH033 trong cùng môn học…"`, trong khi người dùng chỉ định sửa nội dung.
+  *Nguyên nhân:* bước sửa trước đã gỡ phần **chặn** nhưng để lại phần **cảnh báo** trong form
+  sửa (`dupTitleWarn`, `dupStem` tính cho mọi chế độ). Yêu cầu chỉ đặt ra cho câu **thêm mới**.
+  *Xử lý:* gộp về một chỗ — `isNew = !props.id`; cả `dupTitle` (chặn) và `dupStem` (cảnh báo mềm)
+  đều `return null` khi không phải thêm mới. Form sửa không còn dòng cảnh báo trùng nào.
+  Giữ nguyên cảnh báo **hai phương án giống nhau** ở cả hai form vì đó là kiểm tra nội dung
+  của chính câu đang nhập, không phải trùng lặp giữa các câu.
 
 - **Môn học / chương: chuẩn hoá cả hai phía khi so trùng.**
   *Vấn đề:* `CourseDialog.vue` và `TopicManagerDialog.vue` chỉ `trim()` dữ liệu **vừa nhập**,
