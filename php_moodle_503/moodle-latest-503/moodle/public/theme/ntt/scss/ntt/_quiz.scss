@@ -1,0 +1,209 @@
+// Trang làm bài quiz (sinh viên) và trang xem lại bài — theme NTT.
+//
+// Bối cảnh: đồ án CHO SINH VIÊN LÀM BÀI trên Moodle, nên đây là màn hình phải chăm nhất.
+//
+// Mọi selector dưới đây đã được đối chiếu với CSS gốc của Moodle
+// (public/mod/quiz/styles.css, 1219 dòng) — đọc trước khi sửa để biết đang ghi đè cái gì.
+//
+// Nguyên tắc:
+//  1. Bọc trong .path-mod-quiz — Moodle tự thêm path-mod-<tên> vào <body>. Vừa tăng độ ưu tiên
+//     vừa giới hạn phạm vi, không làm hỏng trang khác.
+//  2. Chỉ đổi MÀU, VIỀN, BO GÓC, KHOẢNG CÁCH. Không đổi display/position/float của CSS gốc:
+//     thanh điều hướng câu hỏi dựa vào float + absolute overlay của Moodle, đổi đi là vỡ.
+//  3. Không dùng !important trừ chỗ bắt buộc (đã ghi rõ lý do).
+
+.path-mod-quiz {
+    // =================================================================================================
+    // 1. Thanh điều hướng câu hỏi (.qnbutton)
+    // =================================================================================================
+    //
+    // CSS gốc dựng mỗi câu thành một ô 1.5em, nền xám #ddd, rồi phủ HAI lớp absolute:
+    //   .trafficlight   -> viền 3px trên/dưới làm "đèn tín hiệu" (xanh #080 / đỏ #800)
+    //   .thispageholder -> khoanh ô câu đang làm
+    // Nên chỉ đổi màu nền và viền ngoài; giữ nguyên position/float/overlay.
+
+    .qnbutton {
+        border-color: var(--ntt-border-strong);
+        border-radius: $border-radius-sm;
+        background-color: var(--ntt-surface);
+        color: var(--ntt-text);
+        transition: background-color .15s ease, border-color .15s ease;
+
+        &:hover {
+            border-color: var(--ntt-primary);
+            background-color: var(--ntt-primary-soft);
+        }
+    }
+
+    // Câu đang làm: viền thương hiệu thay cho xám #666 của gốc.
+    .qnbutton.thispage {
+        border-color: var(--ntt-primary);
+    }
+
+    .qnbutton.thispage .thispageholder {
+        border-color: var(--ntt-primary);
+        border-radius: $border-radius-sm;
+    }
+
+    // --- Trạng thái đã trả lời ---------------------------------------------------------------
+    // Màu gốc là hex cứng, không theo chế độ tối: correct #cfc, partiallycorrect #ffa,
+    // notanswered/incorrect #fcc. Đổi sang token --ntt-* để chế độ tối tự theo.
+
+    .qnbutton.correct {
+        background-color: var(--ntt-success-soft);
+    }
+
+    .qnbutton.partiallycorrect {
+        background-color: var(--ntt-warning-soft);
+    }
+
+    .qnbutton.notanswered,
+    .qnbutton.incorrect {
+        background-color: var(--ntt-danger-soft);
+    }
+
+    // Giữ "đèn tín hiệu" của gốc nhưng đổi sang màu token. Đây là tín hiệu thị giác THỨ HAI
+    // (ngoài màu nền) nên phải giữ — người mù màu phân biệt được nhờ vị trí viền trên/dưới.
+    .qnbutton.correct .trafficlight {
+        border-bottom-color: var(--ntt-success);
+    }
+
+    .qnbutton.notanswered .trafficlight,
+    .qnbutton.incorrect .trafficlight {
+        border-top-color: var(--ntt-danger);
+    }
+
+    // Câu bị khoá: mờ nhưng vẫn đọc được.
+    .qnbutton.blocked {
+        color: var(--ntt-text-muted);
+        opacity: .6;
+    }
+
+    // =================================================================================================
+    // 3. Khung câu hỏi khi làm bài
+    // =================================================================================================
+    //
+    // _question.scss đã style .que .info / .que .formulation cho ngữ cảnh xem trước. Khi LÀM BÀI,
+    // khung này cần khoảng cách rộng hơn để dễ đọc — xem khối #page-mod-quiz-attempt ở CUỐI tệp
+    // (đặt ngoài .path-mod-quiz vì #page-* là <body>).
+
+    // Số thứ tự câu (#1, #2...) và điểm: nhạt, không tranh chấp với đề bài.
+    .que .info .grade,
+    .que .info .questionflag {
+        color: var(--ntt-text-muted);
+    }
+
+    // Đáp án: mỗi lựa chọn là một ô viền mảnh, hover nền nhạt (khớp _question.scss).
+    .que.multichoice .answer div.r0,
+    .que.multichoice .answer div.r1 {
+        padding: .625rem .75rem;
+        border: 1px solid var(--ntt-border);
+        border-radius: $ntt-radius;
+        background-color: var(--ntt-surface);
+        transition: background-color .15s ease, border-color .15s ease;
+
+        &:hover {
+            border-color: var(--ntt-primary);
+            background-color: var(--ntt-primary-soft);
+        }
+    }
+
+    // Lựa chọn đang được chọn: viền thương hiệu + nền nhạt. Không dùng :active (đã tắt toàn cục).
+    .que.multichoice .answer div.r0:has(input[type="radio"]:checked),
+    .que.multichoice .answer div.r1:has(input[type="radio"]:checked) {
+        border-color: var(--ntt-primary);
+        background-color: var(--ntt-primary-soft);
+    }
+
+    // Đáp án đúng/sai khi XEM LẠI bài — tô đậm để sinh viên thấy ngay.
+    .que .correctness.correct,
+    .que .rightanswer .correct {
+        background-color: var(--ntt-success-soft);
+        color: var(--ntt-success);
+    }
+
+    .que .correctness.incorrect,
+    .que .rightanswer .incorrect {
+        background-color: var(--ntt-danger-soft);
+        color: var(--ntt-danger);
+    }
+
+    // Bảng tóm tắt trạng thái từng câu (dùng luôn .qnbutton ở trên nên không cần gì thêm).
+    .quizsummaryofattempt {
+        border: 1px solid var(--ntt-border);
+        border-radius: $ntt-radius-card;
+    }
+}
+
+// =====================================================================================================
+// 4. Các quy tắc theo TRANG (phải đặt NGOÀI .path-mod-quiz)
+// =====================================================================================================
+//
+// `#page-mod-quiz-attempt`, `#page-mod-quiz-review`, `#page-mod-quiz-summary` là ID của <body> —
+// pagelib.php:magic_get_bodyid() trả về 'page-'.$pagetype. Đặt chúng trong .path-mod-quiz (cũng
+// nằm trên <body>) thì selector không bao giờ khớp, vì một phần tử không thể là tổ tiên của chính nó.
+// Đây là lỗi rất dễ mắc vì CSS gốc của Moodle lại viết đúng (chúng đứng ở cấp ngoài cùng).
+
+// Trang LÀM BÀI: tách từng câu, dễ đọc.
+#page-mod-quiz-attempt .que {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--ntt-border);
+}
+
+// Thanh nút cuối trang (Câu tiếp / Trang tiếp / Nộp bài).
+// Gốc: `#page-mod-quiz-attempt .submitbtns { display: flex }` và nút "next" có margin-left: auto.
+// GIỮ NGUYÊN flex và margin-left: auto — đổi là mất bố cục. Chỉ thêm gap và vạch ngăn.
+#page-mod-quiz-attempt .submitbtns,
+#page-mod-quiz-review .submitbtns {
+    gap: .5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--ntt-border);
+}
+
+// Trang tổng kết trước khi nộp.
+#page-mod-quiz-summary .submitbtns {
+    margin-top: 1.5rem;
+    gap: .5rem;
+}
+
+// =====================================================================================================
+// 5. Đồng hồ đếm ngược (cấp root — khung ngoài có thể nằm ngoài .path-mod-quiz)
+// =====================================================================================================
+//
+// BA chi tiết đọc từ mã nguồn, bỏ qua là hỏng giao diện:
+//  a) mod/quiz/templates/timer.mustache:26 dựng `#quiz-timer-wrapper` bọc `#quiz-timer`. Khung
+//     ngoài có thể nằm NGOÀI .path-mod-quiz (trang tổng kết), nên style ở cấp ngoài cùng.
+//  b) `#quiz-timer` mang class `ms-auto` (đẩy sang phải). KHÔNG đổi display sang inline-flex:
+//     sẽ vô hiệu margin auto và đồng hồ nhảy về trái.
+//  c) mod/quiz/module.js:193 gắn `timeleft<N>` trực tiếp lên `#quiz-timer` khi còn < 100 giây,
+//     KHÔNG phải lên khung ngoài — nên selector cảnh báo phải bám vào #quiz-timer.
+//
+// Cố ý dùng hổ phách khi bình thường, chỉ chuyển đỏ khi sắp hết giờ: đỏ = lỗi, đồng hồ chạy
+// bình thường không phải lỗi.
+
+#quiz-timer {
+    padding: .375rem .75rem;
+    border: 1px solid var(--ntt-warning-border);
+    border-radius: 999px;
+    background-color: var(--ntt-warning-tint);
+    color: var(--ntt-warning-text);
+    font-variant-numeric: tabular-nums;   // số không nhảy bề rộng khi đếm
+    font-weight: 600;
+}
+
+// Sắp hết giờ: module.js gắn timeleft99 … timeleft0. Dùng [class*="timeleft"] để bắt cả khoảng
+// mà không phải viết 100 selector.
+#quiz-timer[class*="timeleft"] {
+    border-color: var(--ntt-danger-border);
+    background-color: var(--ntt-danger-soft);
+    color: var(--ntt-danger);
+}
+
+// Khung ngoài: flex để đồng hồ và nút "Ẩn" nằm cùng hàng, `margin-left:auto` của #quiz-timer
+// vẫn đẩy cụm này sang phải.
+#quiz-timer-wrapper {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}

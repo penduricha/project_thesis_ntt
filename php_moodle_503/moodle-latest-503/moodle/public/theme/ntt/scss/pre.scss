@@ -140,8 +140,11 @@ $input-btn-font-size-sm: .8125rem !default;
 $btn-font-weight: 600 !default;
 $btn-hover-bg-shade-amount: 22% !default;        // #004b87 -> #003a69
 $btn-hover-border-shade-amount: 22% !default;
-$btn-active-bg-shade-amount: 32% !default;
-$btn-active-border-shade-amount: 32% !default;
+// :active bị tắt (xem scss/ntt/_buttons.scss). Đặt 0% để shade-color()/tint-color() ở tầng biến
+// SCSS không tự làm tối, nên màu active luôn trùng hover — nếu để 32% thì Bootstrap vẫn sinh ra
+// một màu active riêng dù phần ghi đè phía sau có gán biến.
+$btn-active-bg-shade-amount: 0% !default;
+$btn-active-border-shade-amount: 0% !default;
 $input-padding-x: .75rem !default;
 $form-label-color: #5b6b82 !default;
 $form-label-font-size: .875rem !default;

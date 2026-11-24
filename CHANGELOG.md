@@ -14,6 +14,47 @@ chỉ ghi "đã sửa X".
 
 ## [Chưa phát hành] — 2026-11-23
 
+### Giao diện Moodle: style trang quiz + tắt trạng thái :active
+
+#### Thêm mới
+
+- **`theme/ntt/scss/ntt/_quiz.scss` (209 dòng)** — style trang **làm bài quiz** và **xem lại bài**.
+  Đồ án cho sinh viên làm bài thật trên Moodle nên đây là màn hình phải chăm nhất.
+  Phủ: thanh điều hướng câu hỏi 5 trạng thái, đồng hồ đếm ngược, khung câu hỏi, đáp án (`.r0/.r1`),
+  đánh dấu đúng/sai khi xem lại, thanh nút cuối trang, bảng tóm tắt trước khi nộp.
+
+  Màu gốc của Moodle là **hex cứng không theo chế độ tối** (`correct #cfc`,
+  `partiallycorrect #ffa`, `notanswered/incorrect #fcc`, viền `#bbb`) — đã chuyển hết sang token
+  `--ntt-*` nên chế độ tối tự theo.
+
+  Giữ nguyên bộ đèn tín hiệu của Moodle (viền 3px trên/dưới) vì đó là tín hiệu thị giác **thứ hai**
+  ngoài màu nền — người mù màu vẫn phân biệt được đúng/sai nhờ vị trí viền.
+
+#### Sửa lỗi
+
+- **Trạng thái `:active` gây khó chịu — tắt toàn bộ.**
+  *Nguyên nhân:* `_buttons.scss` có `transform: translateY(1px)` khi nhấn, cộng mỗi loại nút còn
+  tự làm tối thêm 32% (`$btn-active-bg-shade-amount`), nên khi bấm nút bị "tụt xuống" và đổi màu
+  — trông giật, không đồng nhất.
+  *Xử lý:* gán biến `--bs-btn-active-*` bằng đúng biến `--bs-btn-hover-*` và đặt
+  `$btn-active-bg-shade-amount: 0%`. Nhấn chuột giờ trông y hệt hover — không đổi màu, không đổi
+  viền, không đổi chữ. Làm ở một chỗ (`.btn`) là phủ mọi loại nút.
+  Giữ `:active` ở `.dropdown-item` vì đó là **mục đang chọn** (trạng thái cố định), không phải
+  hiệu ứng nhấn.
+
+#### Ba cái bẫy đã gặp thật khi viết `_quiz.scss`
+
+1. `#quiz-timer` có class `ms-auto` để đẩy sang phải — đổi `display` sang `inline-flex` là
+   `margin-left: auto` mất tác dụng, đồng hồ nhảy về trái.
+2. `module.js:193` gắn `timeleft<N>` lên **chính** `#quiz-timer`, không phải khung ngoài ⇒
+   selector cảnh báo phải là `#quiz-timer[class*="timeleft"]`.
+3. `#page-mod-quiz-attempt` / `-review` / `-summary` là ID của **`<body>`**
+   (`pagelib.php:magic_get_bodyid` trả `'page-'.$pagetype`). Đặt chúng trong `.path-mod-quiz`
+   (cũng trên `<body>`) thì selector **không bao giờ khớp** — một phần tử không thể là tổ tiên
+   của chính nó. Đã tách hết ra cấp root.
+
+Biên dịch kiểm chứng bằng dart-sass thật: 220 dòng CSS, **0 lỗi**.
+
 ### Khảo sát giao diện Moodle để custom UI
 
 #### Thêm mới

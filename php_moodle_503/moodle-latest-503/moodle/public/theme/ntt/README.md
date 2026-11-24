@@ -33,10 +33,21 @@ Moodle biên dịch lại SCSS, không cần xoá cache. Nhớ tắt khi chạy 
 | `scss/ntt/_drawers.scss` | Thanh bên trái (chỉ mục khoá học) và phải (block). |
 | `scss/ntt/_buttons.scss`, `_cards.scss`, `_forms.scss`, `_tables.scss`, `_feedback.scss`, `_page.scss` | Thành phần dùng chung. |
 | `scss/ntt/_question.scss` | Ngân hàng câu hỏi: bảng danh sách, xem trước câu trắc nghiệm (đáp án đúng/sai). |
+| `scss/ntt/_quiz.scss` | Trang làm bài quiz + xem lại: thanh điều hướng câu hỏi (5 trạng thái), đồng hồ đếm ngược, đáp án, đánh dấu đúng/sai, thanh nút cuối trang. |
 | `scss/ntt/_login.scss` | Trang đăng nhập: thẻ ở giữa trang, ô nhập, nút, thông báo lỗi. |
 | `templates/core/login_layout.mustache` | Ghi đè khung trang đăng nhập: bỏ nửa trái (ảnh nền, khung "Welcome to Moodle", số liệu), chỉ còn một thẻ biểu mẫu. Chỉ là HTML, biểu mẫu `core/loginform` giữ nguyên. |
 | `fonts/be-vietnam-pro/` | Phông (giấy phép OFL 1.1, xem `OFL.txt` và `thirdpartylibs.xml`). |
 | `settings.php` | Trang cài đặt: màu thương hiệu, SCSS thô (để chỉnh nhanh mà không sửa tệp). |
+
+## Trạng thái `:active` bị tắt
+
+Theme chỉ có hai trạng thái thị giác là "thường" và "hover". Khi nhấn chuột (`:active`), nút
+**không** đổi màu và **không** nhảy xuống: `_buttons.scss` gán `--bs-btn-active-*` bằng đúng
+`--bs-btn-hover-*`, còn `pre.scss` đặt `$btn-active-bg-shade-amount: 0%` để tầng biến SCSS không
+tự sinh màu active riêng.
+
+Ngoại lệ: `.dropdown-item:active` vẫn giữ nền xanh đặc, vì đó là **mục đang chọn** (trạng thái cố
+định), không phải hiệu ứng nhấn.
 
 ## Cách hoạt động
 

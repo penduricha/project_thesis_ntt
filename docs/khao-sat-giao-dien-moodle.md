@@ -20,7 +20,7 @@ nhất và nhìn nhiều nhất:
 | Vùng | Trạng thái | Ưu tiên |
 |---|---|---|
 | Trang khoá học (danh sách chương, thẻ hoạt động) | ❌ chưa có | 🔴 cao |
-| Trang làm bài quiz + xem lại bài | ❌ chưa có | 🔴 cao |
+| Trang làm bài quiz + xem lại bài | ✅ **đã có** (`_quiz.scss`, 2026-11-23) | — |
 | Diễn đàn (danh sách thảo luận, bài viết) | ❌ chưa có | 🟠 vừa |
 | Thanh điều hướng bậc 3 (`tertiary-navigation`) | ❌ chưa có | 🟠 vừa |
 | Hộp thoại / modal / popover của Moodle | ⚠️ chỉ có `.modal-content` | 🟠 vừa |
@@ -120,7 +120,26 @@ Class thật của Moodle 5.3 (đọc từ `course/format/templates/local/conten
 > `.activity-grid` — sẽ ra cảm giác "bảng trong bảng". Nên style ở cấp `.section-item` và chỉ
 > cho `.activity-grid` nền khi hover.
 
-### 2.2 🔴 Trang làm bài quiz + xem lại
+### 2.2 ✅ Trang làm bài quiz + xem lại — **đã làm** (`scss/ntt/_quiz.scss`)
+
+> Trạng thái: đã viết xong ngày 2026-11-23 và biên dịch sạch bằng dart-sass.
+> Nội dung dưới đây giữ lại làm tài liệu tham chiếu cho người sửa sau.
+
+Các vùng đã phủ:`.qnbutton` (điều hướng câu hỏi, 5 trạng thái), `#quiz-timer` + `#quiz-timer-wrapper`,
+khung câu hỏi khi làm bài, đáp án (`.r0/.r1`), đánh dấu đúng/sai khi xem lại, thanh nút cuối trang,
+bảng tóm tắt trước khi nộp.
+
+**Ba cái bẫy đã gặp thật khi viết tệp này** (ghi lại để lần sau không mắc):
+
+1. **`#quiz-timer` có class `ms-auto`** (`mod/quiz/templates/timer.mustache:27`) để đẩy sang phải.
+   Nếu đổi `display` sang `inline-flex` thì `margin-left: auto` mất tác dụng và đồng hồ nhảy về
+   trái. Giữ nguyên `display`, chỉ đổi màu/viền/bo góc.
+2. **`module.js:193` gắn `timeleft<N>` lên chính `#quiz-timer`**, không phải khung ngoài
+   (`#quiz-timer-wrapper`). Selector cảnh báo phải là `#quiz-timer[class*="timeleft"]`.
+3. **`#quiz-timer-wrapper` có thể nằm ngoài `.path-mod-quiz`** (trang tổng kết) ⇒ không bọc
+   trong `.path-mod-quiz`, đặt ở cấp root.
+
+Chi tiết cũ (giữ để tham chiếu):
 
 `mod/quiz/` là hoạt động chính nếu đồ án demo việc đẩy câu hỏi từ ngân hàng sang Moodle.
 Hiện **chưa có style nào**. Các vùng cần chăm:
@@ -229,7 +248,7 @@ style, rất dễ ra kết quả nửa vời vì CSS gốc có độ ưu tiên c
 |---|---|---|---|
 | **1** | Trang khoá học | `_course.scss` (mới) + 1 dòng `@import` | ~60 dòng |
 | **2** | `tertiary-navigation` + hộp thoại/popover | `_page.scss`, `_cards.scss` (sửa) | ~30 dòng |
-| **3** | Quiz (nếu có demo làm bài) | `_quiz.scss` (mới) | ~70 dòng |
+| **3** | ~~Quiz (nếu có demo làm bài)~~ ✅ **xong** | `_quiz.scss` (209 dòng) | đã làm |
 | **4** | Diễn đàn | `_forum.scss` (mới) | ~50 dòng |
 | **5** | Lịch, tin nhắn, filepicker | `_blocks.scss` (mới) | ~50 dòng |
 
