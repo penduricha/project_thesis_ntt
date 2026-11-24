@@ -36,6 +36,12 @@ chỉ ghi "đã sửa X".
 
 #### Sửa lỗi
 
+- **Thông báo lưu câu hỏi lộ thuật ngữ kỹ thuật.**
+  *Vấn đề:* toast ghi `"Đã lưu câu hỏi vào cơ sở dữ liệu"` — người dùng cuối không cần biết
+  "cơ sở dữ liệu", và câu chữ không theo mẫu của CRUD môn học.
+  *Xử lý:* `store.js` đổi thành **"Đã thêm câu hỏi"** / **"Đã cập nhật câu hỏi"** (nhánh thật và
+  nhánh mock đều sửa). Môn học giữ nguyên "Đã lưu môn học mới" / "Đã cập nhật thông tin môn học".
+
 - **Tiêu đề câu hỏi trùng trong cùng môn — chặn ở cả backend lẫn UI.**
   *Vấn đề:* trước đây có thể tạo hai câu hỏi cùng môn với tiêu đề giống hệt nhau (khác
   hoa/thường, thừa khoảng trắng), khiến danh sách tra cứu không phân biệt được.
