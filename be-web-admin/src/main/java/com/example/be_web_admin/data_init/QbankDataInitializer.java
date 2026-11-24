@@ -191,7 +191,11 @@ public class QbankDataInitializer {
                 QuestionBlueprint bp = blueprints.get(i % blueprints.size());
                 // variant = i / 10 vòng qua 4 kiểu đảo phương án ⇒ 4 tổ hợp hash khác nhau
                 // cho mỗi mẫu nội dung, nên 33 câu/chương không trùng nhau.
-                createQuestion(subject, topic, bp, i + 1, i / blueprints.size());
+                //
+                // `created + 1` (không phải `i + 1`) vì số thứ tự phải chạy liên tục trong TOÀN
+                // MÔN: dùng i+1 sẽ reset về 1 ở mỗi chương và tiêu đề "… – câu 1" lặp lại ở cả
+                // 3 chương, vi phạm quy tắc tiêu đề duy nhất trong môn.
+                createQuestion(subject, topic, bp, created + 1, i / blueprints.size());
                 created++;
             }
         }
@@ -227,7 +231,12 @@ public class QbankDataInitializer {
         Question q = new Question();
         q.setSubjectId(subject.getSubjectId());
         q.setTopicId(topic.getTopicId());
-        q.setTitle(bp.title());
+        /*
+         * Tiêu đề phải DUY NHẤT trong mỗi môn (quy tắc nghiệp vụ mới: QuestionService chặn
+         * trùng tiêu đề, mã lỗi TITLE_DUPLICATED). Mỗi chương chỉ có 10 mẫu nội dung nhưng
+         * tạo 33-34 câu bằng cách đảo phương án, nên phải gắn số thứ tự để tiêu đề không lặp.
+         */
+        q.setTitle(bp.title() + " – câu " + ordinal);
         q.setStem(bp.stem());
         q.setOptionA(rotated[0]);
         q.setOptionB(rotated[1]);

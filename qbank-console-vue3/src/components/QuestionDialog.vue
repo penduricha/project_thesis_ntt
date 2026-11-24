@@ -23,6 +23,15 @@ const dupStem = computed(() => {
   const t = nstem(f.text), d = t ? S.q.find(x => x.id != props.id && x.c == f.c && nstem(x.text) == t) : null
   return d ? `Câu dẫn trùng với ${code(d)} trong cùng môn học. Đây chỉ là cảnh báo, bạn vẫn có thể lưu.` : ''
 })
+/* Tiêu đề phải KHÁC các câu khác trong cùng môn: bỏ khoảng trắng hai đầu, không phân biệt
+   hoa/thường. Khác với câu dẫn (chỉ cảnh báo), trùng tiêu đề là CHẶN lưu — khớp quy tắc
+   đã áp ở backend (mã lỗi TITLE_DUPLICATED). */
+const ntitle = t => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase()
+const dupTitle = computed(() => {
+  const t = ntitle(f.title)
+  if (!t) return null                       // tiêu đề không bắt buộc: để trống thì bỏ qua
+  return S.q.find(x => x.id != props.id && x.c == f.c && ntitle(x.title) === t) || null
+})
 const dto = computed(() => {
   const c = COURSES[f.c] || {}, o = f.o.map(x => x.trim())
   return { subjectId: c.subjectId ?? null, topicId: c.topicIds?.[f.tp] ?? null, topicName: c.topics?.[f.tp] ?? null, title: f.title.trim() || null, stem: f.text.trim(),
@@ -45,6 +54,7 @@ async function save() {
   if (!c) err.c = 'Hãy chọn môn học trong danh sách.'
   else if (!subjOk(f.c)) err.c = 'Bạn chưa được phân công môn học này.'
   else if (!c.topics[f.tp]) err.chips = 'Môn học này chưa có chương. Hãy thêm chương cho môn học trước khi lưu câu hỏi.'
+  if (dupTitle.value) err.ti = `Tiêu đề này đã dùng cho ${code(dupTitle.value)} trong cùng môn. Hãy đặt tiêu đề khác.`
   if (Object.keys(err).length) { await nextTick(); return focusFirstInvalid() }
   if (cur && cur.text === text && cur.o.every((x, i) => x === o[i]) && cur.a === f.a && cur.c === f.c && (cur.tp || 0) === f.tp && cur.l === +f.l && (cur.title || '') === f.title.trim() && (cur.fb || '') === f.fb.trim()) {
     dirty.value = false; emit('close'); return toast('Không có thay đổi nào để lưu')
@@ -61,7 +71,11 @@ async function save() {
 <template>
   <BaseModal :title="id ? 'Sửa ' + code({ id }) : 'Thêm câu hỏi mới'" :dirty="dirty" @close="emit('close')">
     <label>Tiêu đề (không bắt buộc, dùng làm tên câu hỏi khi xuất Moodle)
-      <input id="f-ti" maxlength="255" v-model="f.title" :placeholder="id ? code({ id }) : 'Để trống sẽ dùng mã CHxxx'" autocomplete="off">
+      <input id="f-ti" maxlength="255" v-model="f.title" :class="{ invalid: err.ti }" :aria-invalid="err.ti ? 'true' : null"
+             :placeholder="id ? code({ id }) : 'Để trống sẽ dùng mã CHxxx'" autocomplete="off"
+             @input="err.ti = ''">
+      <small v-if="err.ti" class="fe" role="alert">{{ err.ti }}</small>
+      <small v-else-if="dupTitle" class="warn-inline">Tiêu đề trùng với {{ code(dupTitle) }} trong cùng môn học.</small>
     </label>
     <label>Câu dẫn <span style="color:var(--danger-strong)">*</span>
       <textarea id="f-t" rows="3" maxlength="500" v-model="f.text" :class="{ invalid: err.t }" :aria-invalid="err.t ? 'true' : null" @input="err.t = ''"></textarea>

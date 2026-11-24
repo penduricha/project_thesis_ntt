@@ -36,6 +36,47 @@ chỉ ghi "đã sửa X".
 
 #### Sửa lỗi
 
+- **Tiêu đề câu hỏi trùng trong cùng môn — chặn ở cả backend lẫn UI.**
+  *Vấn đề:* trước đây có thể tạo hai câu hỏi cùng môn với tiêu đề giống hệt nhau (khác
+  hoa/thường, thừa khoảng trắng), khiến danh sách tra cứu không phân biệt được.
+  *Xử lý:*
+  * `QuestionRepository` thêm `existsDuplicateTitleInSubject` / `findDuplicateTitleInSubject`,
+    so `lower(q.title)` trong cùng `subject_id`, **bỏ qua câu `ARCHIVED`** và **loại chính câu
+    đang sửa** (`excludeId`, truyền `-1` khi tạo mới — xem ghi chú dưới).
+  * `QuestionService.assertTitleAvailable(...)` ném **409 `TITLE_DUPLICATED`** kèm câu trùng
+    (`"Tiêu đề "X" đã được dùng cho câu hỏi #N trong cùng môn học"`).
+  * `QuestionDialog.vue` chặn trước khi gọi API (`dupTitle`), báo lỗi ngay tại ô tiêu đề.
+  * Tiêu đề **để trống không coi là trùng** — cột `title` nullable và không bắt buộc.
+  * *Ghi chú kỹ thuật:* tham số `excludeId` **phải truyền `-1`, không được truyền `null`**,
+    vì `question_id <> NULL` trong SQL luôn cho `UNKNOWN` ⇒ query trả rỗng ⇒ việc chặn trùng
+    mất tác dụng trong im lặng.
+
+- **Môn học / chương: chuẩn hoá cả hai phía khi so trùng.**
+  *Vấn đề:* `CourseDialog.vue` và `TopicManagerDialog.vue` chỉ `trim()` dữ liệu **vừa nhập**,
+  còn dữ liệu **đã lưu** thì so nguyên bản ⇒ một môn đã lưu kèm khoảng trắng thừa
+  (`"Cấu trúc  dữ liệu "`) vẫn lọt qua bước kiểm tra trùng.
+  *Xử lý:* thêm `keyOf()` / `key()` chuẩn hoá (trim + gộp khoảng trắng + lowercase) áp cho
+  **cả hai vế** của phép so sánh.
+
+- **`AnswerNumberingD` thiếu 2 giá trị của Moodle.**
+  *Vấn đề:* Moodle hỗ trợ **6** kiểu đánh số đáp án
+  (`question/type/multichoice/questiontype.php:324` —
+  `abc`, `ABCD`, `123`, `iii`, `IIII`, `none`), nhưng enum và cột
+  `ntt_moodle_profiles.answer_numbering` chỉ có **4**. Profile đọc từ Moodle dùng `iii`/`IIII`
+  sẽ ném `IllegalArgumentException` trong `fromDbValue()` ⇒ HTTP 500; nếu DB chạy non-strict
+  thì giá trị bị ghi rỗng và mất dữ liệu âm thầm.
+  *Xử lý:* thêm `LOWER_ROMAN("iii")`, `UPPER_ROMAN("IIII")`; cập nhật `AnswerNumberingD.SQL_TYPE`
+  và `sql/2026-11-19-02-business-tables.sql:290`; thêm migration
+  `sql/2026-11-23-answer-numbering-moodle-6-gia-tri.sql` cho CSDL đang chạy.
+
+- **Dữ liệu seed có tiêu đề trùng, vi phạm quy tắc vừa thêm.**
+  *Vấn đề:* `QbankDataInitializer` gán `q.setTitle(bp.title())`, mà mỗi chương chỉ có 10 mẫu
+  nội dung cho 33–34 câu ⇒ mỗi tiêu đề lặp 3–4 lần trong cùng môn.
+  *Xử lý:* thêm hậu tố ` – câu <n>` với `n` chạy **liên tục trong toàn môn**
+  (`created + 1`, không phải `i + 1` — dùng `i + 1` sẽ reset ở mỗi chương và lại trùng).
+  Đã kiểm chứng: 100 tiêu đề/môn, **0 trùng** ở cả 5 môn.
+
+
 - **`Column 'question_id' cannot be null` — ứng dụng KHÔNG khởi động được.**
   *Triệu chứng:* log Spring ném `DataIntegrityViolationException` khi insert
   `ntt_question_revisions` (SQLState 23000, errno 1048), tại `QbankDataInitializer.createQuestion`.

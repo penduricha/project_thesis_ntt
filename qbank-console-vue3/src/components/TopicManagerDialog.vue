@@ -8,7 +8,9 @@ const emit = defineEmits(['close'])
 const crs = computed(() => COURSES[props.ci])
 const name = ref(''), err = ref('')
 const clean = v => v.trim().replace(/\s+/g, ' ')
-const same = (a, b) => a.toLowerCase() == b.toLowerCase()
+/* So trùng phải chuẩn hoá cả hai phía: tên chương đã lưu có thể còn khoảng trắng thừa. */
+const key = v => clean(String(v || '')).toLowerCase()
+const same = (a, b) => key(a) == key(b)
 const count = idx => S.q.filter(q => q.c == props.ci && q.tp == idx).length
 
 function add() {

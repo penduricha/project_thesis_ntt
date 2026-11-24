@@ -10,13 +10,17 @@ const f = reactive({ id: old?.id || '', name: old?.name || '', dept: old?.dept |
 const err = reactive({}), dirty = ref(false)
 watch(f, () => { dirty.value = true }, { deep: true })
 function cancel() { if (dirty.value && !confirm('Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?')) return; emit('close') }
+/* Chuẩn hoá để so trùng: bỏ khoảng trắng hai đầu và gộp khoảng trắng giữa, không phân biệt
+   hoa/thường. Phải chuẩn hoá CẢ HAI phía (dữ liệu đã lưu lẫn dữ liệu vừa nhập) — nếu chỉ
+   chuẩn hoá phía nhập thì một môn cũ lưu kèm khoảng trắng thừa sẽ lọt qua bước kiểm tra. */
+const keyOf = t => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase()
 async function submit() {
   Object.keys(err).forEach(k => delete err[k])
   const id = f.id.trim().toUpperCase(), name = f.name.trim().replace(/\s+/g, ' '), others = COURSES.filter((_, i) => i !== props.index)
   if (!id) err.id = 'Mã học phần đang trống.'
-  else if (others.some(c => c.id.toLowerCase() == id.toLowerCase())) err.id = 'Mã học phần này đã tồn tại.'
+  else if (others.some(c => keyOf(c.id) == keyOf(id))) err.id = 'Mã học phần này đã tồn tại.'
   if (!name) err.name = 'Tên môn học đang trống.'
-  else if (others.some(c => c.name.toLowerCase() == name.toLowerCase())) err.name = 'Tên môn học này đã tồn tại.'
+  else if (others.some(c => keyOf(c.name) == keyOf(name))) err.name = 'Tên môn học này đã tồn tại.'
   if (Object.keys(err).length) {
     await nextTick(); const e = document.querySelector('#dlg .invalid'); e?.scrollIntoView({ block: 'center' }); e?.focus({ preventScroll: true }); return
   }

@@ -352,19 +352,28 @@ export async function saveQuestion(d, eid) {
         Object.assign(cur, detailToQuestion(res, d.c, d.tp))
         S.sug = S.sug.filter((s) => s.qid != eid)
         log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
+        toast('Đã cập nhật câu hỏi', 'ok')
       } else {
         const res = await qbankApi.createQuestion(questionToCreate(d, course))
         const q = detailToQuestion(res, d.c, d.tp)
         S.q.push(q)
         log('Thêm câu hỏi mới ' + code(q), 'ok')
+        toast('Đã thêm câu hỏi', 'ok')
       }
-      toast('Đã lưu câu hỏi vào cơ sở dữ liệu', 'ok')
       await loadDashboard()
     } catch (e) {
       const status = e?.response?.status
-      toast(status === 409
-        ? 'Câu hỏi vừa bị người khác sửa (xung đột phiên bản). Hãy tải lại rồi sửa lại.'
-        : apiErrorMessage(e, 'Lưu câu hỏi thất bại.'), 'er')
+      // 409 có HAI nguyên nhân khác nhau, phải phân biệt bằng mã nghiệp vụ:
+      //   TITLE_DUPLICATED -> tiêu đề trùng câu khác trong môn (lỗi nhập liệu, sửa được)
+      //   VERSION_CONFLICT -> người khác vừa sửa cùng câu (phải tải lại)
+      const errCode = e?.response?.data?.code
+      if (errCode === 'TITLE_DUPLICATED') {
+        toast(apiErrorMessage(e, 'Tiêu đề câu hỏi đã được dùng trong môn này.'), 'er')
+      } else if (status === 409) {
+        toast('Câu hỏi vừa bị người khác sửa (xung đột phiên bản). Hãy tải lại rồi sửa lại.', 'er')
+      } else {
+        toast(apiErrorMessage(e, 'Lưu câu hỏi thất bại.'), 'er')
+      }
     }
     return
   }
@@ -373,11 +382,12 @@ export async function saveQuestion(d, eid) {
     const next = { ...cur, ...d, st: cur.st == 'draft' ? 'draft' : 'stale', ver: (cur.ver || 1) + 1 }
     await repo.upsert(next); Object.assign(cur, next)
     S.sug = S.sug.filter(s => s.qid != eid); log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
+    toast('Đã cập nhật câu hỏi', 'ok')
   } else {
     const q = { id: S.n++, st: 'draft', src: 'manual', ver: 1, ...d }
     await repo.upsert(q); S.q.push(q); log('Thêm câu hỏi mới ' + code(q), 'ok')
+    toast('Đã thêm câu hỏi', 'ok')
   }
-  toast('Đã lưu câu hỏi vào cơ sở dữ liệu', 'ok')
 }
 export function askDeleteQuestion(id) {
   const q = S.q.find(x => x.id == id); if (!q) return

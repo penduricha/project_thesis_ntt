@@ -287,7 +287,7 @@ CREATE TABLE IF NOT EXISTS ntt_moodle_profiles
     profile_name    VARCHAR(100) NOT NULL,
     moodle_base_url VARCHAR(255) NULL,
     category_prefix VARCHAR(255) NULL,
-    answer_numbering ENUM ('none','abc','ABCD','123') NOT NULL DEFAULT 'none',
+    answer_numbering ENUM ('none','abc','ABCD','123','iii','IIII') NOT NULL DEFAULT 'none',
     shuffle_answers BIT(1)       NOT NULL DEFAULT b'1',
     default_grade   DECIMAL(6,3) NOT NULL DEFAULT 1.000,
     is_default      BIT(1)       NOT NULL DEFAULT b'0',

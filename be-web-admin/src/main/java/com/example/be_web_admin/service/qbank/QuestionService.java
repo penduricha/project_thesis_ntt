@@ -216,10 +216,15 @@ public class QuestionService {
         String hash = QuestionContentHasher.hash(stem, a, b, c, d, correctLabel, contentFormat);
         boolean duplicate = questions.existsBySubjectIdAndContentHash(subject.getSubjectId(), hash);
 
+        // Tiêu đề phải khác các câu khác trong cùng môn (bỏ khoảng trắng hai đầu, không phân biệt
+        // hoa/thường). Tiêu đề không bắt buộc: để trống thì bỏ qua kiểm tra.
+        String title = trimToNull(request.title());
+        assertTitleAvailable(subject.getSubjectId(), title, -1L);
+
         Question question = new Question();
         question.setSubjectId(subject.getSubjectId());
         question.setTopicId(topic == null ? null : topic.getTopicId());
-        question.setTitle(trimToNull(request.title()));
+        question.setTitle(title);
         question.setStem(stem);
         question.setOptionA(a);
         question.setOptionB(b);
@@ -290,8 +295,12 @@ public class QuestionService {
         String newHash = QuestionContentHasher.hash(stem, a, b, c, d, correctLabel, contentFormat);
         boolean contentChanged = !QuestionContentHasher.sameContent(question.getContentHash(), newHash);
 
+        // Cùng quy tắc với create, nhưng bỏ qua chính câu đang sửa.
+        String title = trimToNull(request.title());
+        assertTitleAvailable(question.getSubjectId(), title, questionId);
+
         question.setTopicId(topic == null ? null : topic.getTopicId());
-        question.setTitle(trimToNull(request.title()));
+        question.setTitle(title);
         question.setStem(stem);
         question.setOptionA(a);
         question.setOptionB(b);
@@ -527,6 +536,32 @@ public class QuestionService {
             throw QbankException.badRequest("EMPTY_FIELD", field + " không được để trống.");
         }
         return trimmed;
+    }
+
+    /**
+     * Chặn trùng tiêu đề câu hỏi trong cùng một môn.
+     *
+     * <p>Quy tắc (theo góp ý nghiệp vụ): tiêu đề phải <b>khác</b> tiêu đề các câu khác trong môn,
+     * không tính khoảng trắng hai đầu và không phân biệt hoa/thường. Tiêu đề để trống là hợp lệ
+     * (cột {@code title} cho phép NULL, giao diện hiển thị mã CHxxx thay thế), nên bỏ qua kiểm tra.</p>
+     *
+     * @param excludeQuestionId câu đang sửa; <b>tạo mới thì truyền -1</b> (không phải null) để
+     *                          tránh bẫy {@code <> NULL} luôn UNKNOWN trong SQL
+     * @throws QbankException 409 TITLE_DUPLICATED kèm mã câu bị trùng để UI báo rõ
+     */
+    private void assertTitleAvailable(Long subjectId, String title, Long excludeQuestionId) {
+        if (title == null || title.isBlank()) {
+            return;
+        }
+        List<Question> clashes = questions.findDuplicateTitleInSubject(
+                subjectId, title, excludeQuestionId, QuestionStatusD.ARCHIVED);
+        if (clashes.isEmpty()) {
+            return;
+        }
+        Question other = clashes.get(0);
+        throw QbankException.conflict("TITLE_DUPLICATED",
+                "Tiêu đề \"" + title + "\" đã được dùng cho câu hỏi #" + other.getQuestionId()
+                        + " trong cùng môn học. Hãy đặt tiêu đề khác.");
     }
 
     private static String trimToNull(String value) {

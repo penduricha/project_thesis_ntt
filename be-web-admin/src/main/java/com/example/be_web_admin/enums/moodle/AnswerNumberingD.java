@@ -14,10 +14,18 @@ public enum AnswerNumberingD {
     NONE("none"),
     ABC("abc"),
     ABCD("ABCD"),
-    NUMERIC("123");
+    NUMERIC("123"),
+    /*
+     * Moodle còn 2 kiểu đánh số bằng số La Mã (xem questiontype.php:324 —
+     * array('abc','ABCD','123','iii','IIII','none')). Thiếu 2 giá trị này thì profile
+     * đọc từ Moodle có answer_numbering = 'iii' | 'IIII' sẽ ném IllegalArgumentException
+     * trong fromDbValue() và trả 500 cho người dùng.
+     */
+    LOWER_ROMAN("iii"),
+    UPPER_ROMAN("IIII");
 
     /** Dùng cho columnDefinition để kiểu cột và danh sách giá trị không bao giờ lệch nhau. */
-    public static final String SQL_TYPE = "enum('none','abc','ABCD','123')";
+    public static final String SQL_TYPE = "enum('none','abc','ABCD','123','iii','IIII')";
 
     private final String dbValue;
 
