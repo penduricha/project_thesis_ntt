@@ -135,7 +135,16 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
   <div v-if="auth.isDemo" class="demo-banner" role="status">Chế độ demo (VITE_DEMO_MODE=true): dùng dữ liệu mẫu, không gọi Spring Boot. Production phải tắt.</div>
   <div id="app" class="shell" :data-nav="nav" :inert="S.dlg.kind ? '' : undefined">
     <header class="topbar">
-      <button class="topbar__toggle" id="mt" aria-label="Mở hoặc đóng menu" :aria-expanded="String(nav === 'open')" aria-controls="side" @click="toggleNav"><span></span><span></span><span></span></button>
+      <button class="topbar__toggle" id="mt" aria-label="Mở hoặc đóng menu" :aria-expanded="String(nav === 'open')" aria-controls="side" @click="toggleNav">
+        <!--
+          3 gạch vẽ bằng SVG chứ không bằng 3 thẻ <span> như trước.
+          Lý do: với <span> (height:2px, gap:5px trong khung 44px) chiều cao nội dung là 16px,
+          căn giữa còn dư 14px ⇒ mỗi thanh rơi vào toạ độ nửa pixel và trình duyệt vẽ thanh
+          thứ ba mảnh hơn hai thanh kia (đo trên ảnh chụp: 3px–3px–2px). Toạ độ nguyên trong
+          SVG luôn cho ba gạch dày bằng nhau ở mọi mức zoom và mọi tỉ lệ màn hình.
+        -->
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
       <RouterLink to="/dash" class="logo-link">
         <span class="logo-badge">QB</span>
         <span class="logo-text"><strong>QBank Console</strong><span>NTTU · Kiểm định LLM</span></span>

@@ -40,8 +40,11 @@ h1,h2,h3,h4,p,dl,dd{margin:0}b,th,h1,h2,h3,h4{font-weight:700}.mut,small{color:v
 /* Shell & Topbar */
 .shell{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr;grid-template-areas:"head" "main";min-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 .topbar{grid-area:head;position:sticky;top:env(safe-area-inset-top,0px);z-index:40;display:flex;align-items:center;gap:.75rem;height:var(--topbar-h);padding:0 var(--page-padding-x) 0 .5rem;background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(0,30,60,.25)}
-.topbar__toggle{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:44px;height:44px;padding:0;border:0;border-radius:var(--radius);background:transparent;cursor:pointer;transition:background-color .2s ease}
-.topbar__toggle span{display:block;flex:none;width:22px;height:2px;border-radius:1px;background:#fff}
+/* Icon hamburger: dùng SVG (xem App.vue) thay cho 3 <span> cũ. Ba gạch của SVG nằm ở toạ độ
+   nguyên nên luôn dày bằng nhau; với <span> + gap thì tổng cao 16px trong khung 44px làm các
+   thanh rơi vào nửa pixel và thanh cuối bị vẽ mảnh hơn (3px-3px-2px). */
+.topbar__toggle{flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;border-radius:var(--radius);background:transparent;color:#fff;cursor:pointer;transition:background-color .2s ease}
+.topbar__toggle svg{display:block}
 .topbar__toggle:hover{background:rgba(255,255,255,.16)}.topbar__toggle:focus-visible{outline-color:#fff}
 
 /* Brand Logo in Topbar */

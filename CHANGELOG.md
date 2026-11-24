@@ -14,6 +14,46 @@ chỉ ghi "đã sửa X".
 
 ## [Chưa phát hành] — 2026-11-23
 
+### Rà soát Spring Boot — tài liệu "tính năng cần vá"
+
+#### Thêm mới
+
+- **`docs/review-spring-boot-can-va.md`** — rà trực tiếp mã nguồn `be-web-admin`, kết luận 4 việc:
+
+  1. 🔴 **Mọi token đều được cấp `ROLE_ADMIN`.** `security/jwt/JwtAuthenticationFilter.java:52`
+     gán cứng `new SimpleGrantedAuthority("ROLE_ADMIN")`, không đọc vai trò thật. Cộng với việc
+     `SecurityConfig` chỉ có `anyRequest().authenticated()` và **không một `@PreAuthorize` nào**
+     trong toàn bộ `src/main/java` ⇒ tài khoản `LECTURER` gọi được API quản trị (`/web/admin/admins`),
+     API tuyển sinh và toàn bộ API mobile. Bẫy: nếu chỉ thêm `@PreAuthorize("hasRole('ADMIN')")`
+     mà không sửa filter thì **không chặn được ai**, vì ai cũng mang ROLE_ADMIN.
+  2. 🔴 **Không có phân công môn ở backend.** Giao diện đã lọc theo `subjOk` / `myScope`
+     (`store.js:534-535`) nhưng dữ liệu lấy từ **mock**; CSDL không có bảng nối giảng viên–môn,
+     service không kiểm tra. Gọi API trực tiếp là sửa được câu của môn bất kỳ.
+  3. 🟠 **Trùng nội dung chỉ ghi log.** `QuestionService:266-269` tính `duplicate` (theo
+     `content_hash`) rồi `log.info`, **không trả cờ** trong `QuestionDetail` ⇒ người dùng tạo câu
+     trùng mà không biết. Đề xuất thêm `duplicateCount` + toast cảnh báo mềm (không chặn).
+  4. 🟡 **Không có test tầng API.** 6 tệp test đều là unit/smoke, không có `@WebMvcTest` ⇒ các
+     quy tắc `TITLE_DUPLICATED`, `VERSION_CONFLICT`, `QUESTION_ARCHIVED` không được bảo vệ.
+
+  Tài liệu cũng ghi rõ **11 hạng mục đã kiểm tra và không có vấn đề** (khoá lạc quan, xoá mềm,
+  phân trang có trần, N+1 đã batch, chống gửi trùng AI, timeout worker, FK ghép chặn `topicId`
+  khác môn…) để tránh rà lại và để trả lời phản biện.
+
+### Giao diện: icon hamburger
+
+#### Sửa lỗi
+
+- **Icon hamburger ba gạch không đều nhau (thanh thứ ba mảnh hơn).**
+  *Triệu chứng:* icon menu ở thanh trên cùng trông "lệch" — đo trên ảnh chụp cho thấy ba gạch
+  dài bằng nhau (30px) và cách đều (7px) nhưng **thanh 3 dày 2px trong khi thanh 1–2 dày 3px**.
+  *Nguyên nhân:* icon vẽ bằng 3 thẻ `<span>` với `height:2px` + `gap:5px` trong nút cao 44px.
+  Tổng cao nội dung 16px, căn giữa còn dư 14px ⇒ mỗi thanh rơi vào toạ độ **nửa pixel**, trình
+  duyệt làm tròn khác nhau cho từng thanh.
+  *Xử lý:* thay bằng **một** thẻ `<svg viewBox="0 0 24 24">` với **một** `stroke-width="2"` và
+  ba đường kẻ tại `y = 7, 12, 17`. Cả ba dùng chung một stroke nên **luôn** dày bằng nhau, ở mọi
+  mức zoom và mọi tỉ lệ màn hình (Retina, 125%, 150%…). CSS bỏ rule `.topbar__toggle span`,
+  chuyển sang `color:#fff` + `currentColor`.
+
 ### Nối API Spring Boot ↔ CSDL và nạp 500 câu hỏi mẫu
 
 #### Thêm mới
