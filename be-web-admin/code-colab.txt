@@ -1,0 +1,260 @@
+# Colab: qwen2.5:14b-instruct-q4_K_M = 1 node T4 16GB
+# Chạy 1 lần cho mỗi tài khoản Colab (5 tài khoản = 5 node). Nhớ đổi NODE_INDEX = 1..5 ở ô 2.
+
+# Ô 1: cài đặt + ollama serve (NUM_PARALLEL=3, KV q8_0, flash attention, keep_alive=-1) + pull model + warm-up đồng thời 3 slot với đúng num_ctx=8192 của worker.
+# Ô 2: proxy Bearer (/health + /api/chat + /api/tags + /api/version) + cloudflared quick tunnel + kiểm tra end-to-end qua URL công khai + in block AI_NODE_<n>_* để dán vào .env.
+# VRAM T4 16GB: weights ~9.0GB + KV q8_0 3×8192 ≈ 4.7GB ≈ 14–15GB. Nếu ô 1 báo warm-up slot != 200 hoặc nvidia-smi >15GB → đặt NUM_PARALLEL=2 và chạy lại ô 1 (đồng thời giữ max-concurrency: 2 ở worker nếu vậy).
+
+# URL quick tunnel đổi mỗi lần runtime reset → phải cập nhật .env + restart worker.
+
+
+!nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv
+!apt-get install -y -qq zstd pciutils
+!curl -fsSL https://ollama.com/install.sh | sh
+!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared && chmod +x cloudflared
+!pip install -q fastapi uvicorn httpx
+
+import os, subprocess, time, requests
+
+NUM_PARALLEL = 3    # T4 16GB + KV q8_0 @ 8192 ctx ≈ 14–15GB → 3 slot an toàn
+NUM_CTX = 8192      # PHẢI trùng ai.llm.*.num-ctx của worker
+
+# dọn ollama cũ nếu chạy lại ô này
+subprocess.run(["pkill", "-f", "ollama serve"], capture_output=True)
+
+env = {**os.environ,
+       "OLLAMA_HOST": "127.0.0.1:11434",   # chỉ nghe nội bộ, không mở ra ngoài
+       "OLLAMA_NUM_PARALLEL": str(NUM_PARALLEL),
+       "OLLAMA_FLASH_ATTENTION": "1",
+       "OLLAMA_KV_CACHE_TYPE": "q8_0",
+       "OLLAMA_MAX_LOADED_MODELS": "1",
+       "OLLAMA_KEEP_ALIVE": "-1"}          # model không bao giờ unload
+subprocess.Popen(["ollama", "serve"], env=env,
+                 stdout=open("ollama.log", "w"), stderr=subprocess.STDOUT)
+
+for _ in range(60):
+    try:
+        if requests.get("http://127.0.0.1:11434/api/version", timeout=2).ok:
+            print("Ollama đã sẵn sàng"); break
+    except Exception:
+        time.sleep(1)
+else:
+    print(open("ollama.log").read()[-3000:]); raise SystemExit("Ollama khởi động thất bại — xem ollama.log")
+
+!ollama pull qwen2.5:14b-instruct-q4_K_M
+
+# Warm-up ĐỒNG THỜI đúng NUM_PARALLEL slot với num_ctx của worker.
+# Nếu VRAM không đủ chứa 3 slot, lỗi (OOM / 500) sẽ lộ ra ngay tại đây
+# → giảm NUM_PARALLEL=2 và chạy lại ô này thay vì để worker gặp lỗi giữa chừng.
+import concurrent.futures
+
+MODEL = "qwen2.5:14b-instruct-q4_K_M"
+
+def warm(i):
+    r = requests.post("http://127.0.0.1:11434/api/chat",
+                      json={"model": MODEL,
+                            "messages": [{"role": "user", "content": f"slot {i}: trả lời đúng 1 từ ok"}],
+                            "options": {"num_ctx": NUM_CTX, "temperature": 0.0},
+                            "keep_alive": -1},
+                      timeout=600)
+    return i, r.status_code
+
+t0 = time.time()
+with concurrent.futures.ThreadPoolExecutor(max_workers=NUM_PARALLEL) as p:
+    for i, s in p.map(warm, range(1, NUM_PARALLEL + 1)):
+        print(f"warm-up slot {i}: HTTP {s}")
+print(f"warm-up xong sau {time.time() - t0:.0f}s")
+!nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
+
+
+
+import os, re, secrets, subprocess, time
+import requests
+
+NODE_INDEX = 1        # ← đổi thành 2, 3, 4, 5 cho từng tài khoản Colab rồi chạy lại ô này
+MODEL = "qwen2.5:14b-instruct-q4_K_M"
+NUM_CTX = 8192
+TOKEN = secrets.token_urlsafe(24)
+
+# dọn proxy/tunnel cũ nếu chạy lại ô này
+subprocess.run(["pkill", "-f", "uvicorn proxy:app"], capture_output=True)
+subprocess.run(["pkill", "-f", "cloudflared tunnel"], capture_output=True)
+
+open("proxy.py", "w").write('''
+import asyncio, hmac, os, time
+import httpx
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import Response, JSONResponse
+
+TOKEN = os.environ["WORKER_TOKEN"]
+OLLAMA = "http://127.0.0.1:11434"
+# PHẢI NHỎ HƠN ai.llm.read-timeout của worker (120s). Nếu lớn hơn, khi worker đã bỏ cuộc
+# Ollama vẫn sinh tiếp cho request bị huỷ, slot bị chiếm quá NUM_PARALLEL và request mới phải xếp hàng.
+UPSTREAM_TIMEOUT = float(os.environ.get("UPSTREAM_TIMEOUT", "115"))
+_cache = {"t": 0.0, "version": None}
+
+def _authorized(req):
+    # so sánh thời gian hằng số, tránh dò token qua độ trễ
+    got = req.headers.get("authorization", "").encode()
+    return hmac.compare_digest(got, ("Bearer " + TOKEN).encode())
+
+async def _ollama_version():
+    now = time.time()
+    if now - _cache["t"] > 10.0:
+        try:
+            async with httpx.AsyncClient(timeout=2) as c:
+                r = await c.get(OLLAMA + "/api/version")
+            _cache["version"] = r.json().get("version")
+        except Exception:
+            _cache["version"] = None
+        _cache["t"] = now
+    return _cache["version"]
+
+app = FastAPI()
+
+@app.get("/health")                     # worker gọi để kiểm tra node (không cần auth)
+async def health():
+    v = await _ollama_version()
+    return {"ok": True, "ollama_up": v is not None, "runtime_version": v or "unknown"}
+
+@app.get("/api/tags")                   # worker probe metadata (cần Bearer)
+async def tags(req: Request):
+    if not _authorized(req):
+        raise HTTPException(401, "unauthorized")
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.get(OLLAMA + "/api/tags")
+        return JSONResponse(r.json(), status_code=r.status_code)
+    except Exception:
+        return JSONResponse({"error": "ollama unreachable"}, status_code=502)
+
+@app.get("/api/version")
+async def version(req: Request):
+    if not _authorized(req):
+        raise HTTPException(401, "unauthorized")
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.get(OLLAMA + "/api/version")
+        return JSONResponse(r.json(), status_code=r.status_code)
+    except Exception:
+        return JSONResponse({"error": "ollama unreachable"}, status_code=502)
+
+@app.post("/api/chat")                  # worker gọi inference (cần Bearer)
+async def chat(req: Request):
+    if not _authorized(req):
+        raise HTTPException(401, "unauthorized")
+    try:
+        body = await req.json()
+    except Exception:
+        return JSONResponse({"error": "body không phải JSON"}, status_code=400)
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "body phải là object JSON"}, status_code=400)
+    body["stream"] = False
+
+    async def call_ollama():
+        async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as c:
+            return await c.post(OLLAMA + "/api/chat", json=body)
+
+    # Chạy lời gọi Ollama như một task riêng để huỷ được ngay khi worker ngắt kết nối:
+    # huỷ task -> httpx đóng kết nối -> Ollama dừng sinh token và nhả slot.
+    upstream = asyncio.create_task(call_ollama())
+    try:
+        while not upstream.done():
+            await asyncio.wait({upstream}, timeout=0.5)
+            if not upstream.done() and await req.is_disconnected():
+                return JSONResponse({"error": "client đã ngắt kết nối"}, status_code=499)
+        r = upstream.result()
+        return Response(content=r.content, status_code=r.status_code,
+                        media_type=r.headers.get("content-type", "application/json"))
+    except httpx.TimeoutException:
+        return JSONResponse({"error": "ollama timeout"}, status_code=504)
+    except httpx.ConnectError:
+        return JSONResponse({"error": "ollama unreachable (chưa chạy hoặc bị tắt)"}, status_code=502)
+    except httpx.HTTPError as e:
+        return JSONResponse({"error": "lỗi giao tiếp với ollama: " + type(e).__name__}, status_code=502)
+    finally:
+        if not upstream.done():
+            upstream.cancel()
+''')
+
+subprocess.Popen(["uvicorn", "proxy:app", "--host", "127.0.0.1", "--port", "8000"],
+                 env={**os.environ, "WORKER_TOKEN": TOKEN},
+                 stdout=open("proxy.log", "w"), stderr=subprocess.STDOUT)
+subprocess.Popen(["./cloudflared", "tunnel", "--url", "http://127.0.0.1:8000"],
+                 stdout=open("cf.log", "w"), stderr=subprocess.STDOUT)
+
+# 1) Chờ URL xuất hiện trong cf.log (tối đa 60s)
+url = None
+for _ in range(60):
+    time.sleep(1)
+    cf_log = open("cf.log").read() if os.path.exists("cf.log") else ""
+    m = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", cf_log)
+    if m:
+        url = m.group(0); break
+if url is None:
+    print(cf_log[-2000:]); raise SystemExit("cloudflared chưa mở URL — xem cf.log")
+print("Tunnel URL:", url)
+
+host = url.split("//", 1)[1].split("/", 1)[0]
+
+# 2) Chẩn đoán DNS qua DoH (HTTPS tới cloudflare-dns.com — KHÔNG dùng DNS của Colab)
+#    Nếu DoH trả lời nhưng requests/urllib của Colab báo "Name or service not known"
+#    thì đây là DNS nội bộ của Colab chậm/lỗi, tunnel vẫn hoạt động bình thường.
+try:
+    r = requests.get("https://cloudflare-dns.com/dns-query",
+                     params={"name": host, "type": "A"},
+                     headers={"accept": "application/dns-json"},
+                     timeout=10)
+    answers = r.json().get("Answer", [])
+    print("DoH A record:", [a.get("data") for a in answers] or r.json())
+except Exception as e:
+    print("DoH check thất bại:", e)
+
+# 3) Kiểm tra end-to-end QUA URL CÔNG KHAI — retry tới 90s (quick tunnel cần vài giây đăng ký)
+verified = False
+deadline = time.time() + 90
+while True:
+    try:
+        r = requests.get(url + "/health", timeout=15)
+        print("GET  /health   ->", r.status_code, r.text)
+        verified = True
+        break
+    except requests.RequestException as e:
+        left = deadline - time.time()
+        if left <= 0:
+            print("KHÔNG kết nối được URL sau 90s:", type(e).__name__, e)
+            print("→ Nếu DoH ở bước 2 CÓ trả lời, tunnel OK nhưng Colab DNS chậm — worker VẪN DÙNG ĐƯỢC.")
+            print("→ Nếu DoH cũng fail: tunnel chưa đăng ký xong hoặc cloudflared đã chết — xem cf.log:")
+            print(open("cf.log").read()[-2000:])
+            break
+        print(f"...chưa resolve/kết nối được, thử lại sau 5s ({int(left)}s còn lại)")
+        time.sleep(5)
+
+if verified:
+    t0 = time.time()
+    try:
+        r = requests.post(url + "/api/chat",
+                          headers={"Authorization": f"Bearer {TOKEN}"},
+                          json={"model": MODEL,
+                                "messages": [{"role": "user", "content": "Trả lời đúng 1 từ: ok"}],
+                                "options": {"num_ctx": NUM_CTX, "temperature": 0.0},
+                                "keep_alive": -1},
+                          timeout=180)
+        print(f"POST /api/chat -> {r.status_code} ({time.time() - t0:.1f}s)",
+              (r.json().get("message") or {}).get("content", "").strip())
+    except requests.RequestException as e:
+        print("POST /api/chat thất bại:", type(e).__name__, e)
+
+# 4) LUÔN in credential (kể cả khi verify thất bại) để không mất URL/TOKEN
+print()
+print("=" * 60)
+print(f"DÁN VÀO .env CỦA server-ai-worker (node {NODE_INDEX}):")
+print(f"AI_NODE_{NODE_INDEX}_URL={url}")
+print(f"AI_NODE_{NODE_INDEX}_TOKEN={TOKEN}")
+print(f"AI_NODE_{NODE_INDEX}_ENABLED=true")
+print("=" * 60)
+if not verified:
+    print("*** CHÚ Ý: chưa verify được từ Colab — xác nhận bằng node-colab.html từ phía server ***")
+print("Chạy đủ 5 tài khoản (NODE_INDEX=1..5), rồi thêm vào .env:")
+print("  AI_DEMO_EVAL_CONCURRENCY=10     # trần mong muốn; worker tự hạ xuống còn 3 × số node đang online")
+print("Restart worker, mở node-colab.html thấy đủ node online mới chạy AI eval.")
