@@ -14,6 +14,34 @@ chỉ ghi "đã sửa X".
 
 ## [Chưa phát hành] — 2026-11-23
 
+### Khảo sát giao diện Moodle để custom UI
+
+#### Thêm mới
+
+- **`docs/khao-sat-giao-dien-moodle.md`** — khảo sát `theme_ntt` và mã nguồn Moodle 5.3, xác định
+  **vùng nào đã style, vùng nào còn trống**, để custom UI mà không chạm logic PHP.
+
+  *Nền móng hiện có (rất tốt, không nên phá):* theme con của Boost, 3 tầng SCSS
+  (`pre.scss` đè token Moodle Design System → `post.scss` import 11 tệp ghi đè), phông
+  Be Vietnam Pro nhúng sẵn, có biến cho chế độ tối, trang cài đặt đổi màu không cần sửa tệp.
+  Chỉ ghi đè **1** template Mustache (`core/login_layout.mustache`) — con số rất tốt.
+
+  *Đã phủ (10 nhóm):* thanh trên, drawer trái/phải, nút, thẻ, form, bảng, huy hiệu/alert/toast,
+  breadcrumb/phân trang/tab, ngân hàng câu hỏi, trang đăng nhập.
+
+  *Còn trống:* trang khoá học (`.section-item`, `.activity-grid`…), quiz (làm bài + xem lại),
+  diễn đàn, `tertiary-navigation`, hộp thoại/popover, lịch, tin nhắn, filepicker.
+
+  *Phát hiện quan trọng nhất — mỗi module có CSS riêng rất lớn:* `mod/quiz/styles.css`
+  **1219 dòng**, `mod/forum/styles.css` **334 dòng**, và theme hiện **không** import/ghi đè
+  dòng nào của chúng. Nghĩa là vào trang quiz sẽ thấy Bootstrap của NTT chồng lên 1219 dòng CSS
+  gốc của Moodle — giao diện nửa vời. Tài liệu ghi rõ phải đọc CSS gốc **trước** khi ghi đè, và
+  mẹo bọc trong `.path-mod-quiz { }` (Moodle tự thêm `path-mod-<tên>` vào `<body>`) để vừa tăng
+  độ ưu tiên vừa giới hạn phạm vi.
+
+  *Ba rủi ro:* Theme designer mode rất chậm (phải tắt khi chạy thật), sửa `.mustache` bắt buộc
+  xoá cache kể cả khi bật designer mode, và đừng ghi đè template lõi khi CSS làm được.
+
 ### Rà soát Spring Boot — tài liệu "tính năng cần vá"
 
 #### Thêm mới
