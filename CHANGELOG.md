@@ -83,6 +83,50 @@ Biên dịch kiểm chứng bằng dart-sass thật: 220 dòng CSS, **0 lỗi**.
   *Ba rủi ro:* Theme designer mode rất chậm (phải tắt khi chạy thật), sửa `.mustache` bắt buộc
   xoá cache kể cả khi bật designer mode, và đừng ghi đè template lõi khi CSS làm được.
 
+### Rà soát Spring Boot — vòng 2 (sau khi merge lên `feature`)
+
+#### Thêm mới
+
+- **`docs/review-spring-boot-can-va-vong2.md`** — review lại toàn bộ `be-web-admin` trên
+  `feature@c82f0686c`. Không lặp lại tài liệu vòng 1: mọi khẳng định đều kiểm chứng lại trên code
+  hiện tại, kèm dòng cụ thể.
+
+  **4 vấn đề MỚI phát hiện:**
+
+  1. 🟠 `AiCheckService.job(taskId)` (dòng 148) và `suggestions(taskId)` (dòng 167) **không nhận
+     `adminId`**, không kiểm tra chủ sở hữu. `AiJobController:40-48` cũng không truyền
+     `Authentication`. Ai có `taskId` là đọc được đề xuất AI (kèm nội dung câu hỏi + đáp án đúng)
+     của môn khác. Trong khi `pushActivity` **có** ghi `adminId` — hệ thống biết ai tạo task,
+     chỉ là không dùng.
+  2. 🟠 **Không có chức năng khôi phục câu hỏi đã lưu trữ.** `archive()` đặt `ARCHIVED` rồi
+     `update()` chặn vĩnh viễn ⇒ lỡ tay "Lưu trữ" (nhất là "Lưu trữ hàng loạt") là mất câu hỏi,
+     dữ liệu còn trong DB nhưng không dùng lại được. Đáng chú ý: hằng
+     `ChangeSourceD.RESTORE("restore")` **đã có sẵn** trong enum và `SQL_TYPE` đã khai báo
+     — CSDL thiết kế sẵn cho việc này, chỉ là chưa cài đặt.
+  3. 🟠 **Đăng nhập không giới hạn số lần thử mật khẩu.** Phần TOTP làm rất tốt (khoá 5 phút, và
+     có chủ ý chỉ đếm *sau* khi mật khẩu đúng để tránh bị dùng làm công cụ DoS), nhưng bước kiểm
+     tra mật khẩu thì **không đếm gì**. `adminId` là số tăng dần và hiện trên form ⇒ dò vét cạn
+     được. BCrypt làm chậm nhưng không chặn.
+  4. 🟡 `update()` **thiếu kiểm tra môn còn hoạt động**: `create()` có `SUBJECT_INACTIVE` (dòng
+     203) và `orElseThrow`, còn `update()` dùng `orElse(null)` (dòng 285) ⇒ vô hiệu hoá môn rồi
+     vẫn sửa được câu hỏi của môn đó, và môn bị xoá thì lặng lẽ trả `subjectName = null`.
+
+  **2 lỗ hổng vòng 1 vẫn chưa vá:** `ROLE_ADMIN` hard-code ở `JwtAuthenticationFilter:52` (kiểm
+  chứng: `grep -rn "PreAuthorize|hasRole"` → 0 kết quả) và không có phân công môn ở backend.
+
+  **8.3 điểm làm TỐT** đáng ghi vào báo cáo đồ án: chống timing attack khi login (luôn chạy
+  BCrypt giả kể cả admin không tồn tại), không ghi mã TOTP vào log, Redis bọc try/catch toàn bộ
+  (graceful degradation).
+
+  **2 điểm hiệu năng:** tìm kiếm dùng `LIKE '%x%'` trong khi bảng có `FULLTEXT KEY ft_q_text`
+  (không dùng được index, và `title` không nằm trong fulltext); `revNo = max + 1` không khoá.
+
+  **1 điểm nên cân nhắc:** `QbankExceptionHandler` không có fallback
+  `@ExceptionHandler(Exception.class)` ⇒ lỗi lạ trả HTML, frontend Vue không parse được.
+  Đã ghi 15 hạng mục **kiểm tra và không có vấn đề** (bao gồm việc xác nhận
+  `revision.getRevNo() != latestRev` là **đúng** — có 1 vế `int` nên Java unbox, không phải so
+  tham chiếu).
+
 ### Rà soát Spring Boot — tài liệu "tính năng cần vá"
 
 #### Thêm mới
