@@ -21,12 +21,13 @@ import en from './locales/en.js'
 import zh from './locales/zh.js'
 import ko from './locales/ko.js'
 import ja from './locales/ja.js'
+import es from './locales/es.js'
 
 const KEY = 'qbank-locale'
 const FALLBACK = 'vi'
 
 /**
- * 5 ngôn ngữ theo yêu cầu đề bài.
+ * Các ngôn ngữ có sẵn trong giao diện.
  * `label` là tên ngôn ngữ viết BẰNG CHÍNH ngôn ngữ đó (endonym) — đây là quy
  * ước quốc tế: người Nhật tìm "日本語" dễ hơn tìm "Japanese" trong danh sách.
  */
@@ -36,9 +37,10 @@ export const LOCALES = [
   { code: 'zh', label: '简体中文', short: 'ZH', flag: '🇨🇳' },
   { code: 'ko', label: '한국어', short: 'KO', flag: '🇰🇷' },
   { code: 'ja', label: '日本語', short: 'JA', flag: '🇯🇵' },
+  { code: 'es-ES', label: 'Español (España)', short: 'ES', flag: '🇪🇸' },
 ]
 
-const MESSAGES = { vi, en, zh, ko, ja }
+const MESSAGES = { vi, en, zh, ko, ja, 'es-ES': es }
 
 function readSaved() {
   try {

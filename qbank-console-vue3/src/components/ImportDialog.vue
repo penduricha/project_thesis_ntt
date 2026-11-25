@@ -53,7 +53,7 @@ async function save() {
       <small v-if="chipErr" class="fe" role="alert">{{ chipErr }}</small>
     </div>
     <label>{{ $t('bank.defaultLevel') }}
-      <select v-model.number="S.imp.l"><option v-for="(x, i) in LV" :key="i" :value="i">{{ x }}</option></select>
+      <select v-model.number="S.imp.l"><option v-for="(x, i) in LV" :key="i" :value="i">{{ $t('difficulty.' + i) }}</option></select>
     </label>
     <label>{{ $t('moodle.pasteXml') }}
       <textarea id="xi" rows="7" v-model="xml" :placeholder="ph" @input="dirty = true; err = ''"></textarea>
@@ -65,7 +65,7 @@ async function save() {
       <p v-if="err" class="err">{{ err }}</p>
       <template v-if="res">
         <p><span class="b ok">{{ $t('moodle.savedCount', { n: res.ok }) }}</span> <span class="b" :class="res.reasons.length ? 'wa' : 'n'">{{ $t('moodle.skippedCount', { n: res.reasons.length }) }}</span></p>
-        <small>{{ $t('moodle.questionsAssigned') }} <b>{{ crs.id }} – {{ crs.name }}</b> ({{ topicName(S.imp.c, S.imp.tp) }}){{ $t('moodle.assignedLevel') }} <b>{{ LV[S.imp.l] }}</b>.</small>
+        <small>{{ $t('moodle.questionsAssigned') }} <b>{{ crs.id }} – {{ crs.name }}</b> ({{ topicName(S.imp.c, S.imp.tp) }}){{ $t('moodle.assignedLevel') }} <b>{{ $t('difficulty.' + S.imp.l) }}</b>.</small>
         <ul v-if="res.reasons.length" class="iss" style="margin-top:.5rem"><li v-for="(r, i) in res.reasons" :key="i">{{ r }}</li></ul>
       </template>
     </div>

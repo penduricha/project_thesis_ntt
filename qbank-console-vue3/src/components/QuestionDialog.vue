@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, ref, computed, watch, nextTick } from 'vue'
 import BaseModal from './BaseModal.vue'
+import { t } from '../i18n/index.js'
 import CourseCombobox from './CourseCombobox.vue'
 import { COURSES, S, code, nowStr, saveQuestion, toast, subjOk } from '../store.js'
 import { LV, LV_DB, ENUM_DB } from '../data/mock.js'
@@ -57,7 +58,7 @@ const dto = computed(() => {
 })
 
 function pickCourse(v) { f.c = +v; f.tp = 0; err.c = ''; err.chips = '' }
-function cancel() { if (dirty.value && !confirm('Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?')) return; emit('close') }
+function cancel() { if (dirty.value && !confirm(t('validation.discard'))) return; emit('close') }
 function focusFirstInvalid() {
   const e = document.querySelector('#dlg .invalid'); if (!e) return
   const t = e.matches('input,textarea,select') ? e : (e.querySelector('button,input') || e)
@@ -66,22 +67,22 @@ function focusFirstInvalid() {
 async function save() {
   Object.keys(err).forEach(k => delete err[k]); apiErr.value = ''
   const text = f.text.trim(), o = f.o.map(x => x.trim()), c = COURSES[f.c]
-  if (!text) err.t = 'Câu dẫn đang trống. Hãy nhập nội dung câu hỏi.'
-  o.forEach((x, i) => { if (!x) err['o' + i] = 'Phương án ' + 'ABCD'[i] + ' đang trống.' })
-  if (!c) err.c = 'Hãy chọn môn học trong danh sách.'
-  else if (!subjOk(f.c)) err.c = 'Bạn chưa được phân công môn học này.'
-  else if (!c.topics[f.tp]) err.chips = 'Môn học này chưa có chương. Hãy thêm chương cho môn học trước khi lưu câu hỏi.'
+  if (!text) err.t = t('validation.stemEmpty')
+  o.forEach((x, i) => { if (!x) err['o' + i] = t('validation.optionEmpty', { option: 'ABCD'[i] }) })
+  if (!c) err.c = t('validation.selectCourse')
+  else if (!subjOk(f.c)) err.c = t('validation.courseScope')
+  else if (!c.topics[f.tp]) err.chips = t('validation.noChapter')
   // Chặn trùng tiêu đề — chỉ ở form THÊM MỚI (dupTitle tự trả null ở form sửa).
-  if (dupTitle.value) err.ti = `Tiêu đề này đã dùng cho ${code(dupTitle.value)} trong cùng môn. Hãy đặt tiêu đề khác.`
+  if (dupTitle.value) err.ti = t('validation.titleTaken', { code: code(dupTitle.value) })
   if (Object.keys(err).length) { await nextTick(); return focusFirstInvalid() }
   if (cur && cur.text === text && cur.o.every((x, i) => x === o[i]) && cur.a === f.a && cur.c === f.c && (cur.tp || 0) === f.tp && cur.l === +f.l && (cur.title || '') === f.title.trim() && (cur.fb || '') === f.fb.trim()) {
-    dirty.value = false; emit('close'); return toast('Không có thay đổi nào để lưu')
+    dirty.value = false; emit('close'); return toast(t('validation.noChanges'))
   }
   saving.value = true
   try {
     await saveQuestion({ text, o, a: f.a, c: f.c, tp: f.tp, l: +f.l, title: f.title.trim(), fb: f.fb.trim(), updatedAt: nowStr(), by: S.name }, props.id)
     dirty.value = false; emit('close')
-  } catch { apiErr.value = 'Không lưu được câu hỏi, vui lòng thử lại.' }
+  } catch { apiErr.value = t('validation.saveQuestionFailed') }
   finally { saving.value = false }
 }
 </script>
@@ -127,7 +128,7 @@ async function save() {
       <small v-if="err.chips" class="fe" role="alert">{{ err.chips }}</small>
     </div>
     <label>{{ $t('bank.level') }}
-      <select id="f-l" v-model="f.l"><option v-for="(x, i) in LV" :key="i" :value="i">{{ x }}</option></select>
+      <select id="f-l" v-model="f.l"><option v-for="(x, i) in LV" :key="i" :value="i">{{ $t('difficulty.' + i) }}</option></select>
     </label>
     <label>{{ $t('llm.responseOptional') }}
       <textarea id="f-fb" rows="2" maxlength="500" v-model="f.fb"></textarea>

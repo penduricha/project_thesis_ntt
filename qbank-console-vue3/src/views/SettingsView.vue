@@ -110,14 +110,14 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast(tr('settings.op
         <p class="set__d">{{ $t('settings.languageDesc') }}</p>
       </div>
       <div class="set__body">
-        <!-- Nút chọn thay vì <select>: chỉ 5 lựa chọn, hiện được tên ngôn ngữ bằng chính
+        <!-- Nút chọn thay vì <select>: các lựa chọn, hiện được tên ngôn ngữ bằng chính
              ngôn ngữ đó cùng mã 2 ký tự -> người dùng nhận ra ngay cả khi không đọc được
              ngôn ngữ đang hiển thị. -->
         <div class="lang-pick" role="radiogroup" :aria-label="$t('settings.language')">
           <label v-for="l in locales" :key="l.code" class="lang-opt" :class="{ on: locale.code === l.code }">
             <input type="radio" name="lang" :value="l.code" :checked="locale.code === l.code" @change="pickLocale(l.code)">
             <span class="lang-opt__code" aria-hidden="true">{{ l.short }}</span>
-            <span class="lang-opt__txt"><b>{{ l.label }}</b><small>{{ l.flag }}</small></span>
+            <span class="lang-opt__txt" :lang="l.code === 'zh' ? 'zh-CN' : l.code"><b>{{ l.label }}</b><small aria-hidden="true">{{ l.flag }}</small></span>
           </label>
         </div>
       </div>
@@ -159,7 +159,7 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast(tr('settings.op
 .theme-opt__swatch--auto{background:linear-gradient(100deg,#fff 0 50%,#0b1220 50% 100%)}
 .theme-opt__swatch--auto::before{content:"";position:absolute;inset:0 0 auto;height:33%;background:linear-gradient(100deg,#004b87 0 50%,#175f9f 50% 100%)}
 
-/* Bộ chọn ngôn ngữ: 5 thẻ, mỗi thẻ có mã 2 ký tự + tên ngôn ngữ viết bằng chính nó.
+/* Bộ chọn ngôn ngữ: các thẻ, mỗi thẻ có mã 2 ký tự + tên ngôn ngữ viết bằng chính nó.
    Dùng chung ngôn ngữ thị giác với .theme-opt để hai mục cài đặt trông cùng một hệ. */
 .lang-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));gap:.6rem}
 .lang-opt{position:relative;display:flex;align-items:center;gap:.6rem;padding:.6rem .7rem;border:1px solid var(--border-strong);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background-color .15s}

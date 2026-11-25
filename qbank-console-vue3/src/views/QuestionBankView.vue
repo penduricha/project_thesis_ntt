@@ -1,9 +1,10 @@
 <script setup>
-import { computed, watchEffect, onMounted, ref } from 'vue'
+import { computed, watch, watchEffect, nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import CourseCombobox from '../components/CourseCombobox.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import { LV, stB } from '../data/mock.js'
+import { t, locale } from '../i18n/index.js'
 import { COURSES, S, list, code, topicName, busy, runAI, clearFilters, loadQuestions, editQuestion, askDeleteQuestion, openDialog } from '../store.js'
 
 const route = useRoute()
@@ -21,11 +22,11 @@ const courseQ = computed(() => (isCourse.value ? S.q.filter(q => q.c === S.ci) :
 
 const chips = computed(() => {
   const f = S.f, a = []
-  if (f.q) a.push(['Từ khóa: ' + f.q, () => { f.q = '' }])
-  if (!isCourse.value && f.c !== '') a.push(['Môn: ' + COURSES[f.c].id + ' – ' + COURSES[f.c].name, () => { f.c = '' }])
-  if (isCourse.value && f.tp !== '') a.push(['Chương: ' + topicName(S.ci, f.tp), () => { f.tp = '' }])
-  if (f.l !== '') a.push(['Mức độ: ' + LV[f.l], () => { f.l = '' }])
-  if (f.s !== '') a.push(['Trạng thái: ' + stB[f.s][0], () => { f.s = '' }])
+  if (f.q) a.push([t('search.keywordLabel') + ': ' + f.q, () => { f.q = '' }])
+  if (!isCourse.value && f.c !== '') a.push([t('nav.courses') + ': ' + COURSES[f.c].id + ' – ' + COURSES[f.c].name, () => { f.c = '' }])
+  if (isCourse.value && f.tp !== '') a.push([t('course.chapters') + ': ' + topicName(S.ci, f.tp), () => { f.tp = '' }])
+  if (f.l !== '') a.push([t('bank.level') + ': ' + t('difficulty.' + f.l), () => { f.l = '' }])
+  if (f.s !== '') a.push([t('common.status') + ': ' + t('questionStatus.' + f.s), () => { f.s = '' }])
   return a
 })
 const loc = q => {
@@ -45,6 +46,7 @@ function fitSearch() {
   ;(el.closest('.tb') || el.parentElement).style.setProperty('--srch-w', Math.ceil(c.measureText(el.placeholder).width + parseFloat(cs.paddingLeft) * 2 + 4) + 'px')
 }
 onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
+watch(() => locale.code, () => nextTick(fitSearch))
 </script>
 
 <template>
@@ -58,11 +60,11 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
   <template v-else>
   <div v-if="isCourse && crs" class="subtopic-bar">
     <div class="chips" style="flex:1">
-      <button type="button" class="chip" :class="{ on: S.f.tp === '' }" @click="S.f.tp = ''; setPage()">{{ $t('bank.allTopicsCount', { n: courseQ.length }) }}</button>
+      <button type="button" class="chip" :class="{ on: S.f.tp === '' }" @click="S.f.tp = ''; setPage()">{{ $t('bank.allTopicsCount') + courseQ.length + ($locale.code === 'zh' || $locale.code === 'ja' ? '）' : ')') }}</button>
       <button v-for="(t, idx) in crs.topics" :key="idx" type="button" class="chip" :class="{ on: S.f.tp === String(idx) }"
               @click="S.f.tp = String(idx); setPage()">{{ t }} ({{ courseQ.filter(q => q.tp === idx).length }})</button>
     </div>
-    <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">{{ $t('bank.manageTopicsCount', { n: crs.topics.length }) }}</button>
+    <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">{{ $t('bank.manageTopicsCount') + crs.topics.length + ($locale.code === 'zh' || $locale.code === 'ja' ? '）' : ')') }}</button>
   </div>
 
   <div class="card tools">
@@ -75,11 +77,11 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
       <CourseCombobox v-if="!isCourse" :model-value="S.f.c" @update:model-value="v => { S.f.c = v; setPage() }" />
       <select class="flt-sel" :aria-label="$t('bank.level')" v-model="S.f.l" @change="setPage">
         <option value="">{{ $t('bank.level') }}</option>
-        <option v-for="(x, i) in LV" :key="i" :value="String(i)">{{ x }}</option>
+        <option v-for="(x, i) in LV" :key="i" :value="String(i)">{{ $t('difficulty.' + i) }}</option>
       </select>
       <select class="flt-sel" :aria-label="$t('common.status')" v-model="S.f.s" @change="setPage">
         <option value="">{{ $t('common.status') }}</option>
-        <option v-for="(v, k) in stB" :key="k" :value="k">{{ v[0] }}</option>
+        <option v-for="(v, k) in stB" :key="k" :value="k">{{ $t('questionStatus.' + k) }}</option>
       </select>
       <select class="flt-sel" :aria-label="$t('common.sort')" v-model="S.f.sort">
         <option value="id">{{ $t('common.sort') }}</option>
@@ -95,7 +97,7 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
       <button class="btn sm ghost" @click="clearFilters">{{ $t('bank.clearFilters') }}</button>
     </div>
     <div class="bar" style="justify-content:space-between">
-      <label class="qall"><input type="checkbox" id="qall-cb" :checked="allSel" :indeterminate.prop="partial" @change="selAll($event.target.checked)"> <span id="qall-lbl">{{ $t('bank.selectAllFiltered', { n: L.length }) }}{{ $t('bank.filteredSuffix') }}</span></label>
+      <label class="qall"><input type="checkbox" id="qall-cb" :checked="allSel" :indeterminate.prop="partial" @change="selAll($event.target.checked)"> <span id="qall-lbl">{{ $t('bank.selectAllFiltered') + L.length }}{{ $t('bank.filteredSuffix') }}</span></label>
       <button type="button" class="btn sm" @click="S.f.hideAns = !S.f.hideAns">{{ S.f.hideAns ? $t('bank.showAnswer') : $t('bank.hideAnswer') }}</button>
     </div>
   </div>
@@ -116,9 +118,9 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
           <div class="qrow__main">
             <div class="qrow__head">
               <b>{{ code(q) }}</b>
-              <span class="b" :class="['ok', '', 'er'][q.l]">{{ LV[q.l] }}</span>
+              <span class="b" :class="['ok', '', 'er'][q.l]">{{ $t('difficulty.' + q.l) }}</span>
               <span v-if="busy(q)" class="b wa"><i class="spin"></i>{{ $t('bank.verifying') }}</span>
-              <span v-else class="b" :class="stB[q.st][1]">{{ stB[q.st][0] }}</span>
+              <span v-else class="b" :class="stB[q.st][1]">{{ $t('questionStatus.' + q.st) }}</span>
               <span class="mut" style="font-size:var(--fs-xs)">{{ loc(q) }}</span>
               <span class="qrow__meta">{{ $t('bank.updatedMeta', { t: q.updatedAt || '—', who: q.by || $t('bank.systemActor') }) }}</span>
             </div>
@@ -133,7 +135,7 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
         </div>
         <div v-if="totalPages > 1" class="bar" style="justify-content:center;margin-top:.5rem">
           <button class="btn sm" :disabled="S.f.page <= 1" @click="S.f.page--">{{ $t('common.prev') }}</button>
-          <span class="mut" style="font-size:var(--fs-sm)">Trang {{ S.f.page }} / {{ totalPages }}</span>
+          <span class="mut" style="font-size:var(--fs-sm)">{{ $t('common.pageNumber', { page: S.f.page, total: totalPages }) }}</span>
           <button class="btn sm" :disabled="S.f.page >= totalPages" @click="S.f.page++">{{ $t('common.next') }}</button>
         </div>
       </template>

@@ -1,16 +1,16 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { toast } from '../store.js'
+import { t } from '../i18n/index.js'
 const props = defineProps({ title: String, dirty: Boolean, footerStyle: String, locked: Boolean })
 const emit = defineEmits(['close'])
 const root = ref(null), opener = document.activeElement
 let down = false
-const MSG = 'Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?'
 function nudge() {
   root.value.classList.add('modal-static'); setTimeout(() => root.value?.classList.remove('modal-static'), 300)
-  toast('Thông tin này chỉ hiển thị một lần. Hãy sao chép lại, rồi dùng nút bên dưới để đóng.', 'wa')
+  toast(t('validation.copyBeforeClose'), 'wa')
 }
-function ask() { if (props.locked) return nudge(); if (props.dirty && !confirm(MSG)) return; emit('close') }
+function ask() { if (props.locked) return nudge(); if (props.dirty && !confirm(t('validation.discard'))) return; emit('close') }
 function onKey(e) {
   if (e.key === 'Escape') { e.preventDefault(); ask(); return }
   if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing) return

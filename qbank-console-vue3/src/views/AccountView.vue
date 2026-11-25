@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ME, TRAIN_SYS, TRAIN_TYPE, ACI, meInit } from '../data/account.js'
 import { S } from '../store.js'
+import { t } from '../i18n/index.js'
 import { auth } from '../auth/authStore.js'
 import Ico from '../components/Ico.vue'
 import InfoVal from '../components/InfoVal.vue'
@@ -27,7 +28,7 @@ const me = computed(() => {
   }
 })
 const c = computed(() => me.value.course || {})
-const adm = computed(() => S.role === 'admin'), ld = computed(() => !S.meReady), who = computed(() => (adm.value ? 'quản trị viên' : 'giảng viên'))
+const adm = computed(() => S.role === 'admin'), ld = computed(() => !S.meReady), who = computed(() => t(adm.value ? 'admin.roleAdmin' : 'admin.roleLecturer'))
 const dob = computed(() => (me.value.dob ? String(me.value.dob).split('-').reverse().join('/') : '—'))
 const shown = computed(() => (S.idShow ? me.value.idCard : me.value.idCard.slice(0, 6) + '•'.repeat(Math.max(0, me.value.idCard.length - 8)) + me.value.idCard.slice(-2)))
 let idT
@@ -69,8 +70,8 @@ onMounted(() => { if (!S.meReady) setTimeout(() => { S.meReady = true }, 600) })
           <div class="ifield"><dt class="ifield__l">{{ $t('course.dept') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.faculty" /></dd></div>
           <div class="ifield"><dt class="ifield__l">{{ $t('account.industry') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.industry" /></dd></div>
           <div class="ifield"><dt class="ifield__l">{{ $t('account.major') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.major" /></dd></div>
-          <div class="ifield"><dt class="ifield__l">{{ $t('account.trainingSystem') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="TRAIN_SYS[c.trainingSystem] || c.trainingSystem" badge="primary" /></dd></div>
-          <div class="ifield"><dt class="ifield__l">{{ $t('account.trainingType') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="TRAIN_TYPE[c.typeOfTraining] || c.typeOfTraining" badge="accent" /></dd></div>
+          <div class="ifield"><dt class="ifield__l">{{ $t('account.trainingSystem') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="TRAIN_SYS[c.trainingSystem] ? $t('training.system.' + (c.trainingSystem === 'PhD' ? 'Doctor' : c.trainingSystem)) : c.trainingSystem" badge="primary" /></dd></div>
+          <div class="ifield"><dt class="ifield__l">{{ $t('account.trainingType') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="TRAIN_TYPE[c.typeOfTraining] ? $t('training.type.' + c.typeOfTraining) : c.typeOfTraining" badge="accent" /></dd></div>
           <div class="ifield"><dt class="ifield__l">{{ $t('account.branch') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.branch" /></dd></div>
         </dl>
       </div>

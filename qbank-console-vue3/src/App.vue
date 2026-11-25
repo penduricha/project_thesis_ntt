@@ -59,13 +59,13 @@ function menuKey(e) {
 }
 
 function bulk(k) {
-  if (!S.sel.size) return toast('Hãy chọn ít nhất một câu hỏi trước', 'wa')
+  if (!S.sel.size) return toast(tr('selection.pick'), 'wa')
   k === 'ai' ? runAI([...S.sel]) : go('moodle')
 }
 function bulkDel() {
   const ids = [...S.sel].filter(id => !busy({ id }))
-  if (!ids.length) return toast('Các câu đang chọn đều đang kiểm định, không thể xóa', 'er')
-  openDialog('confirm', { title: `Xóa ${ids.length} câu hỏi đã chọn?`, text: 'Hành động này sẽ xóa các câu hỏi và đề xuất AI liên quan khỏi ngân hàng.', cancel: 'Giữ lại', ok: `Xóa ${ids.length} câu`, danger: true, action: () => removeQuestions(ids) })
+  if (!ids.length) return toast(tr('selection.busy'), 'er')
+  openDialog('confirm', { title: tr('selection.deleteTitle', { n: ids.length }), text: tr('selection.deleteDescription'), cancel: tr('selection.keep'), ok: tr('selection.deleteButton', { n: ids.length }), danger: true, action: () => removeQuestions(ids) })
 }
 function undo() { const cb = S.toast.cb; S.toast.on = false; cb && cb() }
 
@@ -80,10 +80,10 @@ async function doLogout() {
       S.sel.clear()
       await router.push('/login')
     } else {
-      toast('Không thể đăng xuất lúc này. Vui lòng thử lại.', 'er')
+      toast(tr('auth.logoutFailed'), 'er')
     }
   } catch {
-    toast('Không thể kết nối máy chủ để đăng xuất.', 'er')
+    toast(tr('auth.logoutNoNetwork'), 'er')
   } finally {
     loggingOut.value = false
   }

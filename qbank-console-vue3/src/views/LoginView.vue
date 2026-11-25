@@ -26,14 +26,14 @@ import AdminStorage from '../auth/AdminStorage.js'
 import { DEMO_MODE } from '../config.js'
 
 const MESSAGE = {
-  ADMIN_ID_REQUIRED: 'Vui lòng nhập mã quản trị viên.',
-  PASSWORD_REQUIRED: 'Vui lòng nhập mật khẩu.',
-  WRONG_CREDENTIALS: 'Mã quản trị viên hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.',
-  SERVER_ERROR: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng rồi thử lại.',
-  TOTP_REQUIRED: 'Tài khoản đã bật xác thực 2 lớp. Nhập mã 6 số đang hiển thị trong ứng dụng Authenticator.',
-  TOTP_FORMAT: 'Mã xác thực gồm đúng 6 chữ số.',
-  TOTP_INVALID: 'Mã xác thực không đúng hoặc đã hết hạn. Hãy nhập mã mới đang hiển thị trên ứng dụng.',
-  LOCKED: 'Nhập sai quá nhiều lần. Biểu mẫu tạm khóa, sẽ tự mở lại khi hết thời gian đếm ngược.',
+  ADMIN_ID_REQUIRED: 'login.error.idRequired',
+  PASSWORD_REQUIRED: 'login.error.passwordRequired',
+  WRONG_CREDENTIALS: 'login.error.credentials',
+  SERVER_ERROR: 'login.error.server',
+  TOTP_REQUIRED: 'login.error.totpRequired',
+  TOTP_FORMAT: 'login.error.totpFormat',
+  TOTP_INVALID: 'login.error.totpInvalid',
+  LOCKED: 'login.error.locked',
 }
 const LOGIN_TIMEOUT_MS = 20000
 const LOCK_DEFAULT_SECONDS = 5 * 60
@@ -403,14 +403,14 @@ onBeforeUnmount(() => {
           <Transition name="alert">
             <div v-if="validateLogin && !isLocked" class="note note--error" role="alert">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-              <p>{{ validateLogin }}</p>
+              <p>{{ $t(validateLogin) }}</p>
             </div>
           </Transition>
 
           <div v-if="isLocked" class="note note--locked" role="alert">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
             <div class="note__body">
-              <p>{{ MESSAGE.LOCKED }}</p>
+              <p>{{ $t(MESSAGE.LOCKED) }}</p>
               <div class="locked-timer">
                 <span class="locked-timer__value">{{ lockCountdownLabel }}</span>
                 <span class="locked-timer__track"><i :style="{ width: lockProgress + '%' }"></i></span>
@@ -425,11 +425,11 @@ onBeforeUnmount(() => {
               <div ref="boxAdminId" class="control">
                 <svg class="control__ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <input id="login-admin-id" ref="inputAdminId" type="text" inputmode="numeric" autocomplete="username"
-                       :maxlength="ADMIN_ID_MAX" placeholder="Ví dụ: 2500021774" :value="adminId"
+                       :maxlength="ADMIN_ID_MAX" :placeholder="$t('validation.exampleId')" :value="adminId"
                        :aria-invalid="invalidAdminId" :aria-describedby="errors.adminId ? 'errorAdminId' : null"
                        @input="setInputAdminId">
               </div>
-              <p v-if="errors.adminId" id="errorAdminId" class="fe" role="alert">{{ errors.adminId }}</p>
+              <p v-if="errors.adminId" id="errorAdminId" class="fe" role="alert">{{ $t(errors.adminId) }}</p>
             </div>
 
             <!-- Mật khẩu -->
@@ -453,7 +453,7 @@ onBeforeUnmount(() => {
                   <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 6.2A10.9 10.9 0 0 1 12 5c6.4 0 10 7 10 7a18 18 0 0 1-3.2 4.1"/><path d="M6.6 6.7A17.8 17.8 0 0 0 2 12s3.6 7 10 7a10.9 10.9 0 0 0 4.3-.9"/><path d="M9.9 10.1a3 3 0 0 0 4.2 4.2"/></svg>
                 </button>
               </div>
-              <p v-if="errors.password" id="errorPassword" class="fe" role="alert">{{ errors.password }}</p>
+              <p v-if="errors.password" id="errorPassword" class="fe" role="alert">{{ $t(errors.password) }}</p>
             </div>
 
             <!-- Mã xác thực 2 lớp -->
@@ -473,7 +473,7 @@ onBeforeUnmount(() => {
                        @paste="onOtpPaste" @focus="onOtpFocus">
               </div>
               <p v-if="!errors.totp" id="hintTotp" class="hint">{{ $t('tfa.noOtp') }}</p>
-              <p v-if="errors.totp" id="errorTotp" class="fe" role="alert">{{ errors.totp }}</p>
+              <p v-if="errors.totp" id="errorTotp" class="fe" role="alert">{{ $t(errors.totp) }}</p>
             </div>
 
             <div class="lform__meta">

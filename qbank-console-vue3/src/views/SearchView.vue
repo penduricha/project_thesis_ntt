@@ -125,7 +125,7 @@ const byKeyword = () => { S.f.q = S.nlKw; S.f.page = 1; router.push('/bank') }
                 <td><b>{{ code(q) }}</b></td>
                 <td><template v-for="(p, i) in hl(q.text, res.kw)" :key="i"><mark v-if="p.m">{{ p.t }}</mark><template v-else>{{ p.t }}</template></template></td>
                 <td><b>{{ COURSES[q.c]?.id }}</b> · {{ COURSES[q.c]?.name }}<small>{{ topicName(q.c, q.tp) }}</small></td>
-                <td><span class="b" :class="['ok', '', 'er'][q.l]">{{ LV[q.l] }}</span></td>
+                <td><span class="b" :class="['ok', '', 'er'][q.l]">{{ $t('difficulty.' + q.l) }}</span></td>
               </tr>
             </tbody>
           </table>
