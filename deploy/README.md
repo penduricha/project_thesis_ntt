@@ -1,7 +1,7 @@
 # Triển khai — NGINX + Docker Compose
 
 Hạ tầng cho đồ án tốt nghiệp: **mọi thứ đi qua NGINX**, mỗi giao diện một cổng
-host riêng (5176 / 8085 / 9000). Bên trong vẫn là một tầng proxy duy nhất.
+host riêng (5176 / 8085 / 8001). Bên trong vẫn là một tầng proxy duy nhất.
 
 ---
 
@@ -15,7 +15,9 @@ NGINX phục vụ **đồng thời 4 project**:
 | `fe_web_admin` | Giao diện quản trị cũ (Vue 3) | **8085** | tĩnh |
 | `be-web-admin` | Backend Spring Boot 3 (JDK 21) | *(qua NGINX 8085)* | 8080 |
 | `server-ai-worker` | Worker AI (Spring Boot, JDK 17) | **8086** | 8082 |
-| `php_moodle_503` | Moodle 5.3 (PHP 8.3) | **9000** | 9000 (FastCGI) |
+| `php_moodle_503` | Moodle 5.3 (PHP 8.3) | **8001** | 9000 (FastCGI) |
+| MariaDB | CSDL dùng chung | **3308** | 3306 |
+| Redis | Cache / khoá 2FA / hàng đợi | **6381** | 6379 |
 
 ## Bảng cổng
 
@@ -23,7 +25,14 @@ NGINX phục vụ **đồng thời 4 project**:
 |---|---|
 | `http://qbank.local:5176` | QBank Console + API (cùng origin, không CORS) |
 | `http://admin.local:8085` | fe_web_admin + API |
-| `http://moodle.local:9000` | Moodle |
+| `http://moodle.local:8001` | Moodle |
+
+**Kết nối CSDL/Redis từ máy host** (dùng DBeaver, HeidiSQL, RedisInsight…):
+
+| Dịch vụ | Host : Port | User | Mật khẩu |
+|---|---|---|---|
+| MariaDB | `127.0.0.1:3308` | `root` | `MARIADB_PASSWORD` |
+| Redis | `127.0.0.1:6381` | — | `REDIS_PASSWORD` |
 
 **Cổng phải có trong URL.** Tên miền giả `*.local` đều trỏ về `127.0.0.1`, mà
 trình duyệt gọi cổng 80 — nên phải chỉ định cổng rõ ràng. Đã có trang 404 hướng
@@ -33,10 +42,72 @@ dẫn khi gõ sai cổng (không còn im lặng như trước).
 worker vẫn `8082`. Chỉ có cổng nhìn từ máy host thay đổi, nên **không phải sửa
 `application.yaml`** và vẫn giữ được cách chạy tay để demo (xem mục cuối).
 
-**Về cổng 9000 của Moodle** — đây là cổng **host của NGINX**, không phải cổng
+**Về cổng 8001 của Moodle** — đây là cổng **host của NGINX**, không phải cổng
 FastCGI. Container `moodle_php` vẫn nghe FastCGI trên 9000 nội bộ (không publish).
 Nếu publish thẳng FastCGI ra ngoài thì trình duyệt không hiểu gì: nó gửi HTTP
 vào một cổng chờ gói tin nhị phân. Xem mục "Vì sao cần biết Moodle dùng FastCGI".
+
+**Vì sao Moodle dùng 8001 chứ không 9000:** 9000 là cổng mặc định của PHP-FPM.
+Nếu ai đó cài `php8.3-fpm` trên máy host, cổng 9000 của host bị chiếm và Docker
+báo `port is already allocated`. 8001 tránh hẳn rủi ro đó — và cũng tránh nhầm
+lẫn khi đọc log vì hai số `9000` khác nghĩa nhau (một là HTTP của NGINX, một là
+FastCGI nội bộ).
+
+## CSDL và Redis
+
+### Ba CSDL
+
+| CSDL | Dùng bởi | Tạo bảng bởi |
+|---|---|---|
+| `ntt_university` | be-web-admin | JPA (`ddl-auto: update`) |
+| `moodle_503` | Moodle | Moodle lúc cài đặt (~400 bảng) |
+| `ai_worker` | server-ai-worker | JPA (2 bảng `demo_eval_*`) |
+
+Cả ba được tạo tự động lần đầu bởi `mysql-init/01-create-databases.sql`, với
+`utf8mb4` + `utf8mb4_unicode_ci` (cần cho tiếng Việt có dấu).
+
+**Vì sao `ai_worker` tách riêng:** để khi thử nghiệm dữ liệu AI không ảnh hưởng
+ngân hàng câu hỏi thật. Đổi tên qua `AI_MARIADB_DBS` trong `.env` — nhưng phải
+sửa cả trong `mysql-init/01-create-databases.sql`, nếu không CSDL không được
+tạo và ứng dụng báo `Unknown database`.
+
+### Redis: DB1 và DB2
+
+Redis có 16 db đánh số `0`–`15`, dùng như các namespace riêng biệt:
+
+| DB | Dùng bởi | Nội dung |
+|---|---|---|
+| **1** | be-web-admin | cache, khoá chờ xác nhận 2FA |
+| **2** | server-ai-worker | hàng đợi tác vụ AI |
+
+Cần tách vì hai ứng dụng dùng **cùng một Redis** — nếu chung db, chúng sẽ ghi
+đè key của nhau và lỗi rất khó tìm (một bên `FLUSHDB` là xoá sạch dữ liệu bên kia).
+
+Kiểm tra:
+
+```bash
+docker compose exec redis redis-cli -a 1234 info keyspace
+# db1:keys=12,expires=3      <- spring
+# db2:keys=4,expires=0       <- ai worker
+```
+
+### Dùng `root` cho ứng dụng — đọc kỹ
+
+Cấu hình này cho cả ba thành phần kết nối bằng **`root`**, theo yêu cầu. Điều
+này **không nên làm ở production thật** vì vi phạm nguyên tắc least privilege:
+ứng dụng bị khai thác sẽ có toàn quyền trên toàn bộ MariaDB, kể cả `mysql.user`.
+
+Ở đồ án này chấp nhận được vì:
+- Mạng `data` là `internal: true` — không có đường ra Internet;
+- cổng `3308` chỉ mở cho công cụ kiểm tra dữ liệu của người phát triển.
+
+**Cơ chế:** image MariaDB chính thức chỉ tạo `'root'@'localhost'` theo mặc định,
+tức là chỉ kết nối được từ trong container. Biến `MARIADB_ROOT_HOST='%'` (đã
+đặt trong compose) tạo thêm `'root'@'%'` với `GRANT ALL ON *.*`. Đã kiểm tra
+trực tiếp trong `docker-entrypoint.sh` của image.
+
+Muốn siết lại sau này: bỏ `MARIADB_ROOT_HOST`, đặt `MARIADB_USER`/`MARIADB_PASSWORD`
+và cấp quyền riêng cho từng CSDL trong `mysql-init/`.
 
 Nó là **hạ tầng dùng chung**, không thuộc sở hữu của project nào. Đặt trong
 `be-web-admin/` thì cấu hình web server của Moodle lại nằm trong thư mục
@@ -59,18 +130,19 @@ HTTP. Vì vậy:
   Nếu publish và mở `http://localhost:9000`, trình duyệt gửi HTTP vào một cổng
   đang chờ gói tin FastCGI: kết quả là treo, hoặc trả về ký tự nhị phân rác.
   **Không bao giờ vào được Moodle theo cách đó.**
-- Cổng `9000` mà yêu cầu nhắc tới là **cổng host của NGINX** (`9000:80` trong
-  compose). Đường đi đúng:
+- Cổng host cho Moodle là **`8001`** (`8001:80` trong compose), do NGINX nhận
+  HTTP rồi tự chuyển sang FastCGI. Đường đi đúng:
 
 ```
-trình duyệt --HTTP:9000--> nginx --FastCGI:9000--> moodle_php
+trình duyệt --HTTP:8001--> nginx --FastCGI:9000--> moodle_php
 ```
 
-Hai cổng trùng số `9000` chỉ là trùng ngẫu nhiên, chúng nằm ở hai mạng khác nhau:
-cổng host (nginx publish) và cổng nội bộ mạng Docker (FastCGI).
+Hai cổng nằm ở hai mạng khác nhau: cổng host `8001` (nginx publish) và cổng nội
+bộ `9000` của mạng Docker (FastCGI). Container `moodle_php` không có `ports:`
+nên từ máy host **không thể** chạm tới FastCGI 9000 — chỉ NGINX gọi được.
 
-Kết quả vẫn đúng yêu cầu: **Moodle chỉ có một cổng để truy cập là 9000**, và
-mọi request vẫn đi qua NGINX.
+Kết quả: **Moodle chỉ có một cổng để truy cập là 8001**, và mọi request vẫn đi
+qua NGINX.
 
 ---
 
@@ -84,7 +156,9 @@ Cổng host được chọn để **không đụng** cổng cũ, nên có thể 
 | fe_web_admin | `npm run dev` → **5173** (Vite mặc định) | **8085** |
 | Spring Boot | `./gradlew bootRun` → **8080** | *(không publish riêng — gọi qua NGINX 8085)* |
 | AI worker | `./gradlew bootRun` → **8082** | **8086** (host) |
-| Moodle | `php -S localhost:8000` → **8000** | **9000** |
+| Moodle | `php -S localhost:8000` → **8000** | **8001** |
+| MariaDB | (cài sẵn trên máy) → **3306** | **3308** |
+| Redis | (cài sẵn trên máy) → **6379** | **6381** |
 
 **Vì sao Spring Boot không có cổng host riêng:** yêu cầu là 8085, nhưng cổng
 8085 đã thuộc `nginx` (để phục vụ `admin.local`). Hai container cùng giữ một
@@ -134,7 +208,7 @@ deploy/
 Internet
     │
     ▼
-┌─────────┐  ← 3 cổng host: 5176 / 8085 / 9000
+┌─────────┐  ← 3 cổng host: 5176 / 8085 / 8001
 │  nginx  │
 └────┬────┘
      │  mạng "edge" (bên trong luôn là :80)
@@ -231,7 +305,7 @@ Tất cả phải ở trạng thái `healthy` (trừ `moodle_php` và `moodle_cr
 |---|---|
 | http://qbank.local:5176 | QBank Console |
 | http://admin.local:8085 | fe_web_admin |
-| http://moodle.local:9000 | Moodle |
+| http://moodle.local:8001 | Moodle |
 | http://qbank.local:5176/api/... | Backend (cùng origin, không CORS) |
 
 ---
@@ -261,7 +335,7 @@ php -S localhost:8000 -t public router.php
 
 **B. Cho Moodle chạy qua NGINX** — đổi `config.php`:
 ```php
-$CFG->wwwroot = 'http://moodle.local:9000';
+$CFG->wwwroot = 'http://moodle.local:8001';
 ```
 Rồi xoá cache:
 ```bash
@@ -435,7 +509,7 @@ chưa chạy được `nginx -t` thật. Những gì đã kiểm tra tự độn
 | `bash -n` cho 2 script | ✓ |
 | `server_name` không trùng giữa 3 file | ✓ (12 tên) |
 | CORS khớp cổng publish | ✓ (5176 / 8085) |
-| Không trùng cổng host giữa các container | ✓ (5176/8085/8086/9000) |
+| Không trùng cổng host giữa các container | ✓ (5176/8085/8086/8001/3308/6381) |
 | `qbank-console-vue3` build được | ✓ 613ms |
 | `fe_web_admin` build được | ✓ 1.71s |
 

@@ -82,13 +82,19 @@ services:
       #
       #   host 5176 -> qbank.local   (QBank Console + API)
       #   host 8085 -> admin.local   (fe_web_admin + API)
-      #   host 9000 -> moodle.local  (Moodle)
+      #   host 8001 -> moodle.local  (Moodle)
+      #
+      # Vì sao Moodle là 8001 chứ không phải 9000: cổng 9000 là mặc định của
+      # PHP-FPM. Container moodle_php vẫn nghe FastCGI trên 9000 nội bộ (không
+      # publish), nhưng nếu sau này ai cài php-fpm trên máy host thì cổng 9000
+      # của host bị chiếm -> "port is already allocated". Dùng 8001 tránh hẳn
+      # rủi ro đó. Cũng tránh nhầm lẫn khi đọc log: hai số 9000 khác nghĩa nhau.
       #
       # Bên trong container vẫn là 80 (NGINX chỉ nghe 80), nên không phải
       # sửa listen trong cấu hình.
-      - "5176:80"
-      - "8085:80"
-      - "9000:80"
+      - "${QBANK_HOST_PORT:-5176}:80"
+      - "${ADMIN_HOST_PORT:-8085}:80"
+      - "${MOODLE_HOST_PORT:-8001}:80"
       # Bỏ comment khi có HTTPS (xem deploy/README.md phần "Bật HTTPS").
       # - "443:443"
     networks:
@@ -109,17 +115,35 @@ services:
     image: mariadb:11.4
     container_name: ntt_mariadb
     restart: unless-stopped
-    # KHÔNG có "ports:" -> không thể truy cập từ ngoài. Chỉ các container
-    # trong mạng "data" gọi được qua tên service "mariadb:3306".
+    ports:
+      # 3308 trên host -> 3306 trong container.
+      # Đổi cổng host để KHÔNG đụng MariaDB cài trên máy (mặc định 3306) —
+      # nếu trùng, docker sẽ báo "port is already allocated".
+      #
+      # Khác với Redis/backend (chỉ nội bộ), cổng này ĐƯỢC mở ra ngoài có chủ
+      # đích: để dùng DBeaver/HeidiSQL/MySQL Workbench kết nối vào kiểm tra dữ
+      # liệu khi demo. Đây là công cụ của người phát triển, không phải API.
+      # Nếu máy nằm trong mạng chung thì nên bỏ (comment) 2 dòng dưới.
+      - "${MARIADB_HOST_PORT:-3308}:3306"
     networks:
       - data
     environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Bắt buộc — xem deploy/.env.example}
-      # Tạo sẵn 3 CSDL cho 3 thành phần. MariaDB chỉ chạy script này lần đầu
-      # (khi volume còn trống) nên dữ liệu cũ không bị ghi đè.
-      MARIADB_DATABASE: ${MARIADB_DBS:-ntt_thesis}
-      MARIADB_USER: ${MARIADB_USERNAME:-ntt}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?Bắt buộc — xem deploy/.env.example}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_PASSWORD:?Bắt buộc — xem deploy/.env.example}
+      # MARIADB_ROOT_HOST=% : image chính thức chỉ tạo 'root'@'localhost' theo
+      # mặc định, tức là CHỈ kết nối được từ trong container. Đặt '%' thì nó
+      # tạo thêm 'root'@'%' với toàn quyền (đã kiểm tra trong
+      # docker-entrypoint.sh, nhánh "Creates root users for non-localhost").
+      # Cần thiết vì be_web_admin và ai_worker kết nối bằng user root từ
+      # container khác — không phải localhost.
+      #
+      # LƯU Ý: đây là cấu hình cho ĐỒ ÁN chạy nội bộ. Dùng root cho ứng dụng
+      # là điều KHÔNG nên làm ở production thật (mất nguyên tắc least
+      # privilege). Ở đây chấp nhận được vì: mạng "data" là internal (không có
+      # đường ra Internet), và cổng 3308 chỉ mở cho công cụ kiểm tra dữ liệu.
+      MARIADB_ROOT_HOST: '%'
+      # KHÔNG đặt MARIADB_USER/MARIADB_PASSWORD: đã có root@'%' với toàn quyền,
+      # tạo thêm user thường chỉ dư thừa. Script tạo CSDL trong mysql-init/
+      # cũng đã cấp quyền cho root@'%' rồi.
     volumes:
       - mariadb_data:/var/lib/mysql
       # Script tạo thêm CSDL cho ai-worker và Moodle. Chạy tự động lần đầu.
@@ -146,6 +170,11 @@ services:
     image: redis:7-alpine
     container_name: ntt_redis
     restart: unless-stopped
+    ports:
+      # 6381 trên host -> 6379 trong container.
+      # Mở ra ngoài để kiểm tra bằng redis-cli / RedisInsight khi demo.
+      # Nhớ: Redis này có mật khẩu (xem REDIS_PASSWORD bên dưới).
+      - "${REDIS_HOST_PORT:-6381}:6379"
     networks:
       - data
     # Mật khẩu Redis: bỏ trống trong .env thì KHÔNG đặt mật khẩu (chỉ dùng
@@ -184,14 +213,21 @@ services:
       # --- Kết nối CSDL/Redis: dùng TÊN SERVICE của Docker, không phải 127.0.0.1.
       # Trong container, 127.0.0.1 là chính container đó, không phải máy chủ.
       IP_ADDRESS: mariadb
+      # Cổng NỘI BỘ của service mariadb — luôn 3306, không phải 3308.
+      # 3308 chỉ là cổng publish ra host; trong mạng Docker các container gọi
+      # nhau bằng cổng thật của service.
       MARIADB_PORT: "3306"
-      MARIADB_DBS: ${MARIADB_DBS:-ntt_thesis}
-      MARIADB_USERNAME: ${MARIADB_USERNAME:-ntt}
+      MARIADB_DBS: ${MARIADB_DBS:-ntt_university}
+      # Dùng root cho ứng dụng: xem ghi chú "least privilege" ở service mariadb.
+      MARIADB_USERNAME: ${MARIADB_USERNAME:-root}
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
-      REDIS_PORT: "6379"
+      REDIS_PORT: "6379"          # cũng là cổng nội bộ, không phải 6381
       REDIS_USERNAME: default
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_DBS: "0"
+      # Redis DB 1 = cache của Spring điều phối. ai_worker dùng DB 2.
+      # Tách db để hai ứng dụng không ghi đè key của nhau (cùng một Redis
+      # nhưng namespace riêng — Redis hỗ trợ 16 db đánh số 0..15).
+      REDIS_DBS: ${REDIS_DB_BE:-1}
       # --- Bí mật: đọc từ deploy/.env, không bao giờ ghi vào file này ---
       JWT_SECRET: ${JWT_SECRET:?Bắt buộc — openssl rand -base64 48}
       TOTP_MASTER_KEY_V2: ${TOTP_MASTER_KEY_V2:?Bắt buộc — openssl rand -base64 32}
@@ -268,14 +304,17 @@ services:
       SPRING_BOOT_PORT: "8082"
       IP_ADDRESS: mariadb
       MARIADB_PORT: "3306"
-      # ai-worker cần CSDL riêng (ntt_demo_llm) cho bảng demo eval.
-      MARIADB_DBS: ${AI_MARIADB_DBS:-ntt_demo_llm}
-      MARIADB_USERNAME: ${MARIADB_USERNAME:-ntt}
+      # CSDL RIÊNG cho worker (bảng demo_eval_run / demo_eval_item).
+      # Tách khỏi ntt_university để thử nghiệm dữ liệu AI không ảnh hưởng
+      # ngân hàng câu hỏi thật. Đổi tên được qua AI_MARIADB_DBS trong .env.
+      MARIADB_DBS: ${AI_MARIADB_DBS:-ai_worker}
+      MARIADB_USERNAME: ${MARIADB_USERNAME:-root}
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
       REDIS_PORT: "6379"
       REDIS_USERNAME: default
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_DBS: "1"    # DB Redis khác be-web-admin để không lẫn key
+      # Redis DB 2 = của ai-worker (be-web-admin dùng DB 1).
+      REDIS_DBS: ${REDIS_DB_AI:-2}
       JWT_SECRET: ${JWT_SECRET}
       AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN}
       JPA_DDL_AUTO: ${AI_JPA_DDL_AUTO:-update}
@@ -342,8 +381,8 @@ services:
     environment:
       MOODLE_DB_HOST: mariadb
       MOODLE_DB_PORT: "3306"
-      MOODLE_DB_NAME: ${MOODLE_DB_NAME:-moodle_local}
-      MOODLE_DB_USER: ${MARIADB_USERNAME:-ntt}
+      MOODLE_DB_NAME: ${MOODLE_DB_NAME:-moodle_503}
+      MOODLE_DB_USER: ${MARIADB_USERNAME:-root}
       MOODLE_DB_PASS: ${MARIADB_PASSWORD}
       # wwwroot PHẢI khớp chính xác tên miền người dùng mở.
       # Trong file này nó KHÔNG ghi vào config.php của repo (xem Dockerfile):

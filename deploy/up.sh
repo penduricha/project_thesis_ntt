@@ -33,7 +33,9 @@ ok "Đã có deploy/.env"
 # Đọc file trực tiếp thay vì "source" để không làm hỏng shell hiện tại
 # (giá trị có dấu cách hoặc ký tự đặc biệt sẽ phá script nếu source).
 missing=()
-for k in MARIADB_ROOT_PASSWORD MARIADB_PASSWORD JWT_SECRET TOTP_MASTER_KEY_V2 AI_INTERNAL_TOKEN APP_SEED_DEFAULT_PASSWORD; do
+# MARIADB_ROOT_PASSWORD đã bỏ: cấu hình mới chỉ dùng MARIADB_PASSWORD cho
+# user root (xem ghi chú trong docker-compose.yml).
+for k in MARIADB_PASSWORD JWT_SECRET TOTP_MASTER_KEY_V2 AI_INTERNAL_TOKEN APP_SEED_DEFAULT_PASSWORD; do
     v="$(grep -E "^${k}=" .env | head -1 | cut -d= -f2- || true)"
     [[ -z "${v// }" ]] && missing+=("$k")
 done
@@ -95,11 +97,18 @@ echo
 echo "Truy cập (CỔNG BẮT BUỘC có trong URL):"
 echo "    http://qbank.local:5176    — QBank Console (Vue 3) + API"
 echo "    http://admin.local:8085    — fe_web_admin (Vue cũ) + API"
-echo "    http://moodle.local:9000   — Moodle"
+echo "    http://moodle.local:8001   — Moodle"
 echo
 echo "Kiểm tra nhanh từng cổng:"
 echo "    curl -I http://localhost:5176"
 echo "    curl -I http://localhost:8085"
-echo "    curl -I http://localhost:9000"
+echo "    curl -I http://localhost:8001"
+echo
+echo "Kiểm tra CSDL / Redis (cổng publish ra host):"
+echo "    MariaDB : 127.0.0.1:3308  user=root  pass=<MARIADB_PASSWORD>"
+echo "    Redis   : 127.0.0.1:6381  pass=<REDIS_PASSWORD>  (DB1=spring, DB2=ai)"
+echo
+echo "    docker compose exec mariadb mariadb -uroot -p -e 'SHOW DATABASES;'"
+echo "    docker compose exec redis redis-cli -a \"\$REDIS_PASSWORD\" info keyspace"
 echo
 echo "Chưa thêm tên miền vào /etc/hosts?  sudo bash deploy/hosts-setup.sh"

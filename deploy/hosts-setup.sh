@@ -55,6 +55,6 @@ echo
 echo "Bảng cổng (CỔNG BẮT BUỘC có trong URL):"
 echo "    http://qbank.local:5176    — QBank Console + API"
 echo "    http://admin.local:8085    — fe_web_admin + API"
-echo "    http://moodle.local:9000   — Moodle"
+echo "    http://moodle.local:8001   — Moodle"
 echo
 echo "Gỡ bỏ (nếu cần):  sudo sed -i '/${MARKER//\//\\/}/d' $HOSTS_FILE"
