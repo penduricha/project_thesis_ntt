@@ -137,6 +137,22 @@ chỉ ghi "đã sửa X".
 - Nút "bật/tắt" Bootstrap dạng `.btn-check:checked + .btn` khi đang nhấn sẽ hiện màu hover thay vì màu
   "đang bật" (chưa thấy chỗ nào trong dự án dùng).
 
+### Giao diện Moodle: căn giữa số trong "Quiz navigation" ở trang Summary of attempt
+
+#### Sửa lỗi
+
+- **Trang "Summary of attempt": số câu (1, 2, 3…) dính sát mép trên ô, không nằm giữa.**
+  Ô của Boost cao 40px: số ở nửa trên (`line-height: 20px`), nửa dưới dành cho dải đúng/sai
+  (`.trafficlight`). Bản "FIX 1" trước đó chỉ căn giữa ở `#page-mod-quiz-attempt` (trang làm bài) nên
+  trang tổng kết vẫn lệch. Đo bằng Chromium: số lệch **−10,5px** so với tâm ô → **−0,5px** (bằng đúng
+  trang làm bài), cả chế độ sáng và tối.
+  *Xử lý:* thêm `#page-mod-quiz-summary` vào selector của "FIX 1" trong
+  `theme/boost/scss/moodle/modules.scss` (chỉ SCSS, không đụng PHP). Trang tổng kết chỉ có trạng thái
+  "đã lưu / chưa trả lời / khoá", không có dải đúng/sai nên không mất thông tin nào.
+  *Cố ý không đổi:* trang xem lại bài (`#page-mod-quiz-review`) — số vẫn ở nửa trên vì nửa dưới còn dải
+  đúng/sai. Đo lại: trang làm bài và trang review giữ nguyên số liệu như trước.
+  *Sau khi áp:* cần **Purge all caches** (Site administration → Development) để Moodle biên dịch lại CSS.
+
 ### Giao diện Moodle: style trang quiz + tắt trạng thái :active
 
 #### Thêm mới
