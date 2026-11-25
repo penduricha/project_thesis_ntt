@@ -178,6 +178,7 @@ mặc định), trùng QBank Console — chỉ chạy một cái ở 5173, hoặ
 deploy/
 ├── docker-compose.yml          # định nghĩa toàn bộ service + mạng
 ├── .env.example                # mẫu biến môi trường (copy thành .env)
+├── build-containers.sh         # ★ quản lý vòng đời container (up/ps/logs/down/clean)
 ├── up.sh                       # khởi động kèm kiểm tra tiên quyết
 ├── hosts-setup.sh              # thêm qbank.local / admin.local / moodle.local
 ├── nginx/
@@ -309,6 +310,39 @@ Tất cả phải ở trạng thái `healthy` (trừ `moodle_php` và `moodle_cr
 | http://qbank.local:5176/api/... | Backend (cùng origin, không CORS) |
 
 ---
+
+## Dùng `build-containers.sh` (cách gọn nhất)
+
+Script gộp mọi thao tác thường ngày. Không cần nhớ `docker compose -f ...` dài dòng.
+
+```bash
+chmod +x deploy/build-containers.sh
+cd deploy
+
+./build-containers.sh up        # build và chạy cả 7 container
+./build-containers.sh ps        # xem trạng thái
+./build-containers.sh logs      # log Spring Boot (be_web_admin)
+./build-containers.sh down      # dừng, GIỮ dữ liệu
+./build-containers.sh clean     # dừng và XOÁ dữ liệu DB + Redis
+```
+
+Lệnh phụ:
+
+```bash
+./build-containers.sh logs nginx        # log service khác
+./build-containers.sh restart nginx      # khởi động lại 1 service
+./build-containers.sh shell mariadb      # vào trong container
+./build-containers.sh rebuild be_web_admin  # build lại sau khi sửa code Java
+./build-containers.sh check              # kiểm tra cổng + CSDL + Redis
+```
+
+**Vì sao 7 container chứ không phải 5:** `moodle_cron` chạy cùng image với
+`moodle_php` nhưng là container riêng. Moodle **bắt buộc** có cron hoạt động —
+thiếu nó thì sinh viên nộp bài xong không thấy điểm cập nhật, và đây là lỗi rất
+khó tìm vì mọi thứ "trông có vẻ chạy".
+
+**`clean` có xác nhận:** script hỏi gõ đúng chữ `xoa` mới xoá, vì `down -v`
+không thể hoàn tác. Mã nguồn trong repo không bị ảnh hưởng.
 
 ## Moodle — phần cần lưu ý nhất
 
