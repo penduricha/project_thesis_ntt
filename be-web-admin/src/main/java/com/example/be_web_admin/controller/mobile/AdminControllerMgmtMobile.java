@@ -361,7 +361,8 @@ public class AdminControllerMgmtMobile {
                 body.put("data", Map.of("code", "TOTP_INVALID"));
             }
             case LOCKED -> {
-                body.put("message", "Nhập sai mã quá nhiều lần, vui lòng thử lại sau.");
+                // Như bản web: khoá có thể do sai mật khẩu, không chỉ do sai mã TOTP.
+                body.put("message", "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau.");
                 body.put("data", Map.of("code", "LOCKED", "retryAfterSeconds", outcome.retryAfterSeconds()));
             }
             default -> { // BAD_CREDENTIALS

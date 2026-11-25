@@ -1,5 +1,6 @@
 package com.example.be_web_admin.security;
 
+import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.security.jwt.JwtAuthenticationFilter;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.redis.AdminTokenService;
@@ -12,6 +13,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -27,6 +29,9 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+// Bật @PreAuthorize: trước bản này không có chú thích nào được đọc nên mọi phương thức service
+// coi như công khai với bất kỳ ai đã đăng nhập. Chi tiết quyền nằm ở controller/WebRoles.
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
@@ -37,7 +42,8 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(
             HttpSecurity http,
             AdminJwtTokenProvider tokenProvider,
-            AdminTokenService adminTokenService) throws Exception {
+            AdminTokenService adminTokenService,
+            AdminRepository adminRepository) throws Exception {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
@@ -66,7 +72,7 @@ public class SecurityConfig {
                     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                     response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized\",\"data\":null}");
                 }))
-                .addFilterBefore(new JwtAuthenticationFilter(tokenProvider, adminTokenService),
+                .addFilterBefore(new JwtAuthenticationFilter(tokenProvider, adminTokenService, adminRepository),
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

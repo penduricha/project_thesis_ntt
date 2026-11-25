@@ -63,6 +63,16 @@ export const qbankApi = {
     const { data } = await client().delete(url(`/questions/${questionId}`))
     return data
   },
+  /**
+   * Bỏ lưu trữ (khôi phục) câu hỏi. Backend: POST /questions/{id}/restore.
+   *
+   * Vì sao là POST riêng chứ không dùng lại updateQuestion(): update() cố ý chặn câu đã lưu trữ
+   * (QUESTION_ARCHIVED) và đòi expectedVersion + toàn bộ nội dung, nên không thể dùng để bỏ cờ.
+   */
+  async restoreQuestion(questionId) {
+    const { data } = await client().post(url(`/questions/${questionId}/restore`))
+    return data
+  },
   async revisions(questionId) {
     const { data } = await client().get(url(`/questions/${questionId}/revisions`))
     return data

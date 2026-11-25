@@ -35,6 +35,15 @@ public class UiAiJobView implements Serializable {
 
     private Long questionId;
 
+    /**
+     * Admin đã tạo task. Dùng để kiểm chủ sở hữu khi giao diện hỏi tiến trình / đề xuất: ai có
+     * taskId cũng đọc được nếu không kiểm, mà đề xuất AI chứa nguyên văn câu hỏi + đáp án đúng.
+     *
+     * <p>Field nullable để tương thích bản ghi Redis cũ chưa có trường này (TTL 1 giờ nên tự hết);
+     * khi null thì {@code AiCheckService} đọc lại {@code ntt_ai_tasks.created_by} từ MariaDB.</p>
+     */
+    private Long adminId;
+
     /** question_check | nl_search */
     private String taskType;
 

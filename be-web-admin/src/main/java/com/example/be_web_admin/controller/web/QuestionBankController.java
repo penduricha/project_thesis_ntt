@@ -15,6 +15,7 @@ import com.example.be_web_admin.service.qbank.UiStateStore;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,6 +36,9 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/web/admin/questions")
+// Cấp class: ADMIN + LECTURER đều làm việc với ngân hàng câu hỏi (xem, soạn, lưu trữ, kiểm định AI).
+// Không có endpoint nào ở đây dành riêng cho quản trị hệ thống.
+@PreAuthorize(WebRoles.STAFF)
 public class QuestionBankController {
 
     private final QuestionService questionService;
@@ -100,6 +104,17 @@ public class QuestionBankController {
     public QuestionDetail archive(@PathVariable("questionId") Long questionId,
                                   Authentication authentication) {
         return questionService.archive(questionId, WebPrincipal.adminId(authentication));
+    }
+
+    /**
+     * Khôi phục câu hỏi đã lưu trữ. Dùng POST (không phải PUT /{id}) vì đây là hành động chuyển
+     * trạng thái, không phải sửa nội dung: PUT yêu cầu gửi cả expectedVersion + toàn bộ nội dung,
+     * và update() cố ý chặn câu đã lưu trữ nên không thể tái dùng.
+     */
+    @PostMapping("/{questionId}/restore")
+    public QuestionDetail restore(@PathVariable("questionId") Long questionId,
+                                  Authentication authentication) {
+        return questionService.restore(questionId, WebPrincipal.adminId(authentication));
     }
 
     /** Đề xuất của lần kiểm định gần nhất — dữ liệu cho bảng duyệt. */

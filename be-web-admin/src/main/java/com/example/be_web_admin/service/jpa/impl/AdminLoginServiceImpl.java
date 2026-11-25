@@ -36,6 +36,23 @@ public class AdminLoginServiceImpl {
     private static final Duration TOTP_FAIL_WINDOW = Duration.ofMinutes(5);
     private static final String TOTP_FAIL_KEY = "totp:fail:";
 
+    /**
+     * Chống dò mật khẩu: 10 lần sai liên tiếp cho MỘT adminId thì khoá 15 phút.
+     *
+     * <p>Trước bản vá chỉ mã TOTP được đếm; còn mật khẩu thì không — mà {@code adminId} là số tăng
+     * dần và hiện ngay trên form đăng nhập, nên kẻ tấn công biết trước tài khoản cần dò. BCrypt
+     * chỉ làm chậm mỗi lần thử (khoảng 100ms), không chặn được vét cạn chạy song song.</p>
+     *
+     * <p>Đếm được SAU khi mật khẩu đã đúng hay chưa đều phải làm, nhưng cố ý khác TOTP: ở bước
+     * mật khẩu thì đếm cả khi SAI (đó chính là thứ cần chặn), nên kẻ không biết mật khẩu vẫn khoá
+     * được tài khoản người khác trong 15 phút. Đây là đánh đổi đã cân nhắc: thà khoá tạm 15 phút
+     * còn hơn để lộ mật khẩu. Khoá chỉ áp cho MỘT adminId (không theo IP) để NAT/proxy dùng chung
+     * không khoá oan cả trường, và không đếm được thì không khoá (Redis hỏng vẫn đăng nhập được).</p>
+     */
+    private static final int MAX_PASSWORD_FAILS = 10;
+    private static final Duration PASSWORD_FAIL_WINDOW = Duration.ofMinutes(15);
+    private static final String PASSWORD_FAIL_KEY = "pwd:fail:";
+
     private final AdminRepository adminRepository;
     private final TotpCredentialRepository totpCredentialRepository;
     private final MgmtPassword mgmtPassword;
@@ -53,6 +70,18 @@ public class AdminLoginServiceImpl {
         }
         Long adminId = req.getAdminId();
 
+        // (0) Đã sai mật khẩu quá nhiều lần thì từ chối ngay, KHÔNG chạy BCrypt.
+        //     Đặt trước mọi thứ khác để mỗi lần thử bị khoá không tốn 100ms băm — nếu không, kẻ
+        //     tấn công vẫn ép được server băm liên tục (khuếch đại tải) dù biết chắc sẽ bị chặn.
+        //     Redis hỏng -> bỏ qua chặn (đăng nhập được như trước), không biến sự cố Redis thành
+        //     sự cố đăng nhập toàn hệ thống.
+        String pwdFailKey = PASSWORD_FAIL_KEY + adminId;
+        int pwdFails = readFailCount(pwdFailKey);
+        if (pwdFails >= MAX_PASSWORD_FAILS) {
+            Long ttl = redis.getExpire(pwdFailKey);
+            return LoginOutcome.locked((ttl == null || ttl < 1) ? PASSWORD_FAIL_WINDOW.toSeconds() : ttl);
+        }
+
         // (a) Mật khẩu BCrypt. Cột password trong DB ĐÃ là hash BCrypt, so khớp thẳng với mật khẩu người dùng nhập
         //     (không được băm lại hash đó). Admin không tồn tại: matches() vẫn chạy 1 lần BCrypt giả
         //     để thời gian phản hồi không lộ tài khoản có tồn tại hay không.
@@ -60,8 +89,12 @@ public class AdminLoginServiceImpl {
         String storedHash = (admin == null) ? null : admin.getPassword();
         boolean passwordOk = mgmtPassword.matches(req.getPassword(), storedHash); // luôn chạy, kể cả admin = null
         if (admin == null || !passwordOk) {
+            recordPasswordFailure(pwdFailKey);
             return LoginOutcome.of(LoginStatus.BAD_CREDENTIALS);
         }
+        // Mật khẩu đúng -> xoá bộ đếm của admin này, để lần sai rải rác trong nhiều ngày không
+        // cộng dồn thành khoá oan.
+        clearFailCount(pwdFailKey);
 
         // (b) Chỉ credential ĐÃ xác nhận bên mobile mới tính là bật 2FA (pending không tính).
         //     - Chưa bật 2FA: bỏ qua ô mã 6 số (kể cả khi có gửi lên) -> vào luôn.
@@ -129,6 +162,41 @@ public class AdminLoginServiceImpl {
         }
         // INVALID và REPLAYED trả chung một thông báo để không lộ thêm thông tin
         return LoginOutcome.of(LoginStatus.TOTP_INVALID);
+    }
+
+    /** Đọc số lần sai; Redis lỗi trả 0 để không chặn nhầm người dùng hợp lệ. */
+    private int readFailCount(String key) {
+        try {
+            String raw = redis.opsForValue().get(key);
+            return raw == null ? 0 : Integer.parseInt(raw);
+        } catch (Exception e) {
+            log.warn("Không đọc được bộ đếm {} trên Redis: {}", key, e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Tăng bộ đếm và đặt TTL. TTL được đặt lại mỗi lần sai (giống khoá TOTP) để cửa sổ 15 phút
+     * luôn tính từ lần sai cuối — nếu tính từ lần sai đầu, người dùng có thể bị mở khoá sớm hơn
+     * dự kiến ngay sau lần sai thứ 10.
+     */
+    private void recordPasswordFailure(String key) {
+        try {
+            Long count = redis.opsForValue().increment(key);
+            if (count != null) {
+                redis.expire(key, PASSWORD_FAIL_WINDOW);
+            }
+        } catch (Exception e) {
+            log.warn("Không ghi được bộ đếm {} trên Redis: {}", key, e.getMessage());
+        }
+    }
+
+    private void clearFailCount(String key) {
+        try {
+            redis.delete(key);
+        } catch (Exception e) {
+            log.warn("Không xoá được bộ đếm {} trên Redis: {}", key, e.getMessage());
+        }
     }
 
     private LoginOutcome issueTokens(Admin admin) {

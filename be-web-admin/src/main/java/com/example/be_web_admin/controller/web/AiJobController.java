@@ -7,6 +7,7 @@ import com.example.be_web_admin.dto.qbank.SuggestionDecisionRequest;
 import com.example.be_web_admin.service.qbank.AiCheckService;
 import com.example.be_web_admin.service.qbank.SuggestionReviewService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,9 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/web/admin/ai")
+// Cùng nhóm quyền với ngân hàng câu hỏi: kiểm định AI và duyệt đề xuất là việc chuyên môn của
+// giảng viên, không phải quản trị hệ thống.
+@PreAuthorize(WebRoles.STAFF)
 public class AiJobController {
 
     private final AiCheckService aiCheckService;
@@ -37,14 +41,19 @@ public class AiJobController {
         this.suggestionReviewService = suggestionReviewService;
     }
 
+    /**
+     * Lấy adminId từ access token đã xác thực (WebPrincipal), KHÔNG từ query/body: nếu client tự
+     * khai adminId thì việc kiểm chủ sở hữu ở service vô nghĩa.
+     */
     @GetMapping("/jobs/{taskId}")
-    public AiJobView job(@PathVariable("taskId") String taskId) {
-        return aiCheckService.job(taskId);
+    public AiJobView job(@PathVariable("taskId") String taskId, Authentication authentication) {
+        return aiCheckService.job(taskId, WebPrincipal.adminId(authentication));
     }
 
     @GetMapping("/jobs/{taskId}/suggestions")
-    public List<AiSuggestionView> suggestions(@PathVariable("taskId") String taskId) {
-        return aiCheckService.suggestions(taskId);
+    public List<AiSuggestionView> suggestions(@PathVariable("taskId") String taskId,
+                                              Authentication authentication) {
+        return aiCheckService.suggestions(taskId, WebPrincipal.adminId(authentication));
     }
 
     /**

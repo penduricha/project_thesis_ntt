@@ -63,6 +63,9 @@ public class AiResultParser {
         Map<SuggestionTargetField, String> fieldTexts = extractFieldTexts(input);
         List<Candidate> accepted = new ArrayList<>();
         Set<String> dedupKeys = new LinkedHashSet<>();
+        // Khoá (field|issue) của các lỗi do tiền kiểm tất định tìm ra — LLM báo lại đúng lỗi đó thì
+        // bỏ, tránh người duyệt thấy hai dòng cho cùng một vấn đề (vd. "Phương án B trống").
+        Set<String> preflightKeys = new LinkedHashSet<>();
 
         // 1) Gộp kết quả tiền kiểm tất định (nếu bật)
         if (props.getLlm().isRulePreflight()) {
@@ -71,6 +74,11 @@ public class AiResultParser {
                         ? TextLocator.Span.empty()
                         : TextLocator.locate(fieldTexts.get(f.targetField()), f.originalText());
                 String key = f.targetField().getValue() + "|" + f.issueType();
+                // Khoá THÔ (field|issue) để nhánh LLM đối chiếu. Khoá tinh của LLM có thêm phần
+                // span nên không bao giờ trùng khoá thô này — đó là lý do phải giữ hai tập riêng:
+                //   • preflightKeys: "một lỗi thuộc (field, issue) đã được tiền kiểm bắt rồi".
+                //   • dedupKeys: chống LLM tự lặp lại cùng một lỗi.
+                preflightKeys.add(key);
                 if (dedupKeys.add(key)) {
                     accepted.add(new Candidate(
                             f.issueType(),
@@ -174,6 +182,12 @@ public class AiResultParser {
             Integer spanStart = span.isFound() ? span.start() : null;
             Integer spanEnd = span.isFound() ? span.end() : null;
 
+            // Tiền kiểm tất định thắng: nếu đã bắt được đúng (field, issue) này thì bỏ bản của
+            // LLM. Tiền kiểm chắc chắn 100% (so khớp chuỗi), còn LLM có thể diễn giải lệch.
+            if (preflightKeys.contains(resolvedField.getValue() + "|" + issueType)) {
+                continue;
+            }
+
             String dedupKey = resolvedField.getValue() + "|" + issueType + "|"
                     + (spanStart != null ? spanStart : explanation.substring(0, Math.min(24, explanation.length())));
             if (!dedupKeys.add(dedupKey)) {
@@ -189,6 +203,9 @@ public class AiResultParser {
                     spanEnd,
                     proposed,
                     explanation,
+                    // Đánh giá TRƯỚC khi add() chèn phần tử, nên `accepted.isEmpty()` đúng
+                    // MỘT lần (candidate đầu) — gợi ý độ khó chỉ gắn vào một đề xuất. Đã kiểm
+                    // lại bằng mô phỏng: đây KHÔNG phải bug, giữ nguyên.
                     accepted.isEmpty() ? suggestedDifficulty : null));
         }
 

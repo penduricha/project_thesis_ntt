@@ -290,7 +290,9 @@ public class AdminControllerMgmtWeb {
             }
             case LOCKED -> {
                 body.put("success", false);
-                body.put("message", "Nhập sai mã quá nhiều lần, vui lòng thử lại sau.");
+                // Câu chữ không nói "mã" vì khoá có thể do sai MẬT KHẨU (bộ đếm mật khẩu) chứ không
+                // chỉ do sai mã TOTP — nói sai lý do sẽ khiến người dùng đi tìm lỗi ở ô mã.
+                body.put("message", "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau.");
                 body.put("data", Map.of("code", "LOCKED", "retryAfterSeconds", outcome.retryAfterSeconds()));
             }
             default -> { // BAD_CREDENTIALS

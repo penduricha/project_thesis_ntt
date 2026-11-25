@@ -113,14 +113,74 @@ vì cần bạn quyết định thiết kế thông báo.
 
 | # | Việc | Nơi | Mức | Trạng thái |
 |---|---|---|---|---|
-| 1 | `ROLE_ADMIN` hard-code + không `@PreAuthorize` | `JwtAuthenticationFilter:52` | 🔴 | Chưa vá (từ vòng 1) |
-| 2 | Không phân công môn ở BE | — | 🔴 | Chưa vá (từ vòng 1) |
-| 3 | `AiCheckService.job/suggestions` không kiểm chủ sở hữu | `AiCheckService:148/167` | 🟠 | Chưa vá |
-| 4 | Không có chức năng khôi phục câu hỏi đã lưu trữ | `QuestionService` | 🟠 | Chưa vá |
-| 5 | Đăng nhập không rate-limit mật khẩu | `AdminLoginServiceImpl` | 🟠 | Chưa vá |
+| 1 | `ROLE_ADMIN` hard-code + không `@PreAuthorize` | `JwtAuthenticationFilter` / `SecurityConfig` | 🔴 | **ĐÃ VÁ** |
+| 2 | Không phân công môn ở BE | — | 🔴 | Chưa vá (cần bảng `ntt_subject_lecturers`) |
+| 3 | `AiCheckService.job/suggestions` không kiểm chủ sở hữu | `AiCheckService` | 🟠 | **ĐÃ VÁ** |
+| 4 | Không có chức năng khôi phục câu hỏi đã lưu trữ | `QuestionService` | 🟠 | **ĐÃ VÁ** |
+| 5 | Đăng nhập không rate-limit mật khẩu | `AdminLoginServiceImpl` | 🟠 | **ĐÃ VÁ** |
 | 6 | `periodSeconds` từ server không kiểm ⇒ crash tab TOTP | `enrollment_service.dart` | 🟠 | **ĐÃ VÁ** |
-| 7 | `update()` thiếu `SUBJECT_INACTIVE` | `QuestionService:285` | 🟡 | Chưa vá |
+| 7 | `update()` thiếu `SUBJECT_INACTIVE` | `QuestionService` | 🟡 | **ĐÃ VÁ** |
 | 8 | Không cảnh báo lệch đồng hồ TOTP | `authenticator_screen.dart` | 🟡 | Đề xuất |
+| 9 | Lỗi lạ trả HTML, Vue không parse được | `QbankExceptionHandler` | 🟡 | **ĐÃ VÁ** |
+| 10 | Tiền kiểm + LLM báo trùng một lỗi ⇒ 2 dòng | `AiResultParser` | 🟡 | **ĐÃ VÁ** |
+
+### 3.1 Chi tiết các bản vá (đợt này)
+
+**Việc 1 — vai trò thật.** `JwtAuthenticationFilter` đọc `role` của admin từ DB (sau khi Redis đã xác
+nhận token còn sống) và gán `ROLE_ADMIN` / `ROLE_LECTURER`. Không lấy từ JWT claim vì (a) token đã
+cấp trước khi vá không có claim đó, (b) claim sống 5 phút nên hạ quyền một admin mà token cũ vẫn còn
+quyền cũ. Bật `@EnableMethodSecurity` + `@PreAuthorize` ở 4 controller, quy ước tập trung ở
+`controller/web/WebRoles.java`:
+
+| Nhóm API | Quyền |
+|---|---|
+| `QuestionBankController`, `AiJobController` | ADMIN + LECTURER (công việc chuyên môn của giảng viên) |
+| `AdminControllerTest` (tạo/xem tài khoản) | chỉ ADMIN |
+
+Lỗi đọc DB ⇒ **không cấp quyền nào** (rơi vào 401), tuyệt đối không mặc định ADMIN.
+
+**Việc 5 — rate-limit mật khẩu.** 10 lần sai/15 phút cho một `adminId`. Chặn **trước** khi chạy
+BCrypt, nếu không kẻ tấn công vẫn ép server băm liên tục dù biết chắc bị khoá. Redis lỗi ⇒ bỏ qua
+chặn (không biến sự cố Redis thành sự cố đăng nhập toàn hệ thống). Mật khẩu đúng ⇒ xoá bộ đếm.
+
+Đánh đổi đã cân nhắc: khác với TOTP (chỉ đếm **sau** khi mật khẩu đúng, để không ai khoá được tài
+khoản người khác), bước mật khẩu **phải** đếm cả khi sai — đó chính là thứ cần chặn. Nghĩa là kẻ
+không biết mật khẩu vẫn khoá được tài khoản 15 phút; thà vậy còn hơn để lộ mật khẩu.
+
+**Việc 3 — chủ sở hữu AI job.** `job()`/`suggestions()` nhận thêm `adminId` (lấy từ `WebPrincipal`,
+không từ query). So với `created_by` của task; ADMIN xem được mọi task. Người không phải chủ nhận
+**404** chứ không phải 403, để không xác nhận "task này có tồn tại".
+
+Điểm dễ sai đã xử lý: `job()` đọc **Redis trước**. Nếu kiểm sau khi trả cache thì cache vẫn lộ dữ
+liệu. Bản ghi Redis cũ chưa có `adminId` (null) được coi là "phải xuống MariaDB kiểm", **không** coi
+null là của mọi người.
+
+**Việc 4 — khôi phục.** `QuestionService.restore()` + `POST /web-bank/{id}/restore`. Đối xứng với
+`archive()`: đổi cờ về `ACTIVE`, ghi revision với `ChangeSourceD.RESTORE`, đẩy activity
+`QUESTION_RESTORED`. Enum và `SQL_TYPE` đã có sẵn từ CSDL v4 nên không phải sửa schema.
+
+**Việc 9 — lưới an toàn lỗi.** Thêm 5 handler: `MethodArgumentTypeMismatchException` (ví dụ
+`?page=abc`), `MissingServletRequestParameterException`, `HttpRequestMethodNotSupportedException`,
+`NoResourceFoundException`, và `Exception` cuối cùng. Lỗi lạ giờ trả
+`{success:false, code:"INTERNAL_ERROR", message, at}` — giao diện luôn có câu để hiển thị thay vì
+nhận trang lỗi HTML. Stack trace chỉ ghi log server, không đưa vào phản hồi.
+
+**Việc 10 — AI: tiền kiểm và LLM báo trùng một lỗi.** `RulePreflightChecker` (tất định) dùng khoá
+`field|issue`, còn nhánh LLM dùng `field|issue|span` — hai khuôn khác nhau nên **không bao giờ
+trùng**. Kết quả: `option_b` trống được báo 2 lần cho người duyệt (một của tiền kiểm, một của LLM).
+Đã thêm tập `preflightKeys` riêng: lỗi nào tiền kiểm đã bắt thì bỏ bản của LLM (tiền kiểm chắc chắn
+100% vì so khớp chuỗi). Mô phỏng: **3 dòng → 2 dòng**, không còn dòng trùng.
+
+### 3.2 Một nhận định SAI của tôi, đã rút lại
+
+Tôi từng nghi `accepted.isEmpty() ? suggestedDifficulty : null` trong `AiResultParser` là bug "luôn
+true vì chạy bên trong `accepted.add(...)`" ⇒ mọi đề xuất đều mang cùng một độ khó. **Sai**: Java
+đánh giá đối số **trước** khi gọi `add()`, nên `isEmpty()` đúng một lần. Đã mô phỏng 4 trường hợp
+(0/1/2/3 đề xuất) — bản cũ đúng cả 4. Đã hoàn tác toàn bộ thay đổi đó và thay bằng test
+`AiResultParserDifficultyTest` ghim đúng hành vi để người sau không nghi lại.
+
+Tương tự, tôi từng nghĩ `RulePreflightChecker` không chạy trong luồng thật — sai: `AiResultParser`
+gọi nó ở dòng 64 và `application.yml` đặt `rule-preflight: true`.
 
 **Điểm mạnh nên đưa vào báo cáo đồ án:** cả hai phía đều xử lý đúng những chỗ dễ sai nhất —
 Java chống timing attack + không log OTP + Redis graceful degradation; Flutter TOTP đúng RFC 6238

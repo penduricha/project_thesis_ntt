@@ -282,7 +282,15 @@ public class QuestionService {
                             + ", hiện tại là " + question.getVersion() + "). Tải lại rồi thử lại.");
         }
 
-        Subject subject = subjects.findById(question.getSubjectId()).orElse(null);
+        // Cùng quy tắc với create(): môn bị vô hiệu hoá thì không sửa được câu hỏi của môn đó.
+        // Trước bản vá, update() dùng orElse(null) nên vô hiệu hoá môn rồi vẫn sửa được câu hỏi,
+        // và môn bị xoá thì lặng lẽ trả subjectName = null trong phản hồi.
+        Subject subject = subjects.findById(question.getSubjectId())
+                .orElseThrow(() -> QbankException.notFound("SUBJECT_NOT_FOUND",
+                        "Không tìm thấy môn học " + question.getSubjectId()));
+        if (!Boolean.TRUE.equals(subject.getIsActive())) {
+            throw QbankException.badRequest("SUBJECT_INACTIVE", "Môn học đang bị vô hiệu hoá.");
+        }
         Topic topic = resolveTopic(question.getSubjectId(), request.topicId());
         OptionLabelD correctLabel = parseCorrectLabel(request.correctLabel());
         ContentFormatD contentFormat = parseContentFormat(request.contentFormat());
@@ -359,6 +367,44 @@ public class QuestionService {
 
         uiState.pushActivity(adminId, com.example.be_web_admin.dto.qbank.ActivityItem.of(
                 "QUESTION_ARCHIVED", "Lưu trữ câu hỏi #" + questionId, "QUESTION", questionId));
+        uiState.evictDashboard(question.getSubjectId());
+
+        long pending = suggestions.countByDecisionForQuestion(questionId, SuggestionDecisionD.PENDING);
+        return toDetail(question, subject, topic, revNo, pending);
+    }
+
+    /**
+     * Khôi phục câu hỏi đã lưu trữ: status về active.
+     *
+     * <p><b>Vì sao cần:</b> {@code archive()} đặt {@code ARCHIVED} và {@code update()} chặn vĩnh
+     * viễn câu đã lưu trữ, nên trước bản này bấm nhầm "Lưu trữ" (nhất là "lưu trữ hàng loạt") là
+     * mất câu hỏi: dữ liệu còn trong DB nhưng không sửa, không dùng lại được nữa. Hằng
+     * {@code ChangeSourceD.RESTORE} đã có sẵn trong enum và {@code SQL_TYPE} đã khai báo
+     * {@code 'restore'}, tức CSDL v4 đã thiết kế cho việc này — chỉ thiếu phần cài đặt.</p>
+     *
+     * <p>Không kiểm tra gì thêm ngoài trạng thái: nội dung câu hỏi không đổi khi lưu trữ nên khôi
+     * phục chỉ là đổi cờ. Revision vẫn được ghi để lịch sử thấy rõ ai khôi phục và khi nào.</p>
+     */
+    @Transactional
+    public QuestionDetail restore(Long questionId, Long adminId) {
+        Question question = requireQuestion(questionId);
+        if (question.getStatus() != QuestionStatusD.ARCHIVED) {
+            // Câu đang active: không phải lỗi nặng, nhưng trả conflict để giao diện biết nút này
+            // không áp dụng — tránh im lặng "thành công" trong khi chẳng có gì đổi.
+            throw QbankException.conflict("NOT_ARCHIVED",
+                    "Câu hỏi đang hoạt động, không cần khôi phục.");
+        }
+        question.setStatus(QuestionStatusD.ACTIVE);
+        question.setUpdatedBy(adminId);
+        questions.saveAndFlush(question);
+
+        Subject subject = subjects.findById(question.getSubjectId()).orElse(null);
+        Topic topic = question.getTopicId() == null ? null : topics.findById(question.getTopicId()).orElse(null);
+        int revNo = revisions.findMaxRevNo(questionId) + 1;
+        appendRevision(question, revNo, ChangeSourceD.RESTORE, adminId, "Khôi phục câu hỏi", subject, topic);
+
+        uiState.pushActivity(adminId, com.example.be_web_admin.dto.qbank.ActivityItem.of(
+                "QUESTION_RESTORED", "Khôi phục câu hỏi #" + questionId, "QUESTION", questionId));
         uiState.evictDashboard(question.getSubjectId());
 
         long pending = suggestions.countByDecisionForQuestion(questionId, SuggestionDecisionD.PENDING);

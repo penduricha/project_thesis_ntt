@@ -6,6 +6,7 @@ import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -17,6 +18,9 @@ import java.util.Map;
 @Profile({"dev", "local", "test"})
 @RestController
 @RequestMapping("/web/admin")
+// Chỉ ADMIN: endpoint tạo tài khoản (POST /web/admin) và liệt kê mọi tài khoản (GET /all).
+// Trước bản vá, giảng viên đăng nhập là xem được toàn bộ danh sách admin kèm hồ sơ.
+@PreAuthorize(WebRoles.ADMIN)
 //@ResponseBody
 public class AdminControllerTest {
 

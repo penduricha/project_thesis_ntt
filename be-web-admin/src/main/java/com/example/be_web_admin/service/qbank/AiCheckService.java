@@ -5,14 +5,17 @@ import com.example.be_web_admin.dto.qbank.AiJobView;
 import com.example.be_web_admin.dto.qbank.AiSuggestionView;
 import com.example.be_web_admin.enums.ai.TaskStatusD;
 import com.example.be_web_admin.enums.ai.TaskTypeD;
+import com.example.be_web_admin.enums.Role;
 import com.example.be_web_admin.enums.qbank.QuestionStatusD;
 import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.ai.AiSuggestion;
 import com.example.be_web_admin.model.jpa.ai.AiTask;
 import com.example.be_web_admin.model.jpa.ai.IssueType;
 import com.example.be_web_admin.model.jpa.qbank.Question;
 import com.example.be_web_admin.model.jpa.qbank.QuestionRevision;
 import com.example.be_web_admin.model.redis.UiAiJobView;
+import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.repository.jpa.ai.AiSuggestionRepository;
 import com.example.be_web_admin.repository.jpa.ai.AiTaskRepository;
 import com.example.be_web_admin.repository.jpa.ai.IssueTypeRepository;
@@ -29,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -59,6 +63,7 @@ public class AiCheckService {
     private final IssueTypeRepository issueTypes;
     private final AiWorkerClient worker;
     private final UiStateStore uiState;
+    private final AdminRepository admins;
 
     public AiCheckService(QuestionRepository questions,
                           QuestionRevisionRepository revisions,
@@ -66,7 +71,8 @@ public class AiCheckService {
                           AiSuggestionRepository suggestions,
                           IssueTypeRepository issueTypes,
                           AiWorkerClient worker,
-                          UiStateStore uiState) {
+                          UiStateStore uiState,
+                          AdminRepository admins) {
         this.questions = questions;
         this.revisions = revisions;
         this.tasks = tasks;
@@ -74,6 +80,7 @@ public class AiCheckService {
         this.issueTypes = issueTypes;
         this.worker = worker;
         this.uiState = uiState;
+        this.admins = admins;
     }
 
     /**
@@ -115,6 +122,7 @@ public class AiCheckService {
             UiAiJobView view = new UiAiJobView(
                     workerTask.taskId(),
                     questionId,
+                    adminId,
                     TaskTypeD.QUESTION_CHECK.dbValue(),
                     normalizeStatus(workerTask.status()),
                     1,
@@ -145,12 +153,16 @@ public class AiCheckService {
      * Server 1 mà giao diện vẫn thấy tiến trình.
      */
     @Transactional(readOnly = true)
-    public AiJobView job(String taskId) {
+    public AiJobView job(String taskId, Long adminId) {
         if (taskId == null || taskId.isBlank()) {
             throw QbankException.badRequest("TASK_ID_REQUIRED", "Thiếu taskId.");
         }
         Optional<UiAiJobView> cached = uiState.readJobView(taskId);
-        if (cached.isPresent() && !shouldRefresh(cached.get())) {
+        // Kiểm chủ sở hữu TRƯỚC khi trả cache. Bản ghi Redis cũ chưa có adminId (null) thì phải
+        // xuống MariaDB lấy created_by — không được coi null là "của mọi người".
+        if (cached.isPresent() && cached.get().getAdminId() != null
+                && !shouldRefresh(cached.get())) {
+            assertOwner(cached.get(), adminId, taskId);
             return toView(cached.get(), true);
         }
 
@@ -158,16 +170,61 @@ public class AiCheckService {
                 .orElseThrow(() -> QbankException.notFound("TASK_NOT_FOUND",
                         "Không tìm thấy task AI " + taskId));
         UiAiJobView fresh = fromTask(task);
+        assertOwner(fresh, adminId, taskId);
         uiState.saveJobView(fresh);
         return toView(fresh, cached.isPresent());
     }
 
+    /**
+     * Chỉ người tạo task (hoặc ADMIN) được xem tiến trình và đề xuất của task đó.
+     *
+     * <p>Vì sao cần: taskId do worker sinh, nhưng nó được trả về cho client và có thể lộ qua log,
+     * ảnh chụp màn hình, lịch sử trình duyệt. Đề xuất AI chứa nguyên văn câu hỏi + đáp án đúng, nên
+     * không kiểm chủ sở hữu là cho phép đọc chéo môn chỉ với một taskId.</p>
+     *
+     * <p>ADMIN được xem mọi task: quản trị viên cần xem được để hỗ trợ/chấm điểm, và vai trò này
+     * vốn đã xem được toàn bộ ngân hàng câu hỏi. Người không phải chủ task nhận 404 (không phải
+     * 403) để không xác nhận "task này có tồn tại".</p>
+     */
+    private void assertOwner(UiAiJobView view, Long adminId, String taskId) {
+        if (isOwnerOrAdmin(view.getAdminId(), adminId)) {
+            return;
+        }
+        throw QbankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI " + taskId);
+    }
+
+    private boolean isOwnerOrAdmin(Long ownerAdminId, Long requesterAdminId) {
+        if (requesterAdminId == null) {
+            return false;
+        }
+        return Objects.equals(ownerAdminId, requesterAdminId) || isAdmin(requesterAdminId);
+    }
+
+    /**
+     * Tra vai trò từ DB thay vì từ SecurityContext: service có thể được gọi từ luồng không có
+     * request (job nền) nên không phụ thuộc thread-local. Lỗi đọc DB coi như KHÔNG phải admin —
+     * hỏng CSDL phải siết quyền, không được nới.
+     */
+    private boolean isAdmin(Long adminId) {
+        try {
+            Admin admin = admins.findAdminByAdminId(adminId);
+            return admin != null && admin.getRole() == Role.ADMIN;
+        } catch (Exception e) {
+            log.warn("Không đọc được vai trò của admin {}: {}", adminId, e.getMessage());
+            return false;
+        }
+    }
+
     /** Đề xuất của chính task này (modal tiến trình mở sang bảng duyệt). */
     @Transactional(readOnly = true)
-    public List<AiSuggestionView> suggestions(String taskId) {
+    public List<AiSuggestionView> suggestions(String taskId, Long adminId) {
         AiTask task = tasks.findById(taskId)
                 .orElseThrow(() -> QbankException.notFound("TASK_NOT_FOUND",
                         "Không tìm thấy task AI " + taskId));
+        // Cùng quy tắc với job(): ai có taskId cũng đọc được nếu không kiểm.
+        if (!isOwnerOrAdmin(task.getCreatedBy(), adminId)) {
+            throw QbankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI " + taskId);
+        }
         if (task.getTaskType() != TaskTypeD.QUESTION_CHECK) {
             return List.of();
         }
@@ -208,6 +265,7 @@ public class AiCheckService {
         return new UiAiJobView(
                 task.getTaskId(),
                 task.getQuestionId(),
+                task.getCreatedBy(),
                 task.getTaskType() == null ? null : task.getTaskType().dbValue(),
                 task.getStatus() == null ? null : task.getStatus().dbValue(),
                 task.getAttemptCount(),

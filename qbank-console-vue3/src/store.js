@@ -300,10 +300,23 @@ export async function removeQuestions(ids) {
   S.q = S.q.filter(q => !ids.includes(q.id)); S.sug = S.sug.filter(s => !ids.includes(s.qid)); ids.forEach(id => S.sel.delete(id))
   log(`Xóa hàng loạt ${ids.length} câu hỏi`, 'wa')
   if (useRealApi() && S.dataMode === 'real') {
-    // Backend chỉ có lưu trữ mềm (archive); không có "hoàn tác" nên không hiện nút Hoàn tác ở chế độ real.
     try {
       await Promise.all(ids.map((id) => qbankApi.archiveQuestion(id)))
-      toast(`Đã lưu trữ ${ids.length} câu hỏi`, 'wa')
+      // Nút Hoàn tác chỉ hiện SAU khi lưu trữ thành công ở máy chủ, và hoàn tác thật bằng
+      // POST /questions/{id}/restore. Trước đây chế độ thật không có nút này vì backend chưa có
+      // chức năng khôi phục: bấm "Lưu trữ" nhầm là mất câu hỏi vĩnh viễn.
+      toast(`Đã lưu trữ ${ids.length} câu hỏi`, 'wa', 'Hoàn tác', async () => {
+        try {
+          await Promise.all(ids.map((id) => qbankApi.restoreQuestion(id)))
+          toast(`Đã khôi phục ${ids.length} câu hỏi`, 'ok')
+          await loadQuestions()
+          await loadDashboard()
+        } catch (e) {
+          // Khôi phục hỏng thì nạp lại danh sách để giao diện không hiện trạng thái sai.
+          toast(apiErrorMessage(e, 'Khôi phục thất bại, danh sách đã được tải lại.'), 'er')
+          await loadQuestions()
+        }
+      })
       await loadDashboard()
     } catch (e) {
       S.q.push(...bq); S.sug.push(...bs)
