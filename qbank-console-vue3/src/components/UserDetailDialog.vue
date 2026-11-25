@@ -23,7 +23,7 @@ function del() {
       <div><dt>{{ $t('account.fullName') }}</dt><dd>{{ u.name }}</dd></div>
       <div><dt>{{ $t('auth.loginId') }}</dt><dd class="mono">{{ u.adminId }} <button class="btn-rev" @click="copyId">{{ $t('common.copy') }}</button></dd></div>
       <div><dt>{{ $t('admin.accountStatus') }}</dt><dd><span class="ubd" :class="'ubd--' + (acc ? acc[0] : 'success')">{{ acc ? acc[1] : $t('admin.activeStatus') }}</span></dd></div>
-      <div><dt>{{ $t('auth.otpTitle') }}</dt><dd><span class="ubd" :class="'ubd--' + v.bd">{{ v.text }}</span></dd></div>
+      <div><dt>{{ $t('auth.otpTitle') }}</dt><dd><span class="ubd" :class="'ubd--' + v.bd">{{ $t('tfa.state.' + (me ? S.tfa.st : u.totp)) }}</span></dd></div>
       <div><dt>{{ $t('account.lastChange') }}</dt><dd>{{ u.passwordChangedAt || $t('common.noPasswordChange') }}</dd></div>
     </dl>
     <div v-if="me" class="own-role"><span>{{ $t('admin.currentRole') }}</span><b>{{ u.role }}</b></div>

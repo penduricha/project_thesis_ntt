@@ -9,7 +9,7 @@ import { LOCALES, locale, setLocale, t as tr } from '../i18n/index.js'
 
 const st = computed(() => S.tfa.st), v = computed(() => TFA_VIEW[st.value])
 const left = computed(() => { const t = Math.max(0, Math.ceil((S.tfa.until - S.now) / 1000)); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') })
-const gv = computed(() => (S.role === 'gv' && asUser() ? `Đang mô phỏng phạm vi môn của ${asUser().name}.` : ''))
+const gv = computed(() => { locale.code; return S.role === 'gv' && asUser() ? tr('settings.simScope', { name: asUser().name }) : '' })
 // Chỉ chế độ demo mới có nút "mô phỏng ứng dụng đã xác nhận"; bản thật chờ Flutter xác nhận qua SSE/poll.
 const demo = computed(() => auth.isDemo || S.dataMode === 'mock')
 onMounted(loadTfaStatus)
@@ -22,35 +22,32 @@ const effective = ref(resolveTheme())
 const unWatchSystem = watchSystemTheme((t) => { effective.value = t })
 onBeforeUnmount(unWatchSystem)
 
-const THEME_LABEL = { light: 'Sáng', dark: 'Tối', auto: 'Theo hệ thống' }
-const THEME_HINT = {
-  light: 'Nền sáng, phù hợp phòng làm việc nhiều ánh sáng.',
-  dark: 'Nền tối, giảm chói khi làm việc lâu hoặc ban đêm.',
-  auto: 'Tự đổi theo cài đặt sáng/tối của hệ điều hành.',
-}
+/* Nhãn giao diện tra qua i18n, KHÔNG lưu chữ — đọc locale.code để computed tự cập nhật. */
+const THEME_LABEL = computed(() => { locale.code; return { light: tr('settings.themeLight'), dark: tr('settings.themeDark'), auto: tr('settings.themeAuto') } })
+const THEME_HINT = computed(() => { locale.code; return { light: tr('settings.themeLightHint'), dark: tr('settings.themeDarkHint'), auto: tr('settings.themeAutoHint') } })
 function pickTheme(v) {
   if (!THEME_OPTIONS.includes(v)) return
   pref.value = setPreference(v)     // ghi nhớ + áp ngay, không cần tải lại
   effective.value = resolveTheme(v)
-  log(`Đổi giao diện sang ${THEME_LABEL[v].toLowerCase()}`, 'info')
-  toast('Đã lưu giao diện', 'ok')
+  log(tr('settings.themeChanged', { name: String(THEME_LABEL.value[v]).toLowerCase() }), 'info')
+  toast(tr('settings.themeSaved'), 'ok')
 }
-const themeOptions = THEME_OPTIONS.map((v) => ({ v, label: THEME_LABEL[v], hint: THEME_HINT[v] }))
+const themeOptions = computed(() => { locale.code; return THEME_OPTIONS.map((v) => ({ v, label: THEME_LABEL.value[v], hint: THEME_HINT.value[v] })) })
 
 /* ---------- Ngôn ngữ ----------
    Dùng đúng cơ chế của theme: chọn xong áp ngay và ghi nhớ, không cần tải lại trang.
    `locale` là reactive nên mọi $t() trong toàn ứng dụng tự cập nhật. */
 function pickLocale(code) {
   if (setLocale(code) !== code) return
-  log(`Đổi ngôn ngữ sang ${LOCALES.find((l) => l.code === code)?.label || code}`, 'info')
+  log(tr('settings.langChanged', { name: LOCALES.find((l) => l.code === code)?.label || code }), 'info')
   toast(tr('settings.languageSaved'), 'ok')
 }
 const locales = LOCALES
-const opts = [
-  ['notifyTasks', 'Thông báo khi tác vụ AI hoàn tất', 'Hiện thông báo khi một yêu cầu kiểm định kết thúc (lỗi luôn được báo).', 'Đổi tùy chọn thông báo'],
-  ['confirmDelete', 'Hỏi xác nhận trước khi xóa câu hỏi', 'Tắt đi thì câu hỏi bị xóa ngay và vẫn có nút Hoàn tác. Xóa nhiều câu cùng lúc luôn hỏi xác nhận.', 'Đổi tùy chọn xác nhận xóa'],
-]
-function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy chọn', 'ok') }
+const opts = computed(() => { locale.code; return [
+  ['notifyTasks', tr('settings.notifyTasks'), tr('settings.notifyTasksHint'), tr('log.notifyOptChanged')],
+  ['confirmDelete', tr('settings.confirmDelete'), tr('settings.confirmDeleteHint'), tr('log.confirmOptChanged')],
+] })
+function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast(tr('settings.optSaved'), 'ok') }
 </script>
 
 <template>
@@ -63,8 +60,8 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy
             <div class="tfa__main">
               <span class="tfa__ic"><Ico :d="TFA_ICON[st]" /></span>
               <div class="tfa__txt">
-                <p class="tfa__st" role="status"><span>{{ $t('tfa.status') }}</span><span class="ubd" :class="'ubd--' + v.bd">{{ v.text }}</span></p>
-                <p class="tfa__desc">{{ v.desc }}</p>
+                <p class="tfa__st" role="status"><span>{{ $t('tfa.status') }}</span><span class="ubd" :class="'ubd--' + v.bd">{{ $t('tfa.state.' + st) }}</span></p>
+                <p class="tfa__desc">{{ $t('tfa.description.' + st) }}</p>
                 <p v-if="st === 'PENDING'" class="tfa__hint">{{ $t('tfa.countdownLeft') }} <b id="tfa-cd">{{ left }}</b> {{ $t('tfa.countdownRest') }}</p>
               </div>
             </div>
@@ -102,7 +99,7 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy
           </label>
         </fieldset>
         <p class="theme-now">
-          {{ $t('settings.currentlyShowing') }} <b>{{ THEME_LABEL[effective] }}</b>
+          {{ $t('settings.currentlyShowing') }} <b>{{ $t('settings.theme' + effective.charAt(0).toUpperCase() + effective.slice(1)) }}</b>
           <template v-if="pref === 'auto'"> {{ $t('settings.byOs') }}</template>
         </p>
       </div>
@@ -128,8 +125,8 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy
     <section class="set__row" aria-labelledby="opt-t">
       <div class="set__intro"><h3 id="opt-t" class="set__t">{{ $t('settings.notify') }}</h3><p class="set__d">{{ $t('settings.notifyDesc') }}</p></div>
       <div class="set__body">
-        <label v-for="[k, t, d, msg] in opts" :key="k" class="sopt">
-          <span class="sopt__t"><b>{{ t }}</b><small>{{ d }}</small></span>
+        <label v-for="[k, title, desc, msg] in opts" :key="k" class="sopt">
+          <span class="sopt__t"><b>{{ title }}</b><small>{{ desc }}</small></span>
           <span class="sw"><input type="checkbox" role="switch" :checked="S[k]" @change="setOpt(k, $event.target.checked, msg)"><span class="sw__ui" aria-hidden="true"></span></span>
         </label>
       </div>

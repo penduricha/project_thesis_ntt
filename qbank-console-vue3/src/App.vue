@@ -26,9 +26,11 @@ const page = computed(() => route.name || 'dash')
 const onBank = computed(() => /^(bank|course)$/.test(page.value))
 const crs = computed(() => COURSES[S.ci])
 const cur = computed(() => NAV.concat(EXTRA).find(n => n[0] === page.value))
-const title = computed(() => (page.value === 'course' && crs.value ? `${crs.value.id} – ${crs.value.name}` : cur.value?.[2] || ''))
-const subtitle = computed(() => page.value === 'courses' ? `${SUB.courses} (hiện có ${COURSES.length} môn học).`
-  : page.value === 'course' && crs.value ? `${crs.value.dept || 'Chưa có mô tả'} · ${crs.value.topics.length} chương/chủ đề con` : SUB[page.value])
+const navKey = k => k === 'dash' ? 'dashboard' : k
+const groupKey = k => ({ bank: 'questions', courses: 'questions', search: 'questions', review: 'ai', tasks: 'ai', moodle: 'integration', admin: 'admin', llm: 'admin' })[k]
+const title = computed(() => page.value === 'course' && crs.value ? `${crs.value.id} – ${crs.value.name}` : cur.value ? tr('nav.' + navKey(page.value)) : '')
+const subtitle = computed(() => page.value === 'courses' ? tr('page.coursesCount', { n: COURSES.length })
+  : page.value === 'course' && crs.value ? tr('page.courseScope', { dept: crs.value.dept || tr('page.noDescription'), n: crs.value.topics.length }) : SUB[page.value] ? tr('page.' + page.value) : '')
 const menu = computed(() => NAV.filter(n => !/^(admin|llm)$/.test(n[0]) || S.role === 'admin'))
 const badge = k => (k === 'review' ? S.sug.length : k === 'tasks' ? act() : 0)
 const ini = computed(() => { const w = S.name.split(' '); return (w.length > 1 ? w[0][0] + w[w.length - 1][0] : S.name.slice(0, 2)).toUpperCase() })
@@ -99,11 +101,12 @@ watch(() => route.fullPath, async () => {
   await nextTick()
   // Trang đăng nhập tự đặt tiêu đề riêng; nếu ghép theo mẫu ' · QBank Console' thì
   // route login không có title -> tab trình duyệt hiện ' · QBank Console' (dư dấu chấm).
-  document.title = isLoginPage.value ? 'Đăng nhập'
-    : is404.value ? 'Không tìm thấy trang · QBank Console'
-    : (title.value ? `${title.value} · QBank Console` : 'QBank Console')
   if (booted) { const h = document.getElementById('ttl'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }
   booted = true
+}, { immediate: true })
+
+watch([isLoginPage, is404, title, () => tr('auth.submit')], () => {
+  document.title = isLoginPage.value ? tr('auth.submit') : is404.value ? `${tr('error.notFound')} · QBank Console` : title.value ? `${title.value} · QBank Console` : 'QBank Console'
 }, { immediate: true })
 
 const onDoc = e => { if (!e.target.closest('.acct')) amOpen.value = false }
@@ -207,10 +210,10 @@ async function retryConnection() {
 
     <aside class="sidebar" id="side">
       <nav id="menu" :aria-label="$t('admin.function')">
-        <template v-for="([k, g, t], i) in menu" :key="k">
-          <p v-if="i && g !== menu[i - 1][1]" class="nav-group">{{ g }}</p>
+        <template v-for="([k, g], i) in menu" :key="k">
+          <p v-if="i && g !== menu[i - 1][1]" class="nav-group">{{ $t('nav.group.' + groupKey(k)) }}</p>
           <button type="button" class="nv" :class="{ on: k === page || (k === 'courses' && page === 'course') }" @click="go(k)">
-            <svg viewBox="0 0 24 24" aria-hidden="true" v-html="ICO[k]"></svg><span>{{ t }}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" v-html="ICO[k]"></svg><span>{{ $t('nav.' + navKey(k)) }}</span>
             <em v-if="badge(k)" :aria-label="badge(k) + $t('common.newCount')">{{ badge(k) }}</em>
           </button>
         </template>
@@ -240,7 +243,7 @@ async function retryConnection() {
         </div>
         <div id="view"><RouterView /></div>
       </div>
-      <footer class="foot">©<span id="yr">{{ yr }}</span> - Nguyen Tat Thanh University - All Rights Reserved.</footer>
+      <footer class="foot">{{ $t('brand.footer', { year: yr }) }}</footer>
     </main>
   </div>
 
