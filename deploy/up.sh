@@ -92,9 +92,14 @@ ok "Đã khởi động. Kiểm tra trạng thái:"
 echo
 echo "    docker compose -f deploy/docker-compose.yml ps"
 echo
-echo "Truy cập:"
-echo "    http://qbank.local     — QBank Console (Vue 3)"
-echo "    http://admin.local     — fe_web_admin (Vue cũ)"
-echo "    http://moodle.local    — Moodle"
+echo "Truy cập (CỔNG BẮT BUỘC có trong URL):"
+echo "    http://qbank.local:5176    — QBank Console (Vue 3) + API"
+echo "    http://admin.local:8085    — fe_web_admin (Vue cũ) + API"
+echo "    http://moodle.local:9000   — Moodle"
+echo
+echo "Kiểm tra nhanh từng cổng:"
+echo "    curl -I http://localhost:5176"
+echo "    curl -I http://localhost:8085"
+echo "    curl -I http://localhost:9000"
 echo
 echo "Chưa thêm tên miền vào /etc/hosts?  sudo bash deploy/hosts-setup.sh"

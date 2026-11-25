@@ -1,6 +1,7 @@
 # Triển khai — NGINX + Docker Compose
 
-Hạ tầng cho đồ án tốt nghiệp: **một cổng vào duy nhất, tất cả service nằm sau NGINX**.
+Hạ tầng cho đồ án tốt nghiệp: **mọi thứ đi qua NGINX**, mỗi giao diện một cổng
+host riêng (5176 / 8085 / 9000). Bên trong vẫn là một tầng proxy duy nhất.
 
 ---
 
@@ -8,13 +9,34 @@ Hạ tầng cho đồ án tốt nghiệp: **một cổng vào duy nhất, tất 
 
 NGINX phục vụ **đồng thời 4 project**:
 
-| Project | Vai trò | Cổng nội bộ |
-|---|---|---|
-| `qbank-console-vue3` | Console quản trị chính (Vue 3) | tĩnh |
-| `fe_web_admin` | Giao diện quản trị cũ (Vue 3) | tĩnh |
-| `be-web-admin` | Backend Spring Boot 3 (JDK 21) | 8080 |
-| `server-ai-worker` | Worker AI (Spring Boot, JDK 17) | 8082 |
-| `php_moodle_503` | Moodle 5.3 (PHP 8.3) | 9000 |
+| Project | Vai trò | Cổng **host** | Cổng nội bộ |
+|---|---|---|---|
+| `qbank-console-vue3` | Console quản trị chính (Vue 3) | **5176** | tĩnh |
+| `fe_web_admin` | Giao diện quản trị cũ (Vue 3) | **8085** | tĩnh |
+| `be-web-admin` | Backend Spring Boot 3 (JDK 21) | *(qua NGINX 8085)* | 8080 |
+| `server-ai-worker` | Worker AI (Spring Boot, JDK 17) | **8086** | 8082 |
+| `php_moodle_503` | Moodle 5.3 (PHP 8.3) | **9000** | 9000 (FastCGI) |
+
+## Bảng cổng
+
+| URL | Nội dung |
+|---|---|
+| `http://qbank.local:5176` | QBank Console + API (cùng origin, không CORS) |
+| `http://admin.local:8085` | fe_web_admin + API |
+| `http://moodle.local:9000` | Moodle |
+
+**Cổng phải có trong URL.** Tên miền giả `*.local` đều trỏ về `127.0.0.1`, mà
+trình duyệt gọi cổng 80 — nên phải chỉ định cổng rõ ràng. Đã có trang 404 hướng
+dẫn khi gõ sai cổng (không còn im lặng như trước).
+
+**Cổng nội bộ KHÔNG đổi** so với cấu hình cũ: Spring Boot vẫn `server.port: 8080`,
+worker vẫn `8082`. Chỉ có cổng nhìn từ máy host thay đổi, nên **không phải sửa
+`application.yaml`** và vẫn giữ được cách chạy tay để demo (xem mục cuối).
+
+**Về cổng 9000 của Moodle** — đây là cổng **host của NGINX**, không phải cổng
+FastCGI. Container `moodle_php` vẫn nghe FastCGI trên 9000 nội bộ (không publish).
+Nếu publish thẳng FastCGI ra ngoài thì trình duyệt không hiểu gì: nó gửi HTTP
+vào một cổng chờ gói tin nhị phân. Xem mục "Vì sao cần biết Moodle dùng FastCGI".
 
 Nó là **hạ tầng dùng chung**, không thuộc sở hữu của project nào. Đặt trong
 `be-web-admin/` thì cấu hình web server của Moodle lại nằm trong thư mục
@@ -22,6 +44,57 @@ backend — sai về mặt kiến trúc và rất khó giải thích khi bảo v
 
 Nhưng vẫn **tách bạch trách nhiệm**: mỗi project có đúng một file trong
 `nginx/conf.d/`. Sửa cấu hình của Moodle thì chỉ mở `moodle.conf`.
+
+---
+
+## Vì sao cần biết Moodle dùng FastCGI
+
+Đây là chỗ dễ hiểu sai nhất khi cấu hình cổng, nên giải thích riêng.
+
+NGINX **không tự chạy PHP**. Nó nhận HTTP từ trình duyệt rồi chuyển cho
+`php-fpm` qua giao thức **FastCGI** — một giao thức nhị phân, khác hoàn toàn
+HTTP. Vì vậy:
+
+- Cổng `9000` của container `moodle_php` là **FastCGI** → **không publish**.
+  Nếu publish và mở `http://localhost:9000`, trình duyệt gửi HTTP vào một cổng
+  đang chờ gói tin FastCGI: kết quả là treo, hoặc trả về ký tự nhị phân rác.
+  **Không bao giờ vào được Moodle theo cách đó.**
+- Cổng `9000` mà yêu cầu nhắc tới là **cổng host của NGINX** (`9000:80` trong
+  compose). Đường đi đúng:
+
+```
+trình duyệt --HTTP:9000--> nginx --FastCGI:9000--> moodle_php
+```
+
+Hai cổng trùng số `9000` chỉ là trùng ngẫu nhiên, chúng nằm ở hai mạng khác nhau:
+cổng host (nginx publish) và cổng nội bộ mạng Docker (FastCGI).
+
+Kết quả vẫn đúng yêu cầu: **Moodle chỉ có một cổng để truy cập là 9000**, và
+mọi request vẫn đi qua NGINX.
+
+---
+
+## Chạy song song: Docker và chạy tay
+
+Cổng host được chọn để **không đụng** cổng cũ, nên có thể chạy cả hai cách cùng lúc:
+
+| Thành phần | Chạy tay (demo tính năng) | Chạy Docker |
+|---|---|---|
+| QBank Console | `npm run dev` → **5173** | **5176** |
+| fe_web_admin | `npm run dev` → **5173** (Vite mặc định) | **8085** |
+| Spring Boot | `./gradlew bootRun` → **8080** | *(không publish riêng — gọi qua NGINX 8085)* |
+| AI worker | `./gradlew bootRun` → **8082** | **8086** (host) |
+| Moodle | `php -S localhost:8000` → **8000** | **9000** |
+
+**Vì sao Spring Boot không có cổng host riêng:** yêu cầu là 8085, nhưng cổng
+8085 đã thuộc `nginx` (để phục vụ `admin.local`). Hai container cùng giữ một
+cổng host thì Docker từ chối khởi động. Vì vậy backend chỉ đi qua NGINX —
+đúng mục tiêu của đồ án. Cần gọi thẳng để debug thì mở `"8095:8080"`.
+
+**Cả 5 cặp cổng đều không đụng nhau**, nên chạy Docker và chạy tay **cùng lúc
+được** cho mọi thành phần. Riêng fe_web_admin chạy tay cũng dùng 5173 (Vite
+mặc định), trùng QBank Console — chỉ chạy một cái ở 5173, hoặc truyền
+`npm run dev -- --port 5177`.
 
 ---
 
@@ -61,10 +134,10 @@ deploy/
 Internet
     │
     ▼
-┌─────────┐  ← cổng DUY NHẤT mở ra ngoài (:80)
+┌─────────┐  ← 3 cổng host: 5176 / 8085 / 9000
 │  nginx  │
 └────┬────┘
-     │  mạng "edge"
+     │  mạng "edge" (bên trong luôn là :80)
      ├──────────────┬───────────────┐
      ▼              ▼               ▼
 be_web_admin    moodle_php      (2 SPA tĩnh, cùng image NGINX)
@@ -156,10 +229,10 @@ Tất cả phải ở trạng thái `healthy` (trừ `moodle_php` và `moodle_cr
 
 | URL | Nội dung |
 |---|---|
-| http://qbank.local | QBank Console |
-| http://admin.local | fe_web_admin |
-| http://moodle.local | Moodle |
-| http://qbank.local/api/... | Backend (cùng origin, không CORS) |
+| http://qbank.local:5176 | QBank Console |
+| http://admin.local:8085 | fe_web_admin |
+| http://moodle.local:9000 | Moodle |
+| http://qbank.local:5176/api/... | Backend (cùng origin, không CORS) |
 
 ---
 
@@ -188,7 +261,7 @@ php -S localhost:8000 -t public router.php
 
 **B. Cho Moodle chạy qua NGINX** — đổi `config.php`:
 ```php
-$CFG->wwwroot = 'http://moodle.local';
+$CFG->wwwroot = 'http://moodle.local:9000';
 ```
 Rồi xoá cache:
 ```bash
@@ -318,7 +391,25 @@ không ghi/đọc được.
 
 → Đã thêm `user: www-data` cho service `moodle_cron`.
 
-### 8. `location` lồng nhau
+### 8. Trùng cổng host giữa nginx và backend
+
+Đây là lỗi **chặn hoàn toàn** và rất dễ mắc khi vừa đổi cổng:
+
+Yêu cầu là `8085` cho Spring Boot, nên ban đầu tôi publish `"8085:8080"` cho
+`be_web_admin`. Nhưng `nginx` cũng cần `"8085:80"` để phục vụ `admin.local`.
+**Hai container cùng giữ cổng host 8085** → Docker báo:
+
+```
+Bind for 0.0.0.0:8085 failed: port is already allocated
+```
+
+và **không khởi động được container nào**, kể cả nginx. Lỗi này xảy ra ngay
+lúc `up`, không phải lúc chạy.
+
+→ Đã bỏ `ports:` của `be_web_admin`. Backend chỉ truy cập qua NGINX (đúng mục
+tiêu của đồ án), muốn gọi trực tiếp để debug thì mở cổng **khác** 8085.
+
+### 9. `location` lồng nhau
 
 Các `location` con (`= /api/mobile/chat/ws`, regex `^/api/.../auth`) nằm trong
 `location /api/` là **cấu hình không hợp lệ** trong NGINX: khi đã khớp vào
@@ -342,6 +433,9 @@ chưa chạy được `nginx -t` thật. Những gì đã kiểm tra tự độn
 | Mọi `proxy_pass` / `fastcgi_pass` trỏ tới service có thật | ✓ |
 | Không có `location` lồng trong `location` | ✓ |
 | `bash -n` cho 2 script | ✓ |
+| `server_name` không trùng giữa 3 file | ✓ (12 tên) |
+| CORS khớp cổng publish | ✓ (5176 / 8085) |
+| Không trùng cổng host giữa các container | ✓ (5176/8085/8086/9000) |
 | `qbank-console-vue3` build được | ✓ 613ms |
 | `fe_web_admin` build được | ✓ 1.71s |
 
@@ -402,7 +496,7 @@ Khi có tên miền thật:
    ```nginx
    server {
        listen 80;
-       server_name qbank.local;
+       server_name qbank.local;  # và qbank.local:5176, localhost:5176
        return 301 https://$host$request_uri;
    }
    ```

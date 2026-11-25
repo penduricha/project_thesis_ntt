@@ -73,9 +73,22 @@ services:
     container_name: ntt_nginx
     restart: unless-stopped
     ports:
-      # ĐÂY LÀ CỔNG DUY NHẤT mở ra ngoài trong toàn bộ hệ thống.
-      # Đổi thành "8080:80" nếu cổng 80 đã bị chiếm (vd: đang chạy Apache).
-      - "80:80"
+      # 3 cổng host, mỗi cổng ứng với một tên miền (server_name) của NGINX.
+      # Lý do cần 3 cổng chứ không chỉ 1: các tên miền giả *.local đều trỏ
+      # về 127.0.0.1, mà trình duyệt luôn gọi cổng 80 — nên nếu chỉ publish
+      # "80:80" thì cả 3 tên miền cùng vào được nhưng KHÔNG phân biệt được
+      # khi cần kiểm tra riêng từng cái, và cũng không khớp quy ước cổng
+      # của nhóm.
+      #
+      #   host 5176 -> qbank.local   (QBank Console + API)
+      #   host 8085 -> admin.local   (fe_web_admin + API)
+      #   host 9000 -> moodle.local  (Moodle)
+      #
+      # Bên trong container vẫn là 80 (NGINX chỉ nghe 80), nên không phải
+      # sửa listen trong cấu hình.
+      - "5176:80"
+      - "8085:80"
+      - "9000:80"
       # Bỏ comment khi có HTTPS (xem deploy/README.md phần "Bật HTTPS").
       # - "443:443"
     networks:
@@ -190,13 +203,30 @@ services:
       # --- CORS: giờ chỉ cần origin công khai của NGINX ---
       # Trước đây phải liệt kê 6 origin (5173/5174/5375 trên localhost và
       # 127.0.0.1). Nhờ NGINX gộp về một origin, danh sách rút còn một mục.
-      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://qbank.local,http://admin.local}
+      # Phải KÈM CỔNG: trình duyệt gửi Origin: http://qbank.local:5176.
+      # Ghi thiếu ":5176" là CORS chặn sạch API, chỉ hiện 403 khó đoán.
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://qbank.local:5176,http://admin.local:8085,http://localhost:5176,http://127.0.0.1:5176,http://localhost:8085,http://127.0.0.1:8085}
       # --- AI worker: gọi bằng tên service, cổng nội bộ ---
       AI_WORKER_BASE_URL: http://ai_worker:8082/api
       AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN:?Bắt buộc — dùng chung với ai_worker}
-    # KHÔNG mount cache Gradle ở đây: runtime image là JRE, không có Gradle.
-    # Cache Gradle chỉ có ý nghĩa ở stage BUILD của Dockerfile (xem ghi chú
-    # trong Dockerfile.be). Mount vào runtime chỉ tạo thư mục rác.
+    # KHÔNG có "ports:" — và đây là quyết định có lý do, đọc kỹ:
+    #
+    # Cổng host 8085 ĐÃ được service nginx dùng ("8085:80") để phục vụ
+    # admin.local. Nếu ở đây cũng publish "8085:8080" thì Docker báo
+    # "Bind for 0.0.0.0:8085 failed: port is already allocated" và
+    # KHÔNG KHỞI ĐỘNG ĐƯỢC GÌ CẢ (kể cả nginx).
+    #
+    # Cần gọi thẳng backend để debug (bỏ qua NGINX)? Bỏ comment dòng dưới
+    # với một cổng KHÁC 8085 (ví dụ 8095) vì 8085 đã bị nginx giữ:
+    #
+    #   - "8095:8080"
+    #
+    # CẢNH BÁO khi mở cổng này: client gọi thẳng vào Spring Boot thì tự đặt
+    # được header X-Forwarded-For giả, làm sai audit log và vượt rate-limit
+    # (vì application.yaml bật forward-headers-strategy: native). Chỉ mở
+    # khi thật sự cần debug.
+    #
+    # Truy cập bình thường luôn qua NGINX: http://admin.local:8085
     depends_on:
       mariadb:
         condition: service_healthy
@@ -254,7 +284,20 @@ services:
       AI_NODE_1_URL: ${AI_NODE_1_URL:-}
       AI_NODE_1_TOKEN: ${AI_NODE_1_TOKEN:-}
       AI_NODE_1_ENABLED: ${AI_NODE_1_ENABLED:-false}
-    # Không mount cache Gradle ở runtime — xem ghi chú ở be_web_admin.
+      # Cho phép origin của cổng publish (8086) — nếu không, khi mở thẳng
+      # http://localhost:8086/api/... trình duyệt sẽ bị CORS chặn vì
+      # AiProperties mặc định chỉ cho 8082.
+      # ai-worker cũng cần origin cổng mới: nó có trang HTML riêng
+      # (/api/node-colab.html, /api/demo-eval.html) để cấu hình node Colab
+      # và xem kết quả eval — mở thẳng qua cổng 8086.
+      AI_CORS_ALLOWED_ORIGINS: ${AI_CORS_ALLOWED_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086,http://qbank.local:5176,http://localhost:5176,http://admin.local:8085}
+    ports:
+      # 8086 -> 8082 (container). Chỉ để kiểm tra độc lập bằng curl/browser.
+      # NGUY HIỂM: ai_worker dùng internal-token, KHÔNG xác thực người dùng.
+      # Mở cổng này là bất kỳ ai trên máy/mạng đều gọi được toàn bộ API AI.
+      # Nếu chỉ chạy demo một mình trên máy thì chấp nhận được; nếu máy nằm
+      # trong mạng chung thì PHẢI bỏ 2 dòng dưới.
+      - "8086:8082"
     depends_on:
       mariadb:
         condition: service_healthy
@@ -311,7 +354,16 @@ services:
     volumes:
       - ../php_moodle_503/moodle-latest-503/moodle:/var/www/moodle:rw
       - moodle_data:/var/www/moodledata
-    # Không có ports: PHP-FPM lắng nghe 9000 trong mạng nội bộ, không public.
+    # KHÔNG publish cổng của service này. Lý do quan trọng:
+    # Cổng 9000 của container này là FastCGI (giao thức nhị phân của PHP-FPM),
+    # KHÔNG phải HTTP. Nếu publish "9000:9000" và mở
+    # http://localhost:9000 trên trình duyệt, nó sẽ nhận dữ liệu nhị phân
+    # không đọc được (hoặc treo) — KHÔNG BAO GIỜ vào được Moodle.
+    #
+    # Cổng 9000 mà yêu cầu nhắc tới là cổng HOST của NGINX (xem service
+    # nginx ở trên: "9000:80"), tức NGINX nhận HTTP ở 9000 rồi tự chuyển
+    # sang FastCGI cho service này. Nhờ vậy vẫn là một cổng duy nhất cho
+    # Moodle như yêu cầu, và vẫn đi qua NGINX (đúng mục tiêu của đồ án).
 
   # ===========================================================================
   # Cron cho Moodle
