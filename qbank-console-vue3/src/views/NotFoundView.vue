@@ -63,8 +63,11 @@ function retry() {
 <template>
   <section class="nf" aria-labelledby="nf-title">
     <div class="nf__card">
-      <!-- Số 404: số "0" vẽ bằng CSS để đồng bộ độ dày nét với hai số 4 -->
-      <p class="nf__code" aria-hidden="true">4<span class="nf__zero"></span>4</p>
+      <!-- Số 404 dùng ký tự thật.
+           Bản trước vẽ số 0 bằng một <span> rỗng + border-radius để "đồng bộ độ dày nét",
+           nhưng kết quả là một vòng tròn rỗng trông như CHỮ O chứ không phải số 0 — người
+           dùng đọc thành "4O4". Font Be Vietnam Pro đã có sẵn số 0 cân với số 4, không cần vẽ. -->
+      <p class="nf__code" aria-hidden="true">404</p>
 
       <span class="nf__badge">Lỗi 404</span>
       <h1 id="nf-title" class="nf__title">Không tìm thấy trang</h1>
@@ -90,13 +93,22 @@ function retry() {
 <style scoped>
 /* Trang này nằm trong <RouterView> của App.vue nên thừa hưởng topbar/sidebar/footer và toàn bộ
    token màu (:root). Chỉ cần dựng khối nội dung, không tự vẽ lại theme. */
-/* min-height: trang này có thể được vẽ "trần" (App.vue: chưa đăng nhập thì không có topbar/
-   sidebar/footer), nên phải tự đủ cao để nền --bg phủ hết màn hình, không lộ nền html xanh đậm. */
-.nf{display:grid;place-items:center;min-height:100vh;padding:var(--space-5) var(--space-2)}
+/* CĂN GIỮA — hai trường hợp hiển thị khác nhau nên phải xử lý riêng:
+   1) ĐÃ đăng nhập: trang nằm trong .page → .content, tức phía dưới topbar (--topbar-h) và phía
+      trên footer. Dùng min-height:100vh ở đây (bản trước) là SAI: 100vh là chiều cao CẢ cửa sổ,
+      nên khối cao hơn vùng trống thật đúng bằng topbar + footer ⇒ bị đẩy xuống dưới, lệch tâm
+      (đúng như ảnh chụp màn hình). Ở trường hợp này để flex:1 lo việc giãn — .page và #view đã
+      được khai báo display:flex;flex-direction:column.
+   2) CHƯA đăng nhập: App.vue vẽ trang "trần" (không .page/.content) nên không có flex nào để
+      giãn; phải tự đặt chiều cao tối thiểu. Dùng 100dvh (không phải 100vh) vì trên Safari/iOS
+      thanh địa chỉ động làm vh sai, khiến khối bị cắt mất phần dưới. */
+.nf{display:grid;place-items:center;flex:1;width:100%;padding:var(--space-4) var(--space-2);min-height:100dvh}
+/* Trong khung ứng dụng (.content của App.vue) thì KHÔNG cần và KHÔNG được dùng 100dvh: vùng đó
+   đã ngắn hơn cửa sổ đúng bằng topbar + footer, nên 100dvh sẽ tràn và đẩy khối xuống dưới.
+   Ở đây flex:1 (từ .page → #view → .nf) đã lo việc giãn hết chiều cao còn lại. */
+.content .nf{min-height:0}
 .nf__card{display:grid;justify-items:center;gap:.75rem;text-align:center;max-width:34rem;padding:var(--space-5) var(--space-3);background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-card)}
-.nf__code{display:flex;align-items:center;gap:.35rem;margin:0;font-size:clamp(3rem,10vw,4.5rem);font-weight:700;line-height:1;color:var(--primary);letter-spacing:.02em}
-/* "0" = vòng tròn rỗng cùng độ dày nét với chữ số, dựng bằng border cho khớp mọi font */
-.nf__zero{display:inline-block;width:.72em;height:.72em;border:.12em solid currentColor;border-radius:50%}
+.nf__code{margin:0;font-size:clamp(3rem,10vw,4.5rem);font-weight:700;line-height:1;color:var(--primary-ink);letter-spacing:.02em}
 .nf__badge{padding:.15rem .6rem;border-radius:999px;background:var(--danger-soft);border:1px solid var(--danger-border);color:var(--danger-strong);font-size:var(--fs-xs);font-weight:600}
 .nf__title{margin:0;font-size:1.5rem;color:var(--text)}
 .nf__desc{margin:0;color:var(--text-muted);font-size:var(--fs-sm);line-height:1.6}

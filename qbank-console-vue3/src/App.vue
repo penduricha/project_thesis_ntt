@@ -186,7 +186,10 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
         <div id="crumb">
           <div v-if="page === 'course' && crs" class="crumb-bar"><button type="button" @click="go('courses')">‹ Môn học</button><span>/</span><span><b>{{ crs.id }}</b> · {{ crs.name }}</span></div>
         </div>
-        <div class="page__head">
+        <!-- Trang 404 không có tiêu đề/phụ đề và không có nút hành động nào ở đây, nên bỏ hẳn
+             khối này: trước đây nó vẫn chiếm chỗ (h1 rỗng + margin-bottom 1.25rem), làm khối 404
+             bị đẩy lệch xuống thay vì nằm giữa vùng nội dung. -->
+        <div v-if="!is404" class="page__head">
           <div><h1 class="page__title" id="ttl">{{ title }}</h1><p class="page__sub" id="sub">{{ subtitle }}</p></div>
           <div id="pact">
             <button v-if="page === 'dash'" class="btn pri" @click="editQuestion(0)">Thêm câu hỏi</button>

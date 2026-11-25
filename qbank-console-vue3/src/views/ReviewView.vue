@@ -42,7 +42,7 @@ const toggle = (id, on) => (on ? S.rsel.add(id) : S.rsel.delete(id))
       <div class="bar">
         <input type="checkbox" :aria-label="'Chọn đề xuất ' + code(c.q)" :checked="S.rsel.has(c.s.qid)" @change="toggle(c.s.qid, $event.target.checked)">
         <b>{{ code(c.q) }}</b>
-        <span class="mut">· {{ COURSES[c.q.c]?.id || '' }} ({{ topicName(c.q.c, c.q.tp) }}) · Tác vụ <RouterLink to="/tasks" style="color:var(--primary);font-weight:600">{{ c.s.tid }}</RouterLink></span>
+        <span class="mut">· {{ COURSES[c.q.c]?.id || '' }} ({{ topicName(c.q.c, c.q.tp) }}) · Tác vụ <RouterLink to="/tasks" style="color:var(--primary-ink);font-weight:600">{{ c.s.tid }}</RouterLink></span>
         <span class="grow"></span>
         <span class="b" :class="c.s.sev === 'Cao' ? 'er' : 'wa'">Mức độ: {{ c.s.sev }} ({{ c.s.is.length }} lỗi)</span>
         <span class="b n">Độ khó gợi ý: {{ c.s.diff }}</span>
