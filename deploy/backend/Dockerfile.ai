@@ -1,0 +1,50 @@
+# =============================================================================
+#  server-ai-worker — Spring Boot, JDK 17
+# =============================================================================
+#  Cấu trúc giống Dockerfile.be nhưng dùng JDK 17 vì build.gradle của worker
+#  khai sourceCompatibility = 17 (khác be-web-admin dùng 21).
+#  Dùng JDK 17 cho cả build và runtime để không có bất ngờ về bytecode.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1 — build
+# -----------------------------------------------------------------------------
+FROM gradle:8.10-jdk17 AS build
+
+WORKDIR /build
+
+# Worker dùng Groovy DSL (.gradle), khác be-web-admin dùng Kotlin DSL.
+COPY server-ai-worker/settings.gradle server-ai-worker/build.gradle /build/
+
+# Tải dependency trước để tận dụng layer cache.
+RUN gradle dependencies --no-daemon --console=plain -q || true
+
+COPY server-ai-worker/src /build/src
+
+RUN gradle bootJar --no-daemon --console=plain -x test
+
+# -----------------------------------------------------------------------------
+# Stage 2 — runtime
+# -----------------------------------------------------------------------------
+FROM eclipse-temurin:17-jre-alpine
+
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+WORKDIR /app
+
+COPY --from=build /build/build/libs/*.jar app.jar
+
+EXPOSE 8082
+
+# graceful shutdown: khớp với spring.lifecycle.timeout-per-shutdown-phase: 150s
+# trong application.yml của worker. Khi `docker compose down`, Docker gửi
+# SIGTERM rồi chờ 10s mặc định — KHÔNG đủ để một task AI đang gọi Colab
+# (read-timeout 120s) kết thúc sạch. Phải tăng stop_grace_period ở
+# docker-compose, và ở đây dùng exec-form entrypoint để SIGTERM tới được JVM
+# (nếu dùng shell form, tín hiệu bị shell "nuốt" và container bị kill cứng).
+ENTRYPOINT ["java", \
+    "-XX:MaxRAMPercentage=75", \
+    "-XX:+UseG1GC", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-jar", "app.jar"]

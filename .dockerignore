@@ -1,0 +1,53 @@
+# Build context của Docker Compose là thư mục gốc repo, nên phải loại bỏ mọi thứ nặng
+# và không cần cho việc build image. Không có file này thì context có thể lên vài GB
+# (node_modules, build của Gradle, Moodle, ảnh, tài liệu...).
+#
+# Lưu ý: .git KHÔNG bị loại bỏ hoàn toàn vì một số bước có thể cần; nếu tốc độ build
+# là vấn đề thì bỏ comment dòng .git bên dưới.
+
+.git
+.arena
+
+# ---- Node ----
+**/node_modules
+**/dist
+**/.vite
+**/npm-debug.log*
+
+# ---- Java / Gradle ----
+**/build
+**/.gradle
+**/out
+**/target
+**/.kotlin
+
+# ---- Flutter / Dart ----
+app_mobile/build
+app_mobile/.dart_tool
+app_mobile/.flutter-plugins-dependencies
+app_mobile/android/.gradle
+
+# ---- Python ----
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.pytest_cache
+
+# ---- Dữ liệu & bí mật: KHÔNG bao giờ đưa vào image ----
+.env
+**/.env
+**/.env.local
+database/
+php_moodle_503/
+docs/
+project-design/
+*.md
+!README.md
+
+# ---- Tài liệu, ảnh, tệp rời ----
+CHANGELOG.md
+**/*.patch
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.pdf

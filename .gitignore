@@ -11,3 +11,9 @@ node_modules/
 **/.dart_tool/
 __pycache__/
 .DS_Store
+
+# ---- Hạ tầng (deploy/) ----
+# Log của NGINX ghi ra đĩa khi chạy Docker Compose.
+deploy/logs/
+# Chứng chỉ TLS (không bao giờ commit khóa riêng).
+deploy/nginx/certs/

@@ -1,0 +1,357 @@
+# =============================================================================
+#  Docker Compose — toàn bộ hệ thống đồ án tốt nghiệp
+# =============================================================================
+#  Cách dùng (xem deploy/README.md để có hướng dẫn đầy đủ):
+#      cp deploy/.env.example deploy/.env      # rồi điền bí mật
+#      docker compose -f deploy/docker-compose.yml up -d --build
+#
+#  KIẾN TRÚC MẠNG — điểm quan trọng nhất của file này:
+#
+#    Internet
+#        │
+#        ▼
+#    ┌────────┐   chỉ container này mở cổng ra ngoài (:80)
+#    │ nginx  │
+#    └───┬────┘
+#        │  mạng nội bộ "backend" (không ai từ ngoài vào được)
+#        ├──────────────┬──────────────┬─────────────┐
+#        ▼              ▼              ▼             ▼
+#   be_web_admin    moodle_php    ai_worker       (không lộ ra ngoài)
+#        │              │              │
+#        └──────────────┴──────────────┘
+#                       ▼
+#              mariadb + redis  (chỉ backend gọi, không bao giờ public)
+#
+#  Nguyên tắc: mọi thứ trừ NGINX đều nằm trong mạng nội bộ và KHÔNG có
+#  `ports:` ánh xạ ra host. Đây là "defense in depth" — kể cả khi phát hiện
+#  lỗ hổng ở backend, kẻ tấn công vẫn không với tới được vì không có đường
+#  vào. Đặc biệt với ai_worker: nó dùng internal-token (không có xác thực
+#  người dùng), nếu lộ ra ngoài là cả thiên hạ gọi được AI của đồ án.
+# =============================================================================
+
+name: project-thesis-ntt
+
+# -----------------------------------------------------------------------------
+# Mạng
+# -----------------------------------------------------------------------------
+networks:
+  # Mạng "edge": chỉ nginx + các thứ cần nhận kết nối từ nginx.
+  edge:
+    driver: bridge
+
+  # Mạng "data": chỉ backend + CSDL. Tách riêng để nginx KHÔNG nói chuyện
+  # trực tiếp được với MariaDB/Redis (giảm bề mặt tấn công nếu nginx bị lỗi).
+  data:
+    driver: bridge
+    internal: true          # <-- mạng không có đường ra Internet
+
+# -----------------------------------------------------------------------------
+# Volume (dữ liệu phải sống sót khi xoá container)
+# -----------------------------------------------------------------------------
+volumes:
+  mariadb_data:
+  redis_data:
+  moodle_data:
+  # Mã nguồn Moodle: bind mount từ repo, không copy vào image.
+  # Lý do: chủ project đang sửa theme liên tục. Bind mount nghĩa là sửa file
+  # trong php_moodle_503/ là thấy ngay, chỉ cần purge cache — không phải
+  # build lại image sau mỗi lần sửa CSS. (Xem ghi chú ở service moodle_php.)
+
+services:
+
+  # ===========================================================================
+  # NGINX — cổng vào duy nhất
+  # ===========================================================================
+  nginx:
+    build:
+      context: ..                       # context là GỐC repo (cần cả 2 thư mục Vue)
+      dockerfile: deploy/nginx/Dockerfile
+      args:
+        # Đường dẫn API tương đối: trình duyệt tự ghép với host hiện tại.
+        VITE_API_BASE_URL: /api/web
+    image: ntt/nginx:latest
+    container_name: ntt_nginx
+    restart: unless-stopped
+    ports:
+      # ĐÂY LÀ CỔNG DUY NHẤT mở ra ngoài trong toàn bộ hệ thống.
+      # Đổi thành "8080:80" nếu cổng 80 đã bị chiếm (vd: đang chạy Apache).
+      - "80:80"
+      # Bỏ comment khi có HTTPS (xem deploy/README.md phần "Bật HTTPS").
+      # - "443:443"
+    networks:
+      - edge
+    depends_on:
+      be_web_admin:
+        condition: service_healthy
+      moodle_php:
+        condition: service_started
+    volumes:
+      # Log ra ngoài để xem bằng `ls deploy/logs/` thay vì `docker logs`.
+      - ./logs/nginx:/var/log/nginx
+
+  # ===========================================================================
+  # MariaDB — CSDL dùng chung cho be-web-admin, ai-worker và Moodle
+  # ===========================================================================
+  mariadb:
+    image: mariadb:11.4
+    container_name: ntt_mariadb
+    restart: unless-stopped
+    # KHÔNG có "ports:" -> không thể truy cập từ ngoài. Chỉ các container
+    # trong mạng "data" gọi được qua tên service "mariadb:3306".
+    networks:
+      - data
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Bắt buộc — xem deploy/.env.example}
+      # Tạo sẵn 3 CSDL cho 3 thành phần. MariaDB chỉ chạy script này lần đầu
+      # (khi volume còn trống) nên dữ liệu cũ không bị ghi đè.
+      MARIADB_DATABASE: ${MARIADB_DBS:-ntt_thesis}
+      MARIADB_USER: ${MARIADB_USERNAME:-ntt}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?Bắt buộc — xem deploy/.env.example}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      # Script tạo thêm CSDL cho ai-worker và Moodle. Chạy tự động lần đầu.
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    command:
+      # utf8mb4: cần cho tiếng Việt có dấu và emoji trong chat.
+      # utf8mb4_unicode_ci: so sánh chuỗi đúng cho tiếng Việt.
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # Múi giờ: backend lưu theo UTC (hibernate.jdbc.time_zone: UTC).
+      - --default-time-zone=+00:00
+    healthcheck:
+      # --ping dùng unix socket nên chạy được cả khi mật khẩu chưa đồng bộ.
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ===========================================================================
+  # Redis — cache + khoá chờ 2FA + hàng đợi AI
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ntt_redis
+    restart: unless-stopped
+    networks:
+      - data
+    # Mật khẩu Redis: bỏ trống trong .env thì KHÔNG đặt mật khẩu (chỉ dùng
+    # trong mạng nội bộ nên chấp nhận được cho đồ án). Có mật khẩu thì
+    # redis-server bắt buộc phải khởi động bằng --requirepass.
+    command: >
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+               exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD";
+             else
+               exec redis-server --appendonly yes;
+             fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ${REDIS_PASSWORD:+-a $REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ===========================================================================
+  # be-web-admin — Spring Boot 3, JDK 21
+  # ===========================================================================
+  be_web_admin:
+    build:
+      context: ..
+      dockerfile: deploy/backend/Dockerfile.be
+    image: ntt/be-web-admin:latest
+    container_name: ntt_be_web_admin
+    restart: unless-stopped
+    networks:
+      - edge            # để nginx gọi tới
+      - data            # để gọi mariadb + redis
+    environment:
+      # --- Kết nối CSDL/Redis: dùng TÊN SERVICE của Docker, không phải 127.0.0.1.
+      # Trong container, 127.0.0.1 là chính container đó, không phải máy chủ.
+      IP_ADDRESS: mariadb
+      MARIADB_PORT: "3306"
+      MARIADB_DBS: ${MARIADB_DBS:-ntt_thesis}
+      MARIADB_USERNAME: ${MARIADB_USERNAME:-ntt}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      REDIS_PORT: "6379"
+      REDIS_USERNAME: default
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DBS: "0"
+      # --- Bí mật: đọc từ deploy/.env, không bao giờ ghi vào file này ---
+      JWT_SECRET: ${JWT_SECRET:?Bắt buộc — openssl rand -base64 48}
+      TOTP_MASTER_KEY_V2: ${TOTP_MASTER_KEY_V2:?Bắt buộc — openssl rand -base64 32}
+      TOTP_LEGACY_MASTER_SECRET: ${TOTP_LEGACY_MASTER_SECRET:-}
+      # --- Seed dữ liệu mẫu: chỉ bật lần đầu, sau đó tắt ---
+      APP_SEED_ENABLED: ${APP_SEED_ENABLED:-true}
+      APP_SEED_DEFAULT_PASSWORD: ${APP_SEED_DEFAULT_PASSWORD:?Bắt buộc khi seed}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      # --- CORS: giờ chỉ cần origin công khai của NGINX ---
+      # Trước đây phải liệt kê 6 origin (5173/5174/5375 trên localhost và
+      # 127.0.0.1). Nhờ NGINX gộp về một origin, danh sách rút còn một mục.
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://qbank.local,http://admin.local}
+      # --- AI worker: gọi bằng tên service, cổng nội bộ ---
+      AI_WORKER_BASE_URL: http://ai_worker:8082/api
+      AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN:?Bắt buộc — dùng chung với ai_worker}
+    # KHÔNG mount cache Gradle ở đây: runtime image là JRE, không có Gradle.
+    # Cache Gradle chỉ có ý nghĩa ở stage BUILD của Dockerfile (xem ghi chú
+    # trong Dockerfile.be). Mount vào runtime chỉ tạo thư mục rác.
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # ĐÃ KIỂM TRA: repo này KHÔNG có spring-boot-actuator, nên không thể
+      # gọi /actuator/health. Dùng cách không phụ thuộc endpoint nào:
+      #
+      #   wget -S  in ra status line của response, kể cả khi là 401/403.
+      #   Nếu nhận được BẤT KỲ mã HTTP nào -> Spring Boot ĐANG CHẠY
+      #   (nó đã bind cổng và trả lời được).
+      #   Nếu kết nối bị từ chối -> server CHƯA sẵn sàng -> exit 1.
+      #
+      # Vì sao không dùng "-q -O /dev/null URL": wget trả mã lỗi với cả 401,
+      # tức là healthcheck thất bại mãi mãi dù server hoàn toàn khoẻ.
+      test: ["CMD-SHELL", "wget -S -T 3 -O /dev/null http://127.0.0.1:8080/api/web/admin/auth/login 2>&1 | grep -qE 'HTTP/[0-9.]+ [0-9]{3}' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      # Spring Boot mất 30-90s để khởi động (Hibernate quét entity + seed 500 câu).
+      start_period: 90s
+
+  # ===========================================================================
+  # ai_worker — Spring Boot, JDK 17
+  # ===========================================================================
+  # KHÔNG BAO GIỜ mở cổng ra ngoài: nó chỉ có internal-token, không xác thực
+  # người dùng. Chỉ be_web_admin gọi tới qua mạng nội bộ.
+  ai_worker:
+    build:
+      context: ..
+      dockerfile: deploy/backend/Dockerfile.ai
+    image: ntt/ai-worker:latest
+    container_name: ntt_ai_worker
+    restart: unless-stopped
+    networks:
+      - data            # nginx KHÔNG nói chuyện được với nó
+    environment:
+      SPRING_BOOT_PORT: "8082"
+      IP_ADDRESS: mariadb
+      MARIADB_PORT: "3306"
+      # ai-worker cần CSDL riêng (ntt_demo_llm) cho bảng demo eval.
+      MARIADB_DBS: ${AI_MARIADB_DBS:-ntt_demo_llm}
+      MARIADB_USERNAME: ${MARIADB_USERNAME:-ntt}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      REDIS_PORT: "6379"
+      REDIS_USERNAME: default
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DBS: "1"    # DB Redis khác be-web-admin để không lẫn key
+      JWT_SECRET: ${JWT_SECRET}
+      AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN}
+      JPA_DDL_AUTO: ${AI_JPA_DDL_AUTO:-update}
+      # Node Colab/Ollama: để trống nếu chưa có máy LLM. Khi trống, tính năng
+      # kiểm định AI trả lỗi rõ ràng thay vì treo task.
+      AI_NODE_1_URL: ${AI_NODE_1_URL:-}
+      AI_NODE_1_TOKEN: ${AI_NODE_1_TOKEN:-}
+      AI_NODE_1_ENABLED: ${AI_NODE_1_ENABLED:-false}
+    # Không mount cache Gradle ở runtime — xem ghi chú ở be_web_admin.
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Cùng lý do như be_web_admin: không có actuator trong repo.
+      # ai-worker có security riêng (JWT + internal-token) nên endpoint
+      # /api/web/ai/tasks trả 401 khi chưa xác thực — 401 nghĩa là ĐANG CHẠY.
+      test: ["CMD-SHELL", "wget -S -T 3 -O /dev/null http://127.0.0.1:8082/api/web/ai/tasks 2>&1 | grep -qE 'HTTP/[0-9.]+ [0-9]{3}' || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  # ===========================================================================
+  # Moodle — PHP-FPM + cron
+  # ===========================================================================
+  # GHI CHÚ QUAN TRỌNG VỀ QUYỀN SỞ HỮU:
+  # Service này bind mount mã nguồn từ php_moodle_503/. Tôi (agent) KHÔNG
+  # sửa gì trong thư mục đó — chỉ mount nó vào container. Mọi thay đổi theme
+  # anh đang làm vẫn nằm nguyên trên đĩa và được container đọc trực tiếp,
+  # nên sửa xong chỉ cần purge cache, không phải build lại.
+  moodle_php:
+    build:
+      context: ..
+      dockerfile: deploy/moodle/Dockerfile
+      args:
+        # UID/GID của user sở hữu mã nguồn Moodle trên máy host.
+        # LẤY SỐ ĐÚNG BẰNG:  stat -c '%u %g' php_moodle_503/moodle-latest-503/moodle
+        # Nếu sai số này, container không ghi được vào public/theme/boost/style
+        # -> theme không compile -> trang Moodle mất CSS.
+        # macOS/Windows: để mặc định 1000, Docker Desktop tự ánh xạ.
+        MOODLE_UID: ${MOODLE_UID:-1001}
+        MOODLE_GID: ${MOODLE_GID:-1001}
+    image: ntt/moodle:latest
+    container_name: ntt_moodle_php
+    restart: unless-stopped
+    networks:
+      - edge            # để nginx gọi PHP-FPM
+      - data            # để gọi mariadb
+    environment:
+      MOODLE_DB_HOST: mariadb
+      MOODLE_DB_PORT: "3306"
+      MOODLE_DB_NAME: ${MOODLE_DB_NAME:-moodle_local}
+      MOODLE_DB_USER: ${MARIADB_USERNAME:-ntt}
+      MOODLE_DB_PASS: ${MARIADB_PASSWORD}
+      # wwwroot PHẢI khớp chính xác tên miền người dùng mở.
+      # Trong file này nó KHÔNG ghi vào config.php của repo (xem Dockerfile):
+      # config.php hiện có giữ nguyên $CFG->wwwroot = http://localhost:8000
+      # cho môi trường chạy tay. Nếu muốn Moodle chạy qua NGINX thì đổi
+      # wwwroot — đó là việc của chủ project, xem deploy/README.md.
+      MOODLE_WWWROOT: ${MOODLE_WWWROOT:-http://moodle.local}
+    volumes:
+      - ../php_moodle_503/moodle-latest-503/moodle:/var/www/moodle:rw
+      - moodle_data:/var/www/moodledata
+    # Không có ports: PHP-FPM lắng nghe 9000 trong mạng nội bộ, không public.
+
+  # ===========================================================================
+  # Cron cho Moodle
+  # ===========================================================================
+  # Moodle BẮT BUỘC có cron (thông báo, email, dọn dẹp, hoàn tất bài làm).
+  # Không có cron thì sinh viên nộp bài xong không thấy điểm được cập nhật,
+  # và đây là lỗi rất khó tìm vì mọi thứ "trông có vẻ chạy".
+  # Dùng CHUNG image với moodle_php: khai báo CÙNG build context + cùng args,
+  # và Compose nhận ra hai service dùng chung một image nên CHỈ BUILD MỘT LẦN.
+  #
+  # Không thể chỉ ghi "image: ntt/moodle:latest" mà bỏ "build:": nếu chạy
+  # `docker compose up` trên máy mới, image chưa tồn tại -> Compose báo lỗi
+  # "pull access denied". Phải có build context ở đây để nó tự build.
+  moodle_cron:
+    build:
+      context: ..
+      dockerfile: deploy/moodle/Dockerfile
+      args:
+        MOODLE_UID: ${MOODLE_UID:-1001}
+        MOODLE_GID: ${MOODLE_GID:-1001}
+    image: ntt/moodle:latest
+    container_name: ntt_moodle_cron
+    restart: unless-stopped
+    networks:
+      - data
+    # user: www-data — BẮT BUỘC, không phải tuỳ chọn.
+    # Image php-fpm chạy entrypoint bằng ROOT rồi tự drop xuống www-data.
+    # Ở đây entrypoint bị override sang shell nên KHÔNG có bước drop đó:
+    # php cron.php sẽ chạy bằng ROOT. Hậu quả: mọi file cron tạo ra (cache,
+    # tệp tạm, log trong moodledata) thuộc root, còn web ghi bằng www-data
+    # -> lỗi "permission denied" ngẫu nhiên, rất khó tìm nguyên nhân.
+    user: www-data
+    entrypoint: >
+      sh -c 'while true; do
+               php /var/www/moodle/admin/cli/cron.php > /proc/1/fd/1 2>&1 || true;
+               sleep 60;
+             done'
+    volumes:
+      - ../php_moodle_503/moodle-latest-503/moodle:/var/www/moodle:rw
+      - moodle_data:/var/www/moodledata
+    depends_on:
+      mariadb:
+        condition: service_healthy
