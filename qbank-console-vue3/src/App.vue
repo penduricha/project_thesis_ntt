@@ -12,7 +12,7 @@ const mq = matchMedia('(min-width:768px)')
 const nav = ref(mq.matches ? 'open' : 'closed')
 const amOpen = ref(false)
 const desk = ref(mq.matches)
-const selbar = ref(null)
+const sideBar = ref(null)
 const yr = new Date().getFullYear()
 
 const isLoginPage = computed(() => route.name === 'login')
@@ -35,11 +35,11 @@ const toggleNav = () => {
 }
 const focusView = () => { const v = document.getElementById('view'); if (v) { v.tabIndex = -1; v.focus() } }
 const showSel = computed(() => onBank.value && S.sel.size > 0)
-/* v10: thanh chọn không che hàng cuối – body.has-sel + biến --selbar-h */
+/* v10: thanh chọn không che hàng cuối – body.has-sel + biến --sideBar-h */
 function fitSel() {
-  const sb = selbar.value; if (!sb) return
+  const sb = sideBar.value; if (!sb) return
   document.body.classList.toggle('has-sel', !sb.hidden)
-  if (!sb.hidden) document.documentElement.style.setProperty('--selbar-h', sb.offsetHeight + 'px')
+  if (!sb.hidden) document.documentElement.style.setProperty('--sideBar-h', sb.offsetHeight + 'px')
 }
 watch(showSel, () => nextTick(fitSel))
 watch(amOpen, v => { if (v) nextTick(() => document.querySelector('#am .acct__item')?.focus()) })
@@ -113,7 +113,7 @@ const onKey = e => {
 }
 onMounted(() => {
   document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey); mq.addEventListener('change', onMq)
-  if (window.ResizeObserver && selbar.value) new ResizeObserver(fitSel).observe(selbar.value)
+  if (window.ResizeObserver && sideBar.value) new ResizeObserver(fitSel).observe(sideBar.value)
 })
 
 // Chỉ tải dữ liệu sau khi biết chắc đã đăng nhập (đừng gọi API qbank khi còn ở trang /login),
@@ -198,7 +198,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
     </main>
   </div>
 
-  <div id="selbar" ref="selbar" :hidden="!showSel" :inert="S.dlg.kind ? '' : undefined">
+  <div id="sideBar" ref="sideBar" :hidden="!showSel" :inert="S.dlg.kind ? '' : undefined">
     <b id="sn">Đã chọn {{ S.sel.size }} câu</b>
     <div class="sel-acts">
       <button class="btn sm" id="sb-all" @click="list(page === 'course').forEach(q => S.sel.add(q.id))">Chọn tất cả {{ shown }}</button>
