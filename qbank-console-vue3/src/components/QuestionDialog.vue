@@ -87,56 +87,56 @@ async function save() {
 </script>
 
 <template>
-  <BaseModal :title="id ? 'Sửa ' + code({ id }) : 'Thêm câu hỏi mới'" :dirty="dirty" @close="emit('close')">
-    <label>Tiêu đề (không bắt buộc, dùng làm tên câu hỏi khi xuất Moodle)
+  <BaseModal :title="id ? $t('bank.editPrefix') + code({ id }) : $t('bank.addNew')" :dirty="dirty" @close="emit('close')">
+    <label>{{ $t('bank.titleOptional') }}
       <input id="f-ti" maxlength="255" v-model="f.title" :class="{ invalid: err.ti }" :aria-invalid="err.ti ? 'true' : null"
-             :placeholder="id ? code({ id }) : 'Để trống sẽ dùng mã CHxxx'" autocomplete="off"
+             :placeholder="id ? code({ id }) : $t('bank.codeAuto')" autocomplete="off"
              @input="err.ti = ''">
       <small v-if="err.ti" class="fe" role="alert">{{ err.ti }}</small>
     </label>
-    <label>Câu dẫn <span style="color:var(--danger-strong)">*</span>
+    <label>{{ $t('bank.lead') }} <span style="color:var(--danger-strong)">*</span>
       <textarea id="f-t" rows="3" maxlength="500" v-model="f.text" :class="{ invalid: err.t }" :aria-invalid="err.t ? 'true' : null" @input="err.t = ''"></textarea>
       <small v-if="err.t" class="fe" role="alert">{{ err.t }}</small>
       <small id="f-len" style="text-align:right;margin-top:.25rem">{{ f.text.length }}/500</small>
-      <p v-if="dupStem" id="f-sdup" class="warn-inline">Câu dẫn trùng với {{ code(dupStem) }} trong cùng môn học. Đây chỉ là cảnh báo, bạn vẫn có thể lưu.</p>
+      <p v-if="dupStem" id="f-sdup" class="warn-inline">{{ $t('bank.dupStemWarn', { code: code(dupStem) }) }}</p>
     </label>
     <div class="opt-list">
-      <h4>Bốn phương án – chọn vòng tròn của đáp án đúng <span style="color:var(--danger-strong)">*</span></h4>
+      <h4>{{ $t('bank.options4') }} <span style="color:var(--danger-strong)">*</span></h4>
       <template v-for="(o, i) in f.o" :key="i">
         <div class="opt">
-          <input type="radio" name="ans" :value="i" v-model="f.a" :aria-label="'Đáp án ' + 'ABCD'[i] + ' đúng'"><b>{{ 'ABCD'[i] }}</b>
+          <input type="radio" name="ans" :value="i" v-model="f.a" :aria-label="$t('bank.answerPrefix') + 'ABCD'[i] + $t('bank.answerCorrect')"><b>{{ 'ABCD'[i] }}</b>
           <input :id="'f-o' + i" v-model="f.o[i]" :class="{ invalid: err['o' + i] }" :aria-invalid="err['o' + i] ? 'true' : null" @input="err['o' + i] = ''">
         </div>
         <small v-if="err['o' + i]" class="fe" role="alert">{{ err['o' + i] }}</small>
       </template>
-      <p id="f-dup" class="warn-inline">{{ dupOpt ? 'Cảnh báo: Có 2 phương án giống nhau – hệ thống AI sẽ gắn cờ lỗi Phương án nhiễu.' : '' }}</p>
+      <p id="f-dup" class="warn-inline">{{ dupOpt ? $t('bank.dupOptionWarn') : '' }}</p>
     </div>
-    <label>Môn học (Course) <span style="color:var(--danger-strong)">*</span>
-      <CourseCombobox uid="cf" :all="false" placeholder="Chọn hoặc gõ để tìm môn học…" :invalid="!!err.c" :model-value="String(f.c)" @update:model-value="pickCourse" />
+    <label>{{ $t('course.titleCourse') }} <span style="color:var(--danger-strong)">*</span>
+      <CourseCombobox uid="cf" :all="false" :placeholder="$t('course.searchPlaceholder')" :invalid="!!err.c" :model-value="String(f.c)" @update:model-value="pickCourse" />
       <small v-if="err.c" class="fe" role="alert">{{ err.c }}</small>
-      <small style="margin-top:.25rem">{{ COURSES.length }} môn học. Bấm để xem tất cả hoặc gõ để lọc (không cần dấu).</small>
+      <small style="margin-top:.25rem">{{ $t('bank.courseCountHint', { n: COURSES.length }) }}</small>
     </label>
-    <div class="cc-f">Chương / Chủ đề con <span style="color:var(--danger-strong)">*</span>
+    <div class="cc-f">{{ $t('course.chapters') }} <span style="color:var(--danger-strong)">*</span>
       <div id="cf-chips" class="cc-chips" :class="{ invalid: err.chips }">
         <template v-if="COURSES[f.c]?.topics.length">
-          <small style="flex:1 1 100%">Chương của môn đã chọn ({{ COURSES[f.c].topics.length }}) – bấm để chọn nhanh:</small>
+          <small style="flex:1 1 100%">{{ $t('course.chapterPickHint', { n: COURSES[f.c].topics.length }) }}</small>
           <button v-for="(x, i) in COURSES[f.c].topics" :key="i" type="button" class="btn sm" :class="{ pri: i === f.tp }" @click="f.tp = i; err.chips = ''">{{ x }}</button>
         </template>
-        <small v-else>Môn học này chưa có chương nào.</small>
+        <small v-else>{{ $t('course.noTopic') }}</small>
       </div>
       <small v-if="err.chips" class="fe" role="alert">{{ err.chips }}</small>
     </div>
-    <label>Mức độ
+    <label>{{ $t('bank.level') }}
       <select id="f-l" v-model="f.l"><option v-for="(x, i) in LV" :key="i" :value="i">{{ x }}</option></select>
     </label>
-    <label>Phản hồi chung (không bắt buộc)
+    <label>{{ $t('llm.responseOptional') }}
       <textarea id="f-fb" rows="2" maxlength="500" v-model="f.fb"></textarea>
     </label>
-    <details class="api-prev"><summary>Xem dữ liệu gửi Server 1 (POST /api/questions)</summary><pre id="f-api" class="codeblock" style="margin-top:.5rem">{{ JSON.stringify(dto, null, 2) }}</pre></details>
+    <details class="api-prev"><summary>{{ $t('ai.payloadPreview') }}</summary><pre id="f-api" class="codeblock" style="margin-top:.5rem">{{ JSON.stringify(dto, null, 2) }}</pre></details>
     <p id="f-e" class="err">{{ apiErr }}</p>
     <template #footer>
-      <button class="btn" @click="cancel">Hủy</button>
-      <button class="btn pri" :disabled="saving" @click="save">{{ saving ? 'Đang lưu…' : 'Lưu câu hỏi' }}</button>
+      <button class="btn" @click="cancel">{{ $t('common.cancel') }}</button>
+      <button class="btn pri" :disabled="saving" @click="save">{{ saving ? $t('common.saving') : $t('bank.saveQuestion') }}</button>
     </template>
   </BaseModal>
 </template>

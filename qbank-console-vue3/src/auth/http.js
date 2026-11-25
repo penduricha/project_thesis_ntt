@@ -3,10 +3,11 @@
 import axios from 'axios'
 import { API_BASE, REQUEST_TIMEOUT_MS } from '../config.js'
 import { silentRefresher } from './SilentTokenRefresher.js'
+import { markOk, markError } from '../netStatus.js'
 
 export default class SpringConfigHeader {
   #createClient(extraHeaders = {}) {
-    return axios.create({
+    const client = axios.create({
       baseURL: API_BASE,
       timeout: REQUEST_TIMEOUT_MS,
       headers: {
@@ -14,6 +15,23 @@ export default class SpringConfigHeader {
         ...extraHeaders,
       },
     })
+
+    // Theo dõi tình trạng kết nối ở tầng thấp nhất: MỌI client tạo ở đây đều đi qua đây,
+    // nên không cần rải try/catch ở từng hàm gọi API trong repository.
+    //  - markOk()    : có phản hồi HTTP (kể cả 4xx/5xx nghiệp vụ) => mạng vẫn thông.
+    //  - markError() : chỉ bật cờ "mất mạng" với lỗi mạng thật hoặc 502/503/504 (xem netStatus.js).
+    client.interceptors.response.use(
+      (response) => {
+        markOk()
+        return response
+      },
+      (error) => {
+        markError(error)
+        return Promise.reject(error)
+      },
+    )
+
+    return client
   }
 
   // Không có header xác thực (đăng nhập, API công khai)

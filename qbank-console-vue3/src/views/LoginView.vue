@@ -348,27 +348,27 @@ onBeforeUnmount(() => {
       <div class="brand__top">
         <span class="brand__mark">QB</span>
         <span class="brand__wordmark">
-          <strong>QBank Console</strong>
-          <small>Trường Đại học Nguyễn Tất Thành</small>
+          <strong>{{ $t('brand.name') }}</strong>
+          <small>{{ $t('auth.brandFoot') }}</small>
         </span>
       </div>
 
       <div class="brand__body">
-        <p class="brand__eyebrow">Hệ thống quản trị</p>
-        <h2 class="brand__title">Ngân hàng câu hỏi<br>trắc nghiệm tích hợp AI</h2>
-        <p class="brand__lead">Kiểm định chất lượng câu hỏi bằng mô hình ngôn ngữ lớn — con người quyết định, mọi thay đổi đều lưu vết.</p>
+        <p class="brand__eyebrow">{{ $t('admin.systemTitle') }}</p>
+        <h2 class="brand__title">{{ $t('auth.brandEyebrow') }}<br>{{ $t('brand.quizTagline') }}</h2>
+        <p class="brand__lead">{{ $t('brand.tagline') }}</p>
         <ul class="brand__list">
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V7z"/><path d="M9 12l2 2 4-4"/></svg>
-            <span>Đăng nhập bảo vệ 2 lớp (TOTP)</span>
+            <span>{{ $t('auth.twoLayer') }}</span>
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v12H4z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
-            <span>Kiểm định AI và duyệt đề xuất có kiểm soát</span>
+            <span>{{ $t('ai.flowTitle') }}</span>
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><circle cx="12" cy="12" r="9"/></svg>
-            <span>Phiên bản lịch sử đầy đủ, khôi phục được</span>
+            <span>{{ $t('bank.versionHistory') }}</span>
           </li>
         </ul>
       </div>
@@ -382,22 +382,22 @@ onBeforeUnmount(() => {
         <div class="mobile-brand">
           <span class="brand__mark brand__mark--sm">QB</span>
           <span class="brand__wordmark">
-            <strong>QBank Console</strong>
-            <small>NTTU · Kiểm định LLM</small>
+            <strong>{{ $t('brand.name') }}</strong>
+            <small>{{ $t('brand.sub') }}</small>
           </span>
         </div>
 
         <form class="lform" novalidate :aria-busy="isSubmitting"
           @submit.prevent="handleLoginEvent" @keydown.enter="onFormEnter">
           <header class="lform__head">
-            <p class="lform__eyebrow">Chào mừng trở lại</p>
-            <h1 class="lform__title">Đăng nhập</h1>
-            <p class="lform__sub">Dành cho quản trị viên hệ thống</p>
+            <p class="lform__eyebrow">{{ $t('auth.welcomeBack') }}</p>
+            <h1 class="lform__title">{{ $t('auth.submit') }}</h1>
+            <p class="lform__sub">{{ $t('llm.adminOnly') }}</p>
           </header>
 
           <div v-if="DEMO_MODE" class="note note--info" role="status">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
-            <p><b>Chế độ demo.</b> Đăng nhập bằng bất kỳ mã/mật khẩu nào, dùng dữ liệu mẫu. Tắt <code>VITE_DEMO_MODE</code> khi chạy thật.</p>
+            <p><b>{{ $t('auth.demoMode') }}</b> {{ $t('auth.demoData') }} <code>VITE_DEMO_MODE</code>{{ $t('auth.demoProd') }}</p>
           </div>
 
           <Transition name="alert">
@@ -421,7 +421,7 @@ onBeforeUnmount(() => {
           <fieldset class="lform__fields" :disabled="isFormDisabled">
             <!-- Mã quản trị viên -->
             <div class="field" :class="{ 'is-error': invalidAdminId }">
-              <label for="login-admin-id">Mã quản trị viên <span class="req" aria-hidden="true">*</span></label>
+              <label for="login-admin-id">{{ $t('admin.adminId') }} <span class="req" aria-hidden="true">*</span></label>
               <div ref="boxAdminId" class="control">
                 <svg class="control__ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <input id="login-admin-id" ref="inputAdminId" type="text" inputmode="numeric" autocomplete="username"
@@ -435,19 +435,19 @@ onBeforeUnmount(() => {
             <!-- Mật khẩu -->
             <div class="field" :class="{ 'is-error': invalidPassword }">
               <div class="field__row">
-                <label for="login-password">Mật khẩu <span class="req" aria-hidden="true">*</span></label>
+                <label for="login-password">{{ $t('auth.password') }} <span class="req" aria-hidden="true">*</span></label>
                 <span v-if="capsLockOn && !isFormDisabled" class="caps" role="status">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l7 8h-4v4H9v-4H5z"/><path d="M9 20h6"/></svg>
-                  Caps Lock đang bật
+                  {{ $t('auth.capsLock') }}
                 </span>
               </div>
               <div ref="boxPassword" class="control">
                 <svg class="control__ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
                 <input id="login-password" ref="inputPassword" :type="showPassword ? 'text' : 'password'"
-                       autocomplete="current-password" placeholder="Nhập mật khẩu" v-model="password"
+                       autocomplete="current-password" :placeholder="$t('auth.passwordPlaceholder')" v-model="password"
                        :aria-invalid="invalidPassword" :aria-describedby="errors.password ? 'errorPassword' : null"
                        @input="clearFieldError('password')" @keydown="onPasswordKey" @keyup="onPasswordKey">
-                <button type="button" class="control__btn" :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                <button type="button" class="control__btn" :aria-label="showPassword ? $t('login.hidePassword') : $t('login.showPassword')"
                         :aria-pressed="showPassword" tabindex="0" @click="togglePassword">
                   <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                   <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 6.2A10.9 10.9 0 0 1 12 5c6.4 0 10 7 10 7a18 18 0 0 1-3.2 4.1"/><path d="M6.6 6.7A17.8 17.8 0 0 0 2 12s3.6 7 10 7a10.9 10.9 0 0 0 4.3-.9"/><path d="M9.9 10.1a3 3 0 0 0 4.2 4.2"/></svg>
@@ -459,7 +459,7 @@ onBeforeUnmount(() => {
             <!-- Mã xác thực 2 lớp -->
             <div class="field" :class="{ 'is-error': !!errors.totp }">
               <div class="field__row">
-                <label id="login-totp-label">Mã xác thực 2 lớp</label>
+                <label id="login-totp-label">{{ $t('tfa.code') }}</label>
                 <span class="field__optional" :class="{ 'is-filled': otpFilled === OTP_LENGTH }">{{ otpFilled }}/{{ OTP_LENGTH }}</span>
               </div>
               <div ref="boxTotp" class="otp" role="group" aria-labelledby="login-totp-label"
@@ -472,7 +472,7 @@ onBeforeUnmount(() => {
                        @input="onOtpInput(i - 1, $event)" @keydown="onOtpKey(i - 1, $event)"
                        @paste="onOtpPaste" @focus="onOtpFocus">
               </div>
-              <p v-if="!errors.totp" id="hintTotp" class="hint">Để trống nếu tài khoản chưa bật xác thực 2 lớp (2FA).</p>
+              <p v-if="!errors.totp" id="hintTotp" class="hint">{{ $t('tfa.noOtp') }}</p>
               <p v-if="errors.totp" id="errorTotp" class="fe" role="alert">{{ errors.totp }}</p>
             </div>
 
@@ -482,33 +482,33 @@ onBeforeUnmount(() => {
                 <span class="check__box" aria-hidden="true">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>
                 </span>
-                <span>Ghi nhớ đăng nhập</span>
+                <span>{{ $t('auth.remember') }}</span>
               </label>
             </div>
 
             <button type="submit" class="lsubmit" :disabled="isFormDisabled">
-              <template v-if="isSubmitting"><i class="spin" aria-hidden="true"></i> Đang đăng nhập…</template>
-              <template v-else-if="isLocked">Thử lại sau {{ lockCountdownLabel }}</template>
-              <template v-else>Đăng nhập</template>
+              <template v-if="isSubmitting"><i class="spin" aria-hidden="true"></i> {{ $t('auth.submitting') }}</template>
+              <template v-else-if="isLocked">{{ $t('login.retryAfterTime', { t: lockCountdownLabel }) }}</template>
+              <template v-else>{{ $t('auth.submit') }}</template>
             </button>
           </fieldset>
 
           <p class="lform__tip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 4v5c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V7z"/></svg>
-            Phiên đăng nhập được bảo vệ bằng JWT và tự động làm mới.
+            {{ $t('auth.jwtNote') }}
           </p>
 
           <span class="visually-hidden" role="status" aria-live="polite">
-            {{ isSubmitting ? 'Đang đăng nhập...' : (isLocked ? 'Biểu mẫu đang tạm khóa do nhập sai quá nhiều lần.' : '') }}
+            {{ isSubmitting ? $t('login.signingIn') : (isLocked ? $t('login.formLocked') : '') }}
           </span>
         </form>
 
         <footer class="panel__foot">
           <span>©{{ new Date().getFullYear() }} - Nguyen Tat Thanh University</span>
           <span class="panel__dot" aria-hidden="true">·</span>
-          <span>All Rights Reserved.</span>
+          <span>{{ $t('brand.allRights') }}</span>
           <span class="panel__dot" aria-hidden="true">·</span>
-          <span class="panel__ver" title="Nếu bạn thấy giao diện cũ, hãy xoá cache và tải lại">giao diện v2</span>
+          <span class="panel__ver" :title="$t('brand.oldUi')">{{ $t('auth.version') }}</span>
         </footer>
       </div>
     </main>

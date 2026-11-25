@@ -31,27 +31,27 @@ async function submit() {
 </script>
 
 <template>
-  <BaseModal :title="edit ? 'Sửa thông tin môn học' : 'Thêm môn học mới'" :dirty="dirty" @close="emit('close')">
-    <label>Mã học phần <span style="color:var(--danger-strong)">*</span>
-      <input id="f-cid" maxlength="30" placeholder="Ví dụ: INT3501" autocomplete="off" v-model="f.id" :class="{ invalid: err.id }" :aria-invalid="err.id ? 'true' : null" @input="f.id = f.id.toUpperCase(); err.id = ''">
+  <BaseModal :title="edit ? $t('course.editTitle') : $t('course.addTitle')" :dirty="dirty" @close="emit('close')">
+    <label>{{ $t('course.code') }} <span style="color:var(--danger-strong)">*</span>
+      <input id="f-cid" maxlength="30" :placeholder="$t('course.exampleCode')" autocomplete="off" v-model="f.id" :class="{ invalid: err.id }" :aria-invalid="err.id ? 'true' : null" @input="f.id = f.id.toUpperCase(); err.id = ''">
       <small v-if="err.id" class="fe" role="alert">{{ err.id }}</small>
     </label>
-    <label>Tên môn học <span style="color:var(--danger-strong)">*</span>
-      <input id="f-cn" maxlength="200" placeholder="Ví dụ: An toàn thông tin" autocomplete="off" v-model="f.name" :data-af="edit ? '' : undefined" :class="{ invalid: err.name }" :aria-invalid="err.name ? 'true' : null" @input="err.name = ''">
+    <label>{{ $t('course.name') }} <span style="color:var(--danger-strong)">*</span>
+      <input id="f-cn" maxlength="200" :placeholder="$t('course.exampleName')" autocomplete="off" v-model="f.name" :data-af="edit ? '' : undefined" :class="{ invalid: err.name }" :aria-invalid="err.name ? 'true' : null" @input="err.name = ''">
       <small v-if="err.name" class="fe" role="alert">{{ err.name }}</small>
     </label>
-    <label>Mô tả môn học (không bắt buộc)
-      <textarea id="f-cdept" rows="3" maxlength="500" placeholder="Giới thiệu ngắn về nội dung và phạm vi của môn học" v-model="f.dept"></textarea>
+    <label>{{ $t('course.description') }}
+      <textarea id="f-cdept" rows="3" maxlength="500" :placeholder="$t('course.descPlaceholder')" v-model="f.dept"></textarea>
       <small id="f-dlen" style="text-align:right;margin-top:.25rem">{{ f.dept.length }}/500</small>
     </label>
-    <label v-if="!edit">Chương / Chủ đề đầu tiên
+    <label v-if="!edit">{{ $t('course.firstTopic') }}
       <input id="f-ct1" maxlength="150" autocomplete="off" v-model="f.t1">
     </label>
-    <label class="qall"><input type="checkbox" id="f-cact" v-model="f.active"> Đang sử dụng</label>
+    <label class="qall"><input type="checkbox" id="f-cact" v-model="f.active"> {{ $t('tfa.active') }}</label>
     <p id="f-e" class="err"></p>
     <template #footer>
-      <button class="btn" @click="cancel">Hủy</button>
-      <button class="btn pri" @click="submit">{{ edit ? 'Cập nhật' : 'Lưu môn học' }}</button>
+      <button class="btn" @click="cancel">{{ $t('common.cancel') }}</button>
+      <button class="btn pri" @click="submit">{{ edit ? $t('course.update') : $t('course.saveCourse') }}</button>
     </template>
   </BaseModal>
 </template>

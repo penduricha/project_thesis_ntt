@@ -40,41 +40,41 @@ onMounted(() => { if (!S.meReady) setTimeout(() => { S.meReady = true }, 600) })
     <div class="pcard">
       <div class="pcard__av" aria-hidden="true">{{ meInit(me.name) }}</div>
       <div class="pcard__body">
-        <div class="pcard__head"><h2 class="pcard__name">{{ me.name }}</h2><span class="ubd ubd--primary">{{ adm ? 'Quản trị viên' : 'Giảng viên' }}</span></div>
-        <dl class="pcard__meta"><div><dt>Mã đăng nhập</dt><dd>{{ me.adminId }}</dd></div><div><dt>Giới tính</dt><dd>{{ me.gender ? 'Nam' : 'Nữ' }}</dd></div><div><dt>Ngày sinh</dt><dd>{{ dob }}</dd></div></dl>
+        <div class="pcard__head"><h2 class="pcard__name">{{ me.name }}</h2><span class="ubd ubd--primary">{{ adm ? $t('admin.roleAdmin') : $t('admin.roleLecturer') }}</span></div>
+        <dl class="pcard__meta"><div><dt>{{ $t('auth.loginId') }}</dt><dd>{{ me.adminId }}</dd></div><div><dt>{{ $t('account.gender') }}</dt><dd>{{ me.gender ? $t('account.male') : $t('account.female') }}</dd></div><div><dt>{{ $t('account.dob') }}</dt><dd>{{ dob }}</dd></div></dl>
       </div>
     </div>
 
     <article class="icard" aria-labelledby="ai-t" :aria-busy="String(ld)">
-      <div class="icard__hdr"><span class="icard__ic"><Ico :d="ACI.user" /></span><div><h3 id="ai-t" class="icard__title">Thông tin {{ who }}</h3><p class="icard__sub">Thông tin cá nhân và quá trình đào tạo</p></div></div>
+      <div class="icard__hdr"><span class="icard__ic"><Ico :d="ACI.user" /></span><div><h3 id="ai-t" class="icard__title">{{ $t('account.infoOf', { who }) }}</h3><p class="icard__sub">{{ $t('account.personalDesc') }}</p></div></div>
       <div class="igroup">
-        <h4 class="igroup__t"><Ico :d="ACI.user" />Thông tin cá nhân</h4>
+        <h4 class="igroup__t"><Ico :d="ACI.user" />{{ $t('account.personal') }}</h4>
         <dl class="igrid">
-          <div class="ifield"><dt class="ifield__l"><Ico :d="ACI.pin" />Địa chỉ</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="me.address" /></dd></div>
-          <div class="ifield"><dt class="ifield__l"><Ico :d="ACI.card" />Căn cước công dân</dt>
+          <div class="ifield"><dt class="ifield__l"><Ico :d="ACI.pin" />{{ $t('common.url') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="me.address" /></dd></div>
+          <div class="ifield"><dt class="ifield__l"><Ico :d="ACI.card" />{{ $t('account.idCard') }}</dt>
             <dd class="ifield__v ifield__v--sec">
               <span v-if="ld" class="sk" aria-hidden="true"></span>
               <template v-else>
                 <span class="ifield__secret" aria-live="polite">{{ shown }}</span>
-                <button type="button" class="btn-rev" :aria-label="(S.idShow ? 'Ẩn' : 'Hiện') + ' số căn cước công dân'" @click="idToggle"><Ico :d="S.idShow ? ACI.eyeOff : ACI.eye" />{{ S.idShow ? 'Ẩn' : 'Hiện' }}</button>
-                <span v-if="S.idShow" class="ifield__hint">Tự động ẩn sau 30 giây</span>
+                <button type="button" class="btn-rev" :aria-label="(S.idShow ? $t('common.hide') : $t('common.show')) + $t('account.idCardShow')" @click="idToggle"><Ico :d="S.idShow ? ACI.eyeOff : ACI.eye" />{{ S.idShow ? $t('common.hide') : $t('common.show') }}</button>
+                <span v-if="S.idShow" class="ifield__hint">{{ $t('dialog.toastAutoHide') }}</span>
               </template>
             </dd>
           </div>
         </dl>
       </div>
       <div class="igroup">
-        <h4 class="igroup__t"><Ico :d="ACI.book" />Thông tin đào tạo</h4>
+        <h4 class="igroup__t"><Ico :d="ACI.book" />{{ $t('account.training') }}</h4>
         <dl class="igrid igrid--3">
-          <div class="ifield"><dt class="ifield__l">Khoa</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.faculty" /></dd></div>
-          <div class="ifield"><dt class="ifield__l">Ngành</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.industry" /></dd></div>
-          <div class="ifield"><dt class="ifield__l">Chuyên ngành</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.major" /></dd></div>
-          <div class="ifield"><dt class="ifield__l">Hệ đào tạo</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="TRAIN_SYS[c.trainingSystem] || c.trainingSystem" badge="primary" /></dd></div>
-          <div class="ifield"><dt class="ifield__l">Loại hình đào tạo</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="TRAIN_TYPE[c.typeOfTraining] || c.typeOfTraining" badge="accent" /></dd></div>
-          <div class="ifield"><dt class="ifield__l">Cơ sở</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.branch" /></dd></div>
+          <div class="ifield"><dt class="ifield__l">{{ $t('course.dept') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.faculty" /></dd></div>
+          <div class="ifield"><dt class="ifield__l">{{ $t('account.industry') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.industry" /></dd></div>
+          <div class="ifield"><dt class="ifield__l">{{ $t('account.major') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.major" /></dd></div>
+          <div class="ifield"><dt class="ifield__l">{{ $t('account.trainingSystem') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="TRAIN_SYS[c.trainingSystem] || c.trainingSystem" badge="primary" /></dd></div>
+          <div class="ifield"><dt class="ifield__l">{{ $t('account.trainingType') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="TRAIN_TYPE[c.typeOfTraining] || c.typeOfTraining" badge="accent" /></dd></div>
+          <div class="ifield"><dt class="ifield__l">{{ $t('account.branch') }}</dt><dd class="ifield__v"><InfoVal :ld="ld" :v="c.branch" /></dd></div>
         </dl>
       </div>
     </article>
-    <p class="mut" style="margin:0;font-size:var(--fs-sm)">Xác thực hai yếu tố được quản lý tại <button type="button" class="btn-rev" @click="router.push('/settings')">Cài đặt</button></p>
+    <p class="mut" style="margin:0;font-size:var(--fs-sm)">{{ $t('tfa.managedAt') }} <button type="button" class="btn-rev" @click="router.push('/settings')">{{ $t('nav.settings') }}</button></p>
   </div>
 </template>

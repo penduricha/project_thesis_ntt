@@ -21,13 +21,13 @@ onMounted(() => window.addEventListener('pagehide', onPageHide))
 onBeforeUnmount(() => window.removeEventListener('pagehide', onPageHide))
 </script>
 <template>
-  <BaseModal title="Kích hoạt xác thực hai yếu tố" locked @close="cancel">
-    <p class="mut" style="margin:0">Mở ứng dụng Authenticator trên điện thoại, chọn <b>Thêm tài khoản</b> rồi nhập khóa bí mật dưới đây (chu kỳ đổi mã {{ S.tfaPeriod || 30 }} giây).</p>
-    <div class="tfa-key"><span id="tfa-k">{{ spaced }}</span><button type="button" class="btn sm" data-af @click="copy">Sao chép</button></div>
-    <p class="mut" style="margin:0;font-size:var(--fs-sm)">Khóa chỉ hiển thị một lần và hết hạn sau <b>{{ left }}</b>. Sau khi nhập vào ứng dụng, bấm “Tiếp tục” rồi xác nhận trong ứng dụng để hoàn tất.</p>
+  <BaseModal :title="$t('tfa.activateTitle')" locked @close="cancel">
+    <p class="mut" style="margin:0">{{ $t('tfa.activateSteps') }} <b>{{ $t('tfa.addAccountStep') }}</b> {{ $t('tfa.periodHint', { n: S.tfaPeriod || 30 }) }}</p>
+    <div class="tfa-key"><span id="tfa-k">{{ spaced }}</span><button type="button" class="btn sm" data-af @click="copy">{{ $t('common.copy') }}</button></div>
+    <p class="mut" style="margin:0;font-size:var(--fs-sm)">{{ $t('llm.keyOnce') }} <b>{{ left }}</b>{{ $t('tfa.activateSteps2') }}</p>
     <template #footer>
-      <button class="btn" :disabled="S.tfaBusy" @click="cancel">Hủy</button>
-      <button class="btn pri" :disabled="S.tfaBusy" @click="go">{{ S.tfaBusy ? 'Đang gửi…' : 'Tiếp tục' }}</button>
+      <button class="btn" :disabled="S.tfaBusy" @click="cancel">{{ $t('common.cancel') }}</button>
+      <button class="btn pri" :disabled="S.tfaBusy" @click="go">{{ S.tfaBusy ? $t('common.sending') : $t('auth.otpContinue') }}</button>
     </template>
   </BaseModal>
 </template>

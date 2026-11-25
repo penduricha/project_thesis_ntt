@@ -2,6 +2,7 @@
 import { computed, watchEffect, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import CourseCombobox from '../components/CourseCombobox.vue'
+import SkeletonList from '../components/SkeletonList.vue'
 import { LV, stB } from '../data/mock.js'
 import { COURSES, S, list, code, topicName, busy, runAI, clearFilters, loadQuestions, editQuestion, askDeleteQuestion, openDialog } from '../store.js'
 
@@ -49,90 +50,91 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
 <template>
   <template v-if="isCourse && crs && !courseQ.length">
     <div class="subtopic-bar">
-      <div class="chips"><span class="mut" style="font-size:var(--fs-sm)">Cấu trúc môn học gồm <b>{{ crs.topics.length }}</b> chương/chủ đề:</span><span v-for="(t, i) in crs.topics" :key="i" class="b n">{{ t }}</span></div>
-      <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">Quản lý chương</button>
+      <div class="chips"><span class="mut" style="font-size:var(--fs-sm)">{{ $t('course.subtitle') }} <b>{{ crs.topics.length }}</b> {{ $t('moodle.category') }}</span><span v-for="(t, i) in crs.topics" :key="i" class="b n">{{ t }}</span></div>
+      <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">{{ $t('course.manageTopics') }}</button>
     </div>
-    <div class="empty-box"><p class="mut">Môn học <b>{{ crs.id }} – {{ crs.name }}</b> chưa có câu hỏi nào.</p><button class="btn pri" @click="addQ">Thêm câu hỏi đầu tiên</button></div>
+    <div class="empty-box"><p class="mut">{{ $t('nav.courses') }} <b>{{ crs.id }} – {{ crs.name }}</b> {{ $t('ai.emptyQuestion') }}</p><button class="btn pri" @click="addQ">{{ $t('bank.addFirst') }}</button></div>
   </template>
   <template v-else>
   <div v-if="isCourse && crs" class="subtopic-bar">
     <div class="chips" style="flex:1">
-      <button type="button" class="chip" :class="{ on: S.f.tp === '' }" @click="S.f.tp = ''; setPage()">Tất cả chương ({{ courseQ.length }})</button>
+      <button type="button" class="chip" :class="{ on: S.f.tp === '' }" @click="S.f.tp = ''; setPage()">{{ $t('bank.allTopicsCount', { n: courseQ.length }) }}</button>
       <button v-for="(t, idx) in crs.topics" :key="idx" type="button" class="chip" :class="{ on: S.f.tp === String(idx) }"
               @click="S.f.tp = String(idx); setPage()">{{ t }} ({{ courseQ.filter(q => q.tp === idx).length }})</button>
     </div>
-    <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">Quản lý chương ({{ crs.topics.length }})</button>
+    <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">{{ $t('bank.manageTopicsCount', { n: crs.topics.length }) }}</button>
   </div>
 
   <div class="card tools">
     <div class="bar tb" :class="{ 'tb-nc': isCourse }">
       <div class="srch-box">
-        <input id="q-srch" ref="srch" placeholder="Tìm theo mã, câu dẫn hoặc phương án (phím /)" aria-label="Tìm kiếm" :value="S.f.q"
+        <input id="q-srch" ref="srch" :placeholder="$t('bank.searchPlaceholder')" :aria-label="$t('common.search')" :value="S.f.q"
                @input="S.f.q = $event.target.value; setPage()">
-        <button type="button" id="q-clr" class="srch-clear" aria-label="Xóa từ khóa" v-show="S.f.q" @click="S.f.q = ''; setPage()">×</button>
+        <button type="button" id="q-clr" class="srch-clear" :aria-label="$t('bank.clearKeyword')" v-show="S.f.q" @click="S.f.q = ''; setPage()">×</button>
       </div>
       <CourseCombobox v-if="!isCourse" :model-value="S.f.c" @update:model-value="v => { S.f.c = v; setPage() }" />
-      <select class="flt-sel" aria-label="Mức độ" v-model="S.f.l" @change="setPage">
-        <option value="">Mức độ</option>
+      <select class="flt-sel" :aria-label="$t('bank.level')" v-model="S.f.l" @change="setPage">
+        <option value="">{{ $t('bank.level') }}</option>
         <option v-for="(x, i) in LV" :key="i" :value="String(i)">{{ x }}</option>
       </select>
-      <select class="flt-sel" aria-label="Trạng thái" v-model="S.f.s" @change="setPage">
-        <option value="">Trạng thái</option>
+      <select class="flt-sel" :aria-label="$t('common.status')" v-model="S.f.s" @change="setPage">
+        <option value="">{{ $t('common.status') }}</option>
         <option v-for="(v, k) in stB" :key="k" :value="k">{{ v[0] }}</option>
       </select>
-      <select class="flt-sel" aria-label="Sắp xếp" v-model="S.f.sort">
-        <option value="id">Sắp xếp</option>
-        <option value="level_asc">Dễ → Khó</option>
-        <option value="level">Khó → Dễ</option>
-        <option value="recent">Mới nhất</option>
+      <select class="flt-sel" :aria-label="$t('common.sort')" v-model="S.f.sort">
+        <option value="id">{{ $t('common.sort') }}</option>
+        <option value="level_asc">{{ $t('ai.fromEasyToHard') }}</option>
+        <option value="level">{{ $t('ai.fromHardToEasy') }}</option>
+        <option value="recent">{{ $t('common.newest') }}</option>
       </select>
-      <button class="btn pri" @click="addQ">Thêm câu hỏi</button>
+      <button class="btn pri" @click="addQ">{{ $t('bank.addQuestion') }}</button>
     </div>
     <div v-if="chips.length" class="bar">
-      <span class="mut" style="font-size:var(--fs-xs)">Bộ lọc đang áp dụng:</span>
-      <span v-for="([lbl, rm], idx) in chips" :key="idx" class="chip-rm">{{ lbl }} <button type="button" aria-label="Gỡ bộ lọc" @click="rm(); setPage()">×</button></span>
-      <button class="btn sm ghost" @click="clearFilters">Xóa tất cả lọc</button>
+      <span class="mut" style="font-size:var(--fs-xs)">{{ $t('search.activeFilter') }}</span>
+      <span v-for="([lbl, rm], idx) in chips" :key="idx" class="chip-rm">{{ lbl }} <button type="button" :aria-label="$t('search.clearFilter')" @click="rm(); setPage()">×</button></span>
+      <button class="btn sm ghost" @click="clearFilters">{{ $t('bank.clearFilters') }}</button>
     </div>
     <div class="bar" style="justify-content:space-between">
-      <label class="qall"><input type="checkbox" id="qall-cb" :checked="allSel" :indeterminate.prop="partial" @change="selAll($event.target.checked)"> <span id="qall-lbl">Chọn tất cả ({{ L.length }} đang lọc)</span></label>
-      <button type="button" class="btn sm" @click="S.f.hideAns = !S.f.hideAns">{{ S.f.hideAns ? 'Hiện đáp án đúng' : 'Ẩn đáp án đúng' }}</button>
+      <label class="qall"><input type="checkbox" id="qall-cb" :checked="allSel" :indeterminate.prop="partial" @change="selAll($event.target.checked)"> <span id="qall-lbl">{{ $t('bank.selectAllFiltered', { n: L.length }) }}{{ $t('bank.filteredSuffix') }}</span></label>
+      <button type="button" class="btn sm" @click="S.f.hideAns = !S.f.hideAns">{{ S.f.hideAns ? $t('bank.showAnswer') : $t('bank.hideAnswer') }}</button>
     </div>
   </div>
 
   <div class="qwrap" :class="{ 'hide-ans': S.f.hideAns }">
     <div class="qlist" id="tb">
-      <div v-if="S.status === 'loading' || S.status === 'idle'" class="empty-box"><p class="mut">Đang tải ngân hàng câu hỏi…</p></div>
-      <div v-else-if="S.status === 'error'" class="empty-box"><p class="mut">Không tải được dữ liệu.</p><button class="btn sm pri" @click="loadQuestions">Thử lại</button></div>
+      <!-- Skeleton thay cho spinner: khung đã đúng bố cục hàng thật nên dữ liệu về không bị nhảy. -->
+        <SkeletonList v-if="S.status === 'loading' || S.status === 'idle'" :rows="6" :label="$t('loading.questions')" />
+      <div v-else-if="S.status === 'error'" class="empty-box"><p class="mut">{{ $t('error.loadFailed') }}</p><button class="btn sm pri" @click="loadQuestions">{{ $t('common.retry') }}</button></div>
       <div v-else-if="!slice.length" class="empty-box">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <p class="mut">Không có câu hỏi nào khớp với điều kiện lọc hiện tại.</p>
-        <button class="btn sm pri" @click="clearFilters">Xóa bộ lọc</button>
+        <p class="mut">{{ $t('bank.noMatch') }}</p>
+        <button class="btn sm pri" @click="clearFilters">{{ $t('bank.clearFilter') }}</button>
       </div>
       <template v-else>
         <div v-for="q in slice" :key="q.id" class="qrow">
-          <div class="qrow__sel"><input type="checkbox" :aria-label="'Chọn ' + code(q)" :checked="S.sel.has(q.id)" @change="$event.target.checked ? S.sel.add(q.id) : S.sel.delete(q.id)"></div>
+          <div class="qrow__sel"><input type="checkbox" :aria-label="$t('bank.selectPrefix') + code(q)" :checked="S.sel.has(q.id)" @change="$event.target.checked ? S.sel.add(q.id) : S.sel.delete(q.id)"></div>
           <div class="qrow__main">
             <div class="qrow__head">
               <b>{{ code(q) }}</b>
               <span class="b" :class="['ok', '', 'er'][q.l]">{{ LV[q.l] }}</span>
-              <span v-if="busy(q)" class="b wa"><i class="spin"></i>Đang kiểm định</span>
+              <span v-if="busy(q)" class="b wa"><i class="spin"></i>{{ $t('bank.verifying') }}</span>
               <span v-else class="b" :class="stB[q.st][1]">{{ stB[q.st][0] }}</span>
               <span class="mut" style="font-size:var(--fs-xs)">{{ loc(q) }}</span>
-              <span class="qrow__meta">Cập nhật {{ q.updatedAt || '—' }} · {{ q.by || 'Hệ thống' }}</span>
+              <span class="qrow__meta">{{ $t('bank.updatedMeta', { t: q.updatedAt || '—', who: q.by || $t('bank.systemActor') }) }}</span>
             </div>
             <p class="qrow__text">{{ q.text }}</p>
             <div class="qrow__opts"><span v-for="(o, i) in q.o" :key="i" class="o" :class="{ on: i === q.a }"><i>{{ 'ABCD'[i] }}</i>{{ o }}</span></div>
           </div>
           <div class="acts">
-            <button class="btn sm pri" :disabled="busy(q)" @click="runAI([q.id])">Kiểm định</button>
-            <button class="btn sm" :disabled="busy(q)" @click="editQuestion(q.id)">Sửa</button>
-            <button class="btn sm dan" :disabled="busy(q)" @click="askDeleteQuestion(q.id)">Xóa</button>
+            <button class="btn sm pri" :disabled="busy(q)" @click="runAI([q.id])">{{ $t('ai.validate') }}</button>
+            <button class="btn sm" :disabled="busy(q)" @click="editQuestion(q.id)">{{ $t('common.edit') }}</button>
+            <button class="btn sm dan" :disabled="busy(q)" @click="askDeleteQuestion(q.id)">{{ $t('common.delete') }}</button>
           </div>
         </div>
         <div v-if="totalPages > 1" class="bar" style="justify-content:center;margin-top:.5rem">
-          <button class="btn sm" :disabled="S.f.page <= 1" @click="S.f.page--">‹ Trước</button>
+          <button class="btn sm" :disabled="S.f.page <= 1" @click="S.f.page--">{{ $t('common.prev') }}</button>
           <span class="mut" style="font-size:var(--fs-sm)">Trang {{ S.f.page }} / {{ totalPages }}</span>
-          <button class="btn sm" :disabled="S.f.page >= totalPages" @click="S.f.page++">Sau ›</button>
+          <button class="btn sm" :disabled="S.f.page >= totalPages" @click="S.f.page++">{{ $t('common.next') }}</button>
         </div>
       </template>
     </div>

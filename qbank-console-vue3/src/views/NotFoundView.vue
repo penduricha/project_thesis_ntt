@@ -69,22 +69,21 @@ function retry() {
            dùng đọc thành "4O4". Font Be Vietnam Pro đã có sẵn số 0 cân với số 4, không cần vẽ. -->
       <p class="nf__code" aria-hidden="true">404</p>
 
-      <span class="nf__badge">Lỗi 404</span>
-      <h1 id="nf-title" class="nf__title">Không tìm thấy trang</h1>
+      <span class="nf__badge">{{ $t('error.code404') }}</span>
+      <h1 id="nf-title" class="nf__title">{{ $t('error.notFound') }}</h1>
       <p class="nf__desc">
-        Đường dẫn có thể đã bị xoá, đổi tên hoặc bạn nhập chưa đúng.
-        Hãy kiểm tra lại hoặc quay về trang chủ.
+        {{ $t('error.notFoundDesc') }}
       </p>
 
       <p v-if="requestedPath" class="nf__path">
-        <span>Đường dẫn:</span>
+        <span>{{ $t('error.path') }}</span>
         <code :title="requestedPath">{{ requestedPath }}</code>
       </p>
 
       <div class="nf__actions">
         <button type="button" class="btn pri" @click="goHome">{{ homeLabel }}</button>
-        <button type="button" class="btn" @click="goBack">Quay lại trang trước</button>
-        <button type="button" class="btn ghost" @click="retry">Tải lại trang</button>
+        <button type="button" class="btn" @click="goBack">{{ $t('auth.back') }}</button>
+        <button type="button" class="btn ghost" @click="retry">{{ $t('common.reload') }}</button>
       </div>
     </div>
   </section>

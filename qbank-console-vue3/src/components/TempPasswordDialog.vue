@@ -8,9 +8,9 @@ const copy = () => { navigator.clipboard && navigator.clipboard.writeText(props.
 </script>
 <template>
   <BaseModal :title="title" locked @close="emit('close')">
-    <p class="mut" style="margin:0">Thông tin đăng nhập tạm của <b>{{ u?.name }}</b>. Mật khẩu chỉ hiển thị một lần, hãy gửi cho người dùng qua kênh an toàn. Người dùng phải đổi mật khẩu ở lần đăng nhập đầu tiên.</p>
-    <div class="tfa-key"><span>Mã đăng nhập: {{ adminId }}</span></div>
-    <div class="tfa-key"><span id="pw-t">{{ pw }}</span><button type="button" class="btn sm" data-af @click="copy">Sao chép</button></div>
-    <template #footer><button class="btn pri" style="grid-column:1/-1" @click="emit('close')">Đã lưu lại</button></template>
+    <p class="mut" style="margin:0">{{ $t('admin.tempPassword') }} <b>{{ u?.name }}</b>{{ $t('admin.tempPasswordWarn') }}</p>
+    <div class="tfa-key"><span>{{ $t('tempPw.loginId', { id: adminId }) }}</span></div>
+    <div class="tfa-key"><span id="pw-t">{{ pw }}</span><button type="button" class="btn sm" data-af @click="copy">{{ $t('common.copy') }}</button></div>
+    <template #footer><button class="btn pri" style="grid-column:1/-1" @click="emit('close')">{{ $t('dialog.saved') }}</button></template>
   </BaseModal>
 </template>

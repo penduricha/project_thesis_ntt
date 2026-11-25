@@ -41,7 +41,7 @@ onBeforeUnmount(() => {
         <div class="modal-content" id="dlg">
           <div class="modal-header">
             <h3 class="modal-title" id="dlg-t">{{ title }}</h3>
-            <button type="button" class="dlg-x" aria-label="Đóng" @click="ask"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <button type="button" class="dlg-x" :aria-label="$t('common.close')" @click="ask"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="modal-body"><slot /></div>
           <div v-if="$slots.footer" class="end modal-footer" :style="footerStyle"><slot name="footer" /></div>

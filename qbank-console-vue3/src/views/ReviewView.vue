@@ -21,45 +21,45 @@ const toggle = (id, on) => (on ? S.rsel.add(id) : S.rsel.delete(id))
 
 <template>
   <div v-if="!items.length" class="empty-box">
-    <p class="mut">Hiện chưa có đề xuất chỉnh sửa nào từ AI cần xem xét.</p>
-    <button class="btn pri" @click="router.push('/bank')">Đi tới Tất cả câu hỏi</button>
+    <p class="mut">{{ $t('ai.noSuggestions') }}</p>
+    <button class="btn pri" @click="router.push('/bank')">{{ $t('search.goToBank') }}</button>
   </div>
   <template v-else>
     <div class="card">
       <div class="bar" style="justify-content:space-between">
         <div class="chips">
-          <button v-for="t in types" :key="t" type="button" class="chip" :class="{ on: S.rf === t }" @click="S.rf = t">{{ t === 'all' ? 'Tất cả (' + items.length + ')' : t }}</button>
+          <button v-for="t in types" :key="t" type="button" class="chip" :class="{ on: S.rf === t }" @click="S.rf = t">{{ t === 'all' ? $t('bank.allCount') + items.length + ')' : t }}</button>
         </div>
         <div class="bar">
-          <span class="mut" style="font-size:var(--fs-xs)">Đã chọn {{ S.rsel.size }}</span>
-          <button class="btn sm" :disabled="!S.rsel.size" @click="bulkDecide(false)">Từ chối đã chọn</button>
-          <button class="btn sm pri" :disabled="!S.rsel.size" @click="bulkDecide(true)">Chấp nhận đã chọn</button>
+          <span class="mut" style="font-size:var(--fs-xs)">{{ $t('bank.selected') }} {{ S.rsel.size }}</span>
+          <button class="btn sm" :disabled="!S.rsel.size" @click="bulkDecide(false)">{{ $t('ai.rejectSelected') }}</button>
+          <button class="btn sm pri" :disabled="!S.rsel.size" @click="bulkDecide(true)">{{ $t('ai.acceptSelected') }}</button>
         </div>
       </div>
     </div>
 
     <div v-for="c in cards" :key="c.s.qid" class="card">
       <div class="bar">
-        <input type="checkbox" :aria-label="'Chọn đề xuất ' + code(c.q)" :checked="S.rsel.has(c.s.qid)" @change="toggle(c.s.qid, $event.target.checked)">
+        <input type="checkbox" :aria-label="$t('bank.selectedItemsPrefix', { code: code(c.q) })" :checked="S.rsel.has(c.s.qid)" @change="toggle(c.s.qid, $event.target.checked)">
         <b>{{ code(c.q) }}</b>
-        <span class="mut">· {{ COURSES[c.q.c]?.id || '' }} ({{ topicName(c.q.c, c.q.tp) }}) · Tác vụ <RouterLink to="/tasks" style="color:var(--primary-ink);font-weight:600">{{ c.s.tid }}</RouterLink></span>
+        <span class="mut">· {{ COURSES[c.q.c]?.id || '' }} ({{ topicName(c.q.c, c.q.tp) }}){{ $t('ai.taskPrefix') }}<RouterLink to="/tasks" style="color:var(--primary-ink);font-weight:600">{{ c.s.tid }}</RouterLink></span>
         <span class="grow"></span>
-        <span class="b" :class="c.s.sev === 'Cao' ? 'er' : 'wa'">Mức độ: {{ c.s.sev }} ({{ c.s.is.length }} lỗi)</span>
-        <span class="b n">Độ khó gợi ý: {{ c.s.diff }}</span>
+        <span class="b" :class="c.s.sev === 'Cao' ? 'er' : 'wa'">{{ $t('ai.severityErrors', { sev: c.s.sev, n: c.s.is.length }) }}</span>
+        <span class="b n">{{ $t('ai.suggestedDiff', { d: c.s.diff }) }}</span>
       </div>
       <div class="cmp" :hidden="c.same">
-        <div><h4>Nội dung gốc</h4><p><template v-for="(w, i) in c.df.oldTok" :key="i"><del v-if="w.k === 'del'" class="diff-del">{{ w.t }}</del><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
-        <div class="new"><h4>Đề xuất của AI</h4><p><template v-for="(w, i) in c.df.newTok" :key="i"><ins v-if="w.k === 'ins'" class="diff-ins">{{ w.t }}</ins><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
+        <div><h4>{{ $t('ai.original') }}</h4><p><template v-for="(w, i) in c.df.oldTok" :key="i"><del v-if="w.k === 'del'" class="diff-del">{{ w.t }}</del><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
+        <div class="new"><h4>{{ $t('ai.suggestion') }}</h4><p><template v-for="(w, i) in c.df.newTok" :key="i"><ins v-if="w.k === 'ins'" class="diff-ins">{{ w.t }}</ins><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
       </div>
       <div class="qrow__opts"><span v-for="(o, i) in c.q.o" :key="i" class="o" :class="{ on: i === c.q.a }"><i>{{ 'ABCD'[i] }}</i>{{ o }}</span></div>
-      <p v-if="c.same" class="warn-inline" style="font-size:var(--fs-sm)">AI chỉ nhận xét, không đề xuất văn bản thay thế. Hãy mở trình sửa để chỉnh phương án hoặc giữ nguyên.</p>
+      <p v-if="c.same" class="warn-inline" style="font-size:var(--fs-sm)">{{ $t('ai.noteNoRewrite') }}</p>
       <ul class="iss"><li v-for="(i, k) in c.s.is" :key="k"><span class="b" :class="IC[i.k]">{{ i.k }}</span> {{ i.d }}</li></ul>
-      <details><summary class="mut" style="cursor:pointer;font-size:var(--fs-sm)">Phản hồi JSON đã kiểm tra hợp lệ</summary><pre class="codeblock" style="margin-top:.5rem">{{ c.json }}</pre></details>
-      <small>Lưu ý: AI không tự ý thay đổi đáp án đúng. Nội dung câu hỏi chỉ cập nhật khi giảng viên bấm Chấp nhận.</small>
+      <details><summary class="mut" style="cursor:pointer;font-size:var(--fs-sm)">{{ $t('search.responseValid') }}</summary><pre class="codeblock" style="margin-top:.5rem">{{ c.json }}</pre></details>
+      <small>{{ $t('ai.noteAnswerSafe') }}</small>
       <div class="end">
-        <button class="btn" @click="decide(c.s.qid, false)">{{ c.same ? 'Đã xem, giữ nguyên' : 'Từ chối, giữ bản gốc' }}</button>
-        <button v-if="c.same" class="btn pri" @click="editQuestion(c.s.qid)">Mở trình sửa</button>
-        <button v-else class="btn pri" @click="decide(c.s.qid, true)">Chấp nhận và cập nhật</button>
+        <button class="btn" @click="decide(c.s.qid, false)">{{ c.same ? $t('ai.keepOriginalReviewed') : $t('ai.rejectKeepOriginal') }}</button>
+        <button v-if="c.same" class="btn pri" @click="editQuestion(c.s.qid)">{{ $t('ai.openEditor') }}</button>
+        <button v-else class="btn pri" @click="decide(c.s.qid, true)">{{ $t('ai.accept') }}</button>
       </div>
     </div>
   </template>

@@ -24,28 +24,28 @@ async function save() {
 }
 </script>
 <template>
-  <BaseModal title="Thêm tài khoản" :dirty="dirty" @close="emit('close')">
-    <label>Mã đăng nhập (admin_id) <span style="color:var(--danger-strong)">*</span>
+  <BaseModal :title="$t('admin.addAccount')" :dirty="dirty" @close="emit('close')">
+    <label>{{ $t('admin.adminIdLabel') }} <span style="color:var(--danger-strong)">*</span>
       <input id="u-id" inputmode="numeric" maxlength="18" autocomplete="off" placeholder="Ví dụ: 2500021780" v-model="f.id" :class="{ invalid: err.id }" :aria-invalid="err.id ? 'true' : null" @input="err.id = ''">
       <small v-if="err.id" class="fe" role="alert">{{ err.id }}</small>
-      <small>Mã có sẵn do nhà trường cấp, dùng để đăng nhập.</small>
+      <small>{{ $t('auth.codeHint') }}</small>
     </label>
-    <label>Họ và tên <span style="color:var(--danger-strong)">*</span>
+    <label>{{ $t('account.fullName') }} <span style="color:var(--danger-strong)">*</span>
       <input id="u-n" autocomplete="off" v-model="f.n" :class="{ invalid: err.n }" :aria-invalid="err.n ? 'true' : null" @input="err.n = ''">
       <small v-if="err.n" class="fe" role="alert">{{ err.n }}</small>
     </label>
-    <label>Số CCCD (12 chữ số) <span style="color:var(--danger-strong)">*</span>
+    <label>{{ $t('account.idCardNumber') }} <span style="color:var(--danger-strong)">*</span>
       <input id="u-cccd" inputmode="numeric" maxlength="12" autocomplete="off" v-model="f.cc" :class="{ invalid: err.cc }" :aria-invalid="err.cc ? 'true' : null" @input="err.cc = ''">
       <small v-if="err.cc" class="fe" role="alert">{{ err.cc }}</small>
     </label>
-    <label>Vai trò
-      <select id="u-r" v-model="f.r"><option>Giảng viên</option><option>Quản trị viên</option></select>
+    <label>{{ $t('common.role') }}
+      <select id="u-r" v-model="f.r"><option>{{ $t('admin.roleLecturer') }}</option><option>{{ $t('admin.roleAdmin') }}</option></select>
     </label>
-    <fieldset id="u-sub" class="subj-box" :hidden="f.r !== 'Giảng viên'">
-      <legend>Môn học được phân công</legend>
+    <fieldset id="u-sub" class="subj-box" :hidden="f.r !== $t('admin.roleLecturer')">
+      <legend>{{ $t('course.assigned') }}</legend>
       <div class="subj-list"><label v-for="c in active" :key="c.id" class="qall"><input type="checkbox" :value="c.id" v-model="f.subs"> <span>{{ c.name }}</span></label></div>
-      <small class="mut">Giảng viên chỉ thấy và thao tác trong các môn được phân công. Quản trị viên xem được tất cả.</small>
+      <small class="mut">{{ $t('course.lecturerScope') }}</small>
     </fieldset>
-    <template #footer><button class="btn" @click="cancel">Hủy</button><button class="btn pri" @click="save">Tạo tài khoản</button></template>
+    <template #footer><button class="btn" @click="cancel">{{ $t('common.cancel') }}</button><button class="btn pri" @click="save">{{ $t('admin.createAccount') }}</button></template>
   </BaseModal>
 </template>

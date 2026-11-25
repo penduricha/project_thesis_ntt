@@ -18,32 +18,32 @@ function del() {
 }
 </script>
 <template>
-  <BaseModal title="Chi tiết tài khoản" @close="emit('close')">
+  <BaseModal :title="$t('account.detail')" @close="emit('close')">
     <dl class="udet">
-      <div><dt>Họ và tên</dt><dd>{{ u.name }}</dd></div>
-      <div><dt>Mã đăng nhập</dt><dd class="mono">{{ u.adminId }} <button class="btn-rev" @click="copyId">Sao chép</button></dd></div>
-      <div><dt>Trạng thái tài khoản</dt><dd><span class="ubd" :class="'ubd--' + (acc ? acc[0] : 'success')">{{ acc ? acc[1] : 'Hoạt động' }}</span></dd></div>
-      <div><dt>Xác thực hai yếu tố</dt><dd><span class="ubd" :class="'ubd--' + v.bd">{{ v.text }}</span></dd></div>
-      <div><dt>Đổi mật khẩu lần cuối</dt><dd>{{ u.passwordChangedAt || 'Chưa đổi mật khẩu tạm' }}</dd></div>
+      <div><dt>{{ $t('account.fullName') }}</dt><dd>{{ u.name }}</dd></div>
+      <div><dt>{{ $t('auth.loginId') }}</dt><dd class="mono">{{ u.adminId }} <button class="btn-rev" @click="copyId">{{ $t('common.copy') }}</button></dd></div>
+      <div><dt>{{ $t('admin.accountStatus') }}</dt><dd><span class="ubd" :class="'ubd--' + (acc ? acc[0] : 'success')">{{ acc ? acc[1] : $t('admin.activeStatus') }}</span></dd></div>
+      <div><dt>{{ $t('auth.otpTitle') }}</dt><dd><span class="ubd" :class="'ubd--' + v.bd">{{ v.text }}</span></dd></div>
+      <div><dt>{{ $t('account.lastChange') }}</dt><dd>{{ u.passwordChangedAt || $t('common.noPasswordChange') }}</dd></div>
     </dl>
-    <div v-if="me" class="own-role"><span>Vai trò hiện tại</span><b>{{ u.role }}</b></div>
+    <div v-if="me" class="own-role"><span>{{ $t('admin.currentRole') }}</span><b>{{ u.role }}</b></div>
     <template v-else>
-      <label>Vai trò
-        <select id="ud-r" v-model="role" :class="{ invalid: err }" @change="err = ''"><option>Quản trị viên</option><option>Giảng viên</option></select>
+      <label>{{ $t('common.role') }}
+        <select id="ud-r" v-model="role" :class="{ invalid: err }" @change="err = ''"><option>{{ $t('admin.roleAdmin') }}</option><option>{{ $t('admin.roleLecturer') }}</option></select>
         <small v-if="err" class="fe" role="alert">{{ err }}</small>
       </label>
-      <fieldset id="ud-sub" class="subj-box" :hidden="role !== 'Giảng viên'">
-        <legend>Môn học được phân công</legend>
+      <fieldset id="ud-sub" class="subj-box" :hidden="role !== $t('admin.roleLecturer')">
+        <legend>{{ $t('course.assigned') }}</legend>
         <div class="subj-list"><label v-for="c in active" :key="c.id" class="qall"><input type="checkbox" :value="c.id" v-model="subs"> <span>{{ c.name }}</span></label></div>
       </fieldset>
     </template>
     <div class="directory-secondary">
-      <button class="btn" @click="openDialog('user-confirm', { adminId: u.adminId, mode: 'pw' })">Cấp lại mật khẩu</button>
-      <button v-if="!me" class="btn dan directory-danger" :disabled="used && u.status === 'disabled'" @click="del">{{ used ? 'Vô hiệu hóa' : 'Xóa tài khoản' }}</button>
+      <button class="btn" @click="openDialog('user-confirm', { adminId: u.adminId, mode: 'pw' })">{{ $t('admin.resetPassword') }}</button>
+      <button v-if="!me" class="btn dan directory-danger" :disabled="used && u.status === 'disabled'" @click="del">{{ used ? $t('admin.disableAccount') : $t('admin.deleteAccount') }}</button>
     </div>
     <template #footer>
-      <button class="btn" :class="me ? 'only-action pri' : ''" @click="emit('close')">Đóng</button>
-      <button v-if="!me" class="btn pri" @click="save">Lưu vai trò</button>
+      <button class="btn" :class="me ? 'only-action pri' : ''" @click="emit('close')">{{ $t('common.close') }}</button>
+      <button v-if="!me" class="btn pri" @click="save">{{ $t('admin.saveRole') }}</button>
     </template>
   </BaseModal>
 </template>

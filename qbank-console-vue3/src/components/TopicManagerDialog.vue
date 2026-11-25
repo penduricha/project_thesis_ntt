@@ -41,19 +41,19 @@ function remove(idx) {
 <template>
   <BaseModal :title="`Chương / Chủ đề của môn ${crs.id} – ${crs.name}`" footer-style="grid-template-columns:1fr" @close="emit('close')">
     <div class="bar">
-      <input id="new-tp-name" class="grow" maxlength="80" placeholder="Nhập tên chương / chủ đề mới (VD: Chương 4: Bảo mật)..." v-model="name"
+      <input id="new-tp-name" class="grow" maxlength="80" :placeholder="$t('course.newTopicPlaceholder')" v-model="name"
              :class="{ invalid: err }" :aria-invalid="err ? 'true' : null" @input="err = ''" @keydown.enter.prevent.stop="add">
-      <button type="button" class="btn pri" @click="add">Thêm</button>
+      <button type="button" class="btn pri" @click="add">{{ $t('common.add') }}</button>
     </div>
     <small v-if="err" class="fe" role="alert">{{ err }}</small>
     <div class="topic-list-mgr">
       <div v-for="(t, idx) in crs.topics" :key="idx" class="topic-item">
-        <input :value="t" aria-label="Tên chương" @change="rename(idx, $event)">
-        <span class="b n">{{ count(idx) }} câu</span>
-        <button v-if="crs.topics.length > 1" type="button" class="btn sm del" @click="remove(idx)">Xóa</button>
+        <input :value="t" :aria-label="$t('course.topicName')" @change="rename(idx, $event)">
+        <span class="b n">{{ $t('bank.questionCount', { n: count(idx) }) }}</span>
+        <button v-if="crs.topics.length > 1" type="button" class="btn sm del" @click="remove(idx)">{{ $t('common.delete') }}</button>
       </div>
     </div>
-    <small>Lưu ý: Khi xóa một chương, các câu hỏi thuộc chương đó sẽ tự động chuyển về chương đầu tiên của môn học.</small>
-    <template #footer><button type="button" class="btn pri" @click="emit('close')">Hoàn tất</button></template>
+    <small>{{ $t('course.deleteTopicWarn') }}</small>
+    <template #footer><button type="button" class="btn pri" @click="emit('close')">{{ $t('common.done') }}</button></template>
   </BaseModal>
 </template>

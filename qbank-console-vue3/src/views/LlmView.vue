@@ -97,48 +97,48 @@ const phPaste = 'URL  : https://ten-ngau-nhien.trycloudflare.com\nTOKEN: dán to
 <template>
   <div class="lmhead">
     <section class="card" aria-labelledby="lm-t1">
-      <div class="card__head"><h3 id="lm-t1">Server 2 · AI Worker</h3><span class="b" :class="st[0]" role="status"><i v-if="S.api.busy" class="spin"></i>{{ st[1] }}</span></div>
-      <div class="lmpills"><span class="b code n">model: {{ S.api.on ? 'qwen2.5-14b-instruct-q4_K_M' : 'chưa kết nối' }}</span><span class="b code n">mode: {{ S.api.on ? 'async · Redis queue' : '-' }}</span></div>
-      <label>Địa chỉ API<input id="lm-base" class="mono" inputmode="url" spellcheck="false" autocomplete="off" v-model="S.api.base" :readonly="S.api.on"></label>
-      <label>JWT hoặc Internal Token (Bearer)
+      <div class="card__head"><h3 id="lm-t1">{{ $t('llm.server2') }}</h3><span class="b" :class="st[0]" role="status"><i v-if="S.api.busy" class="spin"></i>{{ st[1] }}</span></div>
+      <div class="lmpills"><span class="b code n">model: {{ S.api.on ? 'qwen2.5-14b-instruct-q4_K_M' : $t('common.notConnected') }}</span><span class="b code n">mode: {{ S.api.on ? 'async · Redis queue' : '-' }}</span></div>
+      <label>{{ $t('llm.apiAddress') }}<input id="lm-base" class="mono" inputmode="url" spellcheck="false" autocomplete="off" v-model="S.api.base" :readonly="S.api.on"></label>
+      <label>{{ $t('llm.tokenLabel') }}
         <div class="pw">
-          <input id="lm-jwt" class="mono" :type="show['lm-jwt'] ? 'text' : 'password'" spellcheck="false" autocomplete="off" placeholder="Nhập ACCESS JWT hoặc AI_INTERNAL_TOKEN" v-model="S.api.jwt" :readonly="S.api.on">
-          <button class="btn sm" type="button" :aria-pressed="String(!!show['lm-jwt'])" @click="show['lm-jwt'] = !show['lm-jwt']">{{ show['lm-jwt'] ? 'Ẩn' : 'Hiện' }}</button>
+          <input id="lm-jwt" class="mono" :type="show['lm-jwt'] ? 'text' : 'password'" spellcheck="false" autocomplete="off" :placeholder="$t('llm.tokenRequired')" v-model="S.api.jwt" :readonly="S.api.on">
+          <button class="btn sm" type="button" :aria-pressed="String(!!show['lm-jwt'])" @click="show['lm-jwt'] = !show['lm-jwt']">{{ show['lm-jwt'] ? $t('common.hide') : $t('common.show') }}</button>
         </div>
       </label>
-      <button class="btn w100 lmact" :class="{ pri: !S.api.on }" :disabled="S.api.busy" @click="conn">{{ S.api.on ? 'Ngắt kết nối' : 'Kết nối' }}</button>
+      <button class="btn w100 lmact" :class="{ pri: !S.api.on }" :disabled="S.api.busy" @click="conn">{{ S.api.on ? $t('common.disconnect') : $t('common.connect') }}</button>
     </section>
     <section class="card" aria-labelledby="lm-t2">
-      <div class="card__head"><h3 id="lm-t2">Dán kết quả từ Colab</h3><span class="b n" id="lm-free">{{ sum.free }}</span></div>
-      <p class="mut">Dán hai dòng URL và TOKEN mà notebook Colab in ra. Hỗ trợ dán nhiều node cùng lúc. Nội dung dán tự xóa ngay sau khi điền.</p>
-      <textarea id="lm-paste" class="area" spellcheck="false" autocomplete="off" aria-label="Kết quả từ Colab" :placeholder="phPaste" v-model="paste"></textarea>
+      <div class="card__head"><h3 id="lm-t2">{{ $t('llm.pasteResult') }}</h3><span class="b n" id="lm-free">{{ sum.free }}</span></div>
+      <p class="mut">{{ $t('llm.pasteNodeHint') }}</p>
+      <textarea id="lm-paste" class="area" spellcheck="false" autocomplete="off" :aria-label="$t('llm.resultFromColab')" :placeholder="phPaste" v-model="paste"></textarea>
       <div class="bar lmact">
-        <label class="lmtg">Điền vào<select id="lm-tg" v-model="tg"><option value="free">Ô trống đầu tiên</option><option v-for="(_, i) in S.lm" :key="i" :value="String(i)">Từ LLM {{ i + 1 }} (ghi đè)</option></select></label>
-        <button class="btn pri" @click="fill">Điền vào ô</button>
+        <label class="lmtg">{{ $t('dialog.fillIn') }}<select id="lm-tg" v-model="tg"><option value="free">{{ $t('dialog.firstEmpty') }}</option><option v-for="(_, i) in S.lm" :key="i" :value="String(i)">{{ $t('llm.fromLlm', { n: i + 1 }) }}</option></select></label>
+        <button class="btn pri" @click="fill">{{ $t('dialog.fillInBox') }}</button>
       </div>
     </section>
   </div>
-  <p class="lmwarn" :hidden="S.api.on">Chưa nối Server 2. Bạn vẫn dán và xuất dạng .env được; muốn kiểm tra và lưu vào bộ nhớ worker thì hãy kết nối ở trên.</p>
+  <p class="lmwarn" :hidden="S.api.on">{{ $t('llm.notConnected') }}</p>
 
-  <div class="rack" aria-label="Các node Colab">
+  <div class="rack" :aria-label="$t('llm.connectNodes')">
     <article v-for="(c, i) in S.lm" :key="i" class="slot" :class="{ flash: flash.includes(i) }" :id="'slot' + i" :data-led="slots[i].led">
       <div class="slot__rail"><div class="slot__id"><span class="led" aria-hidden="true"></span><b>LLM {{ i + 1 }}</b></div><span class="slot__st">{{ slots[i].tx }}</span><span class="slot__tps">{{ slots[i].tps }}</span></div>
       <div class="slot__body">
-        <label>URL dịch vụ suy luận<input :id="'lu' + i" class="mono" type="url" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://ten-ngau-nhien.trycloudflare.com" :value="c.url" @input="set(i, 'url', $event.target.value)"></label>
-        <label>Token
+        <label>{{ $t('llm.serviceUrl') }}<input :id="'lu' + i" class="mono" type="url" inputmode="url" spellcheck="false" autocomplete="off" :placeholder="$t('llm.pastePlaceholder')" :value="c.url" @input="set(i, 'url', $event.target.value)"></label>
+        <label>{{ $t('common.token') }}
           <div class="pw">
-            <input :id="'tk' + i" class="mono" :type="show['tk' + i] ? 'text' : 'password'" spellcheck="false" autocomplete="off" placeholder="Dán token từ Colab" :value="c.tok" @input="set(i, 'tok', $event.target.value)">
-            <button class="btn sm" type="button" :aria-pressed="String(!!show['tk' + i])" @click="show['tk' + i] = !show['tk' + i]">{{ show['tk' + i] ? 'Ẩn' : 'Hiện' }}</button>
+            <input :id="'tk' + i" class="mono" :type="show['tk' + i] ? 'text' : 'password'" spellcheck="false" autocomplete="off" :placeholder="$t('llm.pasteToken')" :value="c.tok" @input="set(i, 'tok', $event.target.value)">
+            <button class="btn sm" type="button" :aria-pressed="String(!!show['tk' + i])" @click="show['tk' + i] = !show['tk' + i]">{{ show['tk' + i] ? $t('common.hide') : $t('common.show') }}</button>
           </div>
         </label>
         <small class="slot__note" :class="slots[i].n[0]" aria-live="polite">{{ slots[i].n[1] }}</small>
       </div>
       <div class="slot__acts">
-        <label class="sw"><input type="checkbox" role="switch" :checked="c.en" @change="set(i, 'en', $event.target.checked)"><span class="sw__ui" aria-hidden="true"></span><span>Dùng node này</span></label>
+        <label class="sw"><input type="checkbox" role="switch" :checked="c.en" @change="set(i, 'en', $event.target.checked)"><span class="sw__ui" aria-hidden="true"></span><span>{{ $t('llm.useNode') }}</span></label>
         <div class="slot__btns">
-          <button class="btn sm" :disabled="slots[i].chk" @click="check(i)">Kiểm tra</button>
-          <button class="btn sm pri" :disabled="slots[i].sav" @click="save(i)">Lưu</button>
-          <button class="btn sm del" :disabled="slots[i].clr" @click="clear(i)">Xóa</button>
+          <button class="btn sm" :disabled="slots[i].chk" @click="check(i)">{{ $t('common.check') }}</button>
+          <button class="btn sm pri" :disabled="slots[i].sav" @click="save(i)">{{ $t('common.save') }}</button>
+          <button class="btn sm del" :disabled="slots[i].clr" @click="clear(i)">{{ $t('common.delete') }}</button>
         </div>
       </div>
     </article>
@@ -146,6 +146,6 @@ const phPaste = 'URL  : https://ten-ngau-nhien.trycloudflare.com\nTOKEN: dán to
 
   <div class="lmbar">
     <span id="lm-sum" class="mut" role="status">{{ sum.text }}</span>
-    <div class="bar"><button id="lm-env" class="btn" :disabled="sum.envOff" @click="env">Sao chép dạng .env</button><button id="lm-all" class="btn pri" :disabled="sum.allOff" @click="saveAll">Lưu tất cả</button></div>
+    <div class="bar"><button id="lm-env" class="btn" :disabled="sum.envOff" @click="env">{{ $t('llm.copyEnv') }}</button><button id="lm-all" class="btn pri" :disabled="sum.allOff" @click="saveAll">{{ $t('common.saveAll') }}</button></div>
   </div>
 </template>

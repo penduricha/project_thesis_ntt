@@ -38,40 +38,40 @@ async function save() {
 </script>
 
 <template>
-  <BaseModal title="Nhập Moodle XML" :dirty="dirty" @close="emit('close')">
-    <label>Gán môn học mặc định <span style="color:var(--danger-strong)">*</span>
-      <CourseCombobox uid="imp" :all="false" placeholder="Chọn hoặc gõ để tìm môn học…" :model-value="String(S.imp.c)" @update:model-value="pickCourse" />
+  <BaseModal :title="$t('bank.importMoodle')" :dirty="dirty" @close="emit('close')">
+    <label>{{ $t('admin.assignedSubjects') }} <span style="color:var(--danger-strong)">*</span>
+      <CourseCombobox uid="imp" :all="false" :placeholder="$t('course.searchPlaceholder')" :model-value="String(S.imp.c)" @update:model-value="pickCourse" />
     </label>
-    <div class="cc-f">Chương / Chủ đề con
+    <div class="cc-f">{{ $t('course.chapters') }}
       <div id="imp-chips" class="cc-chips" :class="{ invalid: chipErr }">
         <template v-if="crs?.topics.length">
-          <small style="flex:1 1 100%">Chương của môn đã chọn ({{ crs.topics.length }}) – bấm để chọn nhanh:</small>
+          <small style="flex:1 1 100%">{{ $t('course.chapterPickHint', { n: crs.topics.length }) }}</small>
           <button v-for="(x, i) in crs.topics" :key="i" type="button" class="btn sm" :class="{ pri: i === S.imp.tp }" @click="S.imp.tp = i; chipErr = ''">{{ x }}</button>
         </template>
-        <small v-else>Môn học này chưa có chương nào.</small>
+        <small v-else>{{ $t('course.noTopic') }}</small>
       </div>
       <small v-if="chipErr" class="fe" role="alert">{{ chipErr }}</small>
     </div>
-    <label>Mức độ mặc định
+    <label>{{ $t('bank.defaultLevel') }}
       <select v-model.number="S.imp.l"><option v-for="(x, i) in LV" :key="i" :value="i">{{ x }}</option></select>
     </label>
-    <label>Dán trực tiếp mã nguồn XML
+    <label>{{ $t('moodle.pasteXml') }}
       <textarea id="xi" rows="7" v-model="xml" :placeholder="ph" @input="dirty = true; err = ''"></textarea>
     </label>
-    <label>Hoặc chọn tệp .xml từ máy tính
-      <input type="file" accept=".xml,text/xml" aria-label="Chọn tệp XML" @change="onFile">
+    <label>{{ $t('moodle.chooseFile') }}
+      <input type="file" accept=".xml,text/xml" :aria-label="$t('moodle.selectFile')" @change="onFile">
     </label>
     <div id="xr">
       <p v-if="err" class="err">{{ err }}</p>
       <template v-if="res">
-        <p><span class="b ok">Đã lưu {{ res.ok }} câu</span> <span class="b" :class="res.reasons.length ? 'wa' : 'n'">Bỏ qua {{ res.reasons.length }}</span></p>
-        <small>Các câu nhập vào được gán môn <b>{{ crs.id }} – {{ crs.name }}</b> ({{ topicName(S.imp.c, S.imp.tp) }}), mức độ <b>{{ LV[S.imp.l] }}</b>.</small>
+        <p><span class="b ok">{{ $t('moodle.savedCount', { n: res.ok }) }}</span> <span class="b" :class="res.reasons.length ? 'wa' : 'n'">{{ $t('moodle.skippedCount', { n: res.reasons.length }) }}</span></p>
+        <small>{{ $t('moodle.questionsAssigned') }} <b>{{ crs.id }} – {{ crs.name }}</b> ({{ topicName(S.imp.c, S.imp.tp) }}){{ $t('moodle.assignedLevel') }} <b>{{ LV[S.imp.l] }}</b>.</small>
         <ul v-if="res.reasons.length" class="iss" style="margin-top:.5rem"><li v-for="(r, i) in res.reasons" :key="i">{{ r }}</li></ul>
       </template>
     </div>
     <template #footer>
-      <button type="button" class="btn" @click="cancel">Đóng</button>
-      <button type="button" class="btn pri" :disabled="busy" @click="save">{{ busy ? 'Đang lưu…' : 'Kiểm tra cấu trúc và lưu' }}</button>
+      <button type="button" class="btn" @click="cancel">{{ $t('common.close') }}</button>
+      <button type="button" class="btn pri" :disabled="busy" @click="save">{{ busy ? $t('common.saving') : $t('bank.checkAndSave') }}</button>
     </template>
   </BaseModal>
 </template>

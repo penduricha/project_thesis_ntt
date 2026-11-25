@@ -92,34 +92,34 @@ const byKeyword = () => { S.f.q = S.nlKw; S.f.page = 1; router.push('/bank') }
 
 <template>
   <div class="card">
-    <h3>Hỏi bằng ngôn ngữ tự nhiên</h3>
-    <p class="mut">Mô hình ngôn ngữ lớn chuyển câu truy vấn tiếng Việt thành bộ lọc JSON có cấu trúc. Backend kiểm tra trường, toán tử và tự dựng câu lệnh SQL an toàn.</p>
+    <h3>{{ $t('search.askNatural') }}</h3>
+    <p class="mut">{{ $t('search.flow') }}</p>
     <div class="bar">
-      <input id="nl" class="grow" aria-label="Câu tìm kiếm" placeholder='Ví dụ: tìm câu hỏi khó môn trí tuệ nhân tạo hoặc chứa "HTTP"' v-model="S.nl" @keydown.enter="run()">
-      <button id="nl-btn" class="btn pri" :disabled="busy" @click="run()"><template v-if="busy"><i class="spin"></i>Đang phân tích…</template><template v-else>Phân tích và tìm</template></button>
+      <input id="nl" class="grow" :aria-label="$t('search.questionLabel')" :placeholder="$t('search.examplePlaceholder')" v-model="S.nl" @keydown.enter="run()">
+      <button id="nl-btn" class="btn pri" :disabled="busy" @click="run()"><template v-if="busy"><i class="spin"></i>{{ $t('ai.analyzing') }}</template><template v-else>{{ $t('search.analyzeAndSearch') }}</template></button>
     </div>
     <div class="chips"><button v-for="x in samples" :key="x" type="button" class="chip" @click="sample(x)">{{ x }}</button></div>
   </div>
 
   <div id="nlr">
-    <div v-if="!res" class="empty-box"><p class="mut">Nhập câu yêu cầu phía trên hoặc chọn một gợi ý mẫu. Kết quả sẽ minh bạch hóa qua 3 bước: <b>Bộ lọc JSON → SQL tham số hóa → Danh sách câu hỏi</b>.</p></div>
-    <div v-else-if="res.off" class="card"><p class="err">Dịch vụ LLM đang ngắt nên chưa phân tích được câu tìm kiếm. Tìm theo từ khóa ở “Tất cả câu hỏi” vẫn hoạt động bình thường.</p></div>
+    <div v-if="!res" class="empty-box"><p class="mut">{{ $t('search.placeholder') }} <b>{{ $t('search.step3') }}</b>.</p></div>
+    <div v-else-if="res.off" class="card"><p class="err">{{ $t('search.llmDown') }}</p></div>
     <template v-else>
       <div class="cols">
-        <div class="card"><h3>Bước 1 · Bộ lọc JSON do mô hình trả về</h3><pre class="codeblock">{{ res.json }}</pre><small>Chỉ gồm các trường được phép: course, level, keyword.</small></div>
-        <div class="card"><h3>Bước 2 · Truy vấn tham số hóa do Backend tự dựng</h3><pre class="codeblock">{{ res.sql }}</pre><small>Giá trị được bind qua Prepared Statement; LLM không trực tiếp sinh SQL.</small></div>
+        <div class="card"><h3>{{ $t('search.step1') }}</h3><pre class="codeblock">{{ res.json }}</pre><small>{{ $t('search.allowedFields') }}</small></div>
+        <div class="card"><h3>{{ $t('search.step2') }}</h3><pre class="codeblock">{{ res.sql }}</pre><small>{{ $t('search.preparedStatement') }}</small></div>
       </div>
       <div class="card">
-        <h3>Bước 3 · Kết quả tìm kiếm ({{ res.rows.length }})</h3>
+        <h3>{{ $t('search.step3Header', { n: res.rows.length }) }}</h3>
         <p v-if="res.real" class="mut" style="margin:.15rem 0 .6rem;font-size:var(--fs-sm)">
-          Kết quả lấy trực tiếp từ Spring Boot (MariaDB) — gọi <code>GET /questions?q=…</code>.
+          {{ $t('search.fromSpring') }} <code>GET /questions?q=…</code>.
         </p>
         <p v-else-if="res.apiError" class="err" style="margin:.15rem 0 .6rem;font-size:var(--fs-sm)">
           {{ res.apiError }}
         </p>
         <div v-if="res.rows.length" class="tw">
           <table>
-            <thead><tr><th>Mã</th><th>Nội dung câu hỏi (bấm để sửa)</th><th>Môn học &amp; Chương</th><th>Mức độ</th></tr></thead>
+            <thead><tr><th>{{ $t('common.code') }}</th><th>{{ $t('bank.content') }}</th><th>{{ $t('course.topics') }}</th><th>{{ $t('bank.level') }}</th></tr></thead>
             <tbody>
               <tr v-for="q in res.rows" :key="q.id" class="clickable" tabindex="0" @click="editQuestion(q.id)" @keydown.enter="editQuestion(q.id)">
                 <td><b>{{ code(q) }}</b></td>
@@ -131,10 +131,10 @@ const byKeyword = () => { S.f.q = S.nlKw; S.f.page = 1; router.push('/bank') }
           </table>
         </div>
         <div v-else class="empty-box">
-          <p class="mut">Không tìm thấy câu hỏi nào khớp hoàn toàn với bộ lọc trên.</p>
+          <p class="mut">{{ $t('search.noMatch') }}</p>
           <div class="bar">
-            <button v-if="res.hasLevel" class="btn sm pri" @click="run(true)">Nới lỏng điều kiện mức độ</button>
-            <button class="btn sm" @click="byKeyword">Tìm theo từ khóa ở Tất cả câu hỏi</button>
+            <button v-if="res.hasLevel" class="btn sm pri" @click="run(true)">{{ $t('ai.difficultyRelax') }}</button>
+            <button class="btn sm" @click="byKeyword">{{ $t('search.keywordSearch') }}</button>
           </div>
         </div>
       </div>

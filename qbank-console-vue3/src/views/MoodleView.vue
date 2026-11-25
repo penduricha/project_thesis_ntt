@@ -34,19 +34,19 @@ function copy() {
 
 <template>
   <div class="card">
-    <h3>Xuất Moodle XML</h3>
-    <p>Đã chọn <b>{{ picked.length }}</b> câu hỏi để đóng gói (tự động xuất kèm phân cấp danh mục <code>Môn học / Chương</code> của Moodle).</p>
+    <h3>{{ $t('bank.exportMoodle') }}</h3>
+    <p>{{ $t('bank.selected') }} <b>{{ picked.length }}</b> {{ $t('moodle.exportHint') }} <code>{{ $t('nav.courseTopic') }}</code> {{ $t('moodle.exportCats') }}</p>
     <div v-if="picked.length" class="chips">
-      <span v-for="q in picked" :key="q.id" class="chip-rm">{{ code(q) }} <button type="button" :aria-label="'Bỏ ' + code(q)" @click="S.sel.delete(q.id)">×</button></span>
+      <span v-for="q in picked" :key="q.id" class="chip-rm">{{ code(q) }} <button type="button" :aria-label="$t('moodle.removePrefix') + code(q)" @click="S.sel.delete(q.id)">×</button></span>
     </div>
-    <label>Tên tệp xuất về máy<input id="x-fn" v-model="S.xmlName" placeholder="qbank-export.xml"></label>
+    <label>{{ $t('moodle.fileName') }}<input id="x-fn" v-model="S.xmlName" :placeholder="$t('moodle.fileNameExample')"></label>
     <div class="btn-grid4">
-      <button type="button" class="btn" @click="pickAll">Chọn tất cả</button>
-      <button type="button" class="btn pri" @click="make">Tạo tệp XML</button>
-      <button type="button" class="btn pri" id="x-dl" :disabled="!S.xml || (meta && !meta.ok)" @click="download">Tải xuống .xml</button>
-      <button type="button" class="btn" @click="copy">Sao chép</button>
+      <button type="button" class="btn" @click="pickAll">{{ $t('common.selectAll') }}</button>
+      <button type="button" class="btn pri" @click="make">{{ $t('moodle.createFile') }}</button>
+      <button type="button" class="btn pri" id="x-dl" :disabled="!S.xml || (meta && !meta.ok)" @click="download">{{ $t('moodle.download') }}</button>
+      <button type="button" class="btn" @click="copy">{{ $t('common.copy') }}</button>
     </div>
-    <div id="xv"><template v-if="meta"><span class="b" :class="meta.ok ? 'ok' : 'er'">{{ meta.ok ? 'XML hợp lệ' : 'XML lỗi cấu trúc' }}</span> <span class="b n">{{ meta.n }} câu · kèm cây danh mục Môn học / Chương</span></template></div>
-    <pre id="xo" class="codeblock" :class="{ empty: !S.xml }">{{ S.xml || 'Chưa tạo tệp. Bấm “Tạo tệp XML” để xem trước mã nguồn và kích hoạt nút tải xuống.' }}</pre>
+    <div id="xv"><template v-if="meta"><span class="b" :class="meta.ok ? 'ok' : 'er'">{{ meta.ok ? $t('moodle.validXml') : $t('moodle.invalidXml') }}</span> <span class="b n">{{ $t('moodle.exportSummary', { n: meta.n }) }}</span></template></div>
+    <pre id="xo" class="codeblock" :class="{ empty: !S.xml }">{{ S.xml || $t('moodle.noFileYet') }}</pre>
   </div>
 </template>

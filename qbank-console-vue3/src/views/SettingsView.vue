@@ -5,6 +5,7 @@ import { S, asUser, previewRole, log, toast, tfaOpen, tfaAsk, tfaDone, loadTfaSt
 import { auth } from '../auth/authStore.js'
 import Ico from '../components/Ico.vue'
 import { getPreference, setPreference, resolveTheme, watchSystemTheme, syncFromDom, THEME_OPTIONS } from '../theme.js'
+import { LOCALES, locale, setLocale, t as tr } from '../i18n/index.js'
 
 const st = computed(() => S.tfa.st), v = computed(() => TFA_VIEW[st.value])
 const left = computed(() => { const t = Math.max(0, Math.ceil((S.tfa.until - S.now) / 1000)); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') })
@@ -35,6 +36,16 @@ function pickTheme(v) {
   toast('Đã lưu giao diện', 'ok')
 }
 const themeOptions = THEME_OPTIONS.map((v) => ({ v, label: THEME_LABEL[v], hint: THEME_HINT[v] }))
+
+/* ---------- Ngôn ngữ ----------
+   Dùng đúng cơ chế của theme: chọn xong áp ngay và ghi nhớ, không cần tải lại trang.
+   `locale` là reactive nên mọi $t() trong toàn ứng dụng tự cập nhật. */
+function pickLocale(code) {
+  if (setLocale(code) !== code) return
+  log(`Đổi ngôn ngữ sang ${LOCALES.find((l) => l.code === code)?.label || code}`, 'info')
+  toast(tr('settings.languageSaved'), 'ok')
+}
+const locales = LOCALES
 const opts = [
   ['notifyTasks', 'Thông báo khi tác vụ AI hoàn tất', 'Hiện thông báo khi một yêu cầu kiểm định kết thúc (lỗi luôn được báo).', 'Đổi tùy chọn thông báo'],
   ['confirmDelete', 'Hỏi xác nhận trước khi xóa câu hỏi', 'Tắt đi thì câu hỏi bị xóa ngay và vẫn có nút Hoàn tác. Xóa nhiều câu cùng lúc luôn hỏi xác nhận.', 'Đổi tùy chọn xác nhận xóa'],
@@ -45,45 +56,45 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy
 <template>
   <div class="card set">
     <section class="set__row" aria-labelledby="tfa-t">
-      <div class="set__intro"><h3 id="tfa-t" class="set__t">Xác thực hai yếu tố</h3><p class="set__d">Thêm bước nhập mã từ ứng dụng Authenticator mỗi khi đăng nhập.</p></div>
+      <div class="set__intro"><h3 id="tfa-t" class="set__t">{{ $t('auth.otpTitle') }}</h3><p class="set__d">{{ $t('tfa.desc') }}</p></div>
       <div class="set__body">
         <div class="set__tfa">
           <div class="tfa" :class="'tfa--' + v.cls">
             <div class="tfa__main">
               <span class="tfa__ic"><Ico :d="TFA_ICON[st]" /></span>
               <div class="tfa__txt">
-                <p class="tfa__st" role="status"><span>Trạng thái:</span><span class="ubd" :class="'ubd--' + v.bd">{{ v.text }}</span></p>
+                <p class="tfa__st" role="status"><span>{{ $t('tfa.status') }}</span><span class="ubd" :class="'ubd--' + v.bd">{{ v.text }}</span></p>
                 <p class="tfa__desc">{{ v.desc }}</p>
-                <p v-if="st === 'PENDING'" class="tfa__hint">Còn <b id="tfa-cd">{{ left }}</b> để hoàn tất. Trong lúc chờ, đăng nhập chưa yêu cầu mã xác thực.</p>
+                <p v-if="st === 'PENDING'" class="tfa__hint">{{ $t('tfa.countdownLeft') }} <b id="tfa-cd">{{ left }}</b> {{ $t('tfa.countdownRest') }}</p>
               </div>
             </div>
-            <button v-if="st === 'NOT_ENABLED'" type="button" class="btn pri" @click="tfaOpen">Kích hoạt 2FA</button>
-            <button v-else-if="st === 'PENDING'" type="button" class="btn" @click="tfaAsk">Hủy và cài lại</button>
+            <button v-if="st === 'NOT_ENABLED'" type="button" class="btn pri" @click="tfaOpen">{{ $t('tfa.enable') }}</button>
+            <button v-else-if="st === 'PENDING'" type="button" class="btn" @click="tfaAsk">{{ $t('dialog.cancelAndReset') }}</button>
           </div>
-          <p v-if="st === 'PENDING' && demo" class="mut" style="margin:0;font-size:var(--fs-sm)">Bản demo: <button type="button" class="btn sm" @click="tfaDone">Mô phỏng ứng dụng đã xác nhận</button></p>
-          <p v-else-if="st === 'PENDING'" class="mut" style="margin:0;font-size:var(--fs-sm)">Đang chờ ứng dụng trên điện thoại xác nhận. Trang tự cập nhật khi xác nhận xong.</p>
+          <p v-if="st === 'PENDING' && demo" class="mut" style="margin:0;font-size:var(--fs-sm)">{{ $t('brand.demo') }} <button type="button" class="btn sm" @click="tfaDone">{{ $t('tfa.simulate') }}</button></p>
+          <p v-else-if="st === 'PENDING'" class="mut" style="margin:0;font-size:var(--fs-sm)">{{ $t('tfa.waiting') }}</p>
         </div>
       </div>
     </section>
     <section class="set__row" aria-labelledby="role-t">
-      <div class="set__intro"><h3 id="role-t" class="set__t">Chế độ xem theo vai trò</h3><p class="set__d">Chỉ đổi giao diện xem thử, không đổi quyền của tài khoản.</p></div>
+      <div class="set__intro"><h3 id="role-t" class="set__t">{{ $t('admin.previewRole') }}</h3><p class="set__d">{{ $t('admin.previewRoleHint') }}</p></div>
       <div class="set__body">
-        <label for="preview-role">Vai trò xem thử</label>
-        <select id="preview-role" :value="S.role" @change="previewRole($event.target.value)"><option value="admin">Quản trị viên</option><option value="gv">Giảng viên</option></select>
+        <label for="preview-role">{{ $t('admin.previewRoleLabel') }}</label>
+        <select id="preview-role" :value="S.role" @change="previewRole($event.target.value)"><option value="admin">{{ $t('admin.roleAdmin') }}</option><option value="gv">{{ $t('admin.roleLecturer') }}</option></select>
         <small v-if="gv">{{ gv }}</small>
       </div>
     </section>
     <section class="set__row" aria-labelledby="theme-t">
       <div class="set__intro">
-        <h3 id="theme-t" class="set__t">Giao diện</h3>
-        <p class="set__d">Chọn nền sáng hoặc tối. Lựa chọn được ghi nhớ trên trình duyệt này.</p>
+        <h3 id="theme-t" class="set__t">{{ $t('settings.appearance') }}</h3>
+        <p class="set__d">{{ $t('settings.appearanceDesc') }}</p>
       </div>
       <div class="set__body">
         <!-- radio thật (ẩn thị giác, vẫn dùng được bằng bàn phím) + nhãn là thẻ trực quan.
              Dùng radio thay vì nút: đây là chọn MỘT trong ba, và trình đọc màn hình đọc đúng
              "1 trên 3" kèm trạng thái chọn. -->
         <fieldset class="theme-pick">
-          <legend class="sr-only">Chọn giao diện</legend>
+          <legend class="sr-only">{{ $t('settings.selectTheme') }}</legend>
           <label v-for="o in themeOptions" :key="o.v" class="theme-opt" :class="{ on: pref === o.v }">
             <input type="radio" name="theme" :value="o.v" :checked="pref === o.v" @change="pickTheme(o.v)">
             <span class="theme-opt__swatch" :class="'theme-opt__swatch--' + o.v" aria-hidden="true"></span>
@@ -91,13 +102,31 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy
           </label>
         </fieldset>
         <p class="theme-now">
-          Đang hiển thị: <b>{{ THEME_LABEL[effective] }}</b>
-          <template v-if="pref === 'auto'"> (theo cài đặt hệ điều hành)</template>
+          {{ $t('settings.currentlyShowing') }} <b>{{ THEME_LABEL[effective] }}</b>
+          <template v-if="pref === 'auto'"> {{ $t('settings.byOs') }}</template>
         </p>
       </div>
     </section>
+    <section class="set__row" aria-labelledby="lang-t">
+      <div class="set__intro">
+        <h3 id="lang-t" class="set__t">{{ $t('settings.language') }}</h3>
+        <p class="set__d">{{ $t('settings.languageDesc') }}</p>
+      </div>
+      <div class="set__body">
+        <!-- Nút chọn thay vì <select>: chỉ 5 lựa chọn, hiện được tên ngôn ngữ bằng chính
+             ngôn ngữ đó cùng mã 2 ký tự -> người dùng nhận ra ngay cả khi không đọc được
+             ngôn ngữ đang hiển thị. -->
+        <div class="lang-pick" role="radiogroup" :aria-label="$t('settings.language')">
+          <label v-for="l in locales" :key="l.code" class="lang-opt" :class="{ on: locale.code === l.code }">
+            <input type="radio" name="lang" :value="l.code" :checked="locale.code === l.code" @change="pickLocale(l.code)">
+            <span class="lang-opt__code" aria-hidden="true">{{ l.short }}</span>
+            <span class="lang-opt__txt"><b>{{ l.label }}</b><small>{{ l.flag }}</small></span>
+          </label>
+        </div>
+      </div>
+    </section>
     <section class="set__row" aria-labelledby="opt-t">
-      <div class="set__intro"><h3 id="opt-t" class="set__t">Thông báo và xác nhận</h3><p class="set__d">Lưu tự động khi bạn bật hoặc tắt.</p></div>
+      <div class="set__intro"><h3 id="opt-t" class="set__t">{{ $t('settings.notify') }}</h3><p class="set__d">{{ $t('settings.notifyDesc') }}</p></div>
       <div class="set__body">
         <label v-for="[k, t, d, msg] in opts" :key="k" class="sopt">
           <span class="sopt__t"><b>{{ t }}</b><small>{{ d }}</small></span>
@@ -132,6 +161,20 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy
 /* "Theo hệ thống": nửa sáng nửa tối, thể hiện ý "cả hai" */
 .theme-opt__swatch--auto{background:linear-gradient(100deg,#fff 0 50%,#0b1220 50% 100%)}
 .theme-opt__swatch--auto::before{content:"";position:absolute;inset:0 0 auto;height:33%;background:linear-gradient(100deg,#004b87 0 50%,#175f9f 50% 100%)}
+
+/* Bộ chọn ngôn ngữ: 5 thẻ, mỗi thẻ có mã 2 ký tự + tên ngôn ngữ viết bằng chính nó.
+   Dùng chung ngôn ngữ thị giác với .theme-opt để hai mục cài đặt trông cùng một hệ. */
+.lang-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));gap:.6rem}
+.lang-opt{position:relative;display:flex;align-items:center;gap:.6rem;padding:.6rem .7rem;border:1px solid var(--border-strong);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background-color .15s}
+.lang-opt:hover{background:var(--surface-hover)}
+.lang-opt.on{border-color:var(--primary-ink);box-shadow:0 0 0 1px var(--primary-ink)}
+.lang-opt input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.lang-opt:has(input:focus-visible){outline:2px solid var(--primary-ink);outline-offset:2px}
+.lang-opt__code{flex:none;display:grid;place-items:center;width:2.1rem;height:2.1rem;border-radius:6px;background:var(--primary-fill-soft,var(--surface-sunken));color:var(--primary-ink);font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em}
+.lang-opt.on .lang-opt__code{background:var(--primary-fill-hover);color:var(--on-primary)}
+.lang-opt__txt{display:grid;gap:.1rem;min-width:0}
+.lang-opt__txt b{font-size:var(--fs-sm);color:var(--text);font-weight:600}
+.lang-opt__txt small{font-size:var(--fs-xs);color:var(--text-muted);line-height:1}
 
 .theme-opt__txt{display:grid;gap:.1rem;min-width:0}
 .theme-opt__txt b{font-size:var(--fs-sm);color:var(--text)}

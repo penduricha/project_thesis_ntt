@@ -37,11 +37,11 @@ function toggle() { if (open.value) open.value = false; else { inp.value.focus()
            aria-autocomplete="list" autocomplete="off" :placeholder="placeholder" v-model="text"
            @focus="$event.target.select(); open = true; typing = false" @click="open = true"
            @input="open = true; typing = true; act = -1" @keydown="key" @blur="blur">
-    <button type="button" class="cb-btn" tabindex="-1" aria-label="Mở danh sách môn học" @mousedown.prevent @click="toggle"></button>
+    <button type="button" class="cb-btn" tabindex="-1" :aria-label="$t('dialog.openCourses')" @mousedown.prevent @click="toggle"></button>
     <ul :id="uid + '-lb'" class="cb-list" role="listbox" :hidden="!open" @mousedown.prevent>
-      <li v-if="all && !(typing && text.trim())" role="option" :class="{ on: cur < 0 }" @click="pick(-1)">Tất cả môn học</li>
+      <li v-if="all && !(typing && text.trim())" role="option" :class="{ on: cur < 0 }" @click="pick(-1)">{{ $t('bank.allCourses') }}</li>
       <li v-for="([c, i], k) in items" :key="c.id" role="option" :class="{ on: i === cur, act: k === act }" @click="pick(i)">{{ c.name }}</li>
-      <li v-if="!items.length" class="none">Không tìm thấy môn học phù hợp</li>
+      <li v-if="!items.length" class="none">{{ $t('course.notFound') }}</li>
     </ul>
   </div>
 </template>

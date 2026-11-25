@@ -6,6 +6,8 @@ import ModalHost from './components/ModalHost.vue'
 import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse, toastHold, toastRelease } from './store.js'
 import { auth, logout } from './auth/authStore.js'
 import { REQUEST_STATUS } from './auth/AdminRepository.js'
+import { net, isOffline, watchBrowserNetwork, startHealthCheck, probe } from './netStatus.js'
+import { t as tr } from './i18n/index.js'
 
 const route = useRoute(), router = useRouter()
 const mq = matchMedia('(min-width:768px)')
@@ -117,9 +119,15 @@ const onKey = e => {
     else if (e.key === 'n' && onBank.value) { e.preventDefault(); editQuestion(0, page.value === 'course' ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0 } : {}) }
   }
 }
+/* ---------- Theo dõi kết nối mạng ----------
+   Hai nguồn tín hiệu bổ sung nhau (xem netStatus.js): trạng thái mạng của trình duyệt và
+   kết quả request thật. Server sống lại thì banner tự tắt, không cần người dùng tải lại trang. */
+let stopHealth = null
 onMounted(() => {
   document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey); mq.addEventListener('change', onMq)
   if (window.ResizeObserver && sideBar.value) new ResizeObserver(fitSel).observe(sideBar.value)
+  watchBrowserNetwork()
+  stopHealth = startHealthCheck(30000)
 })
 
 // Chỉ tải dữ liệu sau khi biết chắc đã đăng nhập (đừng gọi API qbank khi còn ở trang /login),
@@ -131,17 +139,46 @@ watch(() => auth.isAuthenticated, (ok) => {
   loadedFor = auth.adminId
   loadQuestions()
 }, { immediate: true })
-onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey); mq.removeEventListener('change', onMq) })
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey); mq.removeEventListener('change', onMq)
+  stopHealth?.()
+})
+
+/* Nút "Thử lại": kiểm tra lại ngay thay vì đợi nhịp 30 giây, rồi nạp lại dữ liệu
+   đang thiếu. Nhờ vậy người dùng không phải F5. */
+const retrying = ref(false)
+async function retryConnection() {
+  if (retrying.value) return
+  retrying.value = true
+  try {
+    await probe()
+    if (!isOffline.value) {
+      loadQuestions()
+      toast(tr('net.backOnline'), 'ok')
+    }
+  } finally { retrying.value = false }
+}
 </script>
 
 <template>
   <RouterView v-if="isBarePage" />
   <template v-else>
-  <a href="#view" class="skip" @click.prevent="focusView">Bỏ qua điều hướng</a>
-  <div v-if="auth.isDemo" class="demo-banner" role="status">Chế độ demo (VITE_DEMO_MODE=true): dùng dữ liệu mẫu, không gọi Spring Boot. Production phải tắt.</div>
+  <a href="#view" class="skip" @click.prevent="focusView">{{ $t('common.skipNav') }}</a>
+  <div v-if="auth.isDemo" class="demo-banner" role="status">{{ $t('brand.demoBanner') }}</div>
+  <!-- Banner mất kết nối: dùng role="alert" (không phải "status") vì đây là sự cố người dùng
+       phải biết ngay; trình đọc màn hình sẽ đọc ngay thay vì xếp hàng sau thông báo khác.
+       Nút Thử lại cho phép phục hồi tại chỗ, không phải F5. -->
+  <div v-if="isOffline" class="net-banner" role="alert">
+    <span class="net-banner__dot" aria-hidden="true"></span>
+    <b>{{ $t('net.offline') }}</b>
+    <span class="net-banner__hint">{{ $t('net.offlineHint') }}</span>
+    <button type="button" class="btn sm net-banner__btn" :disabled="retrying" @click="retryConnection">
+      {{ retrying ? $t('net.retrying') : $t('common.retry') }}
+    </button>
+  </div>
   <div id="app" class="shell" :data-nav="nav" :inert="S.dlg.kind ? '' : undefined">
     <header class="topbar">
-      <button class="topbar__toggle" id="mt" aria-label="Mở hoặc đóng menu" :aria-expanded="String(nav === 'open')" aria-controls="side" @click="toggleNav">
+      <button class="topbar__toggle" id="mt" :aria-label="$t('dialog.openMenu')" :aria-expanded="String(nav === 'open')" aria-controls="side" @click="toggleNav">
         <!--
           3 gạch vẽ bằng SVG chứ không bằng 3 thẻ <span> như trước.
           Lý do: với <span> (height:2px, gap:5px trong khung 44px) chiều cao nội dung là 16px,
@@ -153,28 +190,28 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
       </button>
       <RouterLink to="/dash" class="logo-link">
         <span class="logo-badge">QB</span>
-        <span class="logo-text"><strong>QBank Console</strong><span>NTTU · Kiểm định LLM</span></span>
+        <span class="logo-text"><strong>{{ $t('brand.name') }}</strong><span>{{ $t('brand.sub') }}</span></span>
       </RouterLink>
       <div class="acct" id="acct-wrap" @focusout="e => { if (!e.currentTarget.contains(e.relatedTarget)) amOpen = false }">
-        <button class="acct__btn" id="ab" aria-haspopup="menu" :aria-expanded="String(amOpen)" aria-controls="am" aria-label="Menu tài khoản" @click="amOpen = !amOpen" @keydown.down.prevent="amOpen = true"><span class="av js-av">{{ ini }}</span><span class="acct__chev" aria-hidden="true"></span></button>
-        <div class="acct__menu" id="am" role="menu" aria-label="Tài khoản" :hidden="!amOpen" @keydown="menuKey">
-          <div class="acct__head"><div class="who"><span class="av av--lg js-av">{{ ini }}</span><div><b id="acn">{{ S.name }}</b><small id="acr">{{ S.role === 'admin' ? 'Quản trị viên' : 'Giảng viên' }}</small></div></div></div>
-          <button role="menuitem" class="acct__item" @click="go('account')">Thông tin tài khoản</button>
-          <button role="menuitem" class="acct__item" @click="go('settings')">Cài đặt</button>
-          <button role="menuitem" class="acct__item" @click="amOpen = false; openDialog('keys')">Phím tắt</button>
+        <button class="acct__btn" id="ab" aria-haspopup="menu" :aria-expanded="String(amOpen)" aria-controls="am" :aria-label="$t('admin.accountMenu')" @click="amOpen = !amOpen" @keydown.down.prevent="amOpen = true"><span class="av js-av">{{ ini }}</span><span class="acct__chev" aria-hidden="true"></span></button>
+        <div class="acct__menu" id="am" role="menu" :aria-label="$t('nav.accountMenu')" :hidden="!amOpen" @keydown="menuKey">
+          <div class="acct__head"><div class="who"><span class="av av--lg js-av">{{ ini }}</span><div><b id="acn">{{ S.name }}</b><small id="acr">{{ S.role === 'admin' ? $t('admin.roleAdmin') : $t('admin.roleLecturer') }}</small></div></div></div>
+          <button role="menuitem" class="acct__item" @click="go('account')">{{ $t('nav.account') }}</button>
+          <button role="menuitem" class="acct__item" @click="go('settings')">{{ $t('nav.settings') }}</button>
+          <button role="menuitem" class="acct__item" @click="amOpen = false; openDialog('keys')">{{ $t('dialog.shortcuts') }}</button>
           <div class="acct__sep" role="separator"></div>
-          <button role="menuitem" class="acct__item out" :disabled="loggingOut" @click="doLogout">{{ loggingOut ? 'Đang đăng xuất…' : 'Đăng xuất' }}</button>
+          <button role="menuitem" class="acct__item out" :disabled="loggingOut" @click="doLogout">{{ loggingOut ? $t('common.loggingOut') : $t('common.logout') }}</button>
         </div>
       </div>
     </header>
 
     <aside class="sidebar" id="side">
-      <nav id="menu" aria-label="Chức năng">
+      <nav id="menu" :aria-label="$t('admin.function')">
         <template v-for="([k, g, t], i) in menu" :key="k">
           <p v-if="i && g !== menu[i - 1][1]" class="nav-group">{{ g }}</p>
           <button type="button" class="nv" :class="{ on: k === page || (k === 'courses' && page === 'course') }" @click="go(k)">
             <svg viewBox="0 0 24 24" aria-hidden="true" v-html="ICO[k]"></svg><span>{{ t }}</span>
-            <em v-if="badge(k)" :aria-label="badge(k) + ' mục mới'">{{ badge(k) }}</em>
+            <em v-if="badge(k)" :aria-label="badge(k) + $t('common.newCount')">{{ badge(k) }}</em>
           </button>
         </template>
       </nav>
@@ -184,7 +221,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
     <main class="content" :inert="nav === 'open' && !desk ? '' : undefined">
       <div class="page">
         <div id="crumb">
-          <div v-if="page === 'course' && crs" class="crumb-bar"><button type="button" @click="go('courses')">‹ Môn học</button><span>/</span><span><b>{{ crs.id }}</b> · {{ crs.name }}</span></div>
+          <div v-if="page === 'course' && crs" class="crumb-bar"><button type="button" @click="go('courses')">{{ $t('nav.backCourses') }}</button><span>/</span><span><b>{{ crs.id }}</b> · {{ crs.name }}</span></div>
         </div>
         <!-- Trang 404 không có tiêu đề/phụ đề và không có nút hành động nào ở đây, nên bỏ hẳn
              khối này: trước đây nó vẫn chiếm chỗ (h1 rỗng + margin-bottom 1.25rem), làm khối 404
@@ -192,13 +229,13 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
         <div v-if="!is404" class="page__head">
           <div><h1 class="page__title" id="ttl">{{ title }}</h1><p class="page__sub" id="sub">{{ subtitle }}</p></div>
           <div id="pact">
-            <button v-if="page === 'dash'" class="btn pri" @click="editQuestion(0)">Thêm câu hỏi</button>
-            <button v-else-if="page === 'courses'" class="btn pri" @click="openDialog('course', { index: -1 })">Thêm môn học</button>
+            <button v-if="page === 'dash'" class="btn pri" @click="editQuestion(0)">{{ $t('bank.addQuestion') }}</button>
+            <button v-else-if="page === 'courses'" class="btn pri" @click="openDialog('course', { index: -1 })">{{ $t('course.addCourse') }}</button>
             <template v-else-if="page === 'course'">
-              <button class="btn sm" @click="openDialog('course', { index: S.ci })">Sửa môn học</button>
-              <button class="btn sm dan" @click="askDeleteCourse(S.ci, () => go('courses'))">Xóa môn học</button>
+              <button class="btn sm" @click="openDialog('course', { index: S.ci })">{{ $t('course.editCourse') }}</button>
+              <button class="btn sm dan" @click="askDeleteCourse(S.ci, () => go('courses'))">{{ $t('course.deleteCourse') }}</button>
             </template>
-            <button v-else-if="page === 'moodle'" class="btn pri" @click="openDialog('import')">Nhập Moodle XML</button>
+            <button v-else-if="page === 'moodle'" class="btn pri" @click="openDialog('import')">{{ $t('bank.importMoodle') }}</button>
           </div>
         </div>
         <div id="view"><RouterView /></div>
@@ -208,13 +245,13 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
   </div>
 
   <div id="sideBar" ref="sideBar" :hidden="!showSel" :inert="S.dlg.kind ? '' : undefined">
-    <b id="sn">Đã chọn {{ S.sel.size }} câu</b>
+    <b id="sn">{{ $t('bank.selectedCount', { n: S.sel.size }) }}</b>
     <div class="sel-acts">
-      <button class="btn sm" id="sb-all" @click="list(page === 'course').forEach(q => S.sel.add(q.id))">Chọn tất cả {{ shown }}</button>
-      <button class="btn sm pri" @click="bulk('ai')">Kiểm định AI</button>
-      <button class="btn sm" @click="bulk('xml')">Xuất <span class="x-long">Moodle </span>XML</button>
-      <button class="btn sm dan" @click="bulkDel" aria-label="Xóa các câu hỏi đã chọn">Xóa</button>
-      <button class="btn sm" @click="S.sel.clear()">Bỏ chọn tất cả</button>
+      <button class="btn sm" id="sb-all" @click="list(page === 'course').forEach(q => S.sel.add(q.id))">{{ $t('common.selectAll') }} {{ shown }}</button>
+      <button class="btn sm pri" @click="bulk('ai')">{{ $t('nav.group.ai') }}</button>
+      <button class="btn sm" @click="bulk('xml')">{{ $t('common.export') }} <span class="x-long">Moodle </span>XML</button>
+      <button class="btn sm dan" @click="bulkDel" :aria-label="$t('bank.deleteSelected')">{{ $t('common.delete') }}</button>
+      <button class="btn sm" @click="S.sel.clear()">{{ $t('common.clearAll') }}</button>
     </div>
   </div>
 

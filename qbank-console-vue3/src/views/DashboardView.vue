@@ -26,55 +26,55 @@ const toggleColab = () => {
 <template>
   <div class="grid">
     <button type="button" class="card stat" @click="toBank">
-      <span class="mut">Tổng số câu hỏi</span>
+      <span class="mut">{{ $t('dash.totalQuestions') }}</span>
       <b :class="total ? '' : 'zero'">{{ total }}</b>
-      <span class="stat__sub">{{ COURSES.length }} môn học · {{ totalTopics }} chương<template v-if="archived"> · {{ archived }} đã lưu trữ</template></span>
+      <span class="stat__sub">{{ $t('dash.courseSummary', { n: COURSES.length, m: totalTopics }) }}<template v-if="archived">{{ $t('dash.archivedCount', { n: archived }) }}</template></span>
     </button>
     <button type="button" class="card stat" @click="toOk">
-      <span class="mut">Đã kiểm định</span>
+      <span class="mut">{{ $t('bank.verified') }}</span>
       <b :class="okC ? '' : 'zero'">{{ okC }}</b>
-      <span class="stat__sub">{{ okC }}/{{ total }} câu · đạt {{ pct }}%</span>
+      <span class="stat__sub">{{ $t('dash.questionSummary', { n: total, p: pct }) }}</span>
     </button>
     <button type="button" class="card stat" @click="router.push('/review')">
-      <span class="mut">Đề xuất chờ duyệt</span>
+      <span class="mut">{{ $t('ai.pendingProposals') }}</span>
       <b :class="sugC ? '' : 'zero'">{{ sugC }}</b>
-      <span class="stat__sub">{{ sugC ? sugC + ' câu cần giảng viên xem xét' : 'Không có đề xuất tồn đọng' }}</span>
+      <span class="stat__sub">{{ sugC ? sugC + $t('dash.pendingReview') : $t('dash.noPendingSug') }}</span>
     </button>
     <button type="button" class="card stat" @click="router.push('/tasks')">
-      <span class="mut">Tác vụ AI đang chạy</span>
+      <span class="mut">{{ $t('ai.aiRunning') }}</span>
       <b :class="actC ? '' : 'zero'">{{ actC }}</b>
-      <span class="stat__sub">{{ actC ? actC + ' tác vụ trong hàng đợi' : 'Hàng đợi đang rảnh' }}</span>
+      <span class="stat__sub">{{ actC ? actC + $t('dash.queueCount') : $t('dash.queueIdle') }}</span>
     </button>
   </div>
 
   <div class="cols dashcols">
     <div class="card">
-      <h3>Dịch vụ suy luận (Qwen2.5-14B)</h3>
-      <div class="flow-box">Vue.js <span>→</span> Server 1 <span>→</span> Tác vụ (MariaDB) <span>→</span> Server 2 <span>→</span> LLM (Qwen2.5)</div>
+      <h3>{{ $t('llm.inferenceService') }}</h3>
+      <div class="flow-box">{{ $t('brand.stack') }} <span>→</span> {{ $t('brand.server1') }} <span>→</span> {{ $t('ai.taskTable') }} <span>→</span> {{ $t('brand.server2') }} <span>→</span> {{ $t('llm.brandMark') }}</div>
       <div class="two_fa svc" :class="S.colab ? 'two_fa--on' : 'two_fa--off'">
         <div>
-          <p class="two_fa__status"><span>Trạng thái kết nối LLM:</span><span class="b" :class="S.colab ? 'ok' : 'er'">{{ S.colab ? 'Đang hoạt động' : 'Đã ngắt kết nối' }}</span></p>
-          <p class="two_fa__desc">{{ S.colab ? 'Hệ thống sẵn sàng tiếp nhận yêu cầu kiểm định câu hỏi và tìm kiếm ngôn ngữ tự nhiên.' : 'Dịch vụ AI tạm ngắt: các tác vụ mới sẽ báo lỗi có kiểm soát, chức năng quản lý câu hỏi vẫn hoạt động.' }}</p>
+          <p class="two_fa__status"><span>{{ $t('llm.llmStatus') }}</span><span class="b" :class="S.colab ? 'ok' : 'er'">{{ S.colab ? $t('dash.running') : $t('dash.disconnected') }}</span></p>
+          <p class="two_fa__desc">{{ S.colab ? $t('dash.ready') : $t('dash.aiDown') }}</p>
         </div>
         <div>
-          <button class="btn" :class="S.colab ? '' : 'pri'" :disabled="S.dataMode === 'real'" @click="toggleColab">{{ S.colab ? 'Tạm ngắt kết nối' : 'Kết nối lại' }}</button>
-          <small style="margin-top:.35rem;text-align:center">{{ S.dataMode === 'real' ? 'Trạng thái do máy chủ báo (không mô phỏng)' : 'Mô phỏng sự cố dịch vụ suy luận' }}</small>
-          <button v-if="S.dataMode === 'real'" class="btn sm" style="margin-top:.35rem" @click="loadDashboard">Làm mới số liệu</button>
+          <button class="btn" :class="S.colab ? '' : 'pri'" :disabled="S.dataMode === 'real'" @click="toggleColab">{{ S.colab ? $t('dash.pauseConnection') : $t('dash.reconnect') }}</button>
+          <small style="margin-top:.35rem;text-align:center">{{ S.dataMode === 'real' ? $t('dash.serverReported') : $t('dash.simulateOutage') }}</small>
+          <button v-if="S.dataMode === 'real'" class="btn sm" style="margin-top:.35rem" @click="loadDashboard">{{ $t('dash.refresh') }}</button>
         </div>
       </div>
     </div>
 
     <div class="card">
       <div class="card__head">
-        <h3>Nhật ký thao tác</h3>
-        <small class="mut">Cập nhật lúc {{ now }}</small>
+        <h3>{{ $t('dash.activity') }}</h3>
+        <small class="mut">{{ $t('dash.updatedAt', { t: now }) }}</small>
       </div>
       <ul v-if="S.log.length" class="lg">
         <li v-for="(l, i) in S.log" :key="i"><span class="dot" :class="l[2] || 'info'"></span><div><span class="mut">{{ l[0] }}</span> · {{ l[1] }}</div></li>
       </ul>
       <div v-else class="empty-box" style="padding:1.5rem">
-        <p class="mut">Chưa có thao tác nào được ghi nhận.</p>
-        <button class="btn sm pri" @click="router.push('/bank')">Gửi câu hỏi đầu tiên đi kiểm định</button>
+        <p class="mut">{{ $t('dash.noActivity') }}</p>
+        <button class="btn sm pri" @click="router.push('/bank')">{{ $t('ai.sendFirst') }}</button>
       </div>
     </div>
   </div>

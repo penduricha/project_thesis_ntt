@@ -286,6 +286,27 @@ ul.lg li:hover{background:var(--tile)}ul.lg li:last-child{border-bottom:0}
 /* Forms & Inputs */
 input,select,textarea{font:inherit;font-size:var(--fs-sm);color:var(--text);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);padding:.5rem .75rem;min-height:2.5rem;max-width:100%;transition:border-color .15s ease}
 input:hover,select:hover,textarea:hover{border-color:var(--primary-ink)}
+/* ===== Danh sách chọn (<select> + <option>) =====
+   Vì sao phải khai báo riêng cho <option>: trình duyệt vẽ danh sách xổ xuống
+   bằng ĐỐI TƯỢNG CỦA HỆ ĐIỀU HÀNH, KHÔNG kế thừa color/background của <select>.
+   Không khai báo thì:
+     - Ở dark mode, danh sách hiện nền TRẮNG với chữ trắng (do color thừa kế
+       từ select đang --text sáng) -> mục nào cũng như bị tàng hình.
+     - Trạng thái hover/selected do hệ điều hành quyết định, thường là xám,
+       lệch hẳn với bảng màu xanh của web.
+
+   Lưu ý giới hạn của CSS: chỉ Firefox và Chromium (một phần) cho đặt màu nền
+   của <option>. Safari trên macOS bỏ qua hoàn toàn — đó là giới hạn của
+   trình duyệt, không phải lỗi CSS. Vì vậy vẫn đặt `color-scheme` trên <html>
+   (xem theme.js) để ít nhất Safari cũng vẽ danh sách theo tông tối/sáng. */
+select option{background:var(--surface);color:var(--text)}
+/* Mục đang được trỏ tới / đang chọn: dùng màu xanh của theme thay vì xám
+   mặc định của hệ điều hành. */
+select option:hover,select option:focus,select option:checked{background:var(--primary-fill-hover);color:var(--on-primary)}
+/* Firefox tô nền mục đang chọn bằng ::-moz-selection bên trong danh sách. */
+@supports (background-color: -moz-any-link){
+  select option:checked{background:var(--primary-fill-hover) linear-gradient(0deg,var(--primary-fill-hover) 0%,var(--primary-fill-hover) 100%);color:var(--on-primary)}
+}
 input[type=checkbox],input[type=radio]{min-height:0;width:1.25rem;height:1.25rem;padding:0;flex:none;accent-color:var(--primary-ink);cursor:pointer}
 input[type=file]{width:100%;padding:.4rem .6rem;cursor:pointer}
 input[type=file]::file-selector-button{margin-right:.75rem;padding:.35rem .75rem;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface-hover);color:var(--text);font:inherit;font-size:var(--fs-xs);font-weight:600;cursor:pointer;transition:background-color .15s ease}
@@ -787,3 +808,16 @@ body.has-sel .page{padding-bottom:calc(var(--sideBar-h,0px) + 1.5rem + env(safe-
 
 /* Banner chế độ demo: nằm trên topbar, luôn hiện để không ai tưởng là dữ liệu thật */
 .demo-banner{padding:.5rem var(--page-padding-x);background:var(--warning-badge-bg);border-bottom:1px solid var(--warning-border);color:var(--warning-strong);font-size:var(--fs-xs);font-weight:600;text-align:center;line-height:1.4}
+
+/* Banner mất kết nối. Khác demo-banner: đây là SỰ CỐ, phải nổi hơn nội dung nhưng
+   không dùng nền đỏ đặc (đỏ đặc cho cảm giác "lỗi nghiêm trọng"; ở đây thường chỉ
+   là quên bật Spring Boot). Dùng tông cảnh báo + chấm nhấp nháy làm mốc mắt.
+   Nằm trên cùng, đẩy nội dung xuống thay vì đè lên -> không che nút nào. */
+.net-banner{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;padding:.55rem var(--page-padding-x);background:var(--warning-badge-bg);border-bottom:1px solid var(--warning-border);color:var(--warning-strong);font-size:var(--fs-sm);line-height:1.4}
+.net-banner__dot{flex:none;width:.6rem;height:.6rem;border-radius:50%;background:var(--danger-fill);animation:net-blink 1.6s ease-in-out infinite}
+.net-banner__hint{font-weight:400;opacity:.9}
+.net-banner__btn{margin-left:auto;background:var(--surface);border-color:var(--warning-border);color:var(--warning-strong);font-weight:700}
+.net-banner__btn:hover:not(:disabled){background:var(--surface-hover)}
+@keyframes net-blink{0%,100%{opacity:1}50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.net-banner__dot{animation:none}}
+@media (max-width:560px){.net-banner__hint{flex:1 1 100%;order:3}.net-banner__btn{margin-left:0}}
