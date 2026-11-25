@@ -1,0 +1,283 @@
+// =====================================================================================================================
+// Tắt phản hồi thị giác khi BẤM chuột.
+//
+// Mục tiêu: bấm vào nút / liên kết / mục menu / tab / ô chọn thì giao diện KHÔNG đổi gì so với lúc chỉ rê chuột.
+// Không còn "nháy" màu, không có vòng xanh dày 4px hiện ra rồi mất, không có thanh nền sáng dưới liên kết.
+//
+// Hai nguồn gây "nháy" khi bấm, xử lý riêng:
+//   A. :active  — Bootstrap, Moodle và Design System đều tô màu riêng lúc đang giữ chuột.
+//   B. :focus do CHUỘT — Moodle vẽ vòng/nền nổi bật trên :focus (không phải :focus-visible) nên bấm chuột cũng
+//      hiện vòng. Ở đây chỉ chặn khi focus do chuột (:focus:not(:focus-visible)); điều hướng bằng bàn phím vẫn
+//      giữ nguyên vòng focus cũ (cần cho người dùng bàn phím/trình đọc màn hình).
+//
+// Không đụng: trạng thái .active/.show/[aria-current] (đó là "đang chọn", không phải phản hồi khi nhấn), liên kết
+// "bỏ qua nội dung" (.visually-hidden-focusable, chỉ hiện khi bàn phím), ô nhập văn bản (.form-control giữ vòng focus
+// để biết đang gõ ở đâu).
+//
+// Cách kiểm: dựng trang mẫu với CSS biên dịch, rê chuột rồi nhấn giữ và so computed style từng phần tử.
+// =====================================================================================================================
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A1. Token Design System của Moodle: mọi token trạng thái nhấn trỏ về token hover.
+// Phủ .mds-btn, .mds-pagination, .mds-nav-pill (thanh điều hướng chính) bằng một khối duy nhất.
+// ---------------------------------------------------------------------------------------------------------------------
+:root,
+[data-bs-theme="dark"] {
+    --mds-bg-interactive-primary-active: var(--mds-bg-interactive-primary-hover);
+    --mds-bg-interactive-secondary-active: var(--mds-bg-interactive-secondary-hover);
+    --mds-bg-interactive-danger-active: var(--mds-bg-interactive-danger-hover);
+    --mds-border-interactive-primary-active: var(--mds-border-interactive-primary-hover);
+    --mds-border-interactive-secondary-active: var(--mds-border-interactive-secondary-hover);
+    --mds-border-interactive-danger-active: var(--mds-border-interactive-danger-hover);
+    --mds-bg-nav-pill-pressed: var(--mds-bg-nav-pill-hover);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A2. Nút Bootstrap (.btn-*): xem _buttons.scss (gán biến *-active-* = *-hover-*).
+// ---------------------------------------------------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A3. Mục menu thả xuống: Bootstrap tô xanh đặc + chữ trắng khi nhấn. Cho giống hover.
+// ---------------------------------------------------------------------------------------------------------------------
+.dropdown-item:active:not(.active):not([aria-current="true"]):not([aria-selected="true"]) {
+    color: var(--#{$prefix}dropdown-link-hover-color);
+    background-color: var(--#{$prefix}dropdown-link-hover-bg);
+}
+
+// Mục "Đăng xuất" (đỏ nhạt khi hover, định nghĩa ở Boost): nhấn giữ nguyên màu hover đó, không chuyển sang xanh.
+.dropdown-menu .dropdown-item[href*="/login/logout.php"]:active:not(.active) {
+    color: $danger;
+    background-color: rgba($danger, .1);
+}
+
+[data-bs-theme="dark"] .dropdown-menu .dropdown-item[href*="/login/logout.php"]:active:not(.active) {
+    color: var(--#{$prefix}danger-text-emphasis);
+    background-color: rgba($danger, .25);
+}
+
+// Liên kết lồng trong mục menu: Boost ép chữ TRẮNG khi hover/focus/nhấn vì nó giả định nền hover đậm. Nền hover của
+// NTT là xanh nhạt nên chữ trắng không đọc được. Mục đang chọn (nền xanh đặc) vẫn giữ chữ trắng.
+.dropdown-item:not(.active):not([aria-current="true"]):not([aria-selected="true"]) {
+    &:hover a,
+    &:focus a,
+    &:focus-within a,
+    &:active a {
+        color: var(--ntt-on-primary-soft);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A4. Danh sách dạng liên kết (list-group-item-action).
+// ---------------------------------------------------------------------------------------------------------------------
+.list-group-item-action:active:not(.active) {
+    color: var(--#{$prefix}list-group-action-hover-color);
+    background-color: var(--#{$prefix}list-group-action-hover-bg);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A5. Ô chọn / nút radio: Bootstrap làm tối 10% khi nhấn.
+// ---------------------------------------------------------------------------------------------------------------------
+.form-check-input:active {
+    filter: none;
+}
+
+// Thanh trượt: núm đổi sang màu nhạt khi kéo. Tách riêng từng pseudo-element vì trình duyệt bỏ cả rule
+// nếu gặp pseudo-element nó không hiểu (-webkit-/-moz-).
+.form-range::-webkit-slider-thumb:active,
+.custom-range::-webkit-slider-thumb:active {
+    background-color: var(--ntt-primary);
+}
+
+.form-range::-moz-range-thumb:active,
+.custom-range::-moz-range-thumb:active {
+    background-color: var(--ntt-primary);
+}
+
+// Ô chọn kiểu cũ (Bootstrap 4, plugin chưa chuyển): ô vuông đổi sang xanh nhạt khi nhấn.
+.custom-control-input:not(:disabled):not(:checked):active ~ .custom-control-label::before {
+    color: inherit;
+    background-color: var(--#{$prefix}body-bg);
+    border-color: var(--ntt-border-strong);
+}
+
+.custom-control-input:not(:disabled):checked:active ~ .custom-control-label::before {
+    color: #fff;
+    background-color: var(--ntt-primary);
+    border-color: var(--ntt-primary);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A6. Thanh công cụ trình soạn thảo Atto: nút đổi sang nền xám đậm hơn khi nhấn. Cho giống hover.
+// .highlight là trạng thái "đang bật" (đậm, nghiêng...) nên giữ.
+// ---------------------------------------------------------------------------------------------------------------------
+.editor_atto_toolbar button:active:not(.highlight) {
+    background-image: radial-gradient(ellipse at center, var(--#{$prefix}white) 60%, #dfdfdf 100%);
+    background-color: #ebebeb;
+}
+
+// Chế độ tối: nền nút do quy tắc nền tối quyết định (hover và thường giống nhau), nhấn không được sáng lên.
+[data-bs-theme="dark"] .editor_atto_toolbar button:active:not(.highlight) {
+    background: var(--#{$prefix}white);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A7. Thành phần Design System còn tô riêng lúc nhấn.
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Nút .mds-btn: quy tắc :active của Bootstrap (đứng sau, cùng độ ưu tiên) thắng quy tắc :active của MDS, nên không
+// thể chỉ dựa vào token ở A1. Lặp lại đúng giá trị HOVER của từng biến thể với độ ưu tiên cao hơn.
+.mds-btn.btn {
+    // Màu chữ của nút chính/nguy hiểm khi hover lấy từ biến Bootstrap (A2), nên không đặt lại ở đây.
+    &:active:not(:disabled) {
+        background-color: var(--mds-bg-interactive-primary-hover);
+    }
+
+    &.btn-secondary:active:not(:disabled) {
+        background-color: var(--mds-bg-interactive-secondary-hover);
+        color: var(--mds-text-subtle);
+    }
+
+    &.btn-danger:active:not(:disabled) {
+        background-color: var(--mds-bg-interactive-danger-hover);
+    }
+
+    &.btn-ghost:active:not(:disabled) {
+        background-color: var(--mds-bg-interactive-secondary-hover);
+        color: var(--mds-text-subtle);
+    }
+
+    &.btn-outline-primary:active:not(:disabled) {
+        border-color: var(--mds-bg-interactive-primary-hover);
+        background-color: var(--mds-bg-interactive-primary-hover);
+        color: var(--mds-text-inverse);
+    }
+
+    &.btn-outline-secondary:active:not(:disabled) {
+        border-color: var(--mds-border-interactive-secondary-hover);
+        background-color: var(--mds-border-interactive-secondary-hover);
+        color: var(--mds-text-inverse);
+    }
+
+    &.btn-outline-danger:active:not(:disabled) {
+        border-color: var(--mds-bg-interactive-danger-hover);
+        background-color: var(--mds-bg-interactive-danger-hover);
+        color: var(--mds-text-inverse);
+    }
+}
+.mds-favourite-button:active:not(:disabled) {
+    background-color: var(--mds-bg-surface-subtle);
+}
+
+.mds-favourite-button--selected:active:not(:disabled) {
+    color: var(--mds-text-link-primary-hover);
+}
+
+.mds-choicebox-input:not(:disabled):not(:checked) + .mds-choicebox:active {
+    background-color: var(--mds-bg-surface-default);
+}
+
+.mds-choicebox-input:not(:disabled):not(:checked) + .mds-choicebox:active .mds-choicebox-indicator::after {
+    background-color: var(--mds-bg-surface-default);
+}
+
+.mds-choicebox-input:not(:disabled):checked + .mds-choicebox:active {
+    background-color: var(--mds-bg-surface-subtle);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// B1. Liên kết trần: Moodle tô nền sáng + gạch trên/dưới khi :focus (kể cả bấm chuột). Trả về liên kết thường;
+// khi rê chuột vẫn gạch chân như cũ (biến màu liên kết do a:hover đặt).
+// ---------------------------------------------------------------------------------------------------------------------
+.aalink,
+a.autolink,
+#page-footer a:not([class]),
+.arrow_link,
+a:not([class]),
+.activityinstance > a {
+    &:focus:not(:focus-visible) {
+        outline: 0;
+        background-color: transparent;
+        box-shadow: none;
+        color: rgba(var(--#{$prefix}link-color-rgb), var(--#{$prefix}link-opacity, 1));
+    }
+
+    // Moodle bỏ gạch chân khi liên kết vừa :focus vừa :hover; với focus do chuột thì phải giữ gạch chân của hover.
+    &:focus:not(:focus-visible):hover {
+        text-decoration: underline;
+    }
+}
+
+// Đường dẫn (breadcrumb) có màu riêng (_page.scss), đừng để bước đặt lại màu liên kết ở trên ghi đè.
+.breadcrumb .breadcrumb-item a:focus:not(:focus-visible) {
+    color: var(--ntt-on-primary-soft);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// B2. Vòng focus 4px của Moodle trên nút dạng liên kết, tab, ô chọn, nút đóng...
+// ---------------------------------------------------------------------------------------------------------------------
+.aabtn,
+.btn-link,
+.nav-link,
+.editor_atto_toolbar button,
+.editor_atto_toolbar .atto_toolbar_row,
+[role="button"]:not(.card),
+.list-group-item-action,
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+input[type="image"],
+a.dropdown-toggle,
+.moodle-dialogue-base .closebutton,
+button.btn-close,
+.form-autocomplete-selection,
+.accordion-button,
+.navbar-toggler,
+.drawer-toggles .drawer-toggler .btn,
+a[class*="badge-"] {
+    &:focus:not(:focus-visible) {
+        outline: 0;
+        box-shadow: none;
+    }
+}
+
+// Ô chọn/radio: ngoài vòng còn đổi màu viền sang xanh nhạt khi focus.
+.form-check-input:focus:not(:focus-visible) {
+    border-color: var(--ntt-border-strong);
+}
+
+.form-check-input:checked:focus:not(:focus-visible) {
+    border-color: var(--ntt-primary);
+}
+
+// Phân trang: Bootstrap đổi cả chữ + nền sang kiểu "focus" khi bấm; trả về kiểu thường (hover vẫn hoạt động).
+.page-link:focus:not(:focus-visible):not(:hover) {
+    color: var(--#{$prefix}pagination-color);
+    background-color: var(--#{$prefix}pagination-bg);
+    box-shadow: none;
+}
+
+.page-link:focus:not(:focus-visible):hover {
+    color: var(--#{$prefix}pagination-hover-color);
+    background-color: var(--#{$prefix}pagination-hover-bg);
+    box-shadow: none;
+}
+
+// Nút đóng (×): Bootstrap tăng độ đậm khi focus.
+.btn-close:focus:not(:focus-visible):not(:hover) {
+    opacity: var(--#{$prefix}btn-close-opacity);
+}
+
+.btn-close:focus:not(:focus-visible):hover {
+    opacity: var(--#{$prefix}btn-close-hover-opacity);
+}
+
+// Thanh trượt: vòng focus quanh núm khi bấm.
+.form-range:focus:not(:focus-visible)::-webkit-slider-thumb,
+.custom-range:focus:not(:focus-visible)::-webkit-slider-thumb {
+    box-shadow: none;
+}
+
+.form-range:focus:not(:focus-visible)::-moz-range-thumb,
+.custom-range:focus:not(:focus-visible)::-moz-range-thumb {
+    box-shadow: none;
+}

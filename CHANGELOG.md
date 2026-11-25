@@ -14,6 +14,44 @@ chỉ ghi "đã sửa X".
 
 ## [Chưa phát hành] — 2026-11-23
 
+### Giao diện Moodle: tắt hết `:active` và vòng focus do chuột (bản sửa)
+
+#### Sửa lỗi
+
+- **Bấm chuột vẫn làm nút/menu/tab/liên kết "nháy" — bản tắt `:active` trước đó không có tác dụng.**
+  Đo bằng Chromium (rê chuột rồi nhấn giữ, so màu nền/viền/chữ/bóng/gạch chân): **49/68** phần tử mẫu
+  đổi giao diện khi nhấn ở chế độ sáng (42/68 ở chế độ tối).
+  *Nguyên nhân (4 chỗ):*
+  1. Bootstrap vẽ `:active` bằng `var(--bs-btn-active-bg)`, không đọc `--bs-btn-bg`. Quy tắc cũ gán
+     `--bs-btn-bg` khi `:active` nên vô tác dụng; kèm `$btn-active-bg-shade-amount: 0%` còn làm nút nháy
+     từ màu hover **ngược về màu gốc** lúc nhấn.
+  2. `.dropdown-item:active` bị đặt nền xanh đặc (coi là "mục đang chọn") nên bấm vào mục menu là nháy
+     xanh rồi mới chuyển trang. Đã bỏ `:active` khỏi nhóm này.
+  3. Các thành phần khác tô riêng khi nhấn: `.list-group-item-action`, ô chọn/radio (`brightness(90%)`),
+     núm thanh trượt, ô chọn kiểu cũ (`.custom-control`), nút Atto, `.mds-*` (nút, phân trang, favourite,
+     choicebox).
+  4. Không phải `:active` nhưng cùng cảm giác: Moodle vẽ vòng 4px và nền sáng dưới liên kết trên
+     `:focus` (không phải `:focus-visible`) nên **bấm chuột** cũng hiện, và mất khi bấm chỗ khác.
+  *Xử lý:* `scss/ntt/_no-active.scss` mới (import cuối `post.scss`) + sửa `_buttons.scss`. Nút: gán
+  `--bs-btn-active-*` = `--bs-btn-hover-*`. Còn lại: `:active` = giá trị hover; token `--mds-*-active`
+  trỏ về token hover; vòng focus chỉ chặn khi `:focus:not(:focus-visible)` nên **bàn phím giữ nguyên vòng
+  focus**. Quy tắc `:focus` do chính theme viết (thanh trên, drawer, `.btn-link`, `.btn-icon`, chỉ mục khoá
+  học, nút trợ giúp) đổi sang `:focus-visible` để nền hover không "dính" sau khi bấm.
+  *Kết quả đo lại:* **0/68** phần tử đổi khi nhấn (sáng và tối); trạng thái nghỉ, hover và focus bàn phím
+  của cả 68 phần tử giữ nguyên.
+  Thay thế mục "Trạng thái `:active` gây khó chịu" ở bản ghi bên dưới, kể cả đoạn "giữ `:active` ở
+  `.dropdown-item`" (đã bỏ).
+- **Liên kết lồng trong mục menu bị chữ trắng trên nền hover xanh nhạt (không đọc được).** Boost ép chữ
+  trắng khi hover/focus vì giả định nền hover đậm; nền hover của NTT là xanh nhạt. Đã đặt màu chữ theo
+  token. Mục đang chọn (nền xanh đặc) vẫn chữ trắng.
+
+#### Chưa xử lý
+
+- Quy tắc `.dropdown-item:hover.text-*` của Boost dùng `!important` ép chữ trắng khi hover (chỉ xảy ra khi
+  mục menu mang class `text-*`). Chưa thấy chỗ nào trong dự án dùng, nên để nguyên.
+- Nút "bật/tắt" Bootstrap dạng `.btn-check:checked + .btn` khi đang nhấn sẽ hiện màu hover thay vì màu
+  "đang bật" (chưa thấy chỗ nào trong dự án dùng).
+
 ### Giao diện Moodle: style trang quiz + tắt trạng thái :active
 
 #### Thêm mới

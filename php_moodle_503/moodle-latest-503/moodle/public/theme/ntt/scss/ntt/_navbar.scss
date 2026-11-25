@@ -33,9 +33,9 @@ $ntt-topbar-selected: rgba(255, 255, 255, .22);
     }
 
     .nav-link:hover,
-    .nav-link:focus,
+    .nav-link:focus-visible,
     .usermenu .dropdown-toggle:hover,
-    .usermenu .dropdown-toggle:focus,
+    .usermenu .dropdown-toggle:focus-visible,
     .langmenu .dropdown-toggle:hover,
     .colourmodemenu .dropdown-toggle:hover {
         color: $ntt-on-topbar;
@@ -89,7 +89,7 @@ $ntt-topbar-selected: rgba(255, 255, 255, .22);
     }
 
     .mds-nav-pill:hover:not([aria-disabled="true"]):not(.mds-nav-pill--selected),
-    .mds-nav-pill:focus {
+    .mds-nav-pill:focus-visible {
         background-color: $ntt-topbar-hover;
         color: $ntt-on-topbar;
     }
@@ -176,8 +176,9 @@ $ntt-topbar-selected: rgba(255, 255, 255, .22);
 }
 
 // Mục đang chọn/hiện tại: xanh đặc như .nv.on.
+// KHÔNG có :active ở đây: nhấn chuột vào một mục menu không được làm nó đổi sang xanh đặc rồi mới
+// chuyển trang (nháy). Trạng thái nhấn được xử lý ở _no-active.scss (giống hover).
 .dropdown-item.active,
-.dropdown-item:active,
 .dropdown-item[aria-current="true"],
 .dropdown-item[aria-selected="true"] {
     background-color: var(--ntt-primary);
