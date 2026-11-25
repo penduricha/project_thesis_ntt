@@ -4,9 +4,16 @@ import { useRouter } from 'vue-router'
 import { LV, LV_DB, ENUM_DB, IC } from '../data/mock.js'
 import { COURSES, S, code, topicName, decide, bulkDecide, editQuestion } from '../store.js'
 import { diffWords } from '../utils.js'
+import { t } from '../i18n/index.js'
 
 const router = useRouter()
+// Keep the original category values for filtering and the API payload; only translate labels.
 const types = ['all', 'Chính tả', 'Ngữ pháp', 'Logic', 'Phương án nhiễu']
+const issueKeys = { 'Chính tả': 'issue.spelling', 'Ngữ pháp': 'issue.grammar', 'Logic': 'issue.logic', 'Phương án nhiễu': 'issue.distractor' }
+const issueLabel = value => Object.prototype.hasOwnProperty.call(issueKeys, value) ? t(issueKeys[value]) : value
+const severityKeys = { 'Cao': 'severity.high', 'Trung bình': 'severity.medium', 'Thấp': 'severity.low' }
+const severityLabel = value => Object.prototype.hasOwnProperty.call(severityKeys, value) ? t(severityKeys[value]) : value
+const difficultyLabel = value => LV.includes(value) ? t('difficulty.' + LV.indexOf(value)) : value
 const items = computed(() => S.sug.filter(s => S.q.some(x => x.id === s.qid)))
 const cards = computed(() => items.value
   .filter(s => S.rf === 'all' || s.is.some(i => i.k === S.rf))
@@ -28,7 +35,7 @@ const toggle = (id, on) => (on ? S.rsel.add(id) : S.rsel.delete(id))
     <div class="card">
       <div class="bar" style="justify-content:space-between">
         <div class="chips">
-          <button v-for="t in types" :key="t" type="button" class="chip" :class="{ on: S.rf === t }" @click="S.rf = t">{{ t === 'all' ? $t('bank.allCount') + items.length + ')' : t }}</button>
+          <button v-for="t in types" :key="t" type="button" class="chip" :class="{ on: S.rf === t }" @click="S.rf = t">{{ t === 'all' ? $t('query.allCount', { n: items.length }) : issueLabel(t) }}</button>
         </div>
         <div class="bar">
           <span class="mut" style="font-size:var(--fs-xs)">{{ $t('bank.selected') }} {{ S.rsel.size }}</span>
@@ -44,8 +51,8 @@ const toggle = (id, on) => (on ? S.rsel.add(id) : S.rsel.delete(id))
         <b>{{ code(c.q) }}</b>
         <span class="mut">· {{ COURSES[c.q.c]?.id || '' }} ({{ topicName(c.q.c, c.q.tp) }}){{ $t('ai.taskPrefix') }}<RouterLink to="/tasks" style="color:var(--primary-ink);font-weight:600">{{ c.s.tid }}</RouterLink></span>
         <span class="grow"></span>
-        <span class="b" :class="c.s.sev === 'Cao' ? 'er' : 'wa'">{{ $t('ai.severityErrors', { sev: c.s.sev, n: c.s.is.length }) }}</span>
-        <span class="b n">{{ $t('ai.suggestedDiff', { d: c.s.diff }) }}</span>
+        <span class="b" :class="c.s.sev === 'Cao' ? 'er' : 'wa'">{{ $t('ai.severityErrors', { sev: severityLabel(c.s.sev), n: c.s.is.length }) }}</span>
+        <span class="b n">{{ $t('ai.suggestedDiff', { d: difficultyLabel(c.s.diff) }) }}</span>
       </div>
       <div class="cmp" :hidden="c.same">
         <div><h4>{{ $t('ai.original') }}</h4><p><template v-for="(w, i) in c.df.oldTok" :key="i"><del v-if="w.k === 'del'" class="diff-del">{{ w.t }}</del><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
@@ -53,7 +60,7 @@ const toggle = (id, on) => (on ? S.rsel.add(id) : S.rsel.delete(id))
       </div>
       <div class="qrow__opts"><span v-for="(o, i) in c.q.o" :key="i" class="o" :class="{ on: i === c.q.a }"><i>{{ 'ABCD'[i] }}</i>{{ o }}</span></div>
       <p v-if="c.same" class="warn-inline" style="font-size:var(--fs-sm)">{{ $t('ai.noteNoRewrite') }}</p>
-      <ul class="iss"><li v-for="(i, k) in c.s.is" :key="k"><span class="b" :class="IC[i.k]">{{ i.k }}</span> {{ i.d }}</li></ul>
+      <ul class="iss"><li v-for="(i, k) in c.s.is" :key="k"><span class="b" :class="IC[i.k]">{{ issueLabel(i.k) }}</span> {{ i.d }}</li></ul>
       <details><summary class="mut" style="cursor:pointer;font-size:var(--fs-sm)">{{ $t('search.responseValid') }}</summary><pre class="codeblock" style="margin-top:.5rem">{{ c.json }}</pre></details>
       <small>{{ $t('ai.noteAnswerSafe') }}</small>
       <div class="end">

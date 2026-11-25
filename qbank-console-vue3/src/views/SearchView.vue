@@ -1,21 +1,32 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { t } from '../i18n/index.js'
 import { useRouter } from 'vue-router'
 import { LV } from '../data/mock.js'
 import { COURSES, S, code, topicName, editQuestion } from '../store.js'
 import { qbankApi, apiErrorMessage } from '../api/qbankApi.js'
 import { detailToQuestion } from '../api/mappers.js'
+import { resolveSampleQuery } from '../services/searchExamples.js'
 
 const router = useRouter()
 const busy = ref(false), res = ref(null)
-const samples = ['câu hỏi dễ môn cơ sở dữ liệu', 'câu hỏi khó môn trí tuệ nhân tạo', 'câu hỏi môn mạng chứa "HTTP"']
+// Keep the original Vietnamese queries for the existing rule-based parser and backend;
+// only the example text shown in the input is translated.
+const sampleQueries = [
+  ['search.exampleDatabase', 'câu hỏi dễ môn cơ sở dữ liệu'],
+  ['search.exampleAi', 'câu hỏi khó môn trí tuệ nhân tạo'],
+  ['search.exampleNetwork', 'câu hỏi môn mạng chứa "HTTP"'],
+]
+const samples = computed(() => sampleQueries.map(([key, query]) => ({ key, query, label: t(key) })))
+let selectedSample = null
 const RULES = [[/java|spring|int3306/, 0], [/cơ sở dữ liệu|sql|mariadb|redis|int3202/, 1], [/mạng|http|rest|int3304/, 2], [/trí tuệ|llm|transformer|qwen|int3401/, 3], [/triết|bas1150/, 4]]
 
 /* Dùng API thật khi đã đăng nhập thật và dữ liệu đến từ Spring Boot */
 const useReal = () => S.dataMode === 'real'
 
 function run(relax = false) {
-  const s = (S.nl || '').trim(); if (!s) return
+  const displayed = (S.nl || '').trim(); if (!displayed) return
+  const s = resolveSampleQuery(displayed, selectedSample)
   if (!S.colab) { res.value = { off: true }; return }
   busy.value = true
   setTimeout(async () => {
@@ -61,7 +72,7 @@ async function runReal(s, relax) {
     res.value = { ...res.value, rows, real: true, total: page?.totalElements ?? rows.length }
     S.nlKw = intent.keyword || s
   } catch (e) {
-    res.value = { ...res.value, real: false, apiError: apiErrorMessage(e, 'Không tìm được trên máy chủ, đang hiển thị kết quả cục bộ.') }
+    res.value = { ...res.value, real: false, apiError: apiErrorMessage(e, t('search.serverFallback')) }
   }
 }
 
@@ -86,7 +97,7 @@ function hl(t, kw) {
   const re = new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi')
   return t.split(re).map((x, i) => ({ t: x, m: i % 2 === 1 })).filter(x => x.t)
 }
-const sample = x => { S.nl = x; run() }
+const sample = x => { selectedSample = x; S.nl = x.label; run() }
 const byKeyword = () => { S.f.q = S.nlKw; S.f.page = 1; router.push('/bank') }
 </script>
 
@@ -98,7 +109,7 @@ const byKeyword = () => { S.f.q = S.nlKw; S.f.page = 1; router.push('/bank') }
       <input id="nl" class="grow" :aria-label="$t('search.questionLabel')" :placeholder="$t('search.examplePlaceholder')" v-model="S.nl" @keydown.enter="run()">
       <button id="nl-btn" class="btn pri" :disabled="busy" @click="run()"><template v-if="busy"><i class="spin"></i>{{ $t('ai.analyzing') }}</template><template v-else>{{ $t('search.analyzeAndSearch') }}</template></button>
     </div>
-    <div class="chips"><button v-for="x in samples" :key="x" type="button" class="chip" @click="sample(x)">{{ x }}</button></div>
+    <div class="chips"><button v-for="x in samples" :key="x.key" type="button" class="chip" @click="sample(x)">{{ x.label }}</button></div>
   </div>
 
   <div id="nlr">

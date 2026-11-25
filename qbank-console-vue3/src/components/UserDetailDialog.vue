@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import BaseModal from './BaseModal.vue'
+import { t } from '../i18n/index.js'
 import { ACC_ST, TFA_VIEW, ME } from '../data/account.js'
 import { COURSES, S, userBy, userUsed, adminCount, saveRole, openDialog, toast } from '../store.js'
 
@@ -10,10 +11,10 @@ const u = userBy(props.adminId), me = u.adminId === ME.adminId
 const v = TFA_VIEW[me ? S.tfa.st : u.totp], acc = ACC_ST[u.status]
 const role = ref(u.role), subs = ref([...(u.subjects || [])]), err = ref(''), used = userUsed(u)
 const active = computed(() => COURSES.filter(c => c.active !== false))
-const copyId = async () => { try { await navigator.clipboard.writeText(String(u.adminId)); toast('Đã sao chép mã đăng nhập', 'ok') } catch { toast('Không thể sao chép tự động. Hãy chọn ID và sao chép thủ công.', 'wa') } }
+const copyId = async () => { try { await navigator.clipboard.writeText(String(u.adminId)); toast(t('clipboard.loginIdCopied'), 'ok') } catch { toast(t('clipboard.idBlocked'), 'wa') } }
 function save() { err.value = saveRole(u.adminId, role.value, subs.value); if (!err.value) emit('close') }
 function del() {
-  if (u.role === 'Quản trị viên' && adminCount() < 2) return toast('Không thể xóa quản trị viên cuối cùng', 'wa')
+  if (u.role === 'Quản trị viên' && adminCount() < 2) return toast(t('operation.lastAdmin'), 'wa')
   openDialog('user-confirm', { adminId: u.adminId, mode: 'del' })
 }
 </script>

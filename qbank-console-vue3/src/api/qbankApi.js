@@ -4,6 +4,7 @@
 //   vd: GET {API_BASE}/admin/questions -> http://localhost:8080/api/web/admin/questions
 import SpringConfigHeader from '../auth/http.js'
 import { TokenLogin } from '../auth/TokenLogin.js'
+import { t } from '../i18n/index.js'
 
 const header = new SpringConfigHeader()
 const tokenLogin = new TokenLogin()
@@ -14,14 +15,14 @@ const url = (path) => `${ADMIN}${path}`
 
 // QbankExceptionHandler của backend trả { success:false, code, message } kèm HTTP status.
 // Helper này trích message/code để UI hiển thị, thay vì chỉ hiện "Request failed".
-export function apiErrorMessage(error, fallback = 'Không gọi được máy chủ. Vui lòng kiểm tra mạng rồi thử lại.') {
+export function apiErrorMessage(error, fallback = t('apiError.network')) {
   const body = error?.response?.data
   if (body && typeof body === 'object') {
     if (body.message) return body.message
     if (body.code) return body.code
   }
-  if (error?.response?.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
-  if (error?.response?.status === 503) return 'Dịch vụ AI (Server 2) chưa được cấu hình. Vui lòng liên hệ quản trị viên.'
+  if (error?.response?.status === 401) return t('apiError.sessionExpired')
+  if (error?.response?.status === 503) return t('apiError.aiNotConfigured')
   return fallback
 }
 

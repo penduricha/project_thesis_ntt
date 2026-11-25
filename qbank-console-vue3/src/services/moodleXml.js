@@ -1,3 +1,5 @@
+import { t as tr } from '../i18n/index.js'
+
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 const cd = t => `<text><![CDATA[${String(t).replace(/\]\]>/g, ']]]]><![CDATA[>')}]]></text>`
 
@@ -19,11 +21,11 @@ export function parseMoodleXml(v) {
   const items = [], reasons = []
   const tx = (n, s) => ((n.querySelector(s) || {}).textContent || '').replace(/<[^>]+>/g, '').trim(), full = n => parseFloat(n.getAttribute('fraction')) === 100
   d.querySelectorAll('question[type="multichoice"]').forEach((x, idx) => {
-    const a = [...x.querySelectorAll(':scope > answer')], t = tx(x, 'questiontext > text'), label = tx(x, 'name > text') || `Câu #${idx + 1}`
-    if (!t) return reasons.push(`${label}: thiếu nội dung câu dẫn`)
-    if (a.length !== 4) return reasons.push(`${label}: có ${a.length} phương án (yêu cầu đúng 4)`)
-    if (a.some(n => !tx(n, 'text'))) return reasons.push(`${label}: có phương án để trống`)
-    if (a.filter(full).length !== 1) return reasons.push(`${label}: có ${a.filter(full).length} đáp án đúng (yêu cầu đúng 1)`)
+    const a = [...x.querySelectorAll(':scope > answer')], t = tx(x, 'questiontext > text'), label = tx(x, 'name > text') || tr('importXml.questionNumber', { n: idx + 1 })
+    if (!t) return reasons.push(tr('importXml.missingStem', { label }))
+    if (a.length !== 4) return reasons.push(tr('importXml.optionCount', { label, n: a.length }))
+    if (a.some(n => !tx(n, 'text'))) return reasons.push(tr('importXml.emptyOption', { label }))
+    if (a.filter(full).length !== 1) return reasons.push(tr('importXml.correctCount', { label, n: a.filter(full).length }))
     items.push({ text: t, o: a.map(n => tx(n, 'text')), a: a.findIndex(full) })
   })
   return { items, reasons }

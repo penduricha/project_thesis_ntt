@@ -23,6 +23,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { auth } from '../auth/authStore.js'
+import { t } from '../i18n/index.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,7 +37,7 @@ const requestedPath = computed(() => route.fullPath || '')
 function homeTarget() {
   return auth.isAuthenticated ? { name: 'dash' } : { name: 'login' }
 }
-const homeLabel = computed(() => (auth.isAuthenticated ? 'Về trang chủ' : 'Về trang đăng nhập'))
+const homeLabel = computed(() => t(auth.isAuthenticated ? 'error.goHome' : 'error.goLogin'))
 
 function goHome() {
   /* replace chứ không push: nếu push, bấm ← của trình duyệt sẽ quay lại đúng trang 404 vừa

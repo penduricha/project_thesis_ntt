@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { COURSES, S, code, topicName, log, toast, openDialog } from '../store.js'
 import { buildXml, isValidXml } from '../services/moodleXml.js'
+import { t } from '../i18n/index.js'
 
 const picked = computed(() => S.q.filter(q => S.sel.has(q.id)))
 const meta = ref(null)
@@ -9,26 +10,26 @@ const meta = ref(null)
 function pickAll() {
   const all = () => S.q.forEach(q => S.sel.add(q.id))
   if (S.sel.size && S.sel.size < S.q.length)
-    return openDialog('confirm', { title: 'Chọn toàn bộ câu hỏi?', text: `Đang có ${S.sel.size} câu được chọn. Bạn muốn chọn toàn bộ ${S.q.length} câu?`, ok: 'Chọn tất cả', cancel: 'Giữ nguyên', action: all })
+    return openDialog('confirm', { title: t('export.selectAllTitle'), text: t('export.selectAllConfirm', { selected: S.sel.size, total: S.q.length }), ok: t('common.selectAll'), cancel: t('selection.keep'), action: all })
   all()
 }
 function make() {
-  if (!picked.value.length) return toast('Chưa chọn câu hỏi nào – hãy chọn ở “Tất cả câu hỏi” hoặc bấm Chọn tất cả', 'wa')
+  if (!picked.value.length) return toast(t('export.selectFirst'), 'wa')
   S.xml = buildXml(picked.value, { COURSES, code, topicName })
   meta.value = { ok: isValidXml(S.xml), n: picked.value.length }
-  log(`Tạo gói xuất ${picked.value.length} câu hỏi chuẩn Moodle XML`, 'ok')
+  log(t('export.logCreated', { n: picked.value.length }), 'ok')
 }
 function download() {
-  if (!S.xml) return toast('Hãy bấm “Tạo tệp XML” trước', 'wa')
+  if (!S.xml) return toast(t('export.createFirst'), 'wa')
   const fn = (S.xmlName || '').trim() || `qbank-export-${new Date().toISOString().slice(0, 10)}.xml`
   const a = document.createElement('a'), name = fn.endsWith('.xml') ? fn : fn + '.xml'
   a.href = URL.createObjectURL(new Blob([S.xml], { type: 'application/xml;charset=utf-8' })); a.download = name; a.click()
   setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-  log(`Tải xuống tệp ${name}`, 'ok'); toast(`Đã tải xuống ${name}`, 'ok')
+  log(t('export.logDownload', { name }), 'ok'); toast(t('export.downloaded', { name }), 'ok')
 }
 function copy() {
-  if (!S.xml) return toast('Hãy tạo tệp XML trước', 'wa')
-  navigator.clipboard?.writeText(S.xml).then(() => toast('Đã sao chép nội dung XML vào bộ nhớ tạm', 'ok'), () => toast('Trình duyệt chặn sao chép tự động – hãy bôi đen khung XML', 'wa'))
+  if (!S.xml) return toast(t('export.createFirst'), 'wa')
+  navigator.clipboard?.writeText(S.xml).then(() => toast(t('export.copied'), 'ok'), () => toast(t('export.copyBlocked'), 'wa'))
 }
 </script>
 

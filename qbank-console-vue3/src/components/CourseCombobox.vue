@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { COURSES, subjOk } from '../store.js'
-const props = defineProps({ modelValue: { type: String, default: '' }, uid: { type: String, default: 'flt' }, all: { type: Boolean, default: true }, placeholder: { type: String, default: 'Tất cả môn học' }, invalid: Boolean })
+const props = defineProps({ modelValue: { type: String, default: '' }, uid: { type: String, default: 'flt' }, all: { type: Boolean, default: true }, placeholder: { type: String, default: '' }, invalid: Boolean })
 const emit = defineEmits(['update:modelValue'])
 const norm = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase()
 const cur = computed(() => (props.modelValue === '' ? -1 : +props.modelValue))
@@ -34,7 +34,7 @@ function toggle() { if (open.value) open.value = false; else { inp.value.focus()
 <template>
   <div class="cb" :class="{ 'flt-course': uid === 'flt' }">
     <input ref="inp" :id="uid + '-c'" class="cb-in" :class="{ 'flt-sel': uid === 'flt', invalid }" role="combobox" :aria-expanded="String(open)" :aria-controls="uid + '-lb'"
-           aria-autocomplete="list" autocomplete="off" :placeholder="placeholder" v-model="text"
+           aria-autocomplete="list" autocomplete="off" :placeholder="placeholder || $t('bank.allCourses')" v-model="text"
            @focus="$event.target.select(); open = true; typing = false" @click="open = true"
            @input="open = true; typing = true; act = -1" @keydown="key" @blur="blur">
     <button type="button" class="cb-btn" tabindex="-1" :aria-label="$t('dialog.openCourses')" @mousedown.prevent @click="toggle"></button>

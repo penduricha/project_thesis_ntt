@@ -8,6 +8,7 @@ import { qbankApi, apiErrorMessage } from './api/qbankApi.js'
 import { subjectToCourse, detailToQuestion, questionToCreate, questionToUpdate, suggestionsToUi } from './api/mappers.js'
 import { TokenLogin } from './auth/TokenLogin.js'
 import { EnrollmentRepository } from './auth/EnrollmentRepository.js'
+import { t as tr } from './i18n/index.js'
 
 /* Danh sách môn học dạng reactive để thêm/sửa/xóa là giao diện tự cập nhật */
 export const COURSES = reactive(RAW_COURSES)
@@ -32,7 +33,7 @@ export const S = reactive({
   q: [], sug: [], tasks: [], sel: new Set(), f: blankF(),
   // Chế độ dữ liệu: 'real' = gọi Spring Boot, 'mock' = dữ liệu mẫu (demo hoặc backend chưa sẵn sàng).
   dataMode: 'mock', dashboard: null, activity: [],
-  log: [['09:45:12', 'Khởi tạo phiên làm việc và đồng bộ ngân hàng câu hỏi từ MariaDB', 'ok']],
+  log: [['09:45:12', { key: 'activity.initial', params: {} }, 'ok']],
   toast: { on: false, msg: '', tone: '', label: '', cb: null },
 })
 
@@ -44,6 +45,10 @@ export const busy = q => S.tasks.some(t => t.qid === q.id && live.test(t.st))
 export const resetFilters = () => { S.f = blankF(S.f.hideAns) }
 export const clearFilters = () => Object.assign(S.f, { q: '', c: '', tp: '', l: '', s: '', page: 1 })
 export function log(m, tone = 'info') { S.log.unshift([new Date().toLocaleTimeString('vi-VN'), m, tone]); if (S.log.length > 50) S.log.length = 50 }
+// Store keys and parameters for local activity messages so they react to locale changes.
+// Existing plain strings (including any server-provided text) remain untouched.
+export function logKey(key, params = {}, tone = 'info') { log({ key, params }, tone) }
+export const logText = value => value && typeof value === 'object' && typeof value.key === 'string' ? tr(value.key, value.params) : value
 
 let th
 const arm = ms => { clearTimeout(th); th = setTimeout(() => { S.toast.on = false }, ms) }
@@ -203,8 +208,12 @@ export async function loadQuestions() {
     }
   }
   try { S.q = await repo.findAll(); S.status = 'ready' }
-  catch { S.status = 'error'; toast('Không tải được ngân hàng câu hỏi', 'er') }
+  catch { S.status = 'error'; toast(tr('operation.loadFailed'), 'er') }
 }
+
+// Locally generated task messages are stored as translation keys so they update
+// when the user changes language. Raw server messages stay in `msg` unchanged.
+function setTaskMessage(task, key, params = {}) { task.msg = ''; task.msgKey = key; task.msgParams = params }
 
 export function runAI(ids) {
   if (useRealApi() && S.dataMode === 'real') return runAiReal(ids)
@@ -219,24 +228,24 @@ export function runAI(ids) {
     setTimeout(() => {
       t.ms = Date.now() - t.t0
       if (!S.colab) {
-        t.st = 'failed'; t.msg = 'Dịch vụ LLM không khả dụng (hết thời gian chờ)'
-        log(`Tác vụ ${t.id} (${code(q)}) thất bại do mất kết nối LLM`, 'er')
-        toast(t.id + ' thất bại có kiểm soát – quản lý câu hỏi vẫn hoạt động', 'er')
+        t.st = 'failed'; setTaskMessage(t, 'job.llmTimeout')
+        logKey('job.logLlmFailed', { id: t.id, code: code(q) }, 'er')
+        toast(tr('job.failedToast', { id: t.id }), 'er')
         return
       }
       const r = llm(q); t.st = 'succeeded'
-      t.msg = r.is.length ? `Phát hiện ${r.is.length} vấn đề · Độ khó gợi ý: ${r.diff}` : 'Đạt chuẩn, không phát hiện lỗi'
+      r.is.length ? setTaskMessage(t, 'job.foundDifficulty', { n: r.is.length, d: r.diff }) : setTaskMessage(t, 'job.passed')
       if (r.is.length) {
         S.sug = S.sug.filter(s => s.qid !== id)
         S.sug.push({ qid: id, tx: r.tx, is: r.is, diff: r.diff, sev: r.sev, tid: t.id })
-        q.st = 'flag'; log(`Hoàn tất ${t.id} (${code(q)}): có ${r.is.length} đề xuất AI`, 'wa')
-        if (S.notifyTasks) toast(`${t.id} hoàn tất: ${code(q)} có ${r.is.length} đề xuất AI`, 'wa')
-      } else { q.st = 'ok'; log(`Hoàn tất ${t.id} (${code(q)}): câu hỏi đạt chuẩn`, 'ok'); if (S.notifyTasks) toast(`${t.id} hoàn tất: ${code(q)} đạt chuẩn`, 'ok') }
+        q.st = 'flag'; logKey('job.logSuggestions', { id: t.id, code: code(q), n: r.is.length }, 'wa')
+        if (S.notifyTasks) toast(tr('job.toastSuggestions', { id: t.id, code: code(q), n: r.is.length }), 'wa')
+      } else { q.st = 'ok'; logKey('job.logPassed', { id: t.id, code: code(q) }, 'ok'); if (S.notifyTasks) toast(tr('job.toastPassed', { id: t.id, code: code(q) }), 'ok') }
     }, 2200 + Math.random() * 1000)
   })
-  if (!n) return toast('Các câu hỏi được chọn đang có tác vụ chạy, không tạo trùng', 'wa')
-  log(`Tiếp nhận ${n} tác vụ kiểm định AI`, 'info')
-  toast(`Đã tiếp nhận ${n} tác vụ – theo dõi ở mục “Tác vụ AI”`, 'ok')
+  if (!n) return toast(tr('job.alreadyRunning'), 'wa')
+  logKey('job.logAccepted', { n }, 'info')
+  toast(tr('job.accepted', { n }), 'ok')
 }
 
 /* Kiểm định AI thật: POST /questions/{id}/ai-check (202) rồi poll GET /ai/jobs/{taskId}
@@ -247,19 +256,21 @@ async function runAiReal(ids) {
     const q = S.q.find((x) => x.id === id)
     if (!q || S.tasks.some((t) => t.qid === id && live.test(t.st))) continue
     n++
-    const t = reactive({ id: '…', qid: id, st: 'pending', ms: 0, t0: Date.now(), started: new Date().toLocaleTimeString('vi-VN'), msg: 'Đang gửi yêu cầu…' })
+    const t = reactive({ id: '…', qid: id, st: 'pending', ms: 0, t0: Date.now(), started: new Date().toLocaleTimeString('vi-VN'), msg: '', msgKey: 'job.sending', msgParams: {} })
     S.tasks.unshift(t); if (S.tasks.length > 50) S.tasks.length = 50
     try {
       const job = await qbankApi.aiCheck(id)
       t.id = job.taskId
       t.st = String(job.status || 'pending').toLowerCase()
+      if (!live.test(t.st)) t.msgKey = ''
       // Poll tới khi kết thúc (giới hạn 2 phút để không treo tab).
       const deadline = Date.now() + 120000
       while (live.test(t.st) && Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, job.pollAfterMs || 1500))
         const cur = await qbankApi.job(job.taskId)
         t.st = String(cur.status || t.st).toLowerCase()
-        t.msg = cur.errorCode ? `Lỗi: ${cur.errorCode}` : ''
+        if (cur.errorCode) setTaskMessage(t, 'job.errorCode', { code: cur.errorCode })
+        else { t.msg = ''; t.msgKey = '' }
       }
       t.ms = Date.now() - t.t0
       if (t.st === 'succeeded') {
@@ -269,64 +280,64 @@ async function runAiReal(ids) {
           S.sug = S.sug.filter((s) => s.qid !== id)
           S.sug.push(suggestionsToUi(pending, q, job.taskId))
           q.st = 'flag'
-          t.msg = `Phát hiện ${pending.length} vấn đề`
-          log(`Hoàn tất ${job.taskId} (${code(q)}): có ${pending.length} đề xuất AI`, 'wa')
-          if (S.notifyTasks) toast(`${job.taskId} hoàn tất: ${code(q)} có ${pending.length} đề xuất AI`, 'wa')
+          setTaskMessage(t, 'job.found', { n: pending.length })
+          logKey('job.logSuggestions', { id: job.taskId, code: code(q), n: pending.length }, 'wa')
+          if (S.notifyTasks) toast(tr('job.toastSuggestions', { id: job.taskId, code: code(q), n: pending.length }), 'wa')
         } else {
-          q.st = 'ok'; t.msg = 'Đạt chuẩn, không phát hiện lỗi'
-          log(`Hoàn tất ${job.taskId} (${code(q)}): câu hỏi đạt chuẩn`, 'ok')
-          if (S.notifyTasks) toast(`${job.taskId} hoàn tất: ${code(q)} đạt chuẩn`, 'ok')
+          q.st = 'ok'; setTaskMessage(t, 'job.passed')
+          logKey('job.logPassed', { id: job.taskId, code: code(q) }, 'ok')
+          if (S.notifyTasks) toast(tr('job.toastPassed', { id: job.taskId, code: code(q) }), 'ok')
         }
       } else if (t.st === 'failed' || t.st === 'cancelled') {
-        t.msg = t.msg || 'Tác vụ thất bại'
-        log(`Tác vụ ${job.taskId} (${code(q)}) thất bại`, 'er')
-        toast(`${job.taskId} thất bại có kiểm soát – quản lý câu hỏi vẫn hoạt động`, 'er')
+        if (!t.msg && !t.msgKey) setTaskMessage(t, 'job.failed')
+        logKey('job.logFailed', { id: job.taskId, code: code(q) }, 'er')
+        toast(tr('job.failedToast', { id: job.taskId }), 'er')
       }
       await loadDashboard()
     } catch (e) {
       t.st = 'failed'; t.ms = Date.now() - t.t0
-      t.msg = apiErrorMessage(e, 'Không gửi được yêu cầu kiểm định.')
-      log(`Gửi kiểm định cho ${code(q)} thất bại: ${t.msg}`, 'er')
+      t.msgKey = ''; t.msg = apiErrorMessage(e, tr('job.sendFailed'))
+      logKey('job.logSendFailed', { code: code(q), message: t.msg }, 'er')
       toast(t.msg, 'er')
     }
   }
-  if (!n) return toast('Các câu hỏi được chọn đang có tác vụ chạy, không tạo trùng', 'wa')
-  log(`Tiếp nhận ${n} tác vụ kiểm định AI`, 'info')
-  toast(`Đã tiếp nhận ${n} tác vụ – theo dõi ở mục “Tác vụ AI”`, 'ok')
+  if (!n) return toast(tr('job.alreadyRunning'), 'wa')
+  logKey('job.logAccepted', { n }, 'info')
+  toast(tr('job.accepted', { n }), 'ok')
 }
 
 export async function removeQuestions(ids) {
   const bq = S.q.filter(q => ids.includes(q.id)), bs = S.sug.filter(s => ids.includes(s.qid))
   S.q = S.q.filter(q => !ids.includes(q.id)); S.sug = S.sug.filter(s => !ids.includes(s.qid)); ids.forEach(id => S.sel.delete(id))
-  log(`Xóa hàng loạt ${ids.length} câu hỏi`, 'wa')
+  logKey('activity.bulkDelete', { n: ids.length }, 'wa')
   if (useRealApi() && S.dataMode === 'real') {
     try {
       await Promise.all(ids.map((id) => qbankApi.archiveQuestion(id)))
       // Nút Hoàn tác chỉ hiện SAU khi lưu trữ thành công ở máy chủ, và hoàn tác thật bằng
       // POST /questions/{id}/restore. Trước đây chế độ thật không có nút này vì backend chưa có
       // chức năng khôi phục: bấm "Lưu trữ" nhầm là mất câu hỏi vĩnh viễn.
-      toast(`Đã lưu trữ ${ids.length} câu hỏi`, 'wa', 'Hoàn tác', async () => {
+      toast(tr('operation.archivedMany', { n: ids.length }), 'wa', tr('bank.undoAction'), async () => {
         try {
           await Promise.all(ids.map((id) => qbankApi.restoreQuestion(id)))
-          toast(`Đã khôi phục ${ids.length} câu hỏi`, 'ok')
+          toast(tr('operation.restoredMany', { n: ids.length }), 'ok')
           await loadQuestions()
           await loadDashboard()
         } catch (e) {
           // Khôi phục hỏng thì nạp lại danh sách để giao diện không hiện trạng thái sai.
-          toast(apiErrorMessage(e, 'Khôi phục thất bại, danh sách đã được tải lại.'), 'er')
+          toast(apiErrorMessage(e, tr('operation.restoreFailedReload')), 'er')
           await loadQuestions()
         }
       })
       await loadDashboard()
     } catch (e) {
       S.q.push(...bq); S.sug.push(...bs)
-      toast(apiErrorMessage(e, 'Lưu trữ thất bại, đã khôi phục.'), 'er')
+      toast(apiErrorMessage(e, tr('operation.archiveFailedRestored')), 'er')
     }
     return
   }
-  try { await repo.removeMany(ids) } catch { S.q.push(...bq); return toast('Xóa thất bại, đã khôi phục', 'er') }
-  toast(`Đã xóa ${ids.length} câu hỏi`, 'wa', 'Hoàn tác', async () => {
-    await repo.restoreMany(bq); S.q.push(...bq); S.sug.push(...bs); toast('Đã khôi phục các câu hỏi vừa xóa', 'ok')
+  try { await repo.removeMany(ids) } catch { S.q.push(...bq); return toast(tr('operation.deleteFailedRestored'), 'er') }
+  toast(tr('operation.deletedMany', { n: ids.length }), 'wa', tr('bank.undoAction'), async () => {
+    await repo.restoreMany(bq); S.q.push(...bq); S.sug.push(...bs); toast(tr('operation.restoredDeleted'), 'ok')
   })
 }
 
@@ -337,8 +348,8 @@ export const closeDialog = () => { S.dlg.kind = null; S.dlg.props = {} }
 
 /* ---------- Câu hỏi ---------- */
 export function editQuestion(id, ctx = {}) {
-  if (!COURSES.length) return toast('Hãy tạo ít nhất một môn học trước khi thêm câu hỏi', 'wa')
-  if (id && busy({ id })) return toast('Câu hỏi đang được kiểm định, vui lòng đợi hoàn tất', 'wa')
+  if (!COURSES.length) return toast(tr('operation.createCourseFirst'), 'wa')
+  if (id && busy({ id })) return toast(tr('operation.questionBusy'), 'wa')
   openDialog('question', { id, ctx })
 }
 /** Đọc lại 1 câu hỏi từ backend rồi cập nhật tại chỗ (giữ nguyên object để Vue không mất tham chiếu). */
@@ -359,7 +370,7 @@ async function refreshFromServer(q) {
 export async function saveQuestion(d, eid) {
   if (useRealApi() && S.dataMode === 'real') {
     const course = COURSES[d.c]
-    if (!course || course.subjectId === null) return toast('Môn học chưa gắn với danh mục trên máy chủ.', 'er')
+    if (!course || course.subjectId === null) return toast(tr('operation.courseNotLinked'), 'er')
     try {
       if (eid) {
         const cur = S.q.find((x) => x.id === eid)
@@ -367,14 +378,14 @@ export async function saveQuestion(d, eid) {
         const res = await qbankApi.updateQuestion(eid, body)
         Object.assign(cur, detailToQuestion(res, d.c, d.tp))
         S.sug = S.sug.filter((s) => s.qid !== eid)
-        log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
-        toast('Đã cập nhật câu hỏi', 'ok')
+        logKey('activity.questionUpdated', { code: code({ id: eid }) }, 'info')
+        toast(tr('operation.questionUpdated'), 'ok')
       } else {
         const res = await qbankApi.createQuestion(questionToCreate(d, course))
         const q = detailToQuestion(res, d.c, d.tp)
         S.q.push(q)
-        log('Thêm câu hỏi mới ' + code(q), 'ok')
-        toast('Đã thêm câu hỏi', 'ok')
+        logKey('activity.questionAdded', { code: code(q) }, 'ok')
+        toast(tr('operation.questionAdded'), 'ok')
       }
       await loadDashboard()
     } catch (e) {
@@ -384,11 +395,11 @@ export async function saveQuestion(d, eid) {
       //   VERSION_CONFLICT -> người khác vừa sửa cùng câu (phải tải lại)
       const errCode = e?.response?.data?.code
       if (errCode === 'TITLE_DUPLICATED') {
-        toast(apiErrorMessage(e, 'Tiêu đề câu hỏi đã được dùng trong môn này.'), 'er')
+        toast(apiErrorMessage(e, tr('operation.titleTaken')), 'er')
       } else if (status === 409) {
-        toast('Câu hỏi vừa bị người khác sửa (xung đột phiên bản). Hãy tải lại rồi sửa lại.', 'er')
+        toast(tr('operation.versionConflict'), 'er')
       } else {
-        toast(apiErrorMessage(e, 'Lưu câu hỏi thất bại.'), 'er')
+        toast(apiErrorMessage(e, tr('operation.questionSaveFailed')), 'er')
       }
     }
     return
@@ -397,8 +408,8 @@ export async function saveQuestion(d, eid) {
     const cur = S.q.find(x => x.id === eid)
     const next = { ...cur, ...d, st: cur.st === 'draft' ? 'draft' : 'stale', ver: (cur.ver || 1) + 1 }
     await repo.upsert(next); Object.assign(cur, next)
-    S.sug = S.sug.filter(s => s.qid !== eid); log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
-    toast('Đã cập nhật câu hỏi', 'ok')
+    S.sug = S.sug.filter(s => s.qid !== eid); logKey('activity.questionUpdated', { code: code({ id: eid }) }, 'info')
+    toast(tr('operation.questionUpdated'), 'ok')
   } else {
     // Chế độ mock không có backend kiểm tra, phải chặn tại đây — nếu chỉ dựa vào UI thì mọi lời
     // gọi saveQuestion không qua form (nhập hàng loạt, hoàn tác, script) đều lách được quy tắc.
@@ -406,49 +417,49 @@ export async function saveQuestion(d, eid) {
     const title = (d.title || '').trim().replace(/\s+/g, ' ').toLowerCase()
     if (title) {
       const clash = S.q.find((x) => x.c === d.c && (x.title || '').trim().replace(/\s+/g, ' ').toLowerCase() === title)
-      if (clash) return toast(`Tiêu đề này đã dùng cho ${code(clash)} trong cùng môn. Hãy đặt tiêu đề khác.`, 'er')
+      if (clash) return toast(tr('validation.titleTaken', { code: code(clash) }), 'er')
     }
     const q = { id: S.n++, st: 'draft', src: 'manual', ver: 1, ...d }
-    await repo.upsert(q); S.q.push(q); log('Thêm câu hỏi mới ' + code(q), 'ok')
-    toast('Đã thêm câu hỏi', 'ok')
+    await repo.upsert(q); S.q.push(q); logKey('activity.questionAdded', { code: code(q) }, 'ok')
+    toast(tr('operation.questionAdded'), 'ok')
   }
 }
 export function askDeleteQuestion(id) {
   const q = S.q.find(x => x.id === id); if (!q) return
-  if (busy(q)) return toast('Không thể xóa khi câu hỏi đang kiểm định', 'er')
+  if (busy(q)) return toast(tr('operation.deleteBusy'), 'er')
   if (S.confirmDelete === false) return deleteQuestion(id)
-  openDialog('confirm', { title: `Xóa câu hỏi ${code(q)}?`, text: 'Câu hỏi và đề xuất AI liên quan sẽ bị xóa khỏi ngân hàng.', cancel: 'Giữ lại', ok: 'Xóa câu hỏi', danger: true, action: () => deleteQuestion(id) })
+  openDialog('confirm', { title: tr('operation.deleteTitle', { code: code(q) }), text: tr('operation.deleteDescription'), cancel: tr('selection.keep'), ok: tr('common.delete'), danger: true, action: () => deleteQuestion(id) })
 }
 async function deleteQuestion(id) {
   const q = S.q.find(x => x.id === id), sug = S.sug.find(s => s.qid === id)
   S.q = S.q.filter(x => x.id !== id); S.sug = S.sug.filter(s => s.qid !== id); S.sel.delete(id)
-  await repo.removeMany([id]); log('Xóa câu hỏi ' + code({ id }), 'wa')
-  toast('Đã xóa ' + code({ id }), 'wa', 'Hoàn tác', async () => {
+  await repo.removeMany([id]); logKey('activity.questionDeleted', { code: code({ id }) }, 'wa')
+  toast(tr('operation.deletedQuestion', { code: code({ id }) }), 'wa', tr('bank.undoAction'), async () => {
     if (q) { await repo.restoreMany([q]); S.q.push(q) }
     if (sug) S.sug.push(sug)
-    toast('Đã khôi phục ' + code({ id }), 'ok')
+    toast(tr('operation.restoredQuestion', { code: code({ id }) }), 'ok')
   })
 }
 
 /* ---------- Môn học ---------- */
 export function addCourse({ id, name, dept, topic, active }) {
   COURSES.push({ id, name, dept, topics: [topic || 'Chương 1: Tổng quan'], subjectId: null, topicIds: [null], active }); S.cq = ''
-  log(`Thêm môn học “${id} – ${name}”`, 'ok'); toast('Đã lưu môn học mới', 'ok')
+  logKey('activity.courseAdded', { course: `${id} – ${name}` }, 'ok'); toast(tr('operation.courseSaved'), 'ok')
 }
 export function updateCourse(i, { id, name, dept, active }) {
   const old = { ...COURSES[i] }; Object.assign(COURSES[i], { id, name, dept, active })
-  log(`Cập nhật môn học “${old.id} – ${old.name}” → “${id} – ${name}”`, 'info'); toast('Đã cập nhật thông tin môn học', 'ok')
+  logKey('activity.courseUpdated', { old: `${old.id} – ${old.name}`, course: `${id} – ${name}` }, 'info'); toast(tr('operation.courseUpdated'), 'ok')
 }
 export function deleteCourse(i) {
   const ids = S.q.filter(q => q.c === i).map(q => q.id), nm = `${COURSES[i].id} – ${COURSES[i].name}`
   S.q = S.q.filter(q => q.c !== i); S.q.forEach(q => { if (q.c > i) q.c-- })
   S.sug = S.sug.filter(s => !ids.includes(s.qid)); ids.forEach(id => S.sel.delete(id))
   COURSES.splice(i, 1); S.ci = 0
-  log(`Xóa môn học “${nm}” và ${ids.length} câu hỏi`, 'wa'); toast(`Đã xóa môn học và ${ids.length} câu hỏi`, 'wa')
+  logKey('activity.courseDeleted', { course: nm, n: ids.length }, 'wa'); toast(tr('operation.courseDeleted', { n: ids.length }), 'wa')
 }
 export function askDeleteCourse(i, after) {
   const c = COURSES[i]; if (!c) return
-  openDialog('confirm', { title: `Xóa môn học “${c.id} – ${c.name}”?`, text: 'Toàn bộ chương và câu hỏi thuộc môn học này sẽ bị xóa khỏi ngân hàng.', cancel: 'Giữ lại', ok: 'Xóa môn học', danger: true, action: () => { deleteCourse(i); after?.() } })
+  openDialog('confirm', { title: tr('operation.deleteCourseTitle', { course: `${c.id} – ${c.name}` }), text: tr('operation.deleteCourseDescription'), cancel: tr('selection.keep'), ok: tr('course.deleteCourse'), danger: true, action: () => { deleteCourse(i); after?.() } })
 }
 
 /* ---------- Xem xét đề xuất AI (có hoàn tác) ---------- */
@@ -502,7 +513,7 @@ export function decide(id, ok) {
   else log(`Từ chối đề xuất AI cho ${code(q)}, giữ nội dung gốc`, 'info')
   q.st = 'ok'; S.sug = S.sug.filter(x => x.qid !== id); S.rsel.delete(id)
   repo.upsert({ ...q, o: [...q.o] })
-  toast(ok ? `Đã cập nhật ${code(q)} theo đề xuất AI` : `Đã giữ nguyên bản gốc ${code(q)}`, ok ? 'ok' : '', 'Hoàn tác', () => {
+  toast(ok ? `Đã cập nhật ${code(q)} theo đề xuất AI` : `Đã giữ nguyên bản gốc ${code(q)}`, ok ? 'ok' : '', tr('bank.undoAction'), () => {
     Object.assign(q, prev); S.sug.push(bak); repo.upsert({ ...q, o: [...q.o] }); toast(`Đã hoàn tác quyết định cho ${code(q)}`, 'info')
   })
 }
@@ -551,7 +562,7 @@ export const myScope = () => (S.role === 'admin' ? null : new Set(asUser()?.subj
 export const subjOk = ci => { const sc = myScope(); return !sc || sc.has(COURSES[ci]?.id) }
 export function previewRole(v) {
   const [r, id] = String(v).split(':'); if (!['admin', 'gv'].includes(r)) return
-  S.role = r; S.asId = r === 'gv' ? id : null; S.cq = ''; toast('Đã đổi chế độ xem', 'ok')
+  S.role = r; S.asId = r === 'gv' ? id : null; S.cq = ''; toast(tr('operation.previewChanged'), 'ok')
 }
 
 /* ---------- Quản lý tài khoản (mock) ---------- */
@@ -570,7 +581,7 @@ export function resetPassword(id) {
 }
 export function saveRole(id, r, subs) {
   const u = userBy(id); if (!u || S.role !== 'admin') return ''
-  if (u.role === 'Quản trị viên' && r !== u.role && adminCount() < 2) return 'Phải còn ít nhất một quản trị viên.'
+  if (u.role === 'Quản trị viên' && r !== u.role && adminCount() < 2) return tr('operation.lastAdmin')
   const s = r === 'Giảng viên' ? subs : [], chg = r !== u.role || s.join() !== (u.subjects || []).join()
   if (r !== u.role) { u.role = r; log('Đổi vai trò của ' + u.name + ' thành ' + r, 'info') }
   u.subjects = s; if (chg) { log('Cập nhật phạm vi môn của ' + u.name, 'info'); toast('Đã cập nhật vai trò và phạm vi môn', 'ok') }
@@ -632,7 +643,7 @@ export async function tfaOpen() {
   try {
     const res = await enrollmentRepo.startEnrollment(currentTokens(), 30)
     if (!res.success) {
-      if (res.status === 409) { await loadTfaStatus(); toast('Xác thực hai yếu tố đã được bật.', 'wa') }
+      if (res.status === 409) { await loadTfaStatus(); toast(tr('enrollment.alreadyEnabled'), 'wa') }
       else toast(res.message, 'er')
       return
     }
@@ -659,8 +670,8 @@ export async function tfaStart() {
       }
       S.tfa = { st: 'PENDING', until: Date.now() + (res.data.expiresInSeconds || 600) * 1000 }
       S.now = Date.now()
-      log('Đã ghi khóa TOTP, đang chờ ứng dụng di động xác nhận', 'info')
-      toast('Đang chờ xác nhận từ ứng dụng Authenticator (tối đa 10 phút)', 'ok')
+      logKey('twoFactor.logKeyWritten', {}, 'info')
+      toast(tr('twoFactor.waiting'), 'ok')
       watchTfaReal()
       focusTfa()
       return true
@@ -671,13 +682,13 @@ export async function tfaStart() {
   S.tfa = { st: 'PENDING', until: Date.now() + 300000 }; S.now = Date.now(); clearInterval(tt)
   tt = setInterval(() => {
     S.now = Date.now(); if (S.tfa.st !== 'PENDING') return clearInterval(tt)
-    if (S.tfa.until - S.now <= 0) { S.tfa = { st: 'NOT_ENABLED', until: 0 }; clearInterval(tt); toast('Khóa chờ xác nhận đã hết hạn, hãy kích hoạt lại', 'wa') }
+    if (S.tfa.until - S.now <= 0) { S.tfa = { st: 'NOT_ENABLED', until: 0 }; clearInterval(tt); toast(tr('twoFactor.pendingExpired'), 'wa') }
   }, 1000)
-  log('Bắt đầu kích hoạt xác thực hai yếu tố', 'info'); toast('Đã tạo khóa, đang chờ xác nhận từ ứng dụng', 'ok'); focusTfa()
+  logKey('twoFactor.logStarted', {}, 'info'); toast(tr('twoFactor.keyCreated'), 'ok'); focusTfa()
 }
 
 export function tfaAsk() {
-  openDialog('confirm', { title: 'Hủy kích hoạt xác thực hai yếu tố?', text: 'Khóa bí mật hiện tại sẽ bị xóa. Nếu muốn cài lại, bạn cần tạo khóa mới và nhập lại vào ứng dụng Authenticator.', cancel: 'Quay lại', ok: 'Hủy kích hoạt', action: tfaReset })
+  openDialog('confirm', { title: tr('twoFactor.cancelTitle'), text: tr('twoFactor.cancelDescription'), cancel: tr('auth.back'), ok: tr('twoFactor.cancelAction'), action: tfaReset })
 }
 
 export async function tfaReset() {
@@ -686,16 +697,16 @@ export async function tfaReset() {
     const ok = await enrollmentRepo.cancelPendingEnrollment(currentTokens())
     S.tfa = { st: 'NOT_ENABLED', until: 0 }
     S.tfaSec = ''
-    log('Hủy phần chờ xác nhận 2FA', 'wa')
-    toast(ok ? 'Đã hủy, bạn có thể kích hoạt lại' : 'Đã hủy cục bộ, nhưng máy chủ chưa xác nhận', ok ? 'ok' : 'wa')
+    logKey('twoFactor.logCancelled', {}, 'wa')
+    toast(ok ? tr('twoFactor.cancelled') : tr('twoFactor.cancelUnconfirmed'), ok ? 'ok' : 'wa')
     focusTfa()
     return
   }
-  S.tfa = { st: 'NOT_ENABLED', until: 0 }; log('Hủy kích hoạt xác thực hai yếu tố đang chờ', 'wa'); toast('Đã hủy, bạn có thể kích hoạt lại', 'ok'); focusTfa()
+  S.tfa = { st: 'NOT_ENABLED', until: 0 }; logKey('twoFactor.logCancelled', {}, 'wa'); toast(tr('twoFactor.cancelled'), 'ok'); focusTfa()
 }
 
 /** Chỉ dùng ở chế độ demo: mô phỏng ứng dụng di động đã xác nhận. */
-export function tfaDone() { stopTfaWatch(); S.tfa = { st: 'ENABLED', until: 0 }; log('Xác thực hai yếu tố đã được kích hoạt', 'ok'); toast('Đã kích hoạt xác thực hai yếu tố', 'ok'); focusTfa() }
+export function tfaDone() { stopTfaWatch(); S.tfa = { st: 'ENABLED', until: 0 }; logKey('twoFactor.logEnabled', {}, 'ok'); toast(tr('twoFactor.enabled'), 'ok'); focusTfa() }
 
 /* Đóng modal/hủy trang khi còn khóa chờ ở Redis: dọn để không để rác 5 phút.
    (pagehide dùng keepalive giống ModalActivate2FA của fe_web_admin) */

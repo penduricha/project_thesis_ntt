@@ -1,14 +1,15 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { S, log, toast } from '../store.js'
+import { t } from '../i18n/index.js'
 
 /* ---- chuẩn hóa / kiểm tra URL ---- */
 const norm = u => (u || '').trim().replace(/\/(api\/chat|health)\/?$/i, '').replace(/\/+$/, '')
 function issue(u) {
   if (!u) return null
-  let p; try { p = new URL(u) } catch { return ['er', 'URL chưa đúng dạng. Ví dụ: https://ten-ngau-nhien.trycloudflare.com'] }
-  if (p.protocol !== 'https:') return ['er', 'URL phải bắt đầu bằng https://']
-  if (!p.hostname.endsWith('.trycloudflare.com')) return ['wa', 'Không phải địa chỉ trycloudflare.com, Server 2 có thể từ chối.']
+  let p; try { p = new URL(u) } catch { return ['er', t('llmState.invalidUrl')] }
+  if (p.protocol !== 'https:') return ['er', t('llmState.httpsRequired')]
+  if (!p.hostname.endsWith('.trycloudflare.com')) return ['wa', t('llmState.domainWarning')]
   return null
 }
 const dirty = c => c.url !== c.sv.url || c.tok !== c.sv.tok || c.en !== c.sv.en
@@ -17,21 +18,21 @@ const bad = c => { const x = issue(norm(c.url)); return !c.url || !!(x && x[0] =
 /* ---- trạng thái hiển thị của từng ô (đèn LED, ghi chú, nút) ---- */
 function calc(c) {
   const has = c.url || c.tok, d = dirty(c), is = issue(norm(c.url)); let led, tx
-  if (c.busy) { led = 'checking'; tx = 'Đang kiểm tra…' }
-  else if (!has) { led = 'empty'; tx = 'Chưa nhập' }
-  else if (c.ok === false) { led = 'fail'; tx = 'Lỗi kết nối' }
-  else if (d) { led = c.ok ? 'ok' : 'draft'; tx = c.ok ? 'Dùng được · chưa lưu' : 'Chưa lưu' }
-  else { led = c.en ? 'ok' : 'off'; tx = c.en ? 'Sẵn sàng' : 'Đã tắt' }
-  const n = c.note ? [c.nk, c.note] : is ? is : (c.tok && c.tok.length < 20) ? ['wa', 'Token thường dài 32 ký tự. Kiểm tra có bị cắt không.'] : (d && S.api.on) ? ['', 'Chưa lưu lên Server 2.'] : ['', '']
+  if (c.busy) { led = 'checking'; tx = t('llmState.checking') }
+  else if (!has) { led = 'empty'; tx = t('llmState.empty') }
+  else if (c.ok === false) { led = 'fail'; tx = t('llmState.connectionError') }
+  else if (d) { led = c.ok ? 'ok' : 'draft'; tx = c.ok ? t('llmState.readyUnsaved') : t('llmState.unsaved') }
+  else { led = c.en ? 'ok' : 'off'; tx = c.en ? t('llmState.ready') : t('llmState.off') }
+  const n = c.note ? [c.nk, t(c.note, { seconds: c.latency })] : is ? is : (c.tok && c.tok.length < 20) ? ['wa', t('llmState.tokenShort')] : (d && S.api.on) ? ['', t('llmState.notSaved')] : ['', '']
   const off = !S.api.on || c.busy
   return { led, tx, n, tps: led === 'ok' && !d && c.tps ? c.tps + ' tok/s' : '', chk: off || bad(c) || !c.tok, sav: off || !d || bad(c) || !c.tok, clr: c.busy || !has }
 }
 const slots = computed(() => S.lm.map(calc))
 const sum = computed(() => {
   const f = S.lm.filter(c => c.url && c.tok && !bad(c)).length, b = S.lm.filter(c => c.url && c.tok && bad(c)).length, d = S.lm.filter(c => dirty(c) && !bad(c) && c.tok).length
-  return { text: (S.api.on ? `${f} node hợp lệ · ${d} chưa lưu` : `${f} node hợp lệ`) + (b ? ` · ${b} node sai URL` : ''), allOff: !S.api.on || !d, envOff: !f, free: `${S.lm.filter(c => !(c.url || c.tok)).length}/${S.lm.length} ô trống` }
+  return { text: (S.api.on ? t('llmState.summaryUnsaved', { valid: f, unsaved: d }) : t('llmState.summary', { valid: f })) + (b ? t('llmState.summaryInvalid', { n: b }) : ''), allOff: !S.api.on || !d, envOff: !f, free: t('llmState.freeSlots', { free: S.lm.filter(c => !(c.url || c.tok)).length, total: S.lm.length }) }
 })
-const st = computed(() => (S.api.busy ? ['wa', 'Đang kết nối…'] : S.api.on ? ['ok', 'Đã kết nối'] : ['n', 'Chưa nối']))
+const st = computed(() => (S.api.busy ? ['wa', t('llmState.connecting')] : S.api.on ? ['ok', t('llmState.connected')] : ['n', t('llmState.disconnected')]))
 
 /* ---- thao tác (mock API: setTimeout + dữ liệu cứng) ---- */
 const show = reactive({}), flash = ref([]), paste = ref(''), tg = ref('free')
@@ -40,30 +41,31 @@ function check(i) {
   const c = S.lm[i]; c.busy = true; c.note = ''
   setTimeout(() => {
     c.busy = false; const up = S.colab; c.ok = up; c.nk = up ? 'ok' : 'er'
-    c.note = up ? `Node phản hồi bình thường (độ trễ ${(.3 + Math.random() * .6).toFixed(1)} giây).` : 'Không kết nối được tới node: hết thời gian chờ. Kiểm tra phiên Colab còn chạy.'
+    c.latency = (.3 + Math.random() * .6).toFixed(1)
+    c.note = up ? 'llmState.nodeHealthy' : 'llmState.nodeTimeout'
     if (up && !c.tps) c.tps = +(14 + Math.random() * 6).toFixed(1)
-    log(`Kiểm tra LLM ${i + 1}: ${up ? 'dùng được' : 'lỗi kết nối'}`, up ? 'ok' : 'er')
+    log(t(up ? 'llmState.logCheckOk' : 'llmState.logCheckFailed', { n: i + 1 }), up ? 'ok' : 'er')
   }, 700 + Math.random() * 600)
 }
 function save(i, quiet) {
   const c = S.lm[i]; if (!S.api.on || bad(c) || !c.tok) return 0
   c.url = norm(c.url); c.sv = { url: c.url, tok: c.tok, en: c.en }
-  log(`Lưu cấu hình LLM ${i + 1} lên Server 2`, 'ok'); if (!quiet) toast(`Đã lưu LLM ${i + 1}`, 'ok'); return 1
+  log(t('llmState.logSaved', { n: i + 1 }), 'ok'); if (!quiet) toast(t('llmState.saved', { n: i + 1 }), 'ok'); return 1
 }
-function saveAll() { const n = S.lm.reduce((a, c, i) => a + (dirty(c) && c.url && c.tok ? save(i, 1) : 0), 0); if (n) toast(`Đã lưu ${n} node`, 'ok') }
+function saveAll() { const n = S.lm.reduce((a, c, i) => a + (dirty(c) && c.url && c.tok ? save(i, 1) : 0), 0); if (n) toast(t('llmState.savedCount', { n }), 'ok') }
 function clear(i) {
   const c = S.lm[i], b = { url: c.url, tok: c.tok, en: c.en, sv: { ...c.sv }, tps: c.tps }
   Object.assign(c, { url: '', tok: '', en: false, sv: { url: '', tok: '', en: false }, ok: null, note: '', nk: '', tps: 0 })
-  log(`Xóa cấu hình LLM ${i + 1}`, 'wa'); document.getElementById('lu' + i)?.focus()
-  toast(`Đã xóa LLM ${i + 1}`, 'wa', 'Hoàn tác', () => Object.assign(c, b))
+  log(t('llmState.logRemoved', { n: i + 1 }), 'wa'); document.getElementById('lu' + i)?.focus()
+  toast(t('llmState.removed', { n: i + 1 }), 'wa', t('bank.undoAction'), () => Object.assign(c, b))
 }
 function conn() {
   const a = S.api
-  if (a.on) { a.on = false; log('Ngắt kết nối Server 2', 'wa'); return toast('Đã ngắt kết nối Server 2', 'wa') }
+  if (a.on) { a.on = false; log(t('llmState.logDisconnected'), 'wa'); return toast(t('llmState.serverDisconnected'), 'wa') }
   a.base = a.base.trim(); a.jwt = a.jwt.trim()
-  if (!/^https?:\/\//i.test(a.base)) return toast('Địa chỉ API chưa đúng dạng, ví dụ http://localhost:8082/api', 'er')
-  if (!a.jwt) return toast('Hãy nhập JWT hoặc Internal Token.', 'er')
-  a.busy = true; setTimeout(() => { a.busy = false; a.on = true; log('Kết nối Server 2 thành công', 'ok'); toast('Đã kết nối Server 2', 'ok') }, 700)
+  if (!/^https?:\/\//i.test(a.base)) return toast(t('llmState.invalidApi'), 'er')
+  if (!a.jwt) return toast(t('llmState.tokenRequired'), 'er')
+  a.busy = true; setTimeout(() => { a.busy = false; a.on = true; log(t('llmState.logConnected'), 'ok'); toast(t('llmState.serverConnected'), 'ok') }, 700)
 }
 function parse(t) {
   const u = [], k = []
@@ -73,25 +75,25 @@ function parse(t) {
 }
 function fill() {
   const pr = parse(paste.value)
-  if (!pr.length) return toast('Chưa nhận ra cặp URL và TOKEN. Mỗi node cần một dòng URL và một dòng TOKEN.', 'wa')
+  if (!pr.length) return toast(t('llmState.noPair'), 'wa')
   const idx = tg.value === 'free' ? S.lm.map((c, i) => (c.url || c.tok ? -1 : i)).filter(i => i >= 0) : S.lm.map((_, i) => i).slice(+tg.value), n = Math.min(pr.length, idx.length)
-  if (!n) return toast('Không còn ô trống. Hãy chọn “Từ LLM … (ghi đè)”.', 'wa')
+  if (!n) return toast(t('llmState.noFreeSlot'), 'wa')
   for (let k = 0; k < n; k++) Object.assign(S.lm[idx[k]], { url: pr[k].url, tok: pr[k].tok, en: true, ok: null, note: '', nk: '' })
   paste.value = ''; flash.value = idx.slice(0, n); setTimeout(() => { flash.value = [] }, 1800)
-  toast(n < pr.length ? `Đã điền ${n}/${pr.length} node, còn ${pr.length - n} cặp chưa có ô.` : `Đã điền ${n} node. Nội dung dán đã được xóa.`, n < pr.length ? 'wa' : 'ok')
+  toast(n < pr.length ? t('llmState.filledPartial', { n, total: pr.length, left: pr.length - n }) : t('llmState.filled', { n }), n < pr.length ? 'wa' : 'ok')
 }
 async function env() {
-  const L = ['# Dán vào .env của Server 2 (AI Worker) rồi khởi động lại'], skip = []
+  const L = ['# ' + t('llmState.envHeader')], skip = []
   S.lm.forEach((c, i) => {
     if (!(c.url && c.tok)) return
     if (bad(c)) { skip.push(i + 1); return }
     const n = i + 1; L.push(`AI_NODE_${n}_URL=${norm(c.url)}`, `AI_NODE_${n}_TOKEN=${c.tok.trim()}`); if (n > 1) L.push(`AI_NODE_${n}_ENABLED=${c.en}`)
   })
-  if (L.length === 1) return toast('Chưa có node hợp lệ để xuất. URL phải bắt đầu bằng https://', 'er')
-  try { await navigator.clipboard.writeText(L.join('\n') + '\n'); toast(skip.length ? `Đã sao chép .env, bỏ qua LLM ${skip.join(', ')} vì URL chưa hợp lệ. Tệp có chứa token, đừng gửi qua kênh công khai.` : 'Đã sao chép .env. Tệp có chứa token, đừng gửi qua kênh công khai.', skip.length ? 'wa' : 'ok') }
-  catch { toast('Trình duyệt chặn clipboard. Hãy dùng HTTPS hoặc sao chép thủ công.', 'wa') }
+  if (L.length === 1) return toast(t('llmState.noValidExport'), 'er')
+  try { await navigator.clipboard.writeText(L.join('\n') + '\n'); toast(skip.length ? t('llmState.envSkipped', { nodes: skip.join(', ') }) : t('llmState.envCopied'), skip.length ? 'wa' : 'ok') }
+  catch { toast(t('llmState.clipboardBlocked'), 'wa') }
 }
-const phPaste = 'URL  : https://ten-ngau-nhien.trycloudflare.com\nTOKEN: dán token ở đây'
+const phPaste = computed(() => t('llmState.pasteExample'))
 </script>
 
 <template>

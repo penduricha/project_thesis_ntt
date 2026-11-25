@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import BaseModal from './BaseModal.vue'
+import { t } from '../i18n/index.js'
 import { S, toast, tfaStart, tfaDiscardKey } from '../store.js'
 const emit = defineEmits(['close'])
 const spaced = computed(() => S.tfaSec.replace(/(.{4})/g, '$1 ').trim())
@@ -8,7 +9,7 @@ const left = computed(() => {
   const t = Math.max(0, Math.ceil((S.tfaKeyExpiresAt - S.now) / 1000))
   return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0')
 })
-const copy = () => { navigator.clipboard && navigator.clipboard.writeText(S.tfaSec); toast('Đã sao chép khóa bí mật', 'ok') }
+const copy = async () => { try { if (!navigator.clipboard) throw new Error('Clipboard unavailable'); await navigator.clipboard.writeText(S.tfaSec); toast(t('clipboard.secretCopied'), 'ok') } catch { toast(t('clipboard.blocked'), 'wa') } }
 async function go() {
   const done = await tfaStart()
   if (done !== false) emit('close')

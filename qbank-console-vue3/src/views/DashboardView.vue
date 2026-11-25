@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { COURSES, S, act, clearFilters, log, loadDashboard } from '../store.js'
+import { COURSES, S, act, clearFilters, logKey, logText, loadDashboard } from '../store.js'
 const router = useRouter()
 // Dashboard ưu tiên số liệu thật của GET /dashboard/summary (cache Redis 30s) khi đã ghép backend;
 // chưa ghép / demo thì tính từ mảng câu hỏi mẫu như cũ.
@@ -19,7 +19,7 @@ const toOk = () => { clearFilters(); S.f.s = 'ok'; router.push('/bank') }
 // Ở chế độ thật, trạng thái dịch vụ do backend/Server 2 quyết định: không cho bật/tắt giả lập.
 const toggleColab = () => {
   if (S.dataMode === 'real') return
-  S.colab = !S.colab; log(S.colab ? 'Kết nối lại dịch vụ LLM' : 'Tạm ngắt kết nối dịch vụ LLM', S.colab ? 'ok' : 'er')
+  S.colab = !S.colab; logKey(S.colab ? 'activity.llmReconnected' : 'activity.llmPaused', {}, S.colab ? 'ok' : 'er')
 }
 </script>
 
@@ -70,7 +70,7 @@ const toggleColab = () => {
         <small class="mut">{{ $t('dash.updatedAt', { t: now }) }}</small>
       </div>
       <ul v-if="S.log.length" class="lg">
-        <li v-for="(l, i) in S.log" :key="i"><span class="dot" :class="l[2] || 'info'"></span><div><span class="mut">{{ l[0] }}</span> · {{ l[1] }}</div></li>
+        <li v-for="(l, i) in S.log" :key="i"><span class="dot" :class="l[2] || 'info'"></span><div><span class="mut">{{ l[0] }}</span> · {{ logText(l[1]) }}</div></li>
       </ul>
       <div v-else class="empty-box" style="padding:1.5rem">
         <p class="mut">{{ $t('dash.noActivity') }}</p>

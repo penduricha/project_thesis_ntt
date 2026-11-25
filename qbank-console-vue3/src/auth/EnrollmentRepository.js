@@ -1,4 +1,5 @@
 import {EnrollmentService} from "./EnrollmentService.js";
+import { t } from "../i18n/index.js";
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
@@ -14,13 +15,13 @@ export const TWO_FA_STATUS = Object.freeze({
 });
 
 const MESSAGES = Object.freeze({
-    DEFAULT_ERROR: 'Không thể tạo khóa bí mật. Vui lòng thử lại.',
-    SESSION_EXPIRED: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
-    NETWORK_ERROR: 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng.',
-    ACTIVATE_ERROR: 'Không thể kích hoạt. Vui lòng thử lại.',
-    ALREADY_ENABLED: 'Xác thực hai yếu tố đã được bật.',
-    KEY_EXPIRED: 'Khóa bí mật đã hết hạn (5 phút). Vui lòng bấm Thử lại để tạo khóa mới.',
-    STATUS_ERROR: 'Không thể đọc trạng thái xác thực hai yếu tố.',
+    DEFAULT_ERROR: 'enrollment.startError',
+    SESSION_EXPIRED: 'apiError.sessionExpired',
+    NETWORK_ERROR: 'apiError.network',
+    ACTIVATE_ERROR: 'enrollment.activateError',
+    ALREADY_ENABLED: 'enrollment.alreadyEnabled',
+    KEY_EXPIRED: 'enrollment.secretExpired',
+    STATUS_ERROR: 'enrollment.statusError',
 });
 
 function buildFailure(status, message) {
@@ -50,7 +51,7 @@ export class EnrollmentRepository {
             .postDataToStartEnrollmentRequest(tokenLogin, periodSeconds);
 
         if (response === null) {
-            return buildFailure(null, MESSAGES.NETWORK_ERROR);
+            return buildFailure(null, t(MESSAGES.NETWORK_ERROR));
         }
 
         const body = response.data;
@@ -72,12 +73,12 @@ export class EnrollmentRepository {
         }
 
         if (response.status === HTTP_UNAUTHORIZED) {
-            return buildFailure(response.status, MESSAGES.SESSION_EXPIRED);
+            return buildFailure(response.status, t(MESSAGES.SESSION_EXPIRED));
         }
         if (response.status === HTTP_CONFLICT) {
-            return buildFailure(response.status, MESSAGES.ALREADY_ENABLED);
+            return buildFailure(response.status, t(MESSAGES.ALREADY_ENABLED));
         }
-        return buildFailure(response.status, body?.message ?? MESSAGES.DEFAULT_ERROR);
+        return buildFailure(response.status, body?.message ?? t(MESSAGES.DEFAULT_ERROR));
     }
 
     /**
@@ -111,7 +112,7 @@ export class EnrollmentRepository {
             .postDataToActivateEnrollmentRequest(tokenLogin, periodSeconds);
 
         if (response === null) {
-            return buildFailure(null, MESSAGES.NETWORK_ERROR);
+            return buildFailure(null, t(MESSAGES.NETWORK_ERROR));
         }
 
         const body = response.data;
@@ -130,15 +131,15 @@ export class EnrollmentRepository {
         }
 
         if (response.status === HTTP_UNAUTHORIZED) {
-            return buildFailure(response.status, MESSAGES.SESSION_EXPIRED);
+            return buildFailure(response.status, t(MESSAGES.SESSION_EXPIRED));
         }
         if (response.status === HTTP_CONFLICT) {
-            return buildFailure(response.status, MESSAGES.ALREADY_ENABLED);
+            return buildFailure(response.status, t(MESSAGES.ALREADY_ENABLED));
         }
         if (response.status === HTTP_GONE) {
-            return {...buildFailure(response.status, MESSAGES.KEY_EXPIRED), expired: true};
+            return {...buildFailure(response.status, t(MESSAGES.KEY_EXPIRED)), expired: true};
         }
-        return buildFailure(response.status, body?.message ?? MESSAGES.ACTIVATE_ERROR);
+        return buildFailure(response.status, body?.message ?? t(MESSAGES.ACTIVATE_ERROR));
     }
 
     /**
@@ -157,7 +158,7 @@ export class EnrollmentRepository {
         });
 
         if (response === null) {
-            return failure(null, MESSAGES.NETWORK_ERROR);
+            return failure(null, t(MESSAGES.NETWORK_ERROR));
         }
 
         const body = response.data;
@@ -177,9 +178,9 @@ export class EnrollmentRepository {
             };
         }
         if (response.status === HTTP_UNAUTHORIZED) {
-            return failure(response.status, MESSAGES.SESSION_EXPIRED);
+            return failure(response.status, t(MESSAGES.SESSION_EXPIRED));
         }
-        return failure(response.status, body?.message ?? MESSAGES.STATUS_ERROR);
+        return failure(response.status, body?.message ?? t(MESSAGES.STATUS_ERROR));
     }
 
     /**

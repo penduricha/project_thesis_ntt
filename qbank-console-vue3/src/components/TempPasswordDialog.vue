@@ -1,10 +1,11 @@
 <script setup>
 import BaseModal from './BaseModal.vue'
+import { t } from '../i18n/index.js'
 import { userBy, toast } from '../store.js'
 const props = defineProps({ adminId: String, pw: String, title: String })
 const emit = defineEmits(['close'])
 const u = userBy(props.adminId)
-const copy = () => { navigator.clipboard && navigator.clipboard.writeText(props.pw); toast('Đã sao chép mật khẩu tạm', 'ok') }
+const copy = async () => { try { if (!navigator.clipboard) throw new Error('Clipboard unavailable'); await navigator.clipboard.writeText(props.pw); toast(t('clipboard.passwordCopied'), 'ok') } catch { toast(t('clipboard.blocked'), 'wa') } }
 </script>
 <template>
   <BaseModal :title="title" locked @close="emit('close')">

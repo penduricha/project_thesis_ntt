@@ -5,6 +5,7 @@ import CourseCombobox from './CourseCombobox.vue'
 import { LV } from '../data/mock.js'
 import { COURSES, S, topicName, importQuestions, log, toast } from '../store.js'
 import { parseMoodleXml } from '../services/moodleXml.js'
+import { t } from '../i18n/index.js'
 
 const emit = defineEmits(['close'])
 const xml = ref(''), err = ref(''), chipErr = ref(''), res = ref(null), dirty = ref(false), busy = ref(false)
@@ -15,24 +16,24 @@ function pickCourse(v) { S.imp.c = +v; S.imp.tp = 0; chipErr.value = '' }
 function onFile(e) {
   const f = e.target.files[0]; if (!f) return
   dirty.value = true
-  if (!/\.xml$/i.test(f.name)) { err.value = 'Chỉ nhận tệp có đuôi .xml.'; e.target.value = ''; return }
+  if (!/\.xml$/i.test(f.name)) { err.value = t('importXml.extension'); e.target.value = ''; return }
   err.value = ''
   const r = new FileReader(); r.onload = () => { xml.value = r.result }; r.readAsText(f)
 }
-function cancel() { if (dirty.value && !confirm('Bạn đang nhập dở dữ liệu. Bạn có chắc muốn đóng và bỏ thay đổi?')) return; emit('close') }
+function cancel() { if (dirty.value && !confirm(t('validation.discard'))) return; emit('close') }
 async function save() {
   err.value = chipErr.value = ''; res.value = null
   const p = parseMoodleXml(xml.value)
-  if (!p) { err.value = 'XML trống hoặc sai cấu trúc nên chưa thể lưu. Hãy kiểm tra lại các thẻ đóng/mở.'; return }
-  if (!crs.value?.topics[S.imp.tp]) { chipErr.value = 'Môn học này chưa có chương. Hãy thêm chương trước khi nhập.'; return }
+  if (!p) { err.value = t('importXml.invalid'); return }
+  if (!crs.value?.topics[S.imp.tp]) { chipErr.value = t('importXml.noChapter'); return }
   busy.value = true
   try {
     const ok = await importQuestions(p.items)
     dirty.value = false
-    log(`Nhập Moodle XML: ${ok} thành công, ${p.reasons.length} bỏ qua`, ok ? 'ok' : 'wa')
-    if (ok && !p.reasons.length) { emit('close'); return toast(`Đã lưu ${ok} câu vào ${crs.value.id} – ${crs.value.name}`, 'ok') }
+    log(t('importXml.logResult', { saved: ok, skipped: p.reasons.length }), ok ? 'ok' : 'wa')
+    if (ok && !p.reasons.length) { emit('close'); return toast(t('importXml.savedTo', { n: ok, id: crs.value.id, name: crs.value.name }), 'ok') }
     res.value = { ok, reasons: p.reasons }
-  } catch { err.value = 'Không lưu được dữ liệu, vui lòng thử lại.' }
+  } catch { err.value = t('importXml.saveFailed') }
   finally { busy.value = false }
 }
 </script>
