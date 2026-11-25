@@ -39,15 +39,35 @@ Moodle biên dịch lại SCSS, không cần xoá cache. Nhớ tắt khi chạy 
 | `fonts/be-vietnam-pro/` | Phông (giấy phép OFL 1.1, xem `OFL.txt` và `thirdpartylibs.xml`). |
 | `settings.php` | Trang cài đặt: màu thương hiệu, SCSS thô (để chỉnh nhanh mà không sửa tệp). |
 
-## Trạng thái `:active` bị tắt
+## Bấm chuột không làm giao diện đổi (`:active` và focus do chuột)
 
-Theme chỉ có hai trạng thái thị giác là "thường" và "hover". Khi nhấn chuột (`:active`), nút
-**không** đổi màu và **không** nhảy xuống: `_buttons.scss` gán `--bs-btn-active-*` bằng đúng
-`--bs-btn-hover-*`, còn `pre.scss` đặt `$btn-active-bg-shade-amount: 0%` để tầng biến SCSS không
-tự sinh màu active riêng.
+Theme chỉ có hai trạng thái thị giác là "thường" và "hover". Bấm/giữ chuột trông y hệt hover: không đổi
+màu, không nhảy xuống, không hiện vòng xanh. Phần này nằm ở `scss/ntt/_no-active.scss` (import cuối
+cùng trong `post.scss`) và `_buttons.scss`.
 
-Ngoại lệ: `.dropdown-item:active` vẫn giữ nền xanh đặc, vì đó là **mục đang chọn** (trạng thái cố
-định), không phải hiệu ứng nhấn.
+Có hai nguồn "nháy" khi bấm, xử lý riêng:
+
+| Nguồn | Ai gây ra | Cách xử lý |
+| --- | --- | --- |
+| `:active` | Bootstrap (nút, mục menu, danh sách, ô chọn, thanh trượt), Moodle (nút Atto), Design System (`.mds-*`) | Gán biến `--bs-btn-active-*` = `--bs-btn-hover-*` (nút); đặt `:active` = giá trị hover (các phần còn lại); token `--mds-*-active/pressed` trỏ về token hover |
+| `:focus` do chuột | Moodle vẽ vòng 4px và nền sáng dưới liên kết trên `:focus` (không phải `:focus-visible`) nên bấm chuột cũng hiện | Chỉ chặn `:focus:not(:focus-visible)`: **bàn phím vẫn giữ nguyên vòng focus** |
+
+Lưu ý khi sửa tiếp:
+
+- Bootstrap vẽ `:active` bằng `var(--bs-btn-active-bg)`, **không** đọc `--bs-btn-bg`. Gán `--bs-btn-bg` trong
+  `:active` là vô tác dụng (nút vẫn nháy về màu gốc rồi tối lại). Phải gán chính biến `*-active-*`.
+- Nút có màu hover đặt trực tiếp bằng thuộc tính (không qua biến) thì phải đặt thêm biến `--bs-btn-hover-*`
+  cho khớp, nếu không `:active` sẽ lệch khỏi hover (xem `.btn-link`, `.btn-icon` trong `_buttons.scss`).
+- Trong quy tắc của chính theme, dùng `:focus-visible` thay `:focus` cho kiểu "giống hover", nếu không nền
+  hover sẽ "dính" sau khi bấm.
+- `.active`, `.show`, `[aria-current]`, `[aria-selected]` là trạng thái **đang chọn**, không phải phản hồi khi
+  nhấn: giữ nguyên, kể cả `.dropdown-item.active` (nền xanh đặc).
+- `.visually-hidden-focusable` (liên kết "bỏ qua nội dung") và ô nhập văn bản (`.form-control`) vẫn giữ
+  `:focus` vì chúng cần cho người dùng bàn phím / để biết đang gõ ở đâu.
+
+Cách kiểm: biên dịch SCSS rồi, trên trang mẫu dùng CSS đó, rê chuột rồi nhấn giữ từng phần tử và so
+`getComputedStyle` (màu nền, chữ, viền, bóng, filter, gạch chân) giữa hai trạng thái. Kết quả hiện tại:
+0/68 phần tử mẫu đổi khi nhấn, cả chế độ sáng và tối.
 
 ## Cách hoạt động
 

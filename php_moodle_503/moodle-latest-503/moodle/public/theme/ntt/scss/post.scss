@@ -18,3 +18,5 @@
 @import "ntt/question";
 @import "ntt/quiz";
 @import "ntt/login";
+// Phải đứng cuối: ghi đè trạng thái :active và :focus-do-chuột của mọi thành phần phía trên.
+@import "ntt/no-active";

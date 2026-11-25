@@ -1,28 +1,29 @@
 // Nút. Thiết kế: nút thường là viền xám xanh, nền trong; nút chính xanh đặc; nút nguy hiểm đỏ đặc; chữ đậm 600.
 // Bootstrap 5.3 dựng nút bằng biến --bs-btn-*, nên chỉ cần gán lại biến cho từng loại nút.
 
-// Trạng thái :active (đang giữ chuột) bị TẮT trên toàn bộ nút.
+// Trạng thái :active (đang giữ chuột) bị TẮT trên toàn bộ nút: nhấn chuột trông y hệt hover.
 //
 // Vì sao: thiết kế chỉ có hai trạng thái thị giác là "thường" và "hover". Thêm trạng thái thứ ba
-// khi nhấn làm giao diện "nhảy" — trước đây là transform: translateY(1px) khiến nút tụt xuống
-// 1px, và mỗi loại nút còn tự làm tối/mở màu thêm 32% khi nhấn, trông giật và không đồng nhất.
+// khi nhấn làm giao diện "nhảy" (nút tụt 1px, đổi màu rồi đổi lại).
 //
-// Cách tắt: gán biến *-active-* bằng đúng biến *-hover-*. Bootstrap 5.3 dựng :active từ các biến
-// này nên nhấn chuột sẽ trông y hệt hover — không đổi màu, không đổi viền, không đổi chữ. Làm ở
-// đây (một chỗ) là phủ cả .btn-primary/.btn-secondary/.btn-danger/.btn-outline-* vì mọi loại nút
-// đều đọc cùng bộ biến này.
+// Cách tắt (đã đo bằng Chromium: rê chuột rồi nhấn giữ, so màu nền/viền/chữ/bóng):
+// Bootstrap 5.3 vẽ :active bằng `background-color: var(--bs-btn-active-bg)` (và -color, -border-color),
+// KHÔNG đọc --bs-btn-bg. Vì vậy chỉ gán --bs-btn-bg/--bs-btn-color khi :active là vô tác dụng — nút
+// vẫn đổi màu lúc nhấn (nền "nháy" về màu gốc rồi tối lại). Phải gán chính các biến *-active-* bằng
+// biến *-hover-* tương ứng. Làm ở đây một lần là phủ mọi loại nút vì tất cả đều đọc cùng bộ biến.
+//
+// Loại trừ .active/.show: đó là trạng thái "đang bật" (nút chuyển đổi, dropdown đang mở), cần giữ
+// màu riêng chứ không phải phản hồi khi nhấn.
 .btn {
     font-weight: 600;
     line-height: 1.4;
     transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 
-    // :active = :hover. Không dùng `all: unset` hay `transform:none` riêng lẻ vì còn phải chặn
-    // cả phần đổi màu do shade-amount gây ra ở tầng biến SCSS.
-    &:not(:disabled):not(.disabled):active {
-        --#{$prefix}btn-color: var(--#{$prefix}btn-hover-color);
-        --#{$prefix}btn-bg: var(--#{$prefix}btn-hover-bg);
-        --#{$prefix}btn-border-color: var(--#{$prefix}btn-hover-border-color);
-        box-shadow: none;
+    &:active:not(.active):not(.show):not(:disabled):not(.disabled) {
+        --#{$prefix}btn-active-color: var(--#{$prefix}btn-hover-color);
+        --#{$prefix}btn-active-bg: var(--#{$prefix}btn-hover-bg);
+        --#{$prefix}btn-active-border-color: var(--#{$prefix}btn-hover-border-color);
+        --#{$prefix}btn-active-shadow: none;
     }
 
     &:disabled,
@@ -60,11 +61,14 @@
 .btn-link {
     --#{$prefix}btn-color: var(--ntt-on-primary-soft);
     --#{$prefix}btn-hover-color: var(--ntt-on-primary-soft);
+    --#{$prefix}btn-hover-bg: var(--ntt-primary-soft);
+    --#{$prefix}btn-hover-border-color: transparent;
     --#{$prefix}btn-active-color: var(--ntt-on-primary-soft);
     font-weight: 600;
 
+    // :focus-visible (bàn phím) chứ không phải :focus, để bấm chuột không để lại nền "dính" sau khi rời chuột.
     &:hover,
-    &:focus {
+    &:focus-visible {
         background-color: var(--ntt-primary-soft);
         text-decoration: none;
     }
@@ -83,7 +87,12 @@
 }
 
 // Nút biểu tượng tròn (Moodle dùng nhiều): hover nền nhạt của màu chính.
-.btn-icon:hover,
-.btn-icon:focus {
-    background-color: var(--ntt-primary-soft);
+.btn-icon {
+    --#{$prefix}btn-hover-bg: var(--ntt-primary-soft);
+    --#{$prefix}btn-hover-border-color: transparent;
+
+    &:hover,
+    &:focus-visible {
+        background-color: var(--ntt-primary-soft);
+    }
 }

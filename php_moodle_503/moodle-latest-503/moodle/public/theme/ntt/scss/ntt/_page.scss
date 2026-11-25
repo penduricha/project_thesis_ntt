@@ -34,12 +34,15 @@
 
 // Nút trợ giúp ở chân trang (popover).
 .btn-footer-popover {
+    --#{$prefix}btn-hover-bg: var(--ntt-primary-hover);
+    --#{$prefix}btn-hover-border-color: var(--ntt-primary-hover);
+    --#{$prefix}btn-hover-color: #fff;
     background-color: var(--ntt-primary);
     border-color: var(--ntt-primary);
     color: #fff;
 
     &:hover,
-    &:focus {
+    &:focus-visible {
         background-color: var(--ntt-primary-hover);
         border-color: var(--ntt-primary-hover);
         color: #fff;

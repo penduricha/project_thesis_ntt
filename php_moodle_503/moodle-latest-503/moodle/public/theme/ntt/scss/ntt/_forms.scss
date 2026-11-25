@@ -57,7 +57,8 @@
         border-color: var(--ntt-primary);
     }
 
-    &:focus {
+    // Chỉ khi dùng bàn phím; bấm chuột không đổi viền ô chọn.
+    &:focus-visible {
         border-color: var(--ntt-primary);
     }
 }

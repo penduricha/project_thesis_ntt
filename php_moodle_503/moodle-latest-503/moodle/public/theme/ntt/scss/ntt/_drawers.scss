@@ -25,10 +25,13 @@
 
 // Nút mở/đóng drawer ở mép trang.
 .drawer-toggles .drawer-toggler .btn {
+    --#{$prefix}btn-hover-bg: var(--ntt-primary-soft);
+    --#{$prefix}btn-hover-color: var(--ntt-on-primary-soft);
+    --#{$prefix}btn-hover-border-color: transparent;
     color: var(--ntt-primary);
 
     &:hover,
-    &:focus {
+    &:focus-visible {
         background-color: var(--ntt-primary-soft);
         color: var(--ntt-on-primary-soft);
     }
@@ -45,7 +48,7 @@
         transition: background-color .15s ease, color .15s ease;
 
         &:hover,
-        &:focus {
+        &:focus-visible {
             background-color: var(--ntt-surface-hover);
             color: var(--ntt-on-primary-soft);
         }

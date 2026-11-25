@@ -15,4 +15,4 @@ async function bootstrap() {
   createApp(App).use(router).mount('#root')
 }
 
-bootstrap()
+bootstrap().then(r => {})
