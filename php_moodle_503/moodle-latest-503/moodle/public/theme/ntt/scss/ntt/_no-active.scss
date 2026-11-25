@@ -240,6 +240,27 @@ a[class*="badge-"] {
     }
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// B2b. Cây điều hướng của block Navigation / Settings: `core/tree` gọi item.focus() sau mỗi lần click,
+// nên Moodle vẽ quầng sáng xanh 4px ($input-btn-focus-box-shadow) ngay dưới chỗ vừa bấm — trông như một
+// đường viền xanh "dính" lại (xem core.scss:175-180 và :202-214). Chỉ chặn focus DO CHUỘT;
+// focus bằng bàn phím (:focus-visible) vẫn giữ vòng như cũ.
+// ---------------------------------------------------------------------------------------------------------------------
+.block_navigation .block_tree [role="treeitem"],
+.block_settings .block_tree [role="treeitem"] {
+    &:focus:not(:focus-visible) {
+        outline: 0;
+        box-shadow: none;
+    }
+
+    // Node đang mở ([aria-expanded="true"]): Moodle chỉ tô riêng THẰNG CON ĐẦU TIÊN (:first-child) —
+    // chính là khung xanh quanh chữ "Dashboard" trong ảnh. Phải ghi đè đúng chỗ đó.
+    &[aria-expanded="true"]:focus:not(:focus-visible) > *:first-child {
+        outline: 0;
+        box-shadow: none;
+    }
+}
+
 // Ô chọn/radio: ngoài vòng còn đổi màu viền sang xanh nhạt khi focus.
 .form-check-input:focus:not(:focus-visible) {
     border-color: var(--ntt-border-strong);
