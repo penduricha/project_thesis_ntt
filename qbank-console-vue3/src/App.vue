@@ -16,6 +16,10 @@ const sideBar = ref(null)
 const yr = new Date().getFullYear()
 
 const isLoginPage = computed(() => route.name === 'login')
+/* 404 hiển thị "trần" (không topbar/menu) khi CHƯA đăng nhập — tránh lộ menu của ứng dụng cho
+   người gõ sai link. Đã đăng nhập thì vẫn giữ khung đầy đủ để họ đi tiếp bằng menu. */
+const is404 = computed(() => route.name === 'not-found')
+const isBarePage = computed(() => isLoginPage.value || (is404.value && !auth.isAuthenticated))
 const page = computed(() => route.name || 'dash')
 const onBank = computed(() => /^(bank|course)$/.test(page.value))
 const crs = computed(() => COURSES[S.ci])
@@ -93,7 +97,9 @@ watch(() => route.fullPath, async () => {
   await nextTick()
   // Trang đăng nhập tự đặt tiêu đề riêng; nếu ghép theo mẫu ' · QBank Console' thì
   // route login không có title -> tab trình duyệt hiện ' · QBank Console' (dư dấu chấm).
-  document.title = isLoginPage.value ? 'Đăng nhập' : (title.value ? `${title.value} · QBank Console` : 'QBank Console')
+  document.title = isLoginPage.value ? 'Đăng nhập'
+    : is404.value ? 'Không tìm thấy trang · QBank Console'
+    : (title.value ? `${title.value} · QBank Console` : 'QBank Console')
   if (booted) { const h = document.getElementById('ttl'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }
   booted = true
 }, { immediate: true })
@@ -129,7 +135,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDoc); document.r
 </script>
 
 <template>
-  <RouterView v-if="isLoginPage" />
+  <RouterView v-if="isBarePage" />
   <template v-else>
   <a href="#view" class="skip" @click.prevent="focusView">Bỏ qua điều hướng</a>
   <div v-if="auth.isDemo" class="demo-banner" role="status">Chế độ demo (VITE_DEMO_MODE=true): dùng dữ liệu mẫu, không gọi Spring Boot. Production phải tắt.</div>

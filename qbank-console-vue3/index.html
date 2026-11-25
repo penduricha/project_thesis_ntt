@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <link rel="icon" type="image/png" href="src/assets/images/logo-NTT.png">
+    <!--
+      Favicon: dùng bản đã cắt sát huy hiệu NTT và thu về 64px (6,6 KB).
+      Không trỏ thẳng logo-NTT.png (1200x1170, 176 KB): trình duyệt tải lại ảnh này mỗi lần mở
+      tab, và ở 16-32px huy hiệu + dòng chữ "NGUYEN TAT THANH UNIVERSITY" không đọc được.
+      File nằm trong src/assets nên Vite băm tên khi build (cache vĩnh viễn, đổi ảnh là đổi hash).
+    -->
+    <link rel="icon" type="image/png" sizes="64x64" href="/src/assets/images/favicon-ntt.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/src/assets/images/apple-touch-icon.png">
+    <meta name="theme-color" content="#004b87">
 <title>QBank Console – Kiểm định ngân hàng câu hỏi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">

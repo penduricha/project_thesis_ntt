@@ -14,6 +14,91 @@ chỉ ghi "đã sửa X".
 
 ## [Chưa phát hành] — 2026-11-23
 
+### QBank Console (Vue 3): nút xoá đỏ, `===` toàn bộ, trang 404
+
+#### Sửa lỗi
+
+- **Nút "Xóa tài khoản" giờ nền đỏ, chữ trắng.** Nút trong hộp thoại Chi tiết tài khoản trước chỉ
+  có `btn directory-danger` — mà `.directory-danger` chỉ đổi **màu chữ** sang đỏ, không đổi nền.
+  Thêm class `dan` để dùng biến thể có sẵn `.btn.dan` (`background: var(--danger-strong)`,
+  `color: #fff`, hover `--danger-hover`). Không viết CSS mới: bảng màu đã có `--danger-strong`
+  `#a51818` / `--danger-hover` `#8a1414` nên chỉ cần dùng đúng class.
+
+- **Thanh chọn câu hỏi bị mất toàn bộ style** (hồi quy từ commit `de04940a0` "Formated code").
+  Commit đó đổi `id="selbar"` → `id="sideBar"` và biến CSS `--selbar-h` → `--sideBar-h` trong
+  `App.vue`, nhưng `main.css` vẫn viết `#selbar` / `var(--selbar-h)` ở 22 chỗ. Hệ quả: thanh chọn
+  thành `div` trần nằm cuối trang, và `.page` không còn chừa chỗ nên thanh chọn **che hàng câu hỏi
+  cuối**. Đã đưa 22 chỗ trong CSS về đúng tên JS đang dùng.
+
+- **Máy quét `==` → `===` suýt gây lỗi bộ lọc.** Đổi 92 chỗ `==` → `===` và 23 chỗ `!=` → `!==`
+  trong 19 tệp. Nhưng **không đổi máy móc**: `q.c`/`q.tp`/`q.l` là **SỐ** (do `mappers.js` sinh),
+  còn bộ lọc `S.f.c`/`S.f.tp`/`S.f.l` là **CHUỖI** (`blankF()` trả `''`, chip gán `String(idx)`).
+  Nếu để `q.tp === f.tp` thì luôn `false` vì khác kiểu ⇒ **lọc theo môn/chương/mức độ ra rỗng**.
+  Đã ép kiểu `+f.c`, `+f.tp`, `+f.l` để so SỐ với SỐ. Kiểm chứng bằng script mô phỏng 6 trường hợp:
+  bản `===` trần sai **4/6**, bản có `+f.*` đúng cả 6.
+
+#### Thêm mới
+
+- **Trang 404** (`src/views/NotFoundView.vue`) + route `/:pathMatch(.*)*` đặt **cuối** mảng route.
+  Trước đó router chỉ có 13 route cụ thể, không có catch-all ⇒ gõ sai đường dẫn (ví dụ
+  `/fwiehgoihergplij`) thì `RouterView` rỗng, **màn hình trắng không lời giải thích**.
+
+  Ba nút của trình duyệt được xử lý riêng vì đây là chỗ dễ hỏng nhất:
+
+  | Nút | Cách xử lý |
+  |---|---|
+  | **←** | `history.state.back` có giá trị ⇒ `router.back()`. Không có (người dùng **dán thẳng link lỗi**) ⇒ về trang chủ, vì `router.back()` sẽ đẩy họ **ra khỏi website** |
+  | **→** | Không cần can thiệp — mọi chuyển trang đi qua router nên entry nào cũng có state |
+  | **↻** | `requestedPath` đọc từ `route.path` (không chốt lúc `created()`) nên sau reload vẫn hiện đúng đường dẫn sai |
+
+  Nút "Về trang chủ" dùng `router.replace` chứ không `push`: nếu `push` thì bấm ← sẽ quay lại đúng
+  trang 404 vừa rời, thành vòng lặp.
+
+  Guard cho 404 đi qua **trước** nhánh chặn đăng nhập — người gõ sai link mà bị đá về trang đăng
+  nhập thì không hiểu mình sai ở đâu. Khi chưa đăng nhập, trang 404 được vẽ **"trần"** (không
+  topbar/sidebar) để không lộ menu.
+
+  Kiểm chứng bằng vue-router thật + jsdom, 6 kịch bản:
+
+  ```
+  1. gõ /fwiehgoihergplij                    → not-found   /fwiehgoihergplij
+  2. gõ /a/b/c/d/e                           → not-found   /a/b/c/d/e
+  3. đang ở 404, bấm ← (có trang trước)       → bank        /bank
+  4. dán link trực tiếp rồi bấm ←             → dash        /dash      ← không thoát web
+  5. CHƯA đăng nhập gõ bậy                    → not-found   /sai-be-bet
+  6. ↻ reload                                 → not-found   /fwiehgoihergplij
+  ```
+
+- **Favicon riêng** `src/assets/images/favicon-ntt.png`. Bản bạn thêm trỏ thẳng
+  `logo-NTT.png` (1200×1170, **176 KB**) — trình duyệt tải lại ảnh này mỗi lần mở tab, và ở
+  16–32px thì dòng chữ "NGUYEN TAT THANH UNIVERSITY" không đọc được. Đã cắt sát huy hiệu NTT
+  (phần "NTT" vẫn nhận ra ở 64px) và thu về **6,6 KB** — giảm 96%. Thêm `apple-touch-icon` 180×180
+  (nền trắng, vì iOS không xử lý alpha tốt) và `meta theme-color #004b87`.
+
+### Flutter `app_mobile`: chặn `periodSeconds` không hợp lệ gây crash tab Xác thực
+
+#### Sửa lỗi
+
+- **`periodSeconds` từ server được dùng trực tiếp, không kiểm.** Chuỗi:
+  `server → _fetchPending() → AuthAccount.periodSeconds → _elapsedFraction()` với
+  `ms % (period * 1000)`. Nếu server trả `0` (hoặc dữ liệu cũ đã lưu có `0`), phép `%` chia cho 0
+  ⇒ **crash cả tab Xác thực**, không chỉ một tài khoản.
+
+  `_clockFor()` cũng tạo `AnimationController(duration: Duration(seconds: 0))` — animation hoàn tất
+  tức thì nên `_onClockCompleted()` được gọi lại liên tục: **vòng lặp vô hạn**.
+
+  Các lớp bảo vệ sẵn có **không cứu được**: `assert(period > 0)` trong `TotpGenerator.generate()`
+  bị **bỏ ở bản release**; `_generateCodes()` chỉ bắt `FormatException` (secret sai Base32).
+
+  Vá 2 lớp: (1) `_fetchPending()` — biên giới tin cậy, kiểm `periodSeconds > 0` và `digits` trong
+  6..9, ném `EnrollmentException` có câu báo tiếng Việt; (2) `_elapsedFraction()`/`_clockFor()` —
+  chặn dưới về `TotpGenerator.defaultPeriod`, để cứu các tài khoản **đã lưu từ bản cũ** (không đi
+  qua bước kiểm 1 nữa).
+
+- **Kiểm chứng TOTP đúng chuẩn** (không phải sửa, ghi lại để hội đồng biết): đối chiếu 12/12 vector
+  RFC 6238 (6 vector SHA-1 + 6 vector SHA-256) — khớp hết. Đáng chú ý: dùng `setUint32` ×2 thay vì
+  `setUint64` là **có chủ ý**, vì `setUint64` không chạy trên Flutter Web.
+
 ### Giao diện Moodle: tắt hết `:active` và vòng focus do chuột (bản sửa)
 
 #### Sửa lỗi

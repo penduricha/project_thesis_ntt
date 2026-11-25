@@ -327,10 +327,25 @@ class EnrollmentService {
       final data = res.data?['data'] as Map<String, dynamic>?;
       if (data == null) throw const EnrollmentException(_msgServer);
 
+      // Ba tham số này quyết định mã đúng/sai, nên phải kiểm trước khi dùng thay vì tin server:
+      //  - periodSeconds = 0  -> AuthenticatorScreen tính `ms % (period * 1000)` = chia cho 0
+      //    => crash ngay khi mở tab Xác thực (Dart ném IntegerDivisionByZeroException/UnsupportedError).
+      //  - digits = 0         -> mã là chuỗi rỗng, người dùng không nhập được gì.
+      //  - digits > 9         -> `math.pow(10, digits)` vượt độ chính xác số nguyên của Dart.
+      // Assert trong TotpGenerator.generate() KHÔNG cứu được: assert bị bỏ ở bản release.
+      final digits = (data['digits'] as num).toInt();
+      final periodSeconds = (data['periodSeconds'] as num).toInt();
+      if (periodSeconds <= 0) {
+        throw const EnrollmentException('Server trả chu kỳ TOTP không hợp lệ.');
+      }
+      if (digits < 6 || digits > 9) {
+        throw const EnrollmentException('Server trả số chữ số TOTP không hợp lệ.');
+      }
+
       return _PendingParams(
         algorithm: TotpAlgorithm.parse(data['algorithm'] as String?),
-        digits: (data['digits'] as num).toInt(),
-        periodSeconds: (data['periodSeconds'] as num).toInt(),
+        digits: digits,
+        periodSeconds: periodSeconds,
       );
     } on DioException catch (e) {
       throw _map(e);

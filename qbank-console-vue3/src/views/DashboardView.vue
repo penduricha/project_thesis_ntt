@@ -7,7 +7,7 @@ const router = useRouter()
 // chưa ghép / demo thì tính từ mảng câu hỏi mẫu như cũ.
 const dash = computed(() => S.dashboard)
 const total = computed(() => (dash.value ? dash.value.totalActive : S.q.length))
-const okC = computed(() => (dash.value ? (dash.value.byValidation?.clean ?? 0) : S.q.filter(x => x.st == 'ok').length))
+const okC = computed(() => (dash.value ? (dash.value.byValidation?.clean ?? 0) : S.q.filter(x => x.st === 'ok').length))
 const pct = computed(() => (total.value ? Math.round(okC.value / total.value * 100) : 0))
 const sugC = computed(() => (dash.value ? dash.value.pendingSuggestions : S.sug.length))
 const actC = computed(() => (dash.value ? dash.value.runningTasks : act()))

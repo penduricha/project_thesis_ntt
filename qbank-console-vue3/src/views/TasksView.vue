@@ -6,10 +6,10 @@ import { S, act, code, runAI } from '../store.js'
 
 const router = useRouter()
 const live = /pending|running/
-const counts = computed(() => ({ all: S.tasks.length, running: act(), succeeded: S.tasks.filter(t => t.st == 'succeeded').length, failed: S.tasks.filter(t => t.st == 'failed').length }))
+const counts = computed(() => ({ all: S.tasks.length, running: act(), succeeded: S.tasks.filter(t => t.st === 'succeeded').length, failed: S.tasks.filter(t => t.st === 'failed').length }))
 const tabs = [['all', 'Tất cả'], ['running', 'Đang chạy'], ['succeeded', 'Hoàn tất'], ['failed', 'Thất bại']]
 const rows = computed(() => S.tasks.filter(t => (S.tf === 'all' ? true : S.tf === 'running' ? live.test(t.st) : t.st === S.tf)))
-const hasSug = t => S.sug.some(s => s.qid == t.qid)
+const hasSug = t => S.sug.some(s => s.qid === t.qid)
 </script>
 
 <template>

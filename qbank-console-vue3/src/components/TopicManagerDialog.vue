@@ -10,8 +10,8 @@ const name = ref(''), err = ref('')
 const clean = v => v.trim().replace(/\s+/g, ' ')
 /* So trùng phải chuẩn hoá cả hai phía: tên chương đã lưu có thể còn khoảng trắng thừa. */
 const key = v => clean(String(v || '')).toLowerCase()
-const same = (a, b) => key(a) == key(b)
-const count = idx => S.q.filter(q => q.c == props.ci && q.tp == idx).length
+const same = (a, b) => key(a) === key(b)
+const count = idx => S.q.filter(q => q.c === props.ci && q.tp === idx).length
 
 function add() {
   const v = clean(name.value)
@@ -23,14 +23,15 @@ function add() {
 function rename(idx, e) {
   const v = clean(e.target.value), t = crs.value.topics
   if (!v) { e.target.value = t[idx]; return toast('Tên chương không được để trống', 'wa') }
-  if (t.some((x, k) => k != idx && same(x, v))) { e.target.value = t[idx]; return toast('Tên chương này đã tồn tại trong môn học', 'wa') }
+  if (t.some((x, k) => k !== idx && same(x, v))) { e.target.value = t[idx]; return toast('Tên chương này đã tồn tại trong môn học', 'wa') }
   t[idx] = v; e.target.value = v
   log(`Đổi tên chương thành “${v}” (${crs.value.id})`, 'info'); toast('Đã cập nhật tên chương', 'ok')
 }
 function remove(idx) {
   const c = crs.value; if (c.topics.length <= 1) return
   const nm = c.topics[idx]
-  S.q.forEach(q => { if (q.c == props.ci) { if (q.tp == idx) q.tp = 0; else if (q.tp > idx) q.tp-- } })
+  S.q.forEach(q => { if (q.c === props.ci) { if (q.tp === idx) q.tp = 0; else if (q.tp > idx) q.tp-- } })
+  // S.f.tp là CHUỖI (chip gán String(idx)), idx là SỐ -> so sánh thẳng sẽ luôn sai
   if (S.f.tp === String(idx)) S.f.tp = ''
   c.topics.splice(idx, 1)
   log(`Xóa chương “${nm}” (${c.id}), chuyển câu hỏi về chương đầu`, 'wa'); toast('Đã xóa chương và bảo toàn câu hỏi', 'wa')

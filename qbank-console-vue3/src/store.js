@@ -40,7 +40,7 @@ export const code = q => 'CH' + String(q.id).padStart(3, '0')
 export const topicName = (ci, tpi) => COURSES[ci]?.topics[tpi] || 'Chương mặc định'
 const live = /pending|running/
 export const act = () => S.tasks.filter(t => live.test(t.st)).length
-export const busy = q => S.tasks.some(t => t.qid == q.id && live.test(t.st))
+export const busy = q => S.tasks.some(t => t.qid === q.id && live.test(t.st))
 export const resetFilters = () => { S.f = blankF(S.f.hideAns) }
 export const clearFilters = () => Object.assign(S.f, { q: '', c: '', tp: '', l: '', s: '', page: 1 })
 export function log(m, tone = 'info') { S.log.unshift([new Date().toLocaleTimeString('vi-VN'), m, tone]); if (S.log.length > 50) S.log.length = 50 }
@@ -61,11 +61,14 @@ export function list(isCourse) {
   let arr = S.q.filter(q =>
     (!kw || (q.text + q.o.join(' ') + code(q) + (COURSES[q.c]?.id || '') + (COURSES[q.c]?.name || '')).toLowerCase().includes(kw)) &&
     subjOk(q.c) &&
-    (isCourse ? q.c == S.ci : (f.c === '' || q.c == f.c)) &&
-    (f.tp === '' || q.tp == f.tp) && (f.l === '' || q.l == f.l) && (f.s === '' || q.st == f.s))
-  if (f.sort == 'level_asc') arr = [...arr].sort((a, b) => a.l - b.l)
-  else if (f.sort == 'level') arr = [...arr].sort((a, b) => b.l - a.l)
-  else if (f.sort == 'recent') arr = [...arr].sort((a, b) => tsk(b.updatedAt) - tsk(a.updatedAt))
+    // q.c/q.tp/q.l là SỐ (từ mapper), còn bộ lọc f.* là CHUỖI (blankF trả '', chip gán String(idx)).
+    // Vì vậy phải +f.* để so SỐ với SỐ — dùng === trên hai kiểu khác nhau sẽ LUÔN false
+    // và bộ lọc môn/chương/mức độ/trạng thái sẽ lọc ra rỗng.
+    (isCourse ? q.c === S.ci : (f.c === '' || q.c === +f.c)) &&
+    (f.tp === '' || q.tp === +f.tp) && (f.l === '' || q.l === +f.l) && (f.s === '' || q.st === f.s))
+  if (f.sort === 'level_asc') arr = [...arr].sort((a, b) => a.l - b.l)
+  else if (f.sort === 'level') arr = [...arr].sort((a, b) => b.l - a.l)
+  else if (f.sort === 'recent') arr = [...arr].sort((a, b) => tsk(b.updatedAt) - tsk(a.updatedAt))
   else arr = [...arr].sort((a, b) => a.id - b.id)
   return arr
 }
@@ -207,8 +210,8 @@ export function runAI(ids) {
   if (useRealApi() && S.dataMode === 'real') return runAiReal(ids)
   let n = 0
   ids.forEach(id => {
-    const q = S.q.find(x => x.id == id)
-    if (!q || S.tasks.some(t => t.qid == id && live.test(t.st))) return
+    const q = S.q.find(x => x.id === id)
+    if (!q || S.tasks.some(t => t.qid === id && live.test(t.st))) return
     n++
     const t = reactive({ id: 'T-' + String(S.tn++).padStart(4, '0'), qid: id, st: 'pending', ms: 0, t0: Date.now(), started: new Date().toLocaleTimeString('vi-VN'), msg: '' })
     S.tasks.unshift(t); if (S.tasks.length > 50) S.tasks.length = 50
@@ -224,7 +227,7 @@ export function runAI(ids) {
       const r = llm(q); t.st = 'succeeded'
       t.msg = r.is.length ? `Phát hiện ${r.is.length} vấn đề · Độ khó gợi ý: ${r.diff}` : 'Đạt chuẩn, không phát hiện lỗi'
       if (r.is.length) {
-        S.sug = S.sug.filter(s => s.qid != id)
+        S.sug = S.sug.filter(s => s.qid !== id)
         S.sug.push({ qid: id, tx: r.tx, is: r.is, diff: r.diff, sev: r.sev, tid: t.id })
         q.st = 'flag'; log(`Hoàn tất ${t.id} (${code(q)}): có ${r.is.length} đề xuất AI`, 'wa')
         if (S.notifyTasks) toast(`${t.id} hoàn tất: ${code(q)} có ${r.is.length} đề xuất AI`, 'wa')
@@ -241,8 +244,8 @@ export function runAI(ids) {
 async function runAiReal(ids) {
   let n = 0
   for (const id of ids) {
-    const q = S.q.find((x) => x.id == id)
-    if (!q || S.tasks.some((t) => t.qid == id && live.test(t.st))) continue
+    const q = S.q.find((x) => x.id === id)
+    if (!q || S.tasks.some((t) => t.qid === id && live.test(t.st))) continue
     n++
     const t = reactive({ id: '…', qid: id, st: 'pending', ms: 0, t0: Date.now(), started: new Date().toLocaleTimeString('vi-VN'), msg: 'Đang gửi yêu cầu…' })
     S.tasks.unshift(t); if (S.tasks.length > 50) S.tasks.length = 50
@@ -263,7 +266,7 @@ async function runAiReal(ids) {
         const list = await qbankApi.jobSuggestions(job.taskId).catch(() => [])
         const pending = (list || []).filter((s) => !s.decision || s.decision === 'pending')
         if (pending.length) {
-          S.sug = S.sug.filter((s) => s.qid != id)
+          S.sug = S.sug.filter((s) => s.qid !== id)
           S.sug.push(suggestionsToUi(pending, q, job.taskId))
           q.st = 'flag'
           t.msg = `Phát hiện ${pending.length} vấn đề`
@@ -343,14 +346,14 @@ async function refreshFromServer(q) {
 export async function saveQuestion(d, eid) {
   if (useRealApi() && S.dataMode === 'real') {
     const course = COURSES[d.c]
-    if (!course || course.subjectId == null) return toast('Môn học chưa gắn với danh mục trên máy chủ.', 'er')
+    if (!course || course.subjectId === null) return toast('Môn học chưa gắn với danh mục trên máy chủ.', 'er')
     try {
       if (eid) {
-        const cur = S.q.find((x) => x.id == eid)
+        const cur = S.q.find((x) => x.id === eid)
         const body = questionToUpdate({ ...cur, ...d }, course)
         const res = await qbankApi.updateQuestion(eid, body)
         Object.assign(cur, detailToQuestion(res, d.c, d.tp))
-        S.sug = S.sug.filter((s) => s.qid != eid)
+        S.sug = S.sug.filter((s) => s.qid !== eid)
         log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
         toast('Đã cập nhật câu hỏi', 'ok')
       } else {
@@ -378,10 +381,10 @@ export async function saveQuestion(d, eid) {
     return
   }
   if (eid) {
-    const cur = S.q.find(x => x.id == eid)
-    const next = { ...cur, ...d, st: cur.st == 'draft' ? 'draft' : 'stale', ver: (cur.ver || 1) + 1 }
+    const cur = S.q.find(x => x.id === eid)
+    const next = { ...cur, ...d, st: cur.st === 'draft' ? 'draft' : 'stale', ver: (cur.ver || 1) + 1 }
     await repo.upsert(next); Object.assign(cur, next)
-    S.sug = S.sug.filter(s => s.qid != eid); log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
+    S.sug = S.sug.filter(s => s.qid !== eid); log('Cập nhật nội dung câu hỏi ' + code({ id: eid }), 'info')
     toast('Đã cập nhật câu hỏi', 'ok')
   } else {
     // Chế độ mock không có backend kiểm tra, phải chặn tại đây — nếu chỉ dựa vào UI thì mọi lời
@@ -389,7 +392,7 @@ export async function saveQuestion(d, eid) {
     // Chỉ chặn khi THÊM MỚI, đúng phạm vi yêu cầu; form sửa không bị ảnh hưởng.
     const title = (d.title || '').trim().replace(/\s+/g, ' ').toLowerCase()
     if (title) {
-      const clash = S.q.find((x) => x.c == d.c && (x.title || '').trim().replace(/\s+/g, ' ').toLowerCase() === title)
+      const clash = S.q.find((x) => x.c === d.c && (x.title || '').trim().replace(/\s+/g, ' ').toLowerCase() === title)
       if (clash) return toast(`Tiêu đề này đã dùng cho ${code(clash)} trong cùng môn. Hãy đặt tiêu đề khác.`, 'er')
     }
     const q = { id: S.n++, st: 'draft', src: 'manual', ver: 1, ...d }
@@ -398,14 +401,14 @@ export async function saveQuestion(d, eid) {
   }
 }
 export function askDeleteQuestion(id) {
-  const q = S.q.find(x => x.id == id); if (!q) return
+  const q = S.q.find(x => x.id === id); if (!q) return
   if (busy(q)) return toast('Không thể xóa khi câu hỏi đang kiểm định', 'er')
   if (S.confirmDelete === false) return deleteQuestion(id)
   openDialog('confirm', { title: `Xóa câu hỏi ${code(q)}?`, text: 'Câu hỏi và đề xuất AI liên quan sẽ bị xóa khỏi ngân hàng.', cancel: 'Giữ lại', ok: 'Xóa câu hỏi', danger: true, action: () => deleteQuestion(id) })
 }
 async function deleteQuestion(id) {
-  const q = S.q.find(x => x.id == id), sug = S.sug.find(s => s.qid == id)
-  S.q = S.q.filter(x => x.id != id); S.sug = S.sug.filter(s => s.qid != id); S.sel.delete(id)
+  const q = S.q.find(x => x.id === id), sug = S.sug.find(s => s.qid === id)
+  S.q = S.q.filter(x => x.id !== id); S.sug = S.sug.filter(s => s.qid !== id); S.sel.delete(id)
   await repo.removeMany([id]); log('Xóa câu hỏi ' + code({ id }), 'wa')
   toast('Đã xóa ' + code({ id }), 'wa', 'Hoàn tác', async () => {
     if (q) { await repo.restoreMany([q]); S.q.push(q) }
@@ -424,8 +427,8 @@ export function updateCourse(i, { id, name, dept, active }) {
   log(`Cập nhật môn học “${old.id} – ${old.name}” → “${id} – ${name}”`, 'info'); toast('Đã cập nhật thông tin môn học', 'ok')
 }
 export function deleteCourse(i) {
-  const ids = S.q.filter(q => q.c == i).map(q => q.id), nm = `${COURSES[i].id} – ${COURSES[i].name}`
-  S.q = S.q.filter(q => q.c != i); S.q.forEach(q => { if (q.c > i) q.c-- })
+  const ids = S.q.filter(q => q.c === i).map(q => q.id), nm = `${COURSES[i].id} – ${COURSES[i].name}`
+  S.q = S.q.filter(q => q.c !== i); S.q.forEach(q => { if (q.c > i) q.c-- })
   S.sug = S.sug.filter(s => !ids.includes(s.qid)); ids.forEach(id => S.sel.delete(id))
   COURSES.splice(i, 1); S.ci = 0
   log(`Xóa môn học “${nm}” và ${ids.length} câu hỏi`, 'wa'); toast(`Đã xóa môn học và ${ids.length} câu hỏi`, 'wa')
@@ -440,7 +443,7 @@ export function askDeleteCourse(i, after) {
    Backend KHÔNG cho áp đề xuất target_field='question' (AI không được đổi cấu trúc/đáp án),
    nên các đề xuất đó được giữ nguyên và người duyệt phải sửa tay trong form câu hỏi. */
 async function decideReal(id, ok) {
-  const s = S.sug.find((x) => x.qid == id), q = S.q.find((x) => x.id == id)
+  const s = S.sug.find((x) => x.qid === id), q = S.q.find((x) => x.id === id)
   if (!s || !q) return
   const list = (s.raw || []).filter((x) => !x.decision || x.decision === 'pending')
   if (!list.length) return toast('Đề xuất này đã được xử lý ở nơi khác.', 'wa')
@@ -466,7 +469,7 @@ async function decideReal(id, ok) {
       const tp = COURSES[ci]?.topicIds.indexOf(last.topicId) ?? q.tp
       Object.assign(q, detailToQuestion(last, ci >= 0 ? ci : q.c, Math.max(0, tp)))
     }
-    S.sug = S.sug.filter((x) => x.qid != id); S.rsel.delete(id)
+    S.sug = S.sug.filter((x) => x.qid !== id); S.rsel.delete(id)
     log(ok ? `Chấp nhận đề xuất AI cho ${code(q)} (đã sinh revision)` : `Từ chối đề xuất AI cho ${code(q)}, giữ nội dung gốc`, ok ? 'ok' : 'info')
     toast(ok ? `Đã áp ${applicable.length} đề xuất vào ${code(q)} và sinh revision mới` : `Đã giữ nguyên bản gốc ${code(q)}`, ok ? 'ok' : '')
     if (manual.length) toast(`Còn ${manual.length} đề xuất mức toàn câu cần sửa tay (AI không được đổi cấu trúc)`, 'wa')
@@ -474,24 +477,24 @@ async function decideReal(id, ok) {
   } catch (e) {
     toast(apiErrorMessage(e, 'Không gửi được quyết định duyệt đề xuất.'), 'er')
     const fresh = await refreshFromServer(q)
-    if (fresh) S.sug = S.sug.filter((x) => x.qid != id)
+    if (fresh) S.sug = S.sug.filter((x) => x.qid !== id)
   }
 }
 
 export function decide(id, ok) {
   if (useRealApi() && S.dataMode === 'real') return decideReal(id, ok)
-  const s = S.sug.find(x => x.qid == id), q = S.q.find(x => x.id == id); if (!s || !q) return
+  const s = S.sug.find(x => x.qid === id), q = S.q.find(x => x.id === id); if (!s || !q) return
   const prev = { text: q.text, st: q.st, updatedAt: q.updatedAt, by: q.by }, bak = { ...s }
   if (ok) { q.text = s.tx; q.updatedAt = nowStr(); q.by = S.name + ' (Duyệt AI)'; log(`Chấp nhận đề xuất AI cho ${code(q)} (có lưu vết)`, 'ok') }
   else log(`Từ chối đề xuất AI cho ${code(q)}, giữ nội dung gốc`, 'info')
-  q.st = 'ok'; S.sug = S.sug.filter(x => x.qid != id); S.rsel.delete(id)
+  q.st = 'ok'; S.sug = S.sug.filter(x => x.qid !== id); S.rsel.delete(id)
   repo.upsert({ ...q, o: [...q.o] })
   toast(ok ? `Đã cập nhật ${code(q)} theo đề xuất AI` : `Đã giữ nguyên bản gốc ${code(q)}`, ok ? 'ok' : '', 'Hoàn tác', () => {
     Object.assign(q, prev); S.sug.push(bak); repo.upsert({ ...q, o: [...q.o] }); toast(`Đã hoàn tác quyết định cho ${code(q)}`, 'info')
   })
 }
 export async function bulkDecide(ok) {
-  const ids = [...S.rsel].filter(id => S.sug.some(s => s.qid == id))
+  const ids = [...S.rsel].filter(id => S.sug.some(s => s.qid === id))
   if (!ids.length) return toast('Hãy chọn ít nhất một đề xuất để xử lý', 'wa')
   if (useRealApi() && S.dataMode === 'real') {
     // Duyệt hàng loạt tuần tự (không Promise.all) để backend xử lý từng câu một,
@@ -499,9 +502,9 @@ export async function bulkDecide(ok) {
     let doneCount = 0, failCount = 0
     for (const id of ids) {
       try {
-        const before = S.sug.find(s => s.qid == id)
+        const before = S.sug.find(s => s.qid === id)
         await decideReal(id, ok)   // eslint-disable-line no-await-in-loop
-        if (!S.sug.some(s => s.qid == id) && before) doneCount++
+        if (!S.sug.some(s => s.qid === id) && before) doneCount++
         else failCount++
       } catch { failCount++ }
     }
@@ -510,7 +513,7 @@ export async function bulkDecide(ok) {
     return
   }
   ids.forEach(id => {
-    const s = S.sug.find(x => x.qid == id), q = S.q.find(x => x.id == id)
+    const s = S.sug.find(x => x.qid === id), q = S.q.find(x => x.id === id)
     if (ok && s && q) { q.text = s.tx; q.updatedAt = nowStr(); q.by = S.name + ' (Duyệt AI)' }
     if (q) { q.st = 'ok'; repo.upsert({ ...q, o: [...q.o] }) }
   })
@@ -543,7 +546,7 @@ const PW = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
 export const tmpPwd = () => Array.from({ length: 12 }, () => PW[Math.random() * PW.length | 0]).join('')
 export const userBy = id => S.users.find(u => u.adminId === id)
 export const userUsed = u => S.q.some(q => (q.by || '').startsWith(u.name))
-export const adminCount = () => S.users.filter(x => x.role == 'Quản trị viên' && x.status != 'disabled').length
+export const adminCount = () => S.users.filter(x => x.role === 'Quản trị viên' && x.status !== 'disabled').length
 export function createUser(d) {
   S.users.push({ adminId: d.id, idCard: d.cc, name: d.n, role: d.r, totp: 'NOT_ENABLED', status: 'pending', passwordChangedAt: null, subjects: d.subs })
   log('Tạo tài khoản ' + d.n + ' (' + d.r + ')', 'ok'); openDialog('pw', { adminId: d.id, pw: tmpPwd(), title: 'Đã tạo tài khoản' })
@@ -554,9 +557,9 @@ export function resetPassword(id) {
 }
 export function saveRole(id, r, subs) {
   const u = userBy(id); if (!u || S.role !== 'admin') return ''
-  if (u.role == 'Quản trị viên' && r != u.role && adminCount() < 2) return 'Phải còn ít nhất một quản trị viên.'
-  const s = r === 'Giảng viên' ? subs : [], chg = r != u.role || s.join() !== (u.subjects || []).join()
-  if (r != u.role) { u.role = r; log('Đổi vai trò của ' + u.name + ' thành ' + r, 'info') }
+  if (u.role === 'Quản trị viên' && r !== u.role && adminCount() < 2) return 'Phải còn ít nhất một quản trị viên.'
+  const s = r === 'Giảng viên' ? subs : [], chg = r !== u.role || s.join() !== (u.subjects || []).join()
+  if (r !== u.role) { u.role = r; log('Đổi vai trò của ' + u.name + ' thành ' + r, 'info') }
   u.subjects = s; if (chg) { log('Cập nhật phạm vi môn của ' + u.name, 'info'); toast('Đã cập nhật vai trò và phạm vi môn', 'ok') }
   return ''
 }
@@ -654,7 +657,7 @@ export async function tfaStart() {
   }
   S.tfa = { st: 'PENDING', until: Date.now() + 300000 }; S.now = Date.now(); clearInterval(tt)
   tt = setInterval(() => {
-    S.now = Date.now(); if (S.tfa.st != 'PENDING') return clearInterval(tt)
+    S.now = Date.now(); if (S.tfa.st !== 'PENDING') return clearInterval(tt)
     if (S.tfa.until - S.now <= 0) { S.tfa = { st: 'NOT_ENABLED', until: 0 }; clearInterval(tt); toast('Khóa chờ xác nhận đã hết hạn, hãy kích hoạt lại', 'wa') }
   }, 1000)
   log('Bắt đầu kích hoạt xác thực hai yếu tố', 'info'); toast('Đã tạo khóa, đang chờ xác nhận từ ứng dụng', 'ok'); focusTfa()

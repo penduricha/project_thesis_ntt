@@ -12,7 +12,7 @@ function issue(u) {
   return null
 }
 const dirty = c => c.url !== c.sv.url || c.tok !== c.sv.tok || c.en !== c.sv.en
-const bad = c => { const x = issue(norm(c.url)); return !c.url || !!(x && x[0] == 'er') }
+const bad = c => { const x = issue(norm(c.url)); return !c.url || !!(x && x[0] === 'er') }
 
 /* ---- trạng thái hiển thị của từng ô (đèn LED, ghi chú, nút) ---- */
 function calc(c) {
@@ -24,7 +24,7 @@ function calc(c) {
   else { led = c.en ? 'ok' : 'off'; tx = c.en ? 'Sẵn sàng' : 'Đã tắt' }
   const n = c.note ? [c.nk, c.note] : is ? is : (c.tok && c.tok.length < 20) ? ['wa', 'Token thường dài 32 ký tự. Kiểm tra có bị cắt không.'] : (d && S.api.on) ? ['', 'Chưa lưu lên Server 2.'] : ['', '']
   const off = !S.api.on || c.busy
-  return { led, tx, n, tps: led == 'ok' && !d && c.tps ? c.tps + ' tok/s' : '', chk: off || bad(c) || !c.tok, sav: off || !d || bad(c) || !c.tok, clr: c.busy || !has }
+  return { led, tx, n, tps: led === 'ok' && !d && c.tps ? c.tps + ' tok/s' : '', chk: off || bad(c) || !c.tok, sav: off || !d || bad(c) || !c.tok, clr: c.busy || !has }
 }
 const slots = computed(() => S.lm.map(calc))
 const sum = computed(() => {
@@ -87,7 +87,7 @@ async function env() {
     if (bad(c)) { skip.push(i + 1); return }
     const n = i + 1; L.push(`AI_NODE_${n}_URL=${norm(c.url)}`, `AI_NODE_${n}_TOKEN=${c.tok.trim()}`); if (n > 1) L.push(`AI_NODE_${n}_ENABLED=${c.en}`)
   })
-  if (L.length == 1) return toast('Chưa có node hợp lệ để xuất. URL phải bắt đầu bằng https://', 'er')
+  if (L.length === 1) return toast('Chưa có node hợp lệ để xuất. URL phải bắt đầu bằng https://', 'er')
   try { await navigator.clipboard.writeText(L.join('\n') + '\n'); toast(skip.length ? `Đã sao chép .env, bỏ qua LLM ${skip.join(', ')} vì URL chưa hợp lệ. Tệp có chứa token, đừng gửi qua kênh công khai.` : 'Đã sao chép .env. Tệp có chứa token, đừng gửi qua kênh công khai.', skip.length ? 'wa' : 'ok') }
   catch { toast('Trình duyệt chặn clipboard. Hãy dùng HTTPS hoặc sao chép thủ công.', 'wa') }
 }

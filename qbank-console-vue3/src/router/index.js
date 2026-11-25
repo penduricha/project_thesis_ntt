@@ -21,12 +21,21 @@ const router = createRouter({
     { path: '/llm', name: 'llm', component: () => import('../views/LlmView.vue') },
     { path: '/account', name: 'account', component: () => import('../views/AccountView.vue') },
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue') },
+    /* Bắt-tất-cả PHẢI nằm cuối mảng: vue-router khớp theo thứ tự khai báo.
+       `:pathMatch(.*)*` khớp mọi độ sâu (kể cả /a/b/c) — dùng tham số lặp `*`.
+       Trước khi có route này, đường dẫn lạ render RouterView rỗng ⇒ màn hình trắng. */
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue') },
   ],
 })
 /* Giống go(): đổi trang (trừ 'bank') thì xoá bộ lọc, giữ trạng thái ẩn đáp án.
    + Bảo vệ route: chưa đăng nhập -> /login; đã đăng nhập mà vào /login -> /dash.
    (fe_web_admin dùng 2 bộ route trước/sau đăng nhập; QBank dùng 1 bộ + guard cho đơn giản.) */
 router.beforeEach((to, from) => {
+  /* 404 phải tới được KỂ CẢ khi chưa đăng nhập: người dùng gõ sai đường dẫn mà bị đá về trang
+     đăng nhập thì không hiểu mình sai ở đâu. Ở App.vue trang này được vẽ KHÔNG kèm topbar/sidebar
+     khi chưa đăng nhập, nên không lộ menu của ứng dụng.
+     Kiểm tra TRƯỚC nhánh chặn đăng nhập bên dưới. */
+  if (to.name === 'not-found') return true
   if (to.name === 'login') {
     return auth.isAuthenticated ? { name: 'dash' } : true
   }

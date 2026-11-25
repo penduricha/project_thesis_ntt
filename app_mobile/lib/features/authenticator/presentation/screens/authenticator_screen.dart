@@ -93,9 +93,11 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   /// Clock for [period] seconds; if not exists, create and run immediately based on real time.
   AnimationController _clockFor(int period) {
     return _clocks.putIfAbsent(period, () {
+      // Duration(seconds: 0) làm AnimationController hoàn tất ngay lập tức -> gọi lại
+      // _onClockCompleted liên tục (vòng lặp vô hạn). Chặn dưới như _elapsedFraction.
       final clock = AnimationController(
         vsync: this,
-        duration: Duration(seconds: period),
+        duration: Duration(seconds: period > 0 ? period : TotpGenerator.defaultPeriod),
       )..addStatusListener((status) {
         // End of 1 period -> recalculate code and run new period (resync based on real time)
         if (status == AnimationStatus.completed) _onClockCompleted(period);
@@ -106,8 +108,13 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   }
 
   /// Elapsed time fraction in the current [period] (0.0 -> 1.0)
+  ///
+  /// [period] đến từ dữ liệu đã lưu (có thể do bản cũ/server lỗi ghi ra 0). Giữ chặn dưới ở đây
+  /// dù EnrollmentService đã kiểm: tài khoản đã lưu từ trước sẽ không đi qua bước kiểm đó nữa,
+  /// mà `ms % (period * 1000)` với period = 0 là chia cho 0 -> crash cả tab Xác thực.
   double _elapsedFraction(int period) {
-    final periodMs = period * 1000;
+    final safePeriod = period > 0 ? period : TotpGenerator.defaultPeriod;
+    final periodMs = safePeriod * 1000;
     final ms = DateTime.now().millisecondsSinceEpoch % periodMs;
     return ms / periodMs;
   }

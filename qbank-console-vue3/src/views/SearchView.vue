@@ -37,7 +37,7 @@ async function runReal(s, relax) {
     const params = { q: intent.keyword || s, page: 0, size: 100, includeOptions: true }
     if (intent.course !== undefined) {
       const course = COURSES[intent.course]
-      if (course?.subjectId != null) params.subjectId = course.subjectId
+      if (course?.subjectId !== null) params.subjectId = course.subjectId
     }
     const page = await qbankApi.listQuestions(params)
     const items = page?.content || []
@@ -57,7 +57,7 @@ async function runReal(s, relax) {
       const tp = course ? Math.max(0, course.topicIds.indexOf(detail.topicId)) : 0
       return detailToQuestion(detail, ci >= 0 ? ci : 0, tp)
     })
-    if (intent.level !== undefined) rows = rows.filter((q) => q.l == intent.level)
+    if (intent.level !== undefined) rows = rows.filter((q) => q.l === intent.level)
     res.value = { ...res.value, rows, real: true, total: page?.totalElements ?? rows.length }
     S.nlKw = intent.keyword || s
   } catch (e) {
@@ -73,7 +73,7 @@ function analyzeRules(s, relax) {
   if (!relax) F.level = /khó/.test(n) ? 2 : /dễ/.test(n) ? 0 : /trung bình/.test(n) ? 1 : undefined
   const m = s.match(/chứa\s+[“"]?([^”"]+)[”"]?/i); if (m) F.keyword = m[1].trim()
   lastIntent = F
-  const rows = S.q.filter(q => (F.course === undefined || q.c == F.course) && (F.level === undefined || q.l == F.level) && (!F.keyword || (q.text + q.o.join(' ')).toLowerCase().includes(F.keyword.toLowerCase())))
+  const rows = S.q.filter(q => (F.course === undefined || q.c === F.course) && (F.level === undefined || q.l === F.level) && (!F.keyword || (q.text + q.o.join(' ')).toLowerCase().includes(F.keyword.toLowerCase())))
   S.nlKw = F.keyword || s
   const c = [F.course !== undefined && 'course_id = ?', F.level !== undefined && 'level = ?', F.keyword && 'content LIKE ?'].filter(Boolean)
   const js = { course: F.course === undefined ? null : `${COURSES[F.course].id} – ${COURSES[F.course].name}`, level: F.level === undefined ? null : LV[F.level], keyword: F.keyword || null }

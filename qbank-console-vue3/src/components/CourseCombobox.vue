@@ -17,23 +17,23 @@ function blur() {
   open.value = false
   const t = norm(text.value.trim()); if (!t) { if (props.all) pick(-1); else { text.value = label(); typing.value = false } return }
   const all = COURSES.map((_, i) => i)
-  const ex = all.filter(i => norm(COURSES[i].name) == t || norm(COURSES[i].id) == t)
+  const ex = all.filter(i => norm(COURSES[i].name) === t || norm(COURSES[i].id) === t)
   const u = ex.length ? ex : all.filter(i => norm(COURSES[i].name).includes(t))
-  if (u.length == 1) pick(u[0]); else { text.value = label(); typing.value = false }
+  if (u.length === 1) pick(u[0]); else { text.value = label(); typing.value = false }
 }
 function key(e) {
   const n = items.value.length
-  if (e.key == 'ArrowDown') { e.preventDefault(); open.value = true; act.value = Math.min(n - 1, act.value + 1) }
-  else if (e.key == 'ArrowUp') { e.preventDefault(); act.value = Math.max(0, act.value - 1) }
-  else if (e.key == 'Enter' && open.value) { e.preventDefault(); const t = items.value[act.value] || items.value[0]; if (t) pick(t[1]) }
-  else if (e.key == 'Escape' && open.value) { e.preventDefault(); e.stopPropagation(); open.value = false }
+  if (e.key === 'ArrowDown') { e.preventDefault(); open.value = true; act.value = Math.min(n - 1, act.value + 1) }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); act.value = Math.max(0, act.value - 1) }
+  else if (e.key === 'Enter' && open.value) { e.preventDefault(); const t = items.value[act.value] || items.value[0]; if (t) pick(t[1]) }
+  else if (e.key === 'Escape' && open.value) { e.preventDefault(); e.stopPropagation(); open.value = false }
 }
 function toggle() { if (open.value) open.value = false; else { inp.value.focus(); open.value = true } }
 </script>
 
 <template>
-  <div class="cb" :class="{ 'flt-course': uid == 'flt' }">
-    <input ref="inp" :id="uid + '-c'" class="cb-in" :class="{ 'flt-sel': uid == 'flt', invalid }" role="combobox" :aria-expanded="String(open)" :aria-controls="uid + '-lb'"
+  <div class="cb" :class="{ 'flt-course': uid === 'flt' }">
+    <input ref="inp" :id="uid + '-c'" class="cb-in" :class="{ 'flt-sel': uid === 'flt', invalid }" role="combobox" :aria-expanded="String(open)" :aria-controls="uid + '-lb'"
            aria-autocomplete="list" autocomplete="off" :placeholder="placeholder" v-model="text"
            @focus="$event.target.select(); open = true; typing = false" @click="open = true"
            @input="open = true; typing = true; act = -1" @keydown="key" @blur="blur">

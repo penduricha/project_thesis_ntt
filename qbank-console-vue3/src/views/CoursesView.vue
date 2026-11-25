@@ -9,8 +9,8 @@ const q = computed(() => norm((S.cq || '').trim().replace(/\s+/g, ' ')))
 const items = computed(() => COURSES.map((c, i) => [c, i]).filter(([c, i]) => subjOk(i) && (!q.value || norm(c.name).includes(q.value) || norm(c.id).includes(q.value))))
 const count = computed(() => ((S.cq || '').trim() ? `Hiển thị ${items.value.length}/${COURSES.length} môn học` : `${COURSES.length} môn học`))
 const stat = i => {
-  const L = S.q.filter(x => x.c == i), ok = L.filter(x => x.st == 'ok').length
-  return { n: L.length, ok, fl: L.filter(x => x.st == 'flag').length, pct: L.length ? Math.round(ok / L.length * 100) : 0 }
+  const L = S.q.filter(x => x.c === i), ok = L.filter(x => x.st === 'ok').length
+  return { n: L.length, ok, fl: L.filter(x => x.st === 'flag').length, pct: L.length ? Math.round(ok / L.length * 100) : 0 }
 }
 const hl = name => {
   const n = norm(name), k = q.value ? n.indexOf(q.value) : -1

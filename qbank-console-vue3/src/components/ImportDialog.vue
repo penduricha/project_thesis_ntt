@@ -46,7 +46,7 @@ async function save() {
       <div id="imp-chips" class="cc-chips" :class="{ invalid: chipErr }">
         <template v-if="crs?.topics.length">
           <small style="flex:1 1 100%">Chương của môn đã chọn ({{ crs.topics.length }}) – bấm để chọn nhanh:</small>
-          <button v-for="(x, i) in crs.topics" :key="i" type="button" class="btn sm" :class="{ pri: i == S.imp.tp }" @click="S.imp.tp = i; chipErr = ''">{{ x }}</button>
+          <button v-for="(x, i) in crs.topics" :key="i" type="button" class="btn sm" :class="{ pri: i === S.imp.tp }" @click="S.imp.tp = i; chipErr = ''">{{ x }}</button>
         </template>
         <small v-else>Môn học này chưa có chương nào.</small>
       </div>

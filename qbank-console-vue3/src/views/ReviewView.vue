@@ -7,11 +7,11 @@ import { diffWords } from '../utils.js'
 
 const router = useRouter()
 const types = ['all', 'Chính tả', 'Ngữ pháp', 'Logic', 'Phương án nhiễu']
-const items = computed(() => S.sug.filter(s => S.q.some(x => x.id == s.qid)))
+const items = computed(() => S.sug.filter(s => S.q.some(x => x.id === s.qid)))
 const cards = computed(() => items.value
   .filter(s => S.rf === 'all' || s.is.some(i => i.k === S.rf))
   .map(s => {
-    const q = S.q.find(x => x.id == s.qid), same = q.text === s.tx
+    const q = S.q.find(x => x.id === s.qid), same = q.text === s.tx
     const json = JSON.stringify({ taskId: s.tid, questionId: code(q), valid: true, issues: s.is.map(i => ({ type: i.k, description: i.d })),
       suggestedText: same ? null : s.tx, suggestedDifficulty: LV_DB[LV.indexOf(s.diff)] || null, severity: ENUM_DB.sev[s.sev] || 'low' }, null, 2)
     return { s, q, same, df: diffWords(q.text, s.tx), json }
@@ -48,10 +48,10 @@ const toggle = (id, on) => (on ? S.rsel.add(id) : S.rsel.delete(id))
         <span class="b n">Độ khó gợi ý: {{ c.s.diff }}</span>
       </div>
       <div class="cmp" :hidden="c.same">
-        <div><h4>Nội dung gốc</h4><p><template v-for="(w, i) in c.df.oldTok" :key="i"><del v-if="w.k == 'del'" class="diff-del">{{ w.t }}</del><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
-        <div class="new"><h4>Đề xuất của AI</h4><p><template v-for="(w, i) in c.df.newTok" :key="i"><ins v-if="w.k == 'ins'" class="diff-ins">{{ w.t }}</ins><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
+        <div><h4>Nội dung gốc</h4><p><template v-for="(w, i) in c.df.oldTok" :key="i"><del v-if="w.k === 'del'" class="diff-del">{{ w.t }}</del><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
+        <div class="new"><h4>Đề xuất của AI</h4><p><template v-for="(w, i) in c.df.newTok" :key="i"><ins v-if="w.k === 'ins'" class="diff-ins">{{ w.t }}</ins><template v-else>{{ w.t }}</template>{{ ' ' }}</template></p></div>
       </div>
-      <div class="qrow__opts"><span v-for="(o, i) in c.q.o" :key="i" class="o" :class="{ on: i == c.q.a }"><i>{{ 'ABCD'[i] }}</i>{{ o }}</span></div>
+      <div class="qrow__opts"><span v-for="(o, i) in c.q.o" :key="i" class="o" :class="{ on: i === c.q.a }"><i>{{ 'ABCD'[i] }}</i>{{ o }}</span></div>
       <p v-if="c.same" class="warn-inline" style="font-size:var(--fs-sm)">AI chỉ nhận xét, không đề xuất văn bản thay thế. Hãy mở trình sửa để chỉnh phương án hoặc giữ nguyên.</p>
       <ul class="iss"><li v-for="(i, k) in c.s.is" :key="k"><span class="b" :class="IC[i.k]">{{ i.k }}</span> {{ i.d }}</li></ul>
       <details><summary class="mut" style="cursor:pointer;font-size:var(--fs-sm)">Phản hồi JSON đã kiểm tra hợp lệ</summary><pre class="codeblock" style="margin-top:.5rem">{{ c.json }}</pre></details>

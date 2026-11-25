@@ -39,7 +39,7 @@ function del() {
     </template>
     <div class="directory-secondary">
       <button class="btn" @click="openDialog('user-confirm', { adminId: u.adminId, mode: 'pw' })">Cấp lại mật khẩu</button>
-      <button v-if="!me" class="btn directory-danger" :disabled="used && u.status === 'disabled'" @click="del">{{ used ? 'Vô hiệu hóa' : 'Xóa tài khoản' }}</button>
+      <button v-if="!me" class="btn dan directory-danger" :disabled="used && u.status === 'disabled'" @click="del">{{ used ? 'Vô hiệu hóa' : 'Xóa tài khoản' }}</button>
     </div>
     <template #footer>
       <button class="btn" :class="me ? 'only-action pri' : ''" @click="emit('close')">Đóng</button>

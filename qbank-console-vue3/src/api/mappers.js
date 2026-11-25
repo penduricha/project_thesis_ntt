@@ -16,7 +16,7 @@ export const VALIDATION_TO_UI = {
 export const UI_TO_VALIDATION = { draft: 'not_checked', ok: 'clean', flag: 'has_issues', stale: 'stale' }
 
 export const LV_DB = [1, 2, 3]
-export const difficultyToUi = (d) => (d == null ? 1 : d <= 1 ? 0 : d === 2 ? 1 : 2)
+export const difficultyToUi = (d) => (d === null ? 1 : d <= 1 ? 0 : d === 2 ? 1 : 2)
 export const difficultyToDb = (uiIndex) => LV_DB[+uiIndex] ?? 2
 export const labelToIndex = (label) => Math.max(0, 'ABCD'.indexOf(label || 'A'))
 export const indexToLabel = (i) => 'ABCD'[+i] || 'A'
@@ -114,13 +114,13 @@ export function questionToUpdate(q, course) {
 export function suggestionsToUi(list, question, taskId) {
   const stemSug = list.find((s) => ['stem', 'question'].includes(String(s.targetField || '').toLowerCase()))
   const tx = stemSug?.proposedText || question.text
-  const diff = list.find((s) => s.suggestedDifficulty != null)?.suggestedDifficulty
+  const diff = list.find((s) => s.suggestedDifficulty !== null)?.suggestedDifficulty
   const sev = list.some((s) => s.severity === 'high') ? 'Cao' : list.some((s) => s.severity === 'medium') ? 'Trung bình' : 'Thấp'
   return {
     qid: question.id,
     tx,
     is: list.map((s) => ({ k: s.issueLabel || s.issueType, d: s.explanation || s.proposedText || '' })),
-    diff: diff != null ? ['Dễ', 'Trung bình', 'Khó'][difficultyToUi(diff)] : 'Trung bình',
+    diff: diff !== null ? ['Dễ', 'Trung bình', 'Khó'][difficultyToUi(diff)] : 'Trung bình',
     sev,
     tid: taskId || list[0]?.taskId || '',
     raw: list,

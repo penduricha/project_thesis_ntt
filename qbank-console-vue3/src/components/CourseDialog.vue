@@ -18,9 +18,9 @@ async function submit() {
   Object.keys(err).forEach(k => delete err[k])
   const id = f.id.trim().toUpperCase(), name = f.name.trim().replace(/\s+/g, ' '), others = COURSES.filter((_, i) => i !== props.index)
   if (!id) err.id = 'Mã học phần đang trống.'
-  else if (others.some(c => keyOf(c.id) == keyOf(id))) err.id = 'Mã học phần này đã tồn tại.'
+  else if (others.some(c => keyOf(c.id) === keyOf(id))) err.id = 'Mã học phần này đã tồn tại.'
   if (!name) err.name = 'Tên môn học đang trống.'
-  else if (others.some(c => keyOf(c.name) == keyOf(name))) err.name = 'Tên môn học này đã tồn tại.'
+  else if (others.some(c => keyOf(c.name) === keyOf(name))) err.name = 'Tên môn học này đã tồn tại.'
   if (Object.keys(err).length) {
     await nextTick(); const e = document.querySelector('#dlg .invalid'); e?.scrollIntoView({ block: 'center' }); e?.focus({ preventScroll: true }); return
   }

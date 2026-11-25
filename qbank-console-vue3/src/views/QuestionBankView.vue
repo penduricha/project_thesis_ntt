@@ -16,7 +16,7 @@ const slice = computed(() => L.value.slice((S.f.page - 1) * perPage, S.f.page * 
 const inView = computed(() => L.value.filter(q => S.sel.has(q.id)).length)
 const allSel = computed(() => L.value.length > 0 && inView.value === L.value.length)
 const partial = computed(() => inView.value > 0 && inView.value < L.value.length)
-const courseQ = computed(() => (isCourse.value ? S.q.filter(q => q.c == S.ci) : []))
+const courseQ = computed(() => (isCourse.value ? S.q.filter(q => q.c === S.ci) : []))
 
 const chips = computed(() => {
   const f = S.f, a = []
@@ -59,7 +59,7 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
     <div class="chips" style="flex:1">
       <button type="button" class="chip" :class="{ on: S.f.tp === '' }" @click="S.f.tp = ''; setPage()">Tất cả chương ({{ courseQ.length }})</button>
       <button v-for="(t, idx) in crs.topics" :key="idx" type="button" class="chip" :class="{ on: S.f.tp === String(idx) }"
-              @click="S.f.tp = String(idx); setPage()">{{ t }} ({{ courseQ.filter(q => q.tp == idx).length }})</button>
+              @click="S.f.tp = String(idx); setPage()">{{ t }} ({{ courseQ.filter(q => q.tp === idx).length }})</button>
     </div>
     <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">Quản lý chương ({{ crs.topics.length }})</button>
   </div>
@@ -121,7 +121,7 @@ onMounted(() => { fitSearch(); document.fonts?.ready.then(fitSearch) })
               <span class="qrow__meta">Cập nhật {{ q.updatedAt || '—' }} · {{ q.by || 'Hệ thống' }}</span>
             </div>
             <p class="qrow__text">{{ q.text }}</p>
-            <div class="qrow__opts"><span v-for="(o, i) in q.o" :key="i" class="o" :class="{ on: i == q.a }"><i>{{ 'ABCD'[i] }}</i>{{ o }}</span></div>
+            <div class="qrow__opts"><span v-for="(o, i) in q.o" :key="i" class="o" :class="{ on: i === q.a }"><i>{{ 'ABCD'[i] }}</i>{{ o }}</span></div>
           </div>
           <div class="acts">
             <button class="btn sm pri" :disabled="busy(q)" @click="runAI([q.id])">Kiểm định</button>

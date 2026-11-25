@@ -8,7 +8,7 @@ import { norm } from '../utils.js'
 
 const props = defineProps({ id: { type: Number, default: 0 }, ctx: { type: Object, default: () => ({}) } })
 const emit = defineEmits(['close'])
-const cur = props.id ? S.q.find(x => x.id == props.id) : null
+const cur = props.id ? S.q.find(x => x.id === props.id) : null
 const base = cur || { text: '', o: ['', '', '', ''], a: 0, c: props.ctx.c ?? 0, tp: props.ctx.tp ?? 0, l: 1 }
 const f = reactive({
   title: base.title || '', text: base.text, o: [...base.o], a: base.a, c: base.c, l: base.l, fb: base.fb || '',
@@ -39,7 +39,7 @@ const dupTitle = computed(() => {
   if (!isNew.value) return null
   const t = ntitle(f.title)
   if (!t) return null                       // tiêu đề không bắt buộc: để trống thì bỏ qua
-  return S.q.find(x => x.c == f.c && ntitle(x.title) === t) || null
+  return S.q.find(x => x.c === f.c && ntitle(x.title) === t) || null
 })
 
 /* Trùng câu dẫn — chỉ CẢNH BÁO, vẫn lưu được (chỉ form thêm mới). */
@@ -47,13 +47,13 @@ const dupStem = computed(() => {
   if (!isNew.value) return null
   const t = nstem(f.text)
   if (!t) return null
-  return S.q.find(x => x.c == f.c && nstem(x.text) === t) || null
+  return S.q.find(x => x.c === f.c && nstem(x.text) === t) || null
 })
 const dto = computed(() => {
   const c = COURSES[f.c] || {}, o = f.o.map(x => x.trim())
   return { subjectId: c.subjectId ?? null, topicId: c.topicIds?.[f.tp] ?? null, topicName: c.topics?.[f.tp] ?? null, title: f.title.trim() || null, stem: f.text.trim(),
     optionA: o[0], optionB: o[1], optionC: o[2], optionD: o[3], correctLabel: 'ABCD'[f.a], contentFormat: 'plain', generalFeedback: f.fb.trim() || null,
-    difficulty: LV_DB[+f.l], status: 'active', validationStatus: ENUM_DB.st[cur && cur.st != 'draft' ? 'stale' : 'draft'], source: cur?.src || 'manual', version: cur?.ver || 1 }
+    difficulty: LV_DB[+f.l], status: 'active', validationStatus: ENUM_DB.st[cur && cur.st !== 'draft' ? 'stale' : 'draft'], source: cur?.src || 'manual', version: cur?.ver || 1 }
 })
 
 function pickCourse(v) { f.c = +v; f.tp = 0; err.c = ''; err.chips = '' }
@@ -120,7 +120,7 @@ async function save() {
       <div id="cf-chips" class="cc-chips" :class="{ invalid: err.chips }">
         <template v-if="COURSES[f.c]?.topics.length">
           <small style="flex:1 1 100%">Chương của môn đã chọn ({{ COURSES[f.c].topics.length }}) – bấm để chọn nhanh:</small>
-          <button v-for="(x, i) in COURSES[f.c].topics" :key="i" type="button" class="btn sm" :class="{ pri: i == f.tp }" @click="f.tp = i; err.chips = ''">{{ x }}</button>
+          <button v-for="(x, i) in COURSES[f.c].topics" :key="i" type="button" class="btn sm" :class="{ pri: i === f.tp }" @click="f.tp = i; err.chips = ''">{{ x }}</button>
         </template>
         <small v-else>Môn học này chưa có chương nào.</small>
       </div>

@@ -30,14 +30,14 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast('Đã lưu tùy
               <div class="tfa__txt">
                 <p class="tfa__st" role="status"><span>Trạng thái:</span><span class="ubd" :class="'ubd--' + v.bd">{{ v.text }}</span></p>
                 <p class="tfa__desc">{{ v.desc }}</p>
-                <p v-if="st == 'PENDING'" class="tfa__hint">Còn <b id="tfa-cd">{{ left }}</b> để hoàn tất. Trong lúc chờ, đăng nhập chưa yêu cầu mã xác thực.</p>
+                <p v-if="st === 'PENDING'" class="tfa__hint">Còn <b id="tfa-cd">{{ left }}</b> để hoàn tất. Trong lúc chờ, đăng nhập chưa yêu cầu mã xác thực.</p>
               </div>
             </div>
-            <button v-if="st == 'NOT_ENABLED'" type="button" class="btn pri" @click="tfaOpen">Kích hoạt 2FA</button>
-            <button v-else-if="st == 'PENDING'" type="button" class="btn" @click="tfaAsk">Hủy và cài lại</button>
+            <button v-if="st === 'NOT_ENABLED'" type="button" class="btn pri" @click="tfaOpen">Kích hoạt 2FA</button>
+            <button v-else-if="st === 'PENDING'" type="button" class="btn" @click="tfaAsk">Hủy và cài lại</button>
           </div>
-          <p v-if="st == 'PENDING' && demo" class="mut" style="margin:0;font-size:var(--fs-sm)">Bản demo: <button type="button" class="btn sm" @click="tfaDone">Mô phỏng ứng dụng đã xác nhận</button></p>
-          <p v-else-if="st == 'PENDING'" class="mut" style="margin:0;font-size:var(--fs-sm)">Đang chờ ứng dụng trên điện thoại xác nhận. Trang tự cập nhật khi xác nhận xong.</p>
+          <p v-if="st === 'PENDING' && demo" class="mut" style="margin:0;font-size:var(--fs-sm)">Bản demo: <button type="button" class="btn sm" @click="tfaDone">Mô phỏng ứng dụng đã xác nhận</button></p>
+          <p v-else-if="st === 'PENDING'" class="mut" style="margin:0;font-size:var(--fs-sm)">Đang chờ ứng dụng trên điện thoại xác nhận. Trang tự cập nhật khi xác nhận xong.</p>
         </div>
       </div>
     </section>
