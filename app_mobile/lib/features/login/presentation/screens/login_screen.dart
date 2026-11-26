@@ -294,9 +294,17 @@ class _LoginScreenState extends State<LoginScreen> {
         ? AutovalidateMode.onUserInteraction
         : AutovalidateMode.disabled;
 
+    final colorScheme = Theme.of(context).colorScheme;
+    final statusBarStyle = colorScheme.brightness == Brightness.dark
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark;
+
     return Scaffold(
+      // The former login card color fills the screen on both light and dark themes.
+      backgroundColor: colorScheme.surfaceContainerLow,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        systemOverlayStyle: statusBarStyle.copyWith(statusBarColor: Colors.transparent),
         actions: [IconButton(
           tooltip: AppStrings.of(context).text('settings'),
           onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen())),
@@ -314,154 +322,150 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 460),
-                child: Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(side: BorderSide(color: Theme.of(context).dividerColor), borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                key: _formKey,
-                // Chỉ phần phụ thuộc trạng thái loading mới được dựng lại
-                child: ListenableBuilder(
-                  listenable: _controller,
-                  builder: (context, _) {
-                    final isLoading = _controller.isLoading;
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    // Chỉ phần phụ thuộc trạng thái loading mới được dựng lại
+                    child: ListenableBuilder(
+                      listenable: _controller,
+                      builder: (context, _) {
+                        final isLoading = _controller.isLoading;
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: Text(
-                            'Authenticator',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 24,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 40),
-
-                        // ---------- Admin Id ----------
-                        _AuthTextField(
-                          label: AppStrings.of(context).text('adminId'),
-                          hint: AppStrings.of(context).text('enterId'),
-                          controller: _idController,
-                          focusNode: _idFocus,
-                          enabled: !isLoading,
-                          autoValidateMode: autoMode,
-                          validator: _validateId,
-                          keyboardType: TextInputType.number,
-                          textInputAction: TextInputAction.next,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly, // chỉ cho nhập 0-9
-                            LengthLimitingTextInputFormatter(10), // tối đa 10 ký tự
-                          ],
-                          onSubmitted: (_) => _passwordFocus.requestFocus(),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        // ---------- Password ----------
-                        _AuthTextField(
-                          label: AppStrings.of(context).text('password'),
-                          hint: AppStrings.of(context).text('enterPassword'),
-                          controller: _passwordController,
-                          focusNode: _passwordFocus,
-                          enabled: !isLoading,
-                          autoValidateMode: autoMode,
-                          validator: _validatePassword,
-                          obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _onSubmit(), // phím Done = bấm Login
-                          suffixIcon: IconButton(
-                            tooltip:
-                            AppStrings.of(context).text(_obscurePassword ? 'showPassword' : 'hidePassword'),
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
-                            onPressed: isLoading
-                                ? null
-                                : () {
-                              setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                              );
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // ---------- Nút Login ----------
-                        // Bình thường luôn cho bấm (để nhận phản hồi lỗi).
-                        // Đang gọi API: chữ "Login" -> spinner, nút bị khóa.
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : _onSubmit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryBlue,
-                              // Giữ nguyên màu xanh khi bị khóa (mặc định sẽ xám)
-                              disabledBackgroundColor: AppColors.primaryBlue,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
-                              child: isLoading
-                                  ? const _ButtonSpinner(key: ValueKey('spinner'))
-                                  : Text(
-                                AppStrings.of(context).text('login'),
-                                key: ValueKey('label'),
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: Text(
+                                'Authenticator',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
+                                  fontSize: 24,
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                          ),
-                        ),
 
-                        const SizedBox(height: 20),
+                            const SizedBox(height: 40),
 
-                        Center(
-                          child: TextButton(
-                            onPressed: isLoading
-                                ? null
-                                : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                  const CreateAccountScreen(),
+                            // ---------- Admin Id ----------
+                            _AuthTextField(
+                              label: AppStrings.of(context).text('adminId'),
+                              hint: AppStrings.of(context).text('enterId'),
+                              controller: _idController,
+                              focusNode: _idFocus,
+                              enabled: !isLoading,
+                              autoValidateMode: autoMode,
+                              validator: _validateId,
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly, // chỉ cho nhập 0-9
+                                LengthLimitingTextInputFormatter(10), // tối đa 10 ký tự
+                              ],
+                              onSubmitted: (_) => _passwordFocus.requestFocus(),
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            // ---------- Password ----------
+                            _AuthTextField(
+                              label: AppStrings.of(context).text('password'),
+                              hint: AppStrings.of(context).text('enterPassword'),
+                              controller: _passwordController,
+                              focusNode: _passwordFocus,
+                              enabled: !isLoading,
+                              autoValidateMode: autoMode,
+                              validator: _validatePassword,
+                              obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _onSubmit(), // phím Done = bấm Login
+                              suffixIcon: IconButton(
+                                tooltip:
+                                AppStrings.of(context).text(_obscurePassword ? 'showPassword' : 'hidePassword'),
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: Colors.grey,
+                                  size: 20,
                                 ),
-                              );
-                            },
-                            child: Text(
-                              AppStrings.of(context).text('createAccount'),
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
+                                onPressed: isLoading
+                                    ? null
+                                    : () {
+                                  setState(
+                                        () => _obscurePassword = !_obscurePassword,
+                                  );
+                                },
                               ),
                             ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+
+                            const SizedBox(height: 12),
+
+                            // ---------- Nút Login ----------
+                            // Bình thường luôn cho bấm (để nhận phản hồi lỗi).
+                            // Đang gọi API: chữ "Login" -> spinner, nút bị khóa.
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: isLoading ? null : _onSubmit,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryBlue,
+                                  // Giữ nguyên màu xanh khi bị khóa (mặc định sẽ xám)
+                                  disabledBackgroundColor: AppColors.primaryBlue,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: isLoading
+                                      ? const _ButtonSpinner(key: ValueKey('spinner'))
+                                      : Text(
+                                    AppStrings.of(context).text('login'),
+                                    key: ValueKey('label'),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            Center(
+                              child: TextButton(
+                                onPressed: isLoading
+                                    ? null
+                                    : () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                      const CreateAccountScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  AppStrings.of(context).text('createAccount'),
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
