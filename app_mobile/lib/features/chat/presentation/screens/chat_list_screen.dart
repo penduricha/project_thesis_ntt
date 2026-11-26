@@ -7,6 +7,7 @@ import '../../../main_shell/presentation/widgets/app_menu_bar.dart';
 import '../../application/chat_controller.dart';
 import '../../data/model/chat_conversation.dart';
 import '../widgets/custom/chat_avatar.dart';
+import '../widgets/custom/chat_list_item.dart';
 import '../widgets/custom/chat_status_banner.dart';
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
@@ -197,12 +198,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return RefreshIndicator(
       onRefresh: _chat.refreshAll,
-      child: ListView.separated(
+      child: ListView.builder(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
         itemCount: chats.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, indent: 76, color: AppColors.border),
         itemBuilder: (context, index) => _buildChatTile(chats[index]),
       ),
     );
@@ -272,83 +272,79 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final last = c.lastMessage;
     final preview = _preview(c);
 
-    return InkWell(
+    return ChatListItem(
       onTap: () => _openConversation(c),
-      child: Container(
-        height: 80,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Chấm xanh chưa đọc
-            SizedBox(
-              width: 10,
-              child: Center(
-                child: isUnread
-                    ? Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(color: _blueColor, shape: BoxShape.circle),
-                      )
-                    : const SizedBox.shrink(),
-              ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Chấm xanh chưa đọc
+          SizedBox(
+            width: 10,
+            child: Center(
+              child: isUnread
+                  ? Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(color: _blueColor, shape: BoxShape.circle),
+                    )
+                  : const SizedBox.shrink(),
             ),
-            const SizedBox(width: 10),
-            _buildAvatar(c),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          c.displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
+          ),
+          const SizedBox(width: 10),
+          _buildAvatar(c),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        c.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      ChatTime.listLabel(c.lastActivity),
+                      style: TextStyle(fontSize: 12, color: isUnread ? _blueColor : Colors.grey),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        preview,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isUnread ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
+                          fontStyle: last == null ? FontStyle.italic : FontStyle.normal,
+                        ),
+                      ),
+                    ),
+                    if (isUnread) ...[
                       const SizedBox(width: 8),
-                      Text(
-                        ChatTime.listLabel(c.lastActivity),
-                        style: TextStyle(fontSize: 12, color: isUnread ? _blueColor : Colors.grey),
-                      ),
+                      _UnreadBadge(count: c.unreadCount),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          preview,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isUnread ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
-                            fontStyle: last == null ? FontStyle.italic : FontStyle.normal,
-                          ),
-                        ),
-                      ),
-                      if (isUnread) ...[
-                        const SizedBox(width: 8),
-                        _UnreadBadge(count: c.unreadCount),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../../../core/utils/chat_time.dart';
 import '../../application/chat_controller.dart';
 import '../../data/model/chat_conversation.dart';
 import '../../data/model/chat_message.dart';
+import '../widgets/custom/chat_composer.dart';
 import '../widgets/custom/chat_message_bubble.dart';
 import '../widgets/custom/chat_status_banner.dart';
 import 'group_info_screen.dart';
@@ -25,8 +26,6 @@ class ChatDetailScreen extends StatefulWidget {
 }
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
-  // Chiều cao tối thiểu của ô nhập và nút gửi
-  static const double _inputHeight = 40;
   static const int _maxLength = 2000;
 
   // Cách đáy bao nhiêu điểm ảnh thì vẫn coi là "đang ở cuối danh sách".
@@ -260,7 +259,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             children: [
               const ChatStatusBanner(),
               Expanded(child: _buildBody(conversation, messages)),
-              _buildInputArea(conversation != null),
+              ChatComposer(
+                controller: _input,
+                enabled: conversation != null,
+                onSend: _send,
+                maxLength: _maxLength,
+              ),
             ],
           ),
         );
@@ -459,76 +463,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           color: Colors.grey[600],
           fontSize: 13,
           fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputArea(bool enabled) {
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Ô nhập: chỉ văn bản. Cao tối thiểu bằng nút gửi, giãn tối đa 5 dòng.
-              Expanded(
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: _inputHeight),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.borderIos),
-                  ),
-                  alignment: Alignment.center,
-                  child: TextField(
-                    controller: _input,
-                    enabled: enabled,
-                    minLines: 1,
-                    maxLines: 5,
-                    keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.sentences,
-                    // Giới hạn theo đơn vị UTF-16 của Dart (chặt hơn hoặc bằng ký tự Unicode server đếm) nên luôn hợp lệ.
-                    inputFormatters: [LengthLimitingTextInputFormatter(_maxLength)],
-                    style: const TextStyle(fontSize: 16),
-                    decoration: InputDecoration(
-                      hintText: AppStrings.of(context).text('messageHint'),
-                      hintStyle: TextStyle(color: AppColors.textInactive),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 8),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Nút gửi: xanh khi có chữ, xám và không bấm được khi ô trống.
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _input,
-                builder: (context, value, child) {
-                  final hasText = enabled && value.text.trim().isNotEmpty;
-                  return Container(
-                    width: _inputHeight,
-                    height: _inputHeight,
-                    decoration: BoxDecoration(
-                      color: hasText ? AppColors.primaryBlue : Colors.grey[300],
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      tooltip: AppStrings.of(context).text('send'),
-                      icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                      onPressed: hasText ? _send : null,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
         ),
       ),
     );
