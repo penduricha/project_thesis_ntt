@@ -253,21 +253,14 @@ function onLockVisibilityChange() {
 }
 
 /* ------------------------------ Gửi đăng nhập ------------------------------ */
-/**
- * ISSUE 1 — phím ENTER phải chạy đúng hàm của nút "Đăng nhập".
- * Vì sao cần xử lý tay thay vì dựa vào submit mặc định của trình duyệt:
- *  - Form có NHIỀU ô text (mã, mật khẩu, 6 ô OTP) nên một số trình duyệt/extension
- *    không kích hoạt implicit submission như mong đợi.
- *  - Ô OTP chặn keydown để điều hướng Backspace/Arrow, dễ "nuốt" luôn Enter.
- * Cách làm: chặn mặc định (preventDefault) rồi gọi handleLoginEvent() để chỉ chạy MỘT lần,
- * không bị double-submit với sự kiện submit của form.
- */
+// Luôn đi qua cùng sự kiện submit như nút đăng nhập. Chỉ xử lý các ô nhập
+// thông tin; nút và checkbox giữ thao tác bàn phím mặc định của chúng.
 function onFormEnter(e) {
-  if (e.isComposing || e.keyCode === 229) return          // đang gõ IME tiếng Việt/Trung
-  const t = e.target
-  if (t?.tagName === 'BUTTON' || t?.tagName === 'TEXTAREA') return  // nút/textarea tự xử lý
+  if (e.isComposing || e.keyCode === 229) return
+  const target = e.target
+  if (!(target instanceof HTMLInputElement) || !['text', 'password'].includes(target.type)) return
   e.preventDefault()
-  handleLoginEvent()
+  if (!e.repeat && !isFormDisabled.value) e.currentTarget.requestSubmit()
 }
 async function handleLoginEvent() {
   if (isFormDisabled.value) return
