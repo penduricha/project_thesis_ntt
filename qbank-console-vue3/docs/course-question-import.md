@@ -53,7 +53,8 @@ Máy chủ vẫn kiểm tra quyền và dữ liệu khi tạo từng câu.
 ## Xử lý lỗi
 
 Vue đọc file và gửi dữ liệu đã chuẩn hóa đến `POST /api/web/admin/questions/import`; Spring xác thực lại dữ liệu, sau đó dùng dịch vụ tạo câu hiện có để ghi từng câu vào CSDL. File gốc không được tải lên máy chủ. Mỗi câu có transaction riêng, không có giao dịch chung cho cả file.
-Khi gặp lỗi, hệ thống dừng và hiển thị số câu đã lưu; các câu sau chưa được gửi.
+Khi toàn bộ câu được máy chủ xác nhận đã lưu và danh sách được cập nhật, dialog tự đóng và hiển thị thông báo thành công.
+Khi gặp lỗi, máy chủ dừng xử lý và hệ thống hiển thị số câu đã lưu; các câu sau chưa được xử lý.
 Nếu mất kết nối trước khi nhận kết quả cả lô, một số hoặc tất cả câu có thể đã được lưu:
 kiểm tra danh sách trên máy chủ trước khi tạo file mới để tránh nhập trùng.
 Không tự động gửi lại các câu đã xử lý.

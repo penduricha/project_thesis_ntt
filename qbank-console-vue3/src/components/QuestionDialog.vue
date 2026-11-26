@@ -60,6 +60,10 @@ const dupStem = computed(() => {
 })
 
 function pickCourse(v) { f.c = +v; f.tp = 0; err.c = ''; err.chips = '' }
+function importSucceeded({ saved, total }) {
+  toast(t('courseImport.saved', { n: saved, total }), 'ok')
+  emit('close')
+}
 function cancel() { if (dirty.value && !confirm(t('validation.discard'))) return; emit('close') }
 function focusFirstInvalid() {
   const e = document.querySelector('#dlg .invalid'); if (!e) return
@@ -95,7 +99,7 @@ async function save() {
       <button type="button" class="btn sm" :class="{ pri: mode === 'manual' }" :aria-pressed="mode === 'manual'" :disabled="importBusy || saving" @click="setMode('manual')">{{ $t('courseImport.manual') }}</button>
       <button type="button" class="btn sm" :class="{ pri: mode === 'import' }" :aria-pressed="mode === 'import'" :disabled="importBusy || saving" @click="setMode('import')">{{ $t('courseImport.mode') }}</button>
     </div>
-    <CourseQuestionImport v-if="mode === 'import'" ref="importPanel" :course-index="ctx.c" :initial-topic="ctx.tp ?? 0" @busy="importBusy = $event" @dirty="importDirty = $event" />
+    <CourseQuestionImport v-if="mode === 'import'" ref="importPanel" :course-index="ctx.c" :initial-topic="ctx.tp ?? 0" @busy="importBusy = $event" @dirty="importDirty = $event" @success="importSucceeded" />
     <template v-else>
     <label>{{ $t('bank.titleOptional') }}
       <input id="f-ti" maxlength="255" v-model="f.title" :class="{ invalid: err.ti }" :aria-invalid="err.ti ? 'true' : null"

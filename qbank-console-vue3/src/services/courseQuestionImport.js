@@ -160,7 +160,7 @@ export async function submitCourseQuestions(items, { importBatch, onSaved, subje
       result.saved !== result.questions.length || result.saved > items.length ||
       result.questions.some(q => !q || q.questionId == null || q.subjectId !== subjectId || q.topicId !== topicId) ||
       (result.failedAt != null && (result.failedAt !== result.saved + 1 || result.failedAt > items.length)) ||
-      (result.failedAt == null && result.saved !== items.length)) {
+      (result.failedAt == null && (result.saved !== items.length || result.uncertain === true))) {
     return { saved: null, batchUncertain: true }
   }
   try { result.questions.forEach(onSaved) }

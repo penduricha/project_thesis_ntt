@@ -39,7 +39,8 @@ try {
   }
   qbankApi.dashboardSummary = async () => null
   qbankApi.dashboardActivity = async () => []
-  app = vue.createApp(Component, { id: 0, ctx: { c: 0, tp: 0, courseImport: true } })
+  const isOpen = vue.ref(true)
+  app = vue.createApp({ render: () => isOpen.value ? vue.h(Component, { id: 0, ctx: { c: 0, tp: 0, courseImport: true }, onClose: () => { isOpen.value = false } }) : null })
   app.provide(vue.ssrContextKey, { modules: new Set() })
   app.config.globalProperties.$t = t
   app.mount('#app')
@@ -55,8 +56,8 @@ try {
   assert.ok(document.querySelector('.modal-header .dlg-x'), 'Header close remains available')
   const chapterLabel = document.querySelector('.course-import label')
   assert.ok(!chapterLabel.textContent.includes('*'), 'Chapter has no asterisk')
-  const input = document.querySelector('input[type=file]')
   const selectFile = async value => {
+    const input = document.querySelector('input[type=file]')
     Object.defineProperty(input, 'files', { configurable: true, value: [new File([JSON.stringify(value)], 'questions.json')] })
     input.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
     await new Promise(resolve => setTimeout(resolve, 20)); await vue.nextTick()
@@ -80,8 +81,38 @@ try {
   assert.equal(posted[0].topicId, 42)
   assert.equal(posted[0].questions[0].correctLabel, 'B')
   assert.equal(S.q[0].id, 99)
-  assert.equal(submit().disabled, true, 'Completed imports cannot be submitted twice')
-  console.log('Course dialog UI: footer action, validation, pending state and import payload passed')
+  assert.equal(isOpen.value, false, 'A fully confirmed import closes the dialog')
+  assert.equal(document.querySelector('.modal'), null)
+  assert.equal(S.toast.on, true)
+  assert.equal(S.toast.tone, 'ok')
+  assert.equal(S.toast.msg, t('courseImport.saved', { n: 1, total: 1 }), 'Success toast reports saved count')
+
+  const failureCases = [
+    { name: 'partial', value: { saved: 1, failedAt: 2, uncertain: false, status: 409, questions: [{ questionId: 100, subjectId: 7, topicId: 42, ...row }] }, rows: [row, row] },
+    { name: 'uncertain response', value: { saved: 0, failedAt: 1, uncertain: true, questions: [] }, rows: [row] },
+    { name: 'network timeout', error: new Error('timeout'), rows: [row] },
+    { name: 'rejected batch', error: { response: { status: 400 } }, rows: [row] },
+    { name: 'malformed response', value: { saved: 2, questions: [] }, rows: [row] },
+    { name: 'inconsistent success response', value: { saved: 1, failedAt: null, uncertain: true, questions: [{ questionId: 101, subjectId: 7, topicId: 42, ...row }] }, rows: [row] },
+  ]
+  for (const test of failureCases) {
+    S.toast.on = false
+    qbankApi.importQuestions = async () => { if (test.error) throw test.error; return test.value }
+    isOpen.value = true
+    await vue.nextTick()
+    ;[...document.querySelectorAll('.import-mode button')].find(button => button.textContent.trim() === t('courseImport.mode')).click()
+    await vue.nextTick()
+    await selectFile(test.rows)
+    submit().click()
+    await new Promise(resolve => setTimeout(resolve, 20)); await vue.nextTick()
+    assert.equal(isOpen.value, true, `${test.name} keeps the dialog open`)
+    assert.equal(S.toast.on, false, `${test.name} does not show a success toast`)
+    assert.ok(document.querySelector('.import-result .err'), `${test.name} shows an error`)
+    assert.equal(submit().disabled, true, `${test.name} cannot be retried accidentally`)
+    isOpen.value = false
+    await vue.nextTick()
+  }
+  console.log('Course dialog UI: success closes and shows toast; failures remain visible without retry')
 } finally {
   app?.unmount()
   await server.close()

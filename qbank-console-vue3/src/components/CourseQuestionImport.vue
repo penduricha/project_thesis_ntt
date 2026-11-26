@@ -7,7 +7,7 @@ import { t } from '../i18n/index.js'
 import { parseQuestionFile, submitCourseQuestions } from '../services/courseQuestionImport.js'
 
 const props = defineProps({ courseIndex: { type: Number, required: true }, initialTopic: { type: Number, default: 0 } })
-const emit = defineEmits(['busy', 'dirty'])
+const emit = defineEmits(['busy', 'dirty', 'success'])
 const course = computed(() => COURSES[props.courseIndex])
 const topic = ref(props.initialTopic), level = ref(1), fileName = ref(''), parsed = ref(null)
 const error = ref(null), busy = ref(false), parsing = ref(false), result = ref(null)
@@ -42,7 +42,10 @@ async function save() {
       onSaved: response => { S.q.push(detailToQuestion(response, ci, tp)) },
     })
     if (result.value.saved) await loadDashboard()
-    if (!result.value.failedAt && !result.value.localUpdateFailure && !result.value.batchUncertain && !result.value.batchRejected) emit('dirty', false)
+    if (result.value.saved === rows.length && !result.value.failedAt && !result.value.uncertain && !result.value.localUpdateFailure && !result.value.batchUncertain && !result.value.batchRejected) {
+      emit('dirty', false)
+      emit('success', { saved: result.value.saved, total: rows.length })
+    }
   } finally { busy.value = false; emit('busy', false) }
 }
 defineExpose({ canSave, save })
