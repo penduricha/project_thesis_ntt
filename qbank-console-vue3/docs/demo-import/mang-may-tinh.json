@@ -1,0 +1,22 @@
+[
+  {
+    "stem": "Giao thức nào thường được dùng để phân giải tên miền thành địa chỉ IP?",
+    "optionA": "DNS",
+    "optionB": "HTTP",
+    "optionC": "FTP",
+    "optionD": "SMTP",
+    "correctLabel": "A",
+    "title": "Demo JSON 01 - DNS",
+    "generalFeedback": "DNS phân giải tên miền thành địa chỉ IP."
+  },
+  {
+    "stem": "Giao thức nào thường dùng để cấp phát địa chỉ IP tự động?",
+    "optionA": "ARP",
+    "optionB": "DHCP",
+    "optionC": "SSH",
+    "optionD": "ICMP",
+    "correctLabel": "B",
+    "title": "Demo JSON 02 - DHCP",
+    "generalFeedback": "DHCP có thể cấp phát cấu hình IP tự động."
+  }
+]

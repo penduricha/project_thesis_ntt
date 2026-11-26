@@ -3,6 +3,8 @@ package com.example.be_web_admin.controller.web;
 import com.example.be_web_admin.dto.qbank.AiJobView;
 import com.example.be_web_admin.dto.qbank.AiSuggestionView;
 import com.example.be_web_admin.dto.qbank.CreateQuestionRequest;
+import com.example.be_web_admin.dto.qbank.ImportQuestionsRequest;
+import com.example.be_web_admin.dto.qbank.ImportQuestionsResult;
 import com.example.be_web_admin.dto.qbank.PageResponse;
 import com.example.be_web_admin.dto.qbank.QuestionDetail;
 import com.example.be_web_admin.dto.qbank.QuestionDraft;
@@ -11,6 +13,7 @@ import com.example.be_web_admin.dto.qbank.RevisionView;
 import com.example.be_web_admin.dto.qbank.UpdateQuestionRequest;
 import com.example.be_web_admin.service.qbank.AiCheckService;
 import com.example.be_web_admin.service.qbank.QuestionService;
+import com.example.be_web_admin.service.qbank.QuestionImportService;
 import com.example.be_web_admin.service.qbank.UiStateStore;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -42,13 +45,16 @@ import java.util.List;
 public class QuestionBankController {
 
     private final QuestionService questionService;
+    private final QuestionImportService questionImportService;
     private final AiCheckService aiCheckService;
     private final UiStateStore uiState;
 
     public QuestionBankController(QuestionService questionService,
+                                  QuestionImportService questionImportService,
                                   AiCheckService aiCheckService,
                                   UiStateStore uiState) {
         this.questionService = questionService;
+        this.questionImportService = questionImportService;
         this.aiCheckService = aiCheckService;
         this.uiState = uiState;
     }
@@ -90,6 +96,13 @@ public class QuestionBankController {
                                                  Authentication authentication) {
         QuestionDetail created = questionService.create(request, WebPrincipal.adminId(authentication));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    /** Import dữ liệu file đã chuẩn hóa, theo môn/chương được chọn. */
+    @PostMapping("/import")
+    public ImportQuestionsResult importQuestions(@Valid @RequestBody ImportQuestionsRequest request,
+                                                  Authentication authentication) {
+        return questionImportService.importQuestions(request, WebPrincipal.adminId(authentication));
     }
 
     @PutMapping("/{questionId}")

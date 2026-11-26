@@ -1,0 +1,3 @@
+stem,optionA,optionB,optionC,optionD,correctLabel,title,generalFeedback
+Tầng nào trong mô hình OSI chịu trách nhiệm định tuyến gói tin?,Tầng vật lý,Tầng mạng,Tầng liên kết dữ liệu,Tầng ứng dụng,B,Demo CSV 01 - Định tuyến OSI,Tầng mạng xử lý định tuyến giữa các mạng.
+Địa chỉ MAC thường được sử dụng ở tầng nào của mô hình OSI?,Tầng liên kết dữ liệu,Tầng vận chuyển,Tầng phiên,Tầng ứng dụng,A,Demo CSV 02 - Địa chỉ MAC,Địa chỉ MAC được sử dụng tại tầng liên kết dữ liệu.

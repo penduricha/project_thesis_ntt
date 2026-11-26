@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='utf-8'?>
+<quiz>
+  <question type="multichoice">
+    <name>
+      <text>Demo XML 01 - IPv4</text>
+    </name>
+    <questiontext format="plain_text">
+      <text>Trong mạng IPv4, địa chỉ có độ dài bao nhiêu bit?</text>
+    </questiontext>
+    <generalfeedback format="plain_text">
+      <text>Địa chỉ IPv4 có độ dài 32 bit.</text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="0" format="plain_text">
+      <text>16</text>
+    </answer>
+    <answer fraction="100" format="plain_text">
+      <text>32</text>
+    </answer>
+    <answer fraction="0" format="plain_text">
+      <text>64</text>
+    </answer>
+    <answer fraction="0" format="plain_text">
+      <text>128</text>
+    </answer>
+  </question>
+  <question type="multichoice">
+    <name>
+      <text>Demo XML 02 - Switch</text>
+    </name>
+    <questiontext format="plain_text">
+      <text>Thiết bị nào thường chuyển tiếp frame dựa trên địa chỉ MAC?</text>
+    </questiontext>
+    <generalfeedback format="plain_text">
+      <text>Switch thường chuyển tiếp frame dựa trên bảng địa chỉ MAC.</text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="0" format="plain_text">
+      <text>Router</text>
+    </answer>
+    <answer fraction="100" format="plain_text">
+      <text>Switch</text>
+    </answer>
+    <answer fraction="0" format="plain_text">
+      <text>Modem</text>
+    </answer>
+    <answer fraction="0" format="plain_text">
+      <text>Repeater</text>
+    </answer>
+  </question>
+</quiz>
