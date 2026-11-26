@@ -91,7 +91,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private String resolveRole(Long adminId) {
         try {
             Admin admin = adminRepository.findAdminByAdminId(adminId);
-            if (admin == null || admin.getRole() == null) {
+            if (admin == null || !admin.isLoginAllowed() || admin.getRole() == null) {
                 // Token còn trong Redis nhưng admin đã bị xoá: không cấp quyền, request thành 401.
                 log.debug("Access token hợp lệ nhưng không tìm thấy admin {} (có thể đã bị xoá)", adminId);
                 return null;

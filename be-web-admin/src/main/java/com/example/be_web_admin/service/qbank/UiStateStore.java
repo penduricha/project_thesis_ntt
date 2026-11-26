@@ -46,7 +46,7 @@ public class UiStateStore {
     private static final Duration DASHBOARD_TTL = Duration.ofSeconds(30);
     private static final Duration ACTIVITY_TTL = Duration.ofDays(7);
     private static final Duration DRAFT_TTL = Duration.ofHours(24);
-    private static final Duration CHECK_LOCK_TTL = Duration.ofSeconds(15);
+    private static final Duration CHECK_LOCK_TTL = Duration.ofMinutes(2);
 
     private static final int ACTIVITY_MAX = 20;
 
@@ -188,8 +188,8 @@ public class UiStateStore {
                     .setIfAbsent(CHECK_LOCK_PREFIX + questionId, "1", CHECK_LOCK_TTL);
             return Boolean.TRUE.equals(ok);
         } catch (RuntimeException e) {
-            log.warn("Redis: không kiểm tra được khoá kiểm định của câu {} (cho qua): {}", questionId, e.toString());
-            return true;
+            log.warn("Redis: không kiểm tra được khoá kiểm định của câu {} (từ chối): {}", questionId, e.toString());
+            return false;
         }
     }
 

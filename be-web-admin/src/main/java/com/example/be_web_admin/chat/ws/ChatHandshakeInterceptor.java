@@ -2,6 +2,8 @@ package com.example.be_web_admin.chat.ws;
 
 import com.example.be_web_admin.chat.exception.ChatException;
 import com.example.be_web_admin.chat.service.WsTicketService;
+import com.example.be_web_admin.repository.jpa.AdminRepository;
+import com.example.be_web_admin.model.jpa.Admin;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -31,11 +33,13 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
     private final WsTicketService ticketService;
     private final ChatSessionRegistry registry;
     private final ChatProperties properties;
+    private final AdminRepository admins;
 
-    public ChatHandshakeInterceptor(WsTicketService ticketService, ChatSessionRegistry registry, ChatProperties properties) {
+    public ChatHandshakeInterceptor(WsTicketService ticketService, ChatSessionRegistry registry, ChatProperties properties, AdminRepository admins) {
         this.ticketService = ticketService;
         this.registry = registry;
         this.properties = properties;
+        this.admins = admins;
     }
 
     @Override
@@ -61,6 +65,17 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
             log.info("Chat WS: từ chối bắt tay 401 (vé sai, đã dùng hoặc hết hạn), Origin={}",
                     http.getHeader("Origin"));
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            return false;
+        }
+        try {
+            Admin admin = admins.findAdminByAdminId(adminId.get());
+            if (admin == null || !admin.isLoginAllowed()) {
+                response.setStatusCode(HttpStatus.UNAUTHORIZED);
+                return false;
+            }
+        } catch (Exception e) {
+            log.warn("Chat WS: không kiểm tra được trạng thái tài khoản: {}", e.getMessage());
+            response.setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
             return false;
         }
         if (registry.count(adminId.get()) >= properties.getWs().getMaxConnectionsPerAdmin()) {

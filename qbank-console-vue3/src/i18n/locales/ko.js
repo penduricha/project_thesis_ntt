@@ -3,6 +3,20 @@
  * 고유명사(NTTU, Moodle, Spring Boot, JWT, Qwen2.5), 오류 코드, 키 이름은 그대로 둡니다.
  */
 export default {
+  "crud.decisionUncertain": "결정 결과를 알 수 없습니다. 다시 불러와 확인하세요.",
+  "crud.taskUnknown": "상태 확인 시간이 초과되었습니다. 작업이 계속 실행 중일 수 있으므로 재전송 전에 확인하세요.",
+  "crud.catalogChanged": "목록이 변경되었습니다. 저장 전에 창을 닫고 다시 불러와 편집기를 여세요.",
+  "taskStatus.unknown": "알 수 없음",
+  "crud.subjectImmutable": "이 편집기에서는 문항의 과목을 변경할 수 없습니다.",
+  "crud.inProgress": "작업이 진행 중입니다.",
+  "crud.saveUncertain": "저장 결과를 확인할 수 없습니다. 창을 닫고 목록을 다시 불러와 재시도 전에 확인하세요.",
+  "crud.archiveUncertain": "{done}/{total}개 보관 확인, 나머지 결과는 알 수 없습니다. 재시도 전에 목록을 확인하세요.",
+  "crud.archivePartial": "{done}/{total}개 문항을 보관했습니다. 나머지는 목록을 확인하세요.",
+  "crud.restoreUncertain": "복원 결과가 불완전하거나 불확실합니다. 목록을 확인하세요.",
+  "crud.catalogUnsupported": "이 작업에는 실제 API가 없습니다. 변경 사항이 저장되지 않았습니다.",
+  "crud.suggestionsFailed": "AI 제안을 불러오지 못했습니다. 다시 시도하세요.",
+  "crud.suggestionApplied": "제안 하나를 적용했습니다. 이전 버전의 제안은 재검사가 필요합니다.",
+  "crud.suggestionsUnknown": "AI 작업은 완료되었지만 제안을 불러오지 못해 정상으로 표시할 수 없습니다.",
   // Course question file import
   "courseImport.batchUncertain": "서버 응답을 받지 못했습니다. 일부 또는 모든 문항이 저장되었을 수 있으므로 다시 가져오기 전에 목록을 확인하세요.",
   "courseImport.batchRejected": "서버가 저장 전에 데이터를 거부했습니다 (HTTP {status}).",

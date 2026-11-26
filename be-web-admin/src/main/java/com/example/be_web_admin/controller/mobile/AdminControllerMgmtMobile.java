@@ -131,10 +131,9 @@ public class AdminControllerMgmtMobile {
             return ResponseEntity.badRequest().body(responseReturn);
         }
 
-        // Lấy adminId trước khi xoá token (ưu tiên refresh token vì sống lâu hơn).
-        Long adminId = resolveAdminIdForLogout(refreshToken, accessToken);
-
         try {
+            // Only a token still present in Redis can identify a session for logout.
+            Long adminId = resolveAdminIdForLogout(refreshToken, accessToken);
             if (accessToken != null) {
                 adminTokenService.removeAdminAccessTokenByJwtToken(accessToken);
             }
@@ -389,10 +388,11 @@ public class AdminControllerMgmtMobile {
     private Long resolveAdminIdForLogout(String refreshToken, String accessToken) {
         if (refreshToken != null) {
             Long id = adminJwtTokenProvider.parseRefreshTokenAdminId(refreshToken);
-            if (id != null) return id;
+            if (id != null && adminTokenService.findAdminRefreshTokenByJwtToken(refreshToken)) return id;
         }
         if (accessToken != null) {
-            return adminJwtTokenProvider.parseAccessTokenAdminId(accessToken);
+            Long id = adminJwtTokenProvider.parseAccessTokenAdminId(accessToken);
+            if (id != null && adminTokenService.findAdminAccessTokenByJwtToken(accessToken)) return id;
         }
         return null;
     }

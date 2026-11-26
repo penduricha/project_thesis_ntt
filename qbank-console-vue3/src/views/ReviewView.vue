@@ -2,8 +2,9 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { LV, LV_DB, ENUM_DB, IC } from '../data/mock.js'
-import { COURSES, S, code, topicName, decide, bulkDecide, editQuestion } from '../store.js'
+import { COURSES, S, code, topicName, decide, bulkDecide, editQuestion, loadSuggestions } from '../store.js'
 import { diffWords } from '../utils.js'
+import { suggestionReplacement } from '../api/mappers.js'
 import { t } from '../i18n/index.js'
 
 const router = useRouter()
@@ -21,13 +22,19 @@ const cards = computed(() => items.value
     const q = S.q.find(x => x.id === s.qid), same = q.text === s.tx
     const json = JSON.stringify({ taskId: s.tid, questionId: code(q), valid: true, issues: s.is.map(i => ({ type: i.k, description: i.d })),
       suggestedText: same ? null : s.tx, suggestedDifficulty: LV_DB[LV.indexOf(s.diff)] || null, severity: ENUM_DB.sev[s.sev] || 'low' }, null, 2)
-    return { s, q, same, df: diffWords(q.text, s.tx), json }
+    const canAccept = (s.raw || []).some(item => (!item.decision || item.decision === 'pending') && suggestionReplacement(q, item) != null)
+    return { s, q, same, canAccept, df: diffWords(q.text, s.tx), json }
   }))
 const toggle = (id, on) => (on ? S.rsel.add(id) : S.rsel.delete(id))
 </script>
 
 <template>
-  <div v-if="!items.length" class="empty-box">
+  <div v-if="S.suggestionsStatus === 'error'" class="empty-box" role="alert">
+    <p>{{ $t('crud.suggestionsFailed') }}</p>
+    <button class="btn pri" @click="loadSuggestions()">{{ $t('common.retry') }}</button>
+  </div>
+  <div v-else-if="S.suggestionsStatus === 'loading'" class="empty-box" role="status">{{ $t('loading.questions') }}</div>
+  <div v-else-if="!items.length" class="empty-box">
     <p class="mut">{{ $t('ai.noSuggestions') }}</p>
     <button class="btn pri" @click="router.push('/bank')">{{ $t('search.goToBank') }}</button>
   </div>
@@ -61,12 +68,16 @@ const toggle = (id, on) => (on ? S.rsel.add(id) : S.rsel.delete(id))
       <div class="qrow__opts"><span v-for="(o, i) in c.q.o" :key="i" class="o" :class="{ on: i === c.q.a }"><i>{{ 'ABCD'[i] }}</i>{{ o }}</span></div>
       <p v-if="c.same" class="warn-inline" style="font-size:var(--fs-sm)">{{ $t('ai.noteNoRewrite') }}</p>
       <ul class="iss"><li v-for="(i, k) in c.s.is" :key="k"><span class="b" :class="IC[i.k]">{{ issueLabel(i.k) }}</span> {{ i.d }}</li></ul>
+      <div v-for="item in c.s.raw || []" :key="item.suggestionId" class="mut">
+        <p v-if="item.originalText"><b>{{ $t('ai.original') }} ({{ item.targetField }}):</b> {{ item.originalText }}</p>
+        <p v-if="item.proposedText"><b>{{ $t('ai.suggestion') }}:</b> {{ item.proposedText }}</p>
+      </div>
       <details><summary class="mut" style="cursor:pointer;font-size:var(--fs-sm)">{{ $t('search.responseValid') }}</summary><pre class="codeblock" style="margin-top:.5rem">{{ c.json }}</pre></details>
       <small>{{ $t('ai.noteAnswerSafe') }}</small>
       <div class="end">
         <button class="btn" @click="decide(c.s.qid, false)">{{ c.same ? $t('ai.keepOriginalReviewed') : $t('ai.rejectKeepOriginal') }}</button>
-        <button v-if="c.same" class="btn pri" @click="editQuestion(c.s.qid)">{{ $t('ai.openEditor') }}</button>
-        <button v-else class="btn pri" @click="decide(c.s.qid, true)">{{ $t('ai.accept') }}</button>
+        <button v-if="c.s.raw ? !c.canAccept : c.same" class="btn pri" @click="editQuestion(c.s.qid)">{{ $t('ai.openEditor') }}</button>
+        <button v-else-if="c.canAccept || (!c.s.raw && !c.same)" class="btn pri" @click="decide(c.s.qid, true)">{{ $t('ai.accept') }}</button>
       </div>
     </div>
   </template>

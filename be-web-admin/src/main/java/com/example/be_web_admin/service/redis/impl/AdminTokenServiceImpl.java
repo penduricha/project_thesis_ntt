@@ -10,6 +10,11 @@ import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.redis.AdminTokenService;
 import io.lettuce.core.RedisBusyException;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import java.time.Duration;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -25,12 +30,14 @@ public class AdminTokenServiceImpl implements AdminTokenService {
     private final AdminRepository adminRepository;
 
     private final AdminJwtTokenProvider adminJwtTokenProvider;
+    private final StringRedisTemplate redis;
 
-    public AdminTokenServiceImpl(AdminAccessTokenRepository adminAccessTokenRepository, AdminRefreshTokenRepository adminRefreshTokenRepository, AdminRepository adminRepository, AdminJwtTokenProvider adminJwtTokenProvider) {
+    public AdminTokenServiceImpl(AdminAccessTokenRepository adminAccessTokenRepository, AdminRefreshTokenRepository adminRefreshTokenRepository, AdminRepository adminRepository, AdminJwtTokenProvider adminJwtTokenProvider, StringRedisTemplate redis) {
         this.adminAccessTokenRepository = adminAccessTokenRepository;
         this.adminRefreshTokenRepository = adminRefreshTokenRepository;
         this.adminRepository = adminRepository;
         this.adminJwtTokenProvider = adminJwtTokenProvider;
+        this.redis = redis;
     }
 
     @Override
@@ -47,7 +54,9 @@ public class AdminTokenServiceImpl implements AdminTokenService {
     public boolean findAdminAccessTokenByJwtToken(String jwtToken) throws RedisBusyException {
         AdminAccessToken adminAccessTokenFound = adminAccessTokenRepository
                 .findAdminAccessTokenByJwtToken(jwtToken);
-        return adminAccessTokenFound != null;
+        if (adminAccessTokenFound == null) return false;
+        Long adminId = adminJwtTokenProvider.parseAccessTokenAdminId(jwtToken);
+        return isAccountAllowed(adminId);
     }
 
     @Override
@@ -64,20 +73,24 @@ public class AdminTokenServiceImpl implements AdminTokenService {
     public boolean findAdminRefreshTokenByJwtToken(String jwtToken) throws RedisBusyException {
         AdminRefreshToken adminRefreshToken = adminRefreshTokenRepository
                 .findAdminRefreshTokenByJwtToken(jwtToken);
-        return adminRefreshToken != null;
+        if (adminRefreshToken == null || Boolean.TRUE.equals(redis.hasKey(consumedKey(jwtToken)))) return false;
+        Long adminId = adminJwtTokenProvider.parseRefreshTokenAdminId(jwtToken);
+        return isAccountAllowed(adminId);
     }
 
 //    String accessToken = jwtTokenProvider.generateAccessToken(adminFound.getAdminId());
 //    String refreshToken = jwtTokenProvider.generateRefreshToken(adminFound.getAdminId());
     @Override
     public boolean removeAdminRefreshTokenByJwtToken(String jwtToken) throws RedisBusyException {
-        AdminRefreshToken adminRefreshTokenFound = adminRefreshTokenRepository
-                .findAdminRefreshTokenByJwtToken(jwtToken);
-        if(adminRefreshTokenFound != null) {
-            adminRefreshTokenRepository.delete(adminRefreshTokenFound);
-            return true;
-        }
-        return false;
+        if (adminJwtTokenProvider.parseRefreshTokenAdminId(jwtToken) == null) return false;
+        AdminRefreshToken token = adminRefreshTokenRepository.findAdminRefreshTokenByJwtToken(jwtToken);
+        if (token == null) return false;
+        // A distributed one-use claim, kept longer than the maximum refresh-token lifetime.
+        // If deletion fails, the claim remains and subsequent refresh attempts fail closed.
+        Boolean claimed = redis.opsForValue().setIfAbsent(consumedKey(jwtToken), "1", Duration.ofDays(31));
+        if (!Boolean.TRUE.equals(claimed)) return false;
+        adminRefreshTokenRepository.delete(token);
+        return true;
     }
 
     @Override
@@ -95,7 +108,7 @@ public class AdminTokenServiceImpl implements AdminTokenService {
 
         Admin adminFound = adminRepository.findAdminByAdminId(adminId);
 
-        if(adminFound != null) {
+        if(adminFound != null && adminFound.isLoginAllowed()) {
             String accessToken = adminJwtTokenProvider.generateAccessToken(adminId);
             String refreshToken = adminJwtTokenProvider.generateRefreshToken(adminId);
             LocalDateTime now = LocalDateTime.now();
@@ -112,13 +125,35 @@ public class AdminTokenServiceImpl implements AdminTokenService {
                 adminRefreshToken.setDateLogin(now);
 
                 // Lưu Refresh Token thành công -> Trả về kết quả cho FE
-                if (addAdminRefreshToken(adminRefreshToken)) {
-                    dataResult.put("adminId", adminFound.getAdminId());
-                    dataResult.put("accessToken", accessToken);
-                    dataResult.put("refreshToken", refreshToken);
+                try {
+                    if (addAdminRefreshToken(adminRefreshToken)) {
+                        dataResult.put("adminId", adminFound.getAdminId());
+                        dataResult.put("accessToken", accessToken);
+                        dataResult.put("refreshToken", refreshToken);
+                    } else {
+                        removeAdminAccessTokenByJwtToken(accessToken);
+                    }
+                } catch (RuntimeException e) {
+                    try { removeAdminAccessTokenByJwtToken(accessToken); } catch (RuntimeException ignored) { }
+                    throw e;
                 }
             }
         }
         return dataResult;
     }
+    private boolean isAccountAllowed(Long adminId) {
+        if (adminId == null) return false;
+        Admin admin = adminRepository.findAdminByAdminId(adminId);
+        return admin != null && admin.isLoginAllowed();
+    }
+
+    private static String consumedKey(String token) {
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
+            return "auth:refresh:consumed:" + HexFormat.of().formatHex(hash);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
 }

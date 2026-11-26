@@ -88,7 +88,7 @@ public class AdminLoginServiceImpl {
         Admin admin = adminRepository.findAdminByAdminId(adminId);
         String storedHash = (admin == null) ? null : admin.getPassword();
         boolean passwordOk = mgmtPassword.matches(req.getPassword(), storedHash); // luôn chạy, kể cả admin = null
-        if (admin == null || !passwordOk) {
+        if (admin == null || !passwordOk || !admin.isLoginAllowed()) {
             recordPasswordFailure(pwdFailKey);
             return LoginOutcome.of(LoginStatus.BAD_CREDENTIALS);
         }
@@ -210,8 +210,7 @@ public class AdminLoginServiceImpl {
         // Ghi mốc đăng nhập cuối (chỉ bước đăng nhập tương tác mới ghi).
         // Best-effort: lỗi ghi không được làm hỏng luồng đăng nhập đã thành công.
         try {
-            admin.setLastLoginAt(Instant.now());
-            adminRepository.save(admin);
+            adminRepository.updateLastLoginAt(admin.getAdminId(), Instant.now());
         } catch (Exception e) {
             log.warn("Can't record lastLoginAt of admin {}: {}", admin.getAdminId(), e.getMessage());
         }

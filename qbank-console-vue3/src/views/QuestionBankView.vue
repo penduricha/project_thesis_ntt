@@ -50,7 +50,7 @@ watch(() => locale.code, () => nextTick(fitSearch))
 </script>
 
 <template>
-  <template v-if="isCourse && crs && !courseQ.length">
+  <template v-if="isCourse && crs && S.status === 'ready' && !courseQ.length">
     <div class="subtopic-bar">
       <div class="chips"><span class="mut" style="font-size:var(--fs-sm)">{{ $t('course.subtitle') }} <b>{{ crs.topics.length }}</b> {{ $t('moodle.category') }}</span><span v-for="(t, i) in crs.topics" :key="i" class="b n">{{ t }}</span></div>
       <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">{{ $t('course.manageTopics') }}</button>

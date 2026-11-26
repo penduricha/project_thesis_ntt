@@ -72,6 +72,11 @@ public class Admin implements Serializable {
     @Column(length = 20, name = "account_status")
     private AccountStatus accountStatus = AccountStatus.PENDING;
 
+    /** Legacy PENDING/null accounts remain usable until an activation policy is agreed. */
+    public boolean isLoginAllowed() {
+        return accountStatus != AccountStatus.LOCKED && accountStatus != AccountStatus.DISABLED;
+    }
+
     @Column(columnDefinition = "datetime(6)", name = "password_changed_at")
     private Instant passwordChangedAt;
 

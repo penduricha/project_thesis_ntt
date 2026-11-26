@@ -1,5 +1,19 @@
 // Español de España: traducciones de la interfaz.
 export default {
+  "crud.decisionUncertain": "Se desconoce el resultado. Recarga y comprueba antes de reintentar.",
+  "crud.taskUnknown": "Se agotó el tiempo de seguimiento; la tarea puede seguir en curso. Comprueba su estado antes de reenviar.",
+  "crud.catalogChanged": "El catálogo cambió. Cierra, recarga y vuelve a abrir el editor antes de guardar.",
+  "taskStatus.unknown": "Desconocido",
+  "crud.subjectImmutable": "Este editor no puede mover una pregunta a otra asignatura.",
+  "crud.inProgress": "La operación ya está en curso.",
+  "crud.saveUncertain": "Se desconoce el resultado. Cierra el diálogo y comprueba la lista antes de volver a intentar.",
+  "crud.archiveUncertain": "Archivadas {done}/{total}; se desconoce el resto. Comprueba la lista antes de reintentar.",
+  "crud.archivePartial": "Archivadas {done}/{total} preguntas. Comprueba las restantes.",
+  "crud.restoreUncertain": "El resultado de restauración es incompleto o desconocido. Comprueba la lista.",
+  "crud.catalogUnsupported": "Esta acción aún no tiene API real. No se guardaron cambios.",
+  "crud.suggestionsFailed": "No se pudieron cargar las sugerencias de IA. Inténtalo de nuevo.",
+  "crud.suggestionApplied": "Se aplicó una sugerencia; las de la revisión anterior requieren una nueva comprobación.",
+  "crud.suggestionsUnknown": "La tarea terminó pero no se pudieron cargar las sugerencias; no se puede marcar como limpia.",
   // Course question file import
   "courseImport.batchUncertain": "No se ha recibido respuesta del servidor. Puede que se hayan guardado algunas o todas las preguntas; comprueba la lista antes de volver a importar.",
   "courseImport.batchRejected": "El servidor ha rechazado los datos antes de guardarlos (HTTP {status}).",

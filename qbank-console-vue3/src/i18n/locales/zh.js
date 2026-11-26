@@ -3,6 +3,20 @@
  * 保留：专有名词（NTTU、Moodle、Spring Boot、JWT、Qwen2.5）、错误代码、按键名。
  */
 export default {
+  "crud.decisionUncertain": "无法确认审核结果。请重新加载并检查后再重试。",
+  "crud.taskUnknown": "轮询超时，任务可能仍在运行。请先检查状态再重新提交。",
+  "crud.catalogChanged": "目录已更改。保存前请关闭、重新加载并再次打开编辑器。",
+  "taskStatus.unknown": "未知",
+  "crud.subjectImmutable": "此编辑器无法将题目移至其他科目。",
+  "crud.inProgress": "操作正在进行。",
+  "crud.saveUncertain": "无法确认保存结果。请关闭对话框并重新加载列表，重试前先检查。",
+  "crud.archiveUncertain": "已确认归档 {done}/{total} 题，其余结果未知。重试前请检查列表。",
+  "crud.archivePartial": "已归档 {done}/{total} 题。请检查其余题目。",
+  "crud.restoreUncertain": "恢复结果不完整或未知，请检查列表。",
+  "crud.catalogUnsupported": "此操作尚无真实 API，未保存任何更改。",
+  "crud.suggestionsFailed": "无法加载 AI 建议，请重试。",
+  "crud.suggestionApplied": "已应用一条建议；旧版本的建议需要重新检查。",
+  "crud.suggestionsUnknown": "AI 任务已完成，但无法加载建议，不能判定题目无误。",
   // Course question file import
   "courseImport.batchUncertain": "未收到服务器结果。部分或全部题目可能已保存；重新导入前请检查列表。",
   "courseImport.batchRejected": "服务器在保存前拒绝了该批数据（HTTP {status}）。",

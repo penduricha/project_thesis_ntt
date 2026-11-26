@@ -11,6 +11,20 @@
  *     Qwen2.5), mã lỗi (404), phím (Ctrl, Esc), ký hiệu (·, ‹, ›).
  */
 export default {
+  "crud.decisionUncertain": "Không xác định được kết quả duyệt. Tải lại và kiểm tra trước khi thử lại.",
+  "crud.taskUnknown": "Đã hết thời gian theo dõi; task có thể vẫn đang chạy. Hãy kiểm tra trạng thái trước khi gửi lại.",
+  "crud.catalogChanged": "Danh mục đã thay đổi. Hãy đóng hộp thoại, tải lại và mở lại câu hỏi trước khi lưu.",
+  "taskStatus.unknown": "Chưa rõ",
+  "crud.subjectImmutable": "Không thể đổi môn học của câu hỏi bằng chức năng sửa này.",
+  "crud.inProgress": "Thao tác đang được xử lý.",
+  "crud.saveUncertain": "Không xác định được kết quả lưu. Hãy đóng hộp thoại, tải lại danh sách và kiểm tra trước khi thử lại.",
+  "crud.archiveUncertain": "Đã xác nhận lưu trữ {done}/{total} câu; không xác định được kết quả còn lại. Kiểm tra lại danh sách trước khi thử lại.",
+  "crud.archivePartial": "Đã lưu trữ {done}/{total} câu. Kiểm tra lại danh sách cho các câu còn lại.",
+  "crud.restoreUncertain": "Không xác định đầy đủ kết quả khôi phục. Kiểm tra lại danh sách trước khi thử lại.",
+  "crud.catalogUnsupported": "Chức năng này chưa có API thật. Không có thay đổi nào được lưu.",
+  "crud.suggestionsFailed": "Không tải được đề xuất AI. Hãy thử lại.",
+  "crud.suggestionApplied": "Đã áp một đề xuất; các đề xuất trên bản cũ cần kiểm định lại.",
+  "crud.suggestionsUnknown": "Tác vụ AI đã hoàn tất nhưng không tải được đề xuất; chưa thể kết luận câu sạch.",
   // Course question file import
   "courseImport.batchUncertain": "Không nhận được kết quả từ máy chủ. Một số hoặc tất cả câu có thể đã được lưu; hãy kiểm tra danh sách trước khi nhập lại.",
   "courseImport.batchRejected": "Máy chủ từ chối dữ liệu trước khi lưu (HTTP {status}).",

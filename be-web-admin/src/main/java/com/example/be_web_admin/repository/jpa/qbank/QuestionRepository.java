@@ -10,9 +10,16 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 @RepositoryRestResource(exported = false)
 public interface QuestionRepository extends JpaRepository<Question, Long>, JpaSpecificationExecutor<Question> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select q from Question q where q.questionId = :id")
+    Optional<Question> findForReview(@Param("id") Long id);
 
     long countByStatus(QuestionStatusD status);
 
@@ -38,6 +45,7 @@ public interface QuestionRepository extends JpaRepository<Question, Long>, JpaSp
      *                  truyền {@code null} sẽ hỏng trong im lặng vì {@code question_id <> NULL}
      *                  luôn cho {@code UNKNOWN} ⇒ query không trả dòng nào ⇒ mất tác dụng chặn.
      */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select q from Question q
             where q.subjectId = :subjectId

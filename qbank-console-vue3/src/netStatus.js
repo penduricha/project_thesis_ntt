@@ -188,10 +188,11 @@ export function startHealthCheck(intervalMs = 30000) {
   const onVisible = () => { if (document.visibilityState === 'visible') probe() }
   document.addEventListener('visibilitychange', onVisible)
   // Kiểm tra ngay sau khi trang tải để biết sớm, không phải đợi 30s đầu.
-  window.setTimeout(tick, 1500)
+  const initialTimer = window.setTimeout(tick, 1500)
 
   return () => {
     running = false
+    window.clearTimeout(initialTimer)
     if (timer) window.clearInterval(timer)
     timer = null
     document.removeEventListener('visibilitychange', onVisible)

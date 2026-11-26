@@ -10,9 +10,23 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 @RepositoryRestResource(exported = false)
 public interface AiSuggestionRepository extends JpaRepository<AiSuggestion, Long> {
+
+    @Query("select s.taskId from AiSuggestion s where s.suggestionId = :id")
+    Optional<String> findTaskIdBySuggestionId(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from AiSuggestion s where s.suggestionId = :id")
+    Optional<AiSuggestion> findForReview(@Param("id") Long id);
+
+    @Modifying(flushAutomatically = true)
+    @Query("update AiSuggestion s set s.decision = :stale where s.decision = :pending and s.taskId in (select t.taskId from AiTask t where t.questionId = :questionId)")
+    int markQuestionPendingStale(@Param("questionId") Long questionId, @Param("pending") SuggestionDecisionD pending, @Param("stale") SuggestionDecisionD stale);
 
     List<AiSuggestion> findByTaskIdOrderBySeqNoAsc(String taskId);
 

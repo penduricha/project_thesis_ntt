@@ -3,6 +3,20 @@
  * Tên riêng, mã lỗi, phím giữ nguyên. Câu ngắn gọn, tránh dịch máy móc.
  */
 export default {
+  "crud.decisionUncertain": "The decision result is unknown. Reload and check before retrying.",
+  "crud.taskUnknown": "Polling timed out; the task may still be running. Check its status before submitting again.",
+  "crud.catalogChanged": "The catalog changed. Close, reload and reopen the editor before saving.",
+  "taskStatus.unknown": "Unknown",
+  "crud.subjectImmutable": "This editor cannot move a question to another subject.",
+  "crud.inProgress": "The operation is already in progress.",
+  "crud.saveUncertain": "The save result is unknown. Close this dialog, reload the list and check before retrying.",
+  "crud.archiveUncertain": "Confirmed {done}/{total} archived; remaining results are unknown. Check the list before retrying.",
+  "crud.archivePartial": "Archived {done}/{total} questions. Check the list for the remainder.",
+  "crud.restoreUncertain": "The restore result is incomplete or unknown. Check the list before retrying.",
+  "crud.catalogUnsupported": "This action has no real API yet. No changes were saved.",
+  "crud.suggestionsFailed": "Could not load AI suggestions. Try again.",
+  "crud.suggestionApplied": "One suggestion was applied; suggestions for the old revision require a new check.",
+  "crud.suggestionsUnknown": "The AI task finished but suggestions could not be loaded; the question cannot be marked clean.",
   // Course question file import
   "courseImport.batchUncertain": "No result was received from the server. Some or all questions may have been saved; check the list before importing again.",
   "courseImport.batchRejected": "The server rejected the batch before saving (HTTP {status}).",

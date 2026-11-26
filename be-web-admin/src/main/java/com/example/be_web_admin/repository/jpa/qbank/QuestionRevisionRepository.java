@@ -8,11 +8,16 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 @RepositoryRestResource(exported = false)
 public interface QuestionRevisionRepository extends JpaRepository<QuestionRevision, Long> {
 
     Optional<QuestionRevision> findTopByQuestionIdOrderByRevNoDesc(Long questionId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<QuestionRevision> findFirstByQuestionIdOrderByRevNoDesc(Long questionId);
 
     List<QuestionRevision> findByQuestionIdOrderByRevNoDesc(Long questionId);
 

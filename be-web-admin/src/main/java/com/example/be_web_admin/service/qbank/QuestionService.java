@@ -196,7 +196,7 @@ public class QuestionService {
 
     @Transactional
     public QuestionDetail create(CreateQuestionRequest request, Long adminId) {
-        Subject subject = subjects.findById(request.subjectId())
+        Subject subject = subjects.findForQuestionCreate(request.subjectId())
                 .orElseThrow(() -> QbankException.notFound("SUBJECT_NOT_FOUND",
                         "Không tìm thấy môn học " + request.subjectId()));
         if (!Boolean.TRUE.equals(subject.getIsActive())) {
@@ -431,14 +431,7 @@ public class QuestionService {
     }
 
     private void markPendingSuggestionsStale(Long questionId) {
-        List<String> taskIds = aiTasks.findByQuestionIdOrderByCreatedAtDesc(questionId).stream()
-                .map(AiTask::getTaskId)
-                .limit(50)
-                .toList();
-        if (taskIds.isEmpty()) {
-            return;
-        }
-        int updated = suggestions.markPendingStale(taskIds, SuggestionDecisionD.PENDING, SuggestionDecisionD.STALE);
+        int updated = suggestions.markQuestionPendingStale(questionId, SuggestionDecisionD.PENDING, SuggestionDecisionD.STALE);
         if (updated > 0) {
             log.info("Đánh dấu {} đề xuất pending của câu #{} thành stale", updated, questionId);
         }

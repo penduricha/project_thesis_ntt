@@ -3,6 +3,20 @@
  * 固有名詞（NTTU、Moodle、Spring Boot、JWT、Qwen2.5）、エラーコード、キー名はそのまま。
  */
 export default {
+  "crud.decisionUncertain": "判定結果が不明です。再読み込みして確認してください。",
+  "crud.taskUnknown": "監視がタイムアウトしました。処理が続いている可能性があります。再送前に状態を確認してください。",
+  "crud.catalogChanged": "分類が変更されました。保存前に画面を閉じて再読み込みし、開き直してください。",
+  "taskStatus.unknown": "不明",
+  "crud.subjectImmutable": "この編集画面では問題の科目を変更できません。",
+  "crud.inProgress": "処理中です。",
+  "crud.saveUncertain": "保存結果を確認できません。画面を閉じて一覧を再読み込みし、再試行前に確認してください。",
+  "crud.archiveUncertain": "{done}/{total}問の保存を確認しました。残りは不明です。再試行前に一覧を確認してください。",
+  "crud.archivePartial": "{done}/{total}問をアーカイブしました。残りは一覧で確認してください。",
+  "crud.restoreUncertain": "復元結果が不完全または不明です。一覧を確認してください。",
+  "crud.catalogUnsupported": "この操作には実APIがありません。変更は保存されていません。",
+  "crud.suggestionsFailed": "AI提案を読み込めませんでした。再試行してください。",
+  "crud.suggestionApplied": "1件を適用しました。旧版の提案は再検証が必要です。",
+  "crud.suggestionsUnknown": "AI処理は完了しましたが提案を取得できず、問題を正常と判定できません。",
   // Course question file import
   "courseImport.batchUncertain": "サーバーから結果を受信できませんでした。一部またはすべての問題が保存された可能性があります。再インポート前に一覧を確認してください。",
   "courseImport.batchRejected": "サーバーは保存前にデータを拒否しました（HTTP {status}）。",

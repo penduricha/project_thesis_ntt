@@ -4,6 +4,10 @@ import com.example.be_web_admin.dto.qbank.ActivityItem;
 import com.example.be_web_admin.dto.qbank.QuestionDetail;
 import com.example.be_web_admin.dto.qbank.SuggestionDecisionRequest;
 import com.example.be_web_admin.enums.ai.SuggestionDecisionD;
+import com.example.be_web_admin.enums.Role;
+import com.example.be_web_admin.model.jpa.Admin;
+import com.example.be_web_admin.repository.jpa.AdminRepository;
+import org.springframework.http.HttpStatus;
 import com.example.be_web_admin.enums.ai.TargetFieldD;
 import com.example.be_web_admin.enums.qbank.ChangeSourceD;
 import com.example.be_web_admin.enums.qbank.ValidationStatusD;
@@ -55,6 +59,7 @@ public class SuggestionReviewService {
     private final QuestionSnapshotFactory snapshots;
     private final QuestionService questionService;
     private final UiStateStore uiState;
+    private final AdminRepository admins;
 
     public SuggestionReviewService(AiSuggestionRepository suggestions,
                                    AiTaskRepository tasks,
@@ -64,7 +69,7 @@ public class SuggestionReviewService {
                                    TopicRepository topics,
                                    QuestionSnapshotFactory snapshots,
                                    QuestionService questionService,
-                                   UiStateStore uiState) {
+                                   UiStateStore uiState, AdminRepository admins) {
         this.suggestions = suggestions;
         this.tasks = tasks;
         this.questions = questions;
@@ -74,13 +79,36 @@ public class SuggestionReviewService {
         this.snapshots = snapshots;
         this.questionService = questionService;
         this.uiState = uiState;
+        this.admins = admins;
     }
 
-    @Transactional
+    // Only the explicit stale outcome commits before returning 409; all other failures roll back.
+    public static class StaleSuggestionException extends QbankException {
+        public StaleSuggestionException(String message) {
+            super(HttpStatus.CONFLICT, "SUGGESTION_STALE", message);
+        }
+    }
+
+    @Transactional(noRollbackFor = StaleSuggestionException.class)
     public QuestionDetail decide(Long suggestionId, SuggestionDecisionRequest request, Long adminId) {
-        AiSuggestion suggestion = suggestions.findById(suggestionId)
-                .orElseThrow(() -> QbankException.notFound("SUGGESTION_NOT_FOUND",
-                        "Không tìm thấy đề xuất " + suggestionId));
+        String taskId = suggestions.findTaskIdBySuggestionId(suggestionId)
+                .orElseThrow(() -> QbankException.notFound("SUGGESTION_NOT_FOUND", "Không tìm thấy đề xuất."));
+        AiTask task = tasks.findById(taskId)
+                .orElseThrow(() -> QbankException.conflict("TASK_MISSING", "Task của đề xuất không còn tồn tại."));
+        Admin admin = adminId == null ? null : admins.findAdminByAdminId(adminId);
+        if (admin == null || !admin.isLoginAllowed() ||
+                (!Objects.equals(task.getCreatedBy(), adminId) && admin.getRole() != Role.ADMIN)) {
+            throw QbankException.notFound("SUGGESTION_NOT_FOUND", "Không tìm thấy đề xuất.");
+        }
+        if (task.getQuestionId() == null) {
+            throw QbankException.conflict("SUGGESTION_WITHOUT_REVISION", "Đề xuất không gắn với câu hỏi.");
+        }
+        // Always lock question before suggestion, also for rejection; accepted changes invalidate
+        // other suggestions for this question. This ordering avoids review/review deadlocks.
+        Question question = questions.findForReview(task.getQuestionId())
+                .orElseThrow(() -> QbankException.notFound("QUESTION_NOT_FOUND", "Không tìm thấy câu hỏi."));
+        AiSuggestion suggestion = suggestions.findForReview(suggestionId)
+                .orElseThrow(() -> QbankException.notFound("SUGGESTION_NOT_FOUND", "Không tìm thấy đề xuất."));
         if (suggestion.getDecision() != SuggestionDecisionD.PENDING) {
             throw QbankException.conflict("SUGGESTION_ALREADY_DECIDED",
                     "Đề xuất đã được xử lý (" + suggestion.getDecision().dbValue() + ").");
@@ -93,7 +121,7 @@ public class SuggestionReviewService {
         if (!"accepted".equals(decision)) {
             throw QbankException.badRequest("INVALID_DECISION", "decision phải là accepted hoặc rejected.");
         }
-        return accept(suggestion, request, adminId);
+        return accept(suggestion, task, question, request, adminId);
     }
 
     // ------------------------------------------------------------------ Từ chối
@@ -115,27 +143,21 @@ public class SuggestionReviewService {
 
     // ------------------------------------------------------------------ Chấp nhận & áp dụng
 
-    private QuestionDetail accept(AiSuggestion suggestion, SuggestionDecisionRequest request, Long adminId) {
-        AiTask task = tasks.findById(suggestion.getTaskId())
-                .orElseThrow(() -> QbankException.conflict("TASK_MISSING",
-                        "Task của đề xuất không còn tồn tại."));
-        if (task.getQuestionId() == null || task.getQuestionRevisionId() == null) {
+    private QuestionDetail accept(AiSuggestion suggestion, AiTask task, Question question,
+                                  SuggestionDecisionRequest request, Long adminId) {
+        if (task.getQuestionRevisionId() == null) {
             throw QbankException.conflict("SUGGESTION_WITHOUT_REVISION",
                     "Đề xuất không gắn với revision nào — không thể áp dụng an toàn.");
         }
-
-        Question question = questions.findById(task.getQuestionId())
-                .orElseThrow(() -> QbankException.notFound("QUESTION_NOT_FOUND",
-                        "Không tìm thấy câu hỏi " + task.getQuestionId()));
-
-        int latestRev = revisions.findMaxRevNo(question.getQuestionId());
+        int latestRev = revisions.findFirstByQuestionIdOrderByRevNoDesc(question.getQuestionId())
+                .map(QuestionRevision::getRevNo).orElse(0);
         QuestionRevision revision = revisions.findById(task.getQuestionRevisionId())
                 .orElseThrow(() -> QbankException.conflict("REVISION_MISSING",
                         "Revision mà AI đã đọc không còn tồn tại."));
-        if (revision.getRevNo() == null || revision.getRevNo() != latestRev) {
+        if (!Objects.equals(revision.getQuestionId(), question.getQuestionId()) || revision.getRevNo() == null || revision.getRevNo() != latestRev) {
             suggestion.setDecision(SuggestionDecisionD.STALE);
             suggestions.saveAndFlush(suggestion);
-            throw QbankException.conflict("SUGGESTION_STALE",
+            throw new StaleSuggestionException(
                     "Câu hỏi đã được sửa sau khi AI đọc (rev " + revision.getRevNo()
                             + " < rev " + latestRev + "). Đề xuất này đã bị đánh dấu stale.");
         }
@@ -152,10 +174,10 @@ public class SuggestionReviewService {
                     "Đề xuất không có proposed_text, cần nhập finalText để áp dụng.");
         }
 
-        applyTargetField(question, suggestion.getTargetField(), newText);
-        if (suggestion.getSuggestedDifficulty() != null) {
-            question.setDifficulty(suggestion.getSuggestedDifficulty());
-        }
+        String currentText = targetText(question, suggestion.getTargetField());
+        String updatedText = replaceQuotedText(currentText, suggestion.getOriginalText(),
+                suggestion.getSpanStart(), suggestion.getSpanEnd(), newText);
+        applyTargetField(question, suggestion.getTargetField(), updatedText);
         // Nội dung đổi => kết quả kiểm định cũ không còn giá trị.
         question.setValidationStatus(ValidationStatusD.STALE);
         question.setContentHash(QuestionContentHasher.hash(
@@ -186,11 +208,8 @@ public class SuggestionReviewService {
         suggestions.saveAndFlush(suggestion);
 
         // Các đề xuất còn pending khác của cùng câu hỏi trỏ tới nội dung cũ -> stale.
-        List<String> taskIds = tasks.findByQuestionIdOrderByCreatedAtDesc(question.getQuestionId()).stream()
-                .map(AiTask::getTaskId).limit(50).toList();
-        if (!taskIds.isEmpty()) {
-            suggestions.markPendingStale(taskIds, SuggestionDecisionD.PENDING, SuggestionDecisionD.STALE);
-        }
+        suggestions.markQuestionPendingStale(question.getQuestionId(),
+                SuggestionDecisionD.PENDING, SuggestionDecisionD.STALE);
 
         uiState.pushActivity(adminId, ActivityItem.of(
                 "AI_SUGGESTION_ACCEPTED",
@@ -222,6 +241,38 @@ public class SuggestionReviewService {
         }
     }
 
+    private static String targetText(Question question, TargetFieldD field) {
+        if (field == null || field == TargetFieldD.QUESTION) {
+            throw QbankException.badRequest("TARGET_NOT_APPLICABLE", "Đề xuất toàn câu phải sửa tay.");
+        }
+        return switch (field) {
+            case STEM -> question.getStem();
+            case OPTION_A -> question.getOptionA();
+            case OPTION_B -> question.getOptionB();
+            case OPTION_C -> question.getOptionC();
+            case OPTION_D -> question.getOptionD();
+            case QUESTION -> throw QbankException.badRequest("TARGET_NOT_APPLICABLE", "Đề xuất toàn câu phải sửa tay.");
+        };
+    }
+
+    static String replaceQuotedText(String current, String original, Integer start, Integer end, String replacement) {
+        if (current == null || original == null || original.isEmpty()) {
+            throw QbankException.conflict("SUGGESTION_NEEDS_MANUAL_EDIT", "Không có đoạn gốc để thay thế an toàn; hãy sửa tay.");
+        }
+        int index = -1;
+        if (start != null && end != null && start >= 0 && end >= start && end <= current.length()
+                && current.substring(start, end).equals(original)) {
+            index = start;
+        } else {
+            int first = current.indexOf(original);
+            if (first >= 0 && current.indexOf(original, first + 1) < 0) index = first;
+        }
+        if (index < 0) {
+            throw QbankException.conflict("SUGGESTION_NEEDS_MANUAL_EDIT", "Không xác định duy nhất đoạn gốc; hãy sửa tay.");
+        }
+        return current.substring(0, index) + replacement + current.substring(index + original.length());
+    }
+
     private Long questionIdOf(AiSuggestion suggestion) {
         return tasks.findById(suggestion.getTaskId())
                 .map(AiTask::getQuestionId)
@@ -231,10 +282,10 @@ public class SuggestionReviewService {
 
     private static String firstNonBlank(String first, String second) {
         if (first != null && !first.isBlank()) {
-            return first.trim();
+            return first;
         }
         if (second != null && !second.isBlank()) {
-            return second.trim();
+            return second;
         }
         return null;
     }

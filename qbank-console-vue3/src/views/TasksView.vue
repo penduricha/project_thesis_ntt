@@ -11,7 +11,7 @@ const counts = computed(() => ({ all: S.tasks.length, running: act(), succeeded:
 const tabs = ['all', 'running', 'succeeded', 'failed']
 const rows = computed(() => S.tasks.filter(t => (S.tf === 'all' ? true : S.tf === 'running' ? live.test(t.st) : t.st === S.tf)))
 const hasSug = t => S.sug.some(s => s.qid === t.qid)
-const taskStatusLabel = status => (Object.prototype.hasOwnProperty.call(TS, status) || status === 'cancelled') ? tr('taskStatus.' + status) : status
+const taskStatusLabel = status => (Object.prototype.hasOwnProperty.call(TS, status) || status === 'cancelled' || status === 'unknown') ? tr('taskStatus.' + status) : status
 const taskStatusClass = status => status === 'cancelled' ? 'wa' : TS[status]?.[1] || 'n'
 const taskMessage = task => {
   if (!task.msgKey) return task.msg || tr('search.pendingWorker')

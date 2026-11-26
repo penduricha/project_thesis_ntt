@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NAV, EXTRA, SUB, ICO } from './data/mock.js'
 import ModalHost from './components/ModalHost.vue'
-import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse, toastHold, toastRelease } from './store.js'
+import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, resetQuestionSession, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse, toastHold, toastRelease } from './store.js'
 import { auth, logout } from './auth/authStore.js'
 import { REQUEST_STATUS } from './auth/AdminRepository.js'
 import { net, isOffline, watchBrowserNetwork, startHealthCheck, probe } from './netStatus.js'
@@ -125,26 +125,27 @@ const onKey = e => {
 /* ---------- Theo dõi kết nối mạng ----------
    Hai nguồn tín hiệu bổ sung nhau (xem netStatus.js): trạng thái mạng của trình duyệt và
    kết quả request thật. Server sống lại thì banner tự tắt, không cần người dùng tải lại trang. */
-let stopHealth = null
+let stopHealth = null, resizeObserver = null
 onMounted(() => {
   document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey); mq.addEventListener('change', onMq)
-  if (window.ResizeObserver && sideBar.value) new ResizeObserver(fitSel).observe(sideBar.value)
+  if (window.ResizeObserver && sideBar.value) { resizeObserver = new ResizeObserver(fitSel); resizeObserver.observe(sideBar.value) }
   watchBrowserNetwork()
   stopHealth = startHealthCheck(30000)
 })
 
 // Chỉ tải dữ liệu sau khi biết chắc đã đăng nhập (đừng gọi API qbank khi còn ở trang /login),
 // và tải lại đúng một lần mỗi khi trạng thái đăng nhập chuyển sang true.
-let loadedFor = null
-watch(() => auth.isAuthenticated, (ok) => {
-  if (!ok) { loadedFor = null; return }
-  if (loadedFor === auth.adminId) return
-  loadedFor = auth.adminId
-  loadQuestions()
-}, { immediate: true })
+watch(() => [auth.isAuthenticated, auth.adminId, auth.isDemo], ([ok, adminId], _old, onCleanup) => {
+  resetQuestionSession()
+  if (!ok || adminId == null) return
+  const controller = new AbortController()
+  onCleanup(() => { controller.abort(); resetQuestionSession() })
+  void loadQuestions({ signal: controller.signal })
+}, { immediate: true, flush: 'sync' })
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey); mq.removeEventListener('change', onMq)
   stopHealth?.()
+  resizeObserver?.disconnect()
 })
 
 /* Nút "Thử lại": kiểm tra lại ngay thay vì đợi nhịp 30 giây, rồi nạp lại dữ liệu
@@ -156,8 +157,7 @@ async function retryConnection() {
   try {
     await probe()
     if (!isOffline.value) {
-      loadQuestions()
-      toast(tr('net.backOnline'), 'ok')
+      if (await loadQuestions()) toast(tr('net.backOnline'), 'ok')
     }
   } finally { retrying.value = false }
 }

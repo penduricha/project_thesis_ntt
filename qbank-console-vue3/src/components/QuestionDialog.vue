@@ -11,12 +11,19 @@ import { norm } from '../utils.js'
 const props = defineProps({ id: { type: Number, default: 0 }, ctx: { type: Object, default: () => ({}) } })
 const emit = defineEmits(['close'])
 const cur = props.id ? S.q.find(x => x.id === props.id) : null
+const expectedVersion = cur?.ver
+const originalSubjectId = cur?.subjectId
+const originalTopicId = cur?.topicId
+const topicTouched = ref(false)
+// Indices are only UI conveniences; do not write to a different subject/topic if a
+// background catalog reload changes their mapping while this editor is open.
+const catalogAtOpen = COURSES.map(c => ({ subjectId: c.subjectId, topicIds: [...(c.topicIds || [])] }))
 const base = cur || { text: '', o: ['', '', '', ''], a: 0, c: props.ctx.c ?? 0, tp: props.ctx.tp ?? 0, l: 1 }
 const f = reactive({
   title: base.title || '', text: base.text, o: [...base.o], a: base.a, c: base.c, l: base.l, fb: base.fb || '',
   tp: Math.min(base.tp || 0, Math.max(0, (COURSES[base.c]?.topics.length || 1) - 1)),
 })
-const err = reactive({}), dirty = ref(false), saving = ref(false), apiErr = ref('')
+const err = reactive({}), dirty = ref(false), saving = ref(false), apiErr = ref(''), uncertain = ref(false)
 const mode = ref('manual'), importBusy = ref(false), importDirty = ref(false), importPanel = ref(null)
 function setMode(value) {
   if (value === mode.value || saving.value || importBusy.value) return
@@ -59,7 +66,7 @@ const dupStem = computed(() => {
   return S.q.find(x => x.c === f.c && nstem(x.text) === t) || null
 })
 
-function pickCourse(v) { f.c = +v; f.tp = 0; err.c = ''; err.chips = '' }
+function pickCourse(v) { f.c = +v; f.tp = 0; topicTouched.value = true; err.c = ''; err.chips = '' }
 function importSucceeded({ saved, total }) {
   toast(t('courseImport.saved', { n: saved, total }), 'ok')
   emit('close')
@@ -71,23 +78,28 @@ function focusFirstInvalid() {
   t.scrollIntoView({ block: 'center' }); t.focus({ preventScroll: true })
 }
 async function save() {
+  if (saving.value || uncertain.value) return
   Object.keys(err).forEach(k => delete err[k]); apiErr.value = ''
   const text = f.text.trim(), o = f.o.map(x => x.trim()), c = COURSES[f.c]
   if (!text) err.t = t('validation.stemEmpty')
   o.forEach((x, i) => { if (!x) err['o' + i] = t('validation.optionEmpty', { option: 'ABCD'[i] }) })
+  const originalCourse = catalogAtOpen[f.c]
+  if (c && (originalCourse?.subjectId !== c.subjectId || originalCourse?.topicIds[f.tp] !== c.topicIds?.[f.tp])) err.c = t('crud.catalogChanged')
+  if (cur && originalSubjectId != null && c && c.subjectId !== originalSubjectId) err.c = t('crud.subjectImmutable')
   if (!c) err.c = t('validation.selectCourse')
   else if (!subjOk(f.c)) err.c = t('validation.courseScope')
   else if (!c.topics[f.tp]) err.chips = t('validation.noChapter')
   // Chặn trùng tiêu đề — chỉ ở form THÊM MỚI (dupTitle tự trả null ở form sửa).
   if (dupTitle.value) err.ti = t('validation.titleTaken', { code: code(dupTitle.value) })
   if (Object.keys(err).length) { await nextTick(); return focusFirstInvalid() }
-  if (cur && cur.text === text && cur.o.every((x, i) => x === o[i]) && cur.a === f.a && cur.c === f.c && (cur.tp || 0) === f.tp && cur.l === +f.l && (cur.title || '') === f.title.trim() && (cur.fb || '') === f.fb.trim()) {
+  if (cur && cur.text === text && cur.o.every((x, i) => x === o[i]) && cur.a === f.a && cur.c === f.c && (cur.tp || 0) === f.tp && cur.l === +f.l && (cur.title || '') === f.title.trim() && (cur.fb || '') === f.fb.trim() && (!topicTouched.value || originalTopicId === (c.topicIds?.[f.tp] ?? null))) {
     dirty.value = false; emit('close'); return toast(t('validation.noChanges'))
   }
   saving.value = true
   try {
-    await saveQuestion({ text, o, a: f.a, c: f.c, tp: f.tp, l: +f.l, title: f.title.trim(), fb: f.fb.trim(), updatedAt: nowStr(), by: S.name }, props.id)
-    dirty.value = false; emit('close')
+    const result = await saveQuestion({ text, o, a: f.a, c: f.c, tp: f.tp, l: +f.l, title: f.title.trim(), fb: f.fb.trim(), updatedAt: nowStr(), by: S.name, topicChanged: topicTouched.value, topicId: originalTopicId }, props.id, expectedVersion)
+    if (result?.ok) { dirty.value = false; emit('close') }
+    else if (!result?.abandoned) { apiErr.value = result?.message || t('validation.saveQuestionFailed'); uncertain.value = !!result?.uncertain }
   } catch { apiErr.value = t('validation.saveQuestionFailed') }
   finally { saving.value = false }
 }
@@ -133,7 +145,7 @@ async function save() {
       <div id="cf-chips" class="cc-chips" :class="{ invalid: err.chips }">
         <template v-if="COURSES[f.c]?.topics.length">
           <small style="flex:1 1 100%">{{ $t('course.chapterPickHint', { n: COURSES[f.c].topics.length }) }}</small>
-          <button v-for="(x, i) in COURSES[f.c].topics" :key="i" type="button" class="btn sm" :class="{ pri: i === f.tp }" @click="f.tp = i; err.chips = ''">{{ x }}</button>
+          <button v-for="(x, i) in COURSES[f.c].topics" :key="i" type="button" class="btn sm" :class="{ pri: i === f.tp }" @click="f.tp = i; topicTouched = true; err.chips = ''">{{ x }}</button>
         </template>
         <small v-else>{{ $t('course.noTopic') }}</small>
       </div>
@@ -153,8 +165,8 @@ async function save() {
         {{ importBusy ? $t('courseImport.saving') : $t('courseImport.submit') }}
       </button>
       <template v-else>
-      <button class="btn" @click="cancel">{{ $t('common.cancel') }}</button>
-      <button class="btn pri" :disabled="saving" @click="save">{{ saving ? $t('common.saving') : $t('bank.saveQuestion') }}</button>
+      <button class="btn" :disabled="saving" @click="cancel">{{ $t('common.cancel') }}</button>
+      <button class="btn pri" :disabled="saving || uncertain" @click="save">{{ saving ? $t('common.saving') : $t('bank.saveQuestion') }}</button>
       </template>
     </template>
   </BaseModal>
