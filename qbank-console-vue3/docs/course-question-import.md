@@ -57,3 +57,16 @@ Khi gặp lỗi, hệ thống dừng và hiển thị số câu đã lưu; các 
 Nếu mất kết nối trước khi nhận kết quả cả lô, một số hoặc tất cả câu có thể đã được lưu:
 kiểm tra danh sách trên máy chủ trước khi tạo file mới để tránh nhập trùng.
 Không tự động gửi lại các câu đã xử lý.
+
+## File demo
+
+Các file trong [`demo-import/`](demo-import/) chứa câu hỏi mẫu về Mạng máy tính,
+2 câu mỗi file: `mang-may-tinh.csv`, `mang-may-tinh.xlsx`,
+`mang-may-tinh.xml` (Moodle XML) và `mang-may-tinh.json`. Các file có nội dung
+và tiêu đề khác nhau để có thể nhập lần lượt vào cùng môn. Trong dialog chọn
+môn, chương và mức độ phù hợp, rồi chọn từng file, xem trước và nhấn **Nhập câu hỏi**.
+Mỗi file được lưu vào môn/chương đang chọn, không phải thông tin nằm sẵn trong file.
+
+Nhập lại cùng file trong cùng môn có thể bị từ chối vì trùng tiêu đề; hãy kiểm tra
+hoặc xóa câu demo trước khi nhập lại. Đây là dữ liệu demo, được lưu thật khi import
+thành công; nên dùng môn/CSDL thử nghiệm, không dùng dữ liệu production.

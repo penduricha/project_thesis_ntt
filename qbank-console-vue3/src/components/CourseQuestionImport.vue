@@ -45,13 +45,14 @@ async function save() {
     if (!result.value.failedAt && !result.value.localUpdateFailure && !result.value.batchUncertain && !result.value.batchRejected) emit('dirty', false)
   } finally { busy.value = false; emit('busy', false) }
 }
+defineExpose({ canSave, save })
 </script>
 
 <template>
   <section class="course-import" data-enter="none">
     <p>{{ $t('courseImport.destination', { course: course ? `${course.id} – ${course.name}` : '' }) }}</p>
     <p class="mut">{{ $t('courseImport.scopeHint') }}</p>
-    <label>{{ $t('course.chapters') }} <span style="color:var(--danger-strong)">*</span>
+    <label>{{ $t('course.chapters') }}
       <select v-model.number="topic" :disabled="busy || !!result">
         <option v-for="(name, index) in course?.topics || []" :key="index" :value="index">{{ name }}</option>
       </select>
@@ -103,7 +104,6 @@ async function save() {
       <p v-if="result.failedAt">{{ $t('courseImport.stopped') }}</p>
       <p v-if="result.localUpdateFailure" class="err">{{ $t('courseImport.refreshNeeded') }}</p>
     </div>
-    <button type="button" class="btn pri" :disabled="!canSave" @click="save">{{ busy ? $t('courseImport.saving') : $t('courseImport.submit') }}</button>
   </section>
 </template>
 

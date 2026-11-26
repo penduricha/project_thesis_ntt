@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { JSDOM } from 'jsdom'
 import { zipSync, strToU8 } from 'fflate'
 import readXlsx from 'read-excel-file/node'
@@ -47,6 +48,22 @@ const formulaBytes = zipSync(Object.fromEntries(Object.entries(formulaFiles).map
 await assert.rejects(parseQuestionFile(new File([formulaBytes], 'formula.xlsx'), { readXlsx: async () => { throw new Error('must not parse formulas') } }), e => e.key === 'courseImport.xlsxFormula')
 const expandedZip = zipSync({ 'xl/worksheets/sheet1.xml': new Uint8Array(17 * 1024 * 1024) })
 await assert.rejects(parseQuestionFile(new File([expandedZip], 'large.xlsx')), e => e.key === 'courseImport.xlsxTooLarge')
+
+// Verify the actual demo files with the production parser, including the real XLSX reader.
+const demoTitles = new Set()
+for (const ext of ['csv', 'xlsx', 'xml', 'json']) {
+  const name = `mang-may-tinh.${ext}`
+  const data = await readFile(new URL(`../docs/demo-import/${name}`, import.meta.url))
+  const parsed = await parseQuestionFile(new File([data], name), {
+    readXlsx: async f => readXlsx(Buffer.from(await f.arrayBuffer())),
+  })
+  assert.deepEqual(parsed.errors, [], `${name} should be valid`)
+  assert.equal(parsed.items.length, 2, `${name} should have two demo questions`)
+  for (const item of parsed.items) {
+    assert.ok(item.title && !demoTitles.has(item.title), `Demo title must be unique: ${item.title}`)
+    demoTitles.add(item.title)
+  }
+}
 
 let requests = [], saved = []
 const importBatch = async body => { requests.push(body); return { saved: 1, failedAt: null, uncertain: false, questions: [{ questionId: 1, subjectId: 7, topicId: 42 }] } }
