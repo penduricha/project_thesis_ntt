@@ -15,6 +15,7 @@ try {
   const { auth } = await server.ssrLoadModule('/src/auth/authStore.js')
   const { parseMoodleXml } = await server.ssrLoadModule('/src/services/moodleXml.js')
   const { EnrollmentRepository } = await server.ssrLoadModule('/src/auth/EnrollmentRepository.js')
+  const { default: AccountView } = await server.ssrLoadModule('/src/views/AccountView.vue')
   const { default: TasksView } = await server.ssrLoadModule('/src/views/TasksView.vue')
   const { default: SearchView } = await server.ssrLoadModule('/src/views/SearchView.vue')
   const { default: MoodleView } = await server.ssrLoadModule('/src/views/MoodleView.vue')
@@ -81,6 +82,25 @@ try {
     assert.equal(expired.expired, true)
     response = { status: 400, data: { message: 'Original API message' } }
     assert.equal((await enrollment.startEnrollment(null)).message, 'Original API message')
+    // Account view keeps API values, privacy masking and the settings destination.
+    const oldBasic = auth.basic, oldDetail = auth.detail, oldReady = S.meReady, oldShow = S.idShow
+    auth.basic = { adminId: 42, adminName: 'Original API Name', gender: true, dateOfBirthAdmin: '2003-09-08' }
+    auth.detail = { address: 'Original API Address', idCard: '123456789012', faculty: 'Original Faculty', industry: 'Original Industry', major: 'Original Major', trainingSystem: 'Master', typeOfTraining: 'Research', branch: 'Original Branch' }
+    S.meReady = true; S.idShow = false
+    const accountApp = () => { const app = createSSRApp(AccountView).use(i18n); app.provide(routerKey, { push() {} }); return app }
+    const masked = await renderToString(accountApp())
+    assert.ok(masked.includes('Original API Name') && masked.includes('Original API Address') && masked.includes('Original Faculty'), `${language}: account API data`)
+    assert.ok(masked.includes('123456••••12') && !masked.includes('123456789012'), `${language}: ID masked`)
+    assert.ok(masked.includes(t('account.training')) && masked.includes(t('nav.settings')), `${language}: account sections`)
+    assert.ok(masked.includes('08/09/2003') && masked.includes(t('training.system.Master').replaceAll("'", '&#39;')), `${language}: account formatting`)
+    S.idShow = true
+    const revealed = await renderToString(accountApp())
+    assert.ok(revealed.includes('123456789012') && revealed.includes(t('dialog.toastAutoHide')), `${language}: ID revealed`)
+    S.meReady = false
+    const loading = await renderToString(accountApp())
+    assert.ok(loading.includes('aria-busy="true"') && loading.includes('class="sk"') && !loading.includes('123456789012'), `${language}: account skeleton`)
+    assert.equal(auth.detail.idCard, '123456789012')
+    auth.basic = oldBasic; auth.detail = oldDetail; S.meReady = oldReady; S.idShow = oldShow
     const comboboxHtml = await renderToString(createSSRApp(CourseCombobox).use(i18n))
     assert.ok(comboboxHtml.includes(t('bank.allCourses')), `${language}: default course placeholder`)
     const oldAuth = auth.isAuthenticated
