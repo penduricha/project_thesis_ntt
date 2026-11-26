@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo đánh giá AI – Bộ 1000 câu hỏi | Server AI Worker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #E9EDF0;
+    --panel: #FFFFFF;
+    --ink: #12222B;
+    --ink-2: #4A5D69;
+    --rule: #C9D3DA;
+    --rail: #DDE5EA;
+    --field-edge: #9FADB6;
+    --accent: #0E7C86;
+    --accent-strong: #0A626A;
+    --accent-tint: #D3EDEF;
+    --ok: #1E8E5A;
+    --ok-tint: #E3F4EA;
+    --warn: #8A5A00;
+    --warn-tint: #FFF3D1;
+    --warn-edge: #E3BF5C;
+    --bad: #B3321F;
+    --bad-tint: #FBE6E2;
+    --font: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --c-none: #1E8E5A;
+    --c-spelling: #E8A200;
+    --c-grammar: #D35400;
+    --c-logic: #7B2CBF;
+    --c-distractor: #0E7C86;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 16px 72px; }
+  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+
+  /* ---------- header ---------- */
+  .top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); gap: 24px 32px; align-items: start; margin-bottom: 18px; }
+  .eyebrow { margin: 0 0 6px; font: 600 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-strong); }
+  .title { margin: 0; font: 700 29px/1.15 var(--font); letter-spacing: -0.02em; }
+  .lede { margin: 10px 0 0; max-width: 56ch; color: var(--ink-2); }
+  .meta-line { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border: 1px solid var(--rule); border-radius: 999px; background: var(--panel); color: var(--ink-2); font: 500 12px/1.4 var(--mono); }
+  .pill-warn { border-color: var(--warn-edge); background: var(--warn-tint); color: var(--warn); }
+
+  .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .panel-title { margin: 0; font: 600 16px/1.3 var(--font); display: flex; align-items: center; gap: 8px; }
+  .step { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--accent-tint); color: var(--accent-strong); font: 600 12px/1 var(--mono); }
+  .server-status { font-size: 13px; color: var(--ink-2); text-align: right; }
+  .server-status[data-kind="ok"] { color: var(--ok); }
+  .server-status[data-kind="bad"] { color: var(--bad); }
+  .help { margin: 0 0 12px; max-width: 82ch; font-size: 14px; color: var(--ink-2); }
+
+  /* ---------- buttons & inputs ---------- */
+  .btn { height: 36px; padding: 0 14px; border: 1px solid var(--field-edge); border-radius: 6px; background: #fff; color: var(--ink); font: 500 14px/1 var(--font); cursor: pointer; }
+  .btn:hover:not(:disabled) { background: #F2F5F7; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
+  .btn-danger { background: #fff; border-color: var(--bad); color: var(--bad); }
+  .btn-danger:hover:not(:disabled) { background: var(--bad-tint); }
+  .btn-xs { height: 30px; padding: 0 10px; font-size: 12.5px; }
+  .select { height: 36px; padding: 0 10px; border: 1px solid var(--field-edge); border-radius: 6px; background: #fff; color: var(--ink); font: 400 14px/1 var(--font); }
+  .input { height: 36px; padding: 0 10px; border: 1px solid var(--field-edge); border-radius: 6px; background: #fff; color: var(--ink); font: 400 13px/1 var(--mono); }
+  :is(.input, .select, .btn):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- stats & distribution bar ---------- */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; background: #FDFEFE; }
+  .stat-k { font: 500 12px/1.2 var(--font); color: var(--ink-2); }
+  .stat-v { font: 700 24px/1.15 var(--mono); margin-top: 2px; }
+  .stat-v small { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+
+  .dist-bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); }
+  .dist-seg { display: flex; align-items: center; justify-content: center; color: #fff; font: 600 11px/1 var(--mono); min-width: 30px; }
+  .dist-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* ---------- tables ---------- */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tbl th, .tbl td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--rail); vertical-align: middle; }
+  .tbl thead th { background: #F4F7F9; font: 600 12px/1.2 var(--font); color: var(--ink-2); text-transform: none; white-space: nowrap; }
+  .tbl tbody tr:last-child td { border-bottom: none; }
+  .tbl tbody tr:hover { background: #FAFCFD; }
+  .num { text-align: right; font-family: var(--mono); }
+
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font: 600 11px/1.6 var(--mono); color: #fff; white-space: nowrap; }
+  .chip-none { background: var(--c-none); }
+  .chip-spelling { background: var(--c-spelling); }
+  .chip-grammar { background: var(--c-grammar); }
+  .chip-logic { background: var(--c-logic); }
+  .chip-distractor { background: var(--c-distractor); }
+  .chip-error { background: var(--bad); }
+  .chip-outline { background: #fff; color: var(--ink-2); border: 1px solid var(--rule); }
+
+  .muted { color: var(--ink-2); }
+
+  /* ---------- progress ---------- */
+  .progress { height: 14px; border-radius: 999px; background: var(--rail); overflow: hidden; border: 1px solid var(--rule); }
+  .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.35s ease; }
+  .run-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font: 500 12.5px/1.4 var(--mono); color: var(--ink-2); }
+
+  /* ---------- metric bars ---------- */
+  .bar-cell { min-width: 140px; }
+  .bar { height: 8px; border-radius: 999px; background: var(--rail); overflow: hidden; margin-top: 3px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+  /* ---------- confusion matrix ---------- */
+  .cm-tbl { border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; }
+  .cm-tbl th, .cm-tbl td { border: 1px solid var(--rail); padding: 6px 8px; text-align: center; min-width: 64px; }
+  .cm-tbl thead th { background: #F4F7F9; font-family: var(--font); font-size: 11.5px; }
+  .cm-tbl tbody th { background: #F4F7F9; font-family: var(--font); font-size: 11.5px; text-align: left; }
+  .cm-diag { outline: 2px solid var(--accent-strong); outline-offset: -2px; font-weight: 700; }
+
+  .banner { margin: 0 0 12px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--warn-edge); background: var(--warn-tint); font-size: 14px; }
+  .banner-bad { border-color: #E5B4AB; background: var(--bad-tint); color: var(--bad); }
+  .banner-ok { border-color: #B7E2CB; background: var(--ok-tint); color: var(--ok); }
+  .hidden { display: none !important; }
+
+  /* ---------- modal ---------- */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(18, 34, 43, 0.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal { background: var(--panel); border-radius: 12px; max-width: 640px; width: 100%; max-height: 85vh; overflow: auto; padding: 18px; box-shadow: 0 24px 64px rgba(0,0,0,0.25); }
+  .modal h3 { margin: 0 0 4px; font-size: 15px; }
+  .opt { padding: 6px 10px; border: 1px solid var(--rail); border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+  .opt-correct { border-color: var(--ok); background: var(--ok-tint); }
+  .opt-marked-wrong { border-color: var(--bad); background: var(--bad-tint); }
+
+  .pager { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .footer-note { border-top: 1px solid var(--rule); margin-top: 8px; padding-top: 12px; font-size: 12.5px; color: var(--ink-2); }
+  .footer-note li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ================= HEADER ================= -->
+  <div class="top">
+    <div>
+      <p class="eyebrow">Server AI Worker · Module Demo</p>
+      <h1 class="title">Đánh giá chất lượng AI trên bộ 1000 câu hỏi</h1>
+      <p class="lede">1000 câu hỏi trắc nghiệm do AI khởi tạo (10 môn · 5 nhãn lỗi), có gold label. Trang này nạp bộ câu hỏi vào bảng demo, chạy bộ kiểm tra chất lượng AI và tổng hợp báo cáo phân loại: accuracy, Precision/Recall/F1 theo nhãn, Macro/Micro-F1 và confusion matrix.</p>
+      <div class="meta-line">
+        <span class="pill pill-warn">DEMO — không tích hợp vào CSDL thật</span>
+        <span class="pill">seed 20261120</span>
+        <span class="pill">1000 câu · 10 môn</span>
+        <span class="pill">5 nhãn gold</span>
+      </div>
+    </div>
+    <div class="panel" id="conn-panel" style="margin:0">
+      <div class="panel-head">
+        <h2 class="panel-title">Máy chủ</h2>
+        <span class="server-status" id="server-status" data-kind="">Đang kiểm tra…</span>
+      </div>
+      <div class="field" style="display:grid;gap:4px">
+        <label class="field-label" for="api-base" style="font-size:13px;color:var(--ink-2)">API base URL</label>
+        <div style="display:flex;gap:8px">
+          <input class="input" id="api-base" type="url" inputmode="url" placeholder="http://localhost:8082/api" spellcheck="false" style="flex:1">
+          <button class="btn btn-xs" id="btn-connect" type="button">Kết nối</button>
+        </div>
+      </div>
+      <div class="field" style="display:grid;gap:4px;margin-top:8px">
+        <label class="field-label" for="api-jwt" style="font-size:13px;color:var(--ink-2)">JWT hoặc Internal Token (Bearer)</label>
+        <input class="input" id="api-jwt" type="password" value="fbbd5eac46965321c057958266cecc731345c1e6bac2928a" placeholder="Nhập ACCESS JWT hoặc AI_INTERNAL_TOKEN" spellcheck="false" autocomplete="off">
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:12px">Trang này được phục vụ tĩnh từ chính Server AI Worker (<code>/api/demo-eval.html</code>), API cùng origin nên chỉ cần dán token hợp lệ khi kết nối.</p>
+    </div>
+  </div>
+
+  <div id="global-banner" class="banner hidden"></div>
+
+  <!-- ================= SECTION 1 · TỔNG QUAN BỘ CÂU HỎI ================= -->
+  <section class="panel" id="sec-overview">
+    <div class="panel-head">
+      <h2 class="panel-title"><span class="step">1</span>Bộ câu hỏi demo</h2>
+      <button class="btn btn-xs btn-danger" id="btn-reseed" type="button" title="Xóa runs/items và nạp lại 1000 câu từ questions-1000.json">Nạp lại bộ câu hỏi…</button>
+    </div>
+    <div class="stat-grid" id="stat-grid"></div>
+    <div id="dist-wrap">
+      <div class="dist-bar" id="dist-bar"></div>
+      <div class="dist-legend" id="dist-legend"></div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:14px">
+      <table class="tbl" id="domain-table">
+        <thead><tr><th>Môn</th><th>Tên môn</th><th class="num">Câu</th><th class="num">none</th><th class="num">spelling</th><th class="num">grammar</th><th class="num">logic</th><th class="num">distractor</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= SECTION 2 · KHÁM PHÁ CÂU HỎI ================= -->
+  <section class="panel" id="sec-explorer">
+    <div class="panel-head">
+      <h2 class="panel-title"><span class="step">2</span>Khám phá câu hỏi</h2>
+      <span class="muted" style="font-size:12px">Bấm vào một dòng để xem đầy đủ</span>
+    </div>
+    <div class="filters">
+      <select class="select" id="q-subject" aria-label="Lọc theo môn"><option value="">Tất cả môn</option></select>
+      <select class="select" id="q-label" aria-label="Lọc theo nhãn">
+        <option value="">Tất cả nhãn gold</option>
+        <option value="none">none — Không lỗi</option>
+        <option value="spelling">spelling — Chính tả</option>
+        <option value="grammar">grammar — Ngữ pháp</option>
+        <option value="logic">logic — Logic / key sai</option>
+        <option value="distractor">distractor — Phương án nhiễu</option>
+      </select>
+      <button class="btn btn-xs" id="btn-q-reset" type="button">Xóa lọc</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl" id="questions-table">
+        <thead><tr><th>ID</th><th>Môn</th><th>Chủ đề</th><th>Câu hỏi</th><th>Gold</th><th class="num">Độ khó</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button class="btn btn-xs" id="q-prev" type="button">← Trước</button>
+      <span id="q-page-info">Trang 1/1</span>
+      <button class="btn btn-xs" id="q-next" type="button">Sau →</button>
+    </div>
+  </section>
+
+  <!-- ================= SECTION 3 · CHẠY ĐÁNH GIÁ ================= -->
+  <section class="panel" id="sec-run">
+    <div class="panel-head">
+      <h2 class="panel-title"><span class="step">3</span>Chạy đánh giá</h2>
+      <span class="muted" style="font-size:12px">Kết quả lưu ở ntt_demo_eval_runs / ntt_demo_eval_items</span>
+    </div>
+    <p class="help">Hai chế độ: <strong>rule-only</strong> — tiền kiểm tất định (trùng phương án, câu dẫn/phương án rỗng, lộ đáp án), chạy tức thì, làm mốc baseline; <strong>AI đầy đủ</strong> — thêm lượt gọi Ollama trên các node Colab theo đúng pipeline question_check, chậm (≈ số giây đến vài phút mỗi câu tùy node) và cần ít nhất một node đang bật.</p>
+    <div class="toolbar">
+      <select class="select" id="run-mode" aria-label="Chế độ đánh giá">
+        <option value="rule">Rule-only (tất định) — tức thì</option>
+        <option value="ai">AI đầy đủ (rule + Colab LLM)</option>
+      </select>
+      <select class="select" id="run-limit" aria-label="Số câu">
+        <option value="100">100 câu đầu</option>
+        <option value="250">250 câu đầu</option>
+        <option value="500">500 câu đầu</option>
+        <option value="1000" selected>Toàn bộ 1000 câu</option>
+      </select>
+      <button class="btn btn-primary" id="btn-start" type="button">▶ Bắt đầu đánh giá</button>
+      <button class="btn btn-danger" id="btn-stop" type="button" disabled>■ Dừng</button>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="run-progress"></div></div>
+    <div class="run-meta" id="run-meta"><span>Chưa có run nào.</span></div>
+    <div id="run-error" class="banner banner-bad hidden" style="margin-top:10px"></div>
+  </section>
+
+  <!-- ================= SECTION 4 · BÁO CÁO ================= -->
+  <section class="panel" id="sec-report">
+    <div class="panel-head">
+      <h2 class="panel-title"><span class="step">4</span>Báo cáo đánh giá</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="select" id="report-run" aria-label="Chọn run"></select>
+        <button class="btn btn-xs" id="btn-report-refresh" type="button">Tải lại</button>
+        <button class="btn btn-xs btn-danger" id="btn-delete-runs" type="button" title="Xóa toàn bộ runs/items demo">Xóa runs…</button>
+      </div>
+    </div>
+    <div id="report-empty" class="muted">Chưa có lần chạy nào. Chọn chế độ ở mục 3 rồi bấm “Bắt đầu đánh giá”.</div>
+    <div id="report-body" class="hidden">
+      <div class="stat-grid" id="report-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px"></div>
+
+      <h3 style="margin:6px 0 8px;font-size:14px">Precision / Recall / F1 theo nhãn</h3>
+      <div class="tbl-wrap">
+        <table class="tbl" id="per-label-table">
+          <thead><tr><th>Nhãn</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th class="num">Support</th><th class="bar-cell">F1</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:16px 0 8px">
+        <h3 style="margin:0;font-size:14px">Confusion matrix (gold ↓ · dự đoán →)</h3>
+        <label style="font-size:12.5px;color:var(--ink-2);display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="cm-pct"> Hiển thị % theo hàng</label>
+      </div>
+      <div class="tbl-wrap" style="padding:10px;display:inline-block;max-width:100%">
+        <table class="cm-tbl" id="confusion-table"></table>
+      </div>
+
+      <h3 style="margin:16px 0 8px;font-size:14px">Accuracy theo môn</h3>
+      <div class="tbl-wrap">
+        <table class="tbl" id="per-domain-table">
+          <thead><tr><th>Môn</th><th class="num">Đúng</th><th class="num">Tổng</th><th class="num">Accuracy</th><th class="bar-cell">Accuracy</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3 style="margin:16px 0 8px;font-size:14px">Câu bị dự đoán sai (10 câu đầu)</h3>
+      <div class="tbl-wrap">
+        <table class="tbl" id="wrong-table">
+          <thead><tr><th>ID</th><th>Môn</th><th>Gold → Dự đoán</th><th>Câu hỏi</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= METHODOLOGY ================= -->
+  <footer class="footer-note">
+    <strong>Cách đọc kết quả</strong>
+    <ul>
+      <li><strong>Gold labels</strong> (5 nhãn): <code>none</code> = câu hỏi sạch; <code>spelling</code> = sai chính tả; <code>grammar</code> = lỗi ngữ pháp (tiếng Anh); <code>logic</code> = đáp án đúng bị đổi thành phương án sai (key sai); <code>distractor</code> = một phương án nhiễu bị thay bằng phương án trùng đáp án đúng hoặc lạc phạm trù.</li>
+      <li><strong>Predicted label</strong>: luôn dùng kết luận của pipeline question_check (tiền kiểm tất định + LLM). Không suggestion nào → <code>none</code>. Có suggestion → lấy suggestion có severity cao nhất (hoà thì theo thứ tự model trả về); <code>key_doubt</code> được quy đổi thành <code>logic</code> vì gold taxonomy không tách key_doubt.</li>
+      <li><strong>Câu lỗi kỹ thuật</strong> (LLM timeout/schema/…) được đếm vào <em>lỗi</em> và loại khỏi accuracy/confusion matrix — không đoán bừa nhãn.</li>
+      <li><strong>Micro-F1</strong> với phân loại đơn nhãn bằng accuracy. <strong>Macro-F1</strong> là trung bình F1 không trọng số trên 5 nhãn.</li>
+      <li>Bộ câu hỏi: sinh bởi <code>python_demo_llm/gen_eval_questions.py</code> (seed 20261120), gold label tất định theo quy tắc bơm lỗi. Module này chỉ đọc bảng <code>ntt_demo_*</code>, không ghi vào bảng ER v4 thật và không được gọi từ Server 1 / FE / Moodle.</li>
+    </ul>
+  </footer>
+
+</div><!-- /wrap -->
+
+<!-- Modal chi tiết câu hỏi -->
+<div class="modal-overlay hidden" id="question-modal" role="dialog" aria-modal="true" aria-label="Chi tiết câu hỏi">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <h3 id="modal-title">Câu hỏi</h3>
+      <button class="btn btn-xs" id="modal-close" type="button">Đóng ✕</button>
+    </div>
+    <p class="muted" id="modal-meta" style="margin:2px 0 12px;font-size:12px"></p>
+    <p id="modal-stem" style="font-weight:500"></p>
+    <div id="modal-options"></div>
+    <p class="muted" id="modal-explanation" style="font-size:13px;margin-top:10px;border-top:1px solid var(--rail);padding-top:10px"></p>
+  </div>
+</div>
+  <script>
+  'use strict';
+  /* ============ helpers ============ */
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+  var LABELS = ['none', 'spelling', 'grammar', 'logic', 'distractor'];
+  var LABEL_VI = { none: 'none · Không lỗi', spelling: 'spelling · Chính tả', grammar: 'grammar · Ngữ pháp', logic: 'logic · Logic / key sai', distractor: 'distractor · Nhiễu' };
+  var LABEL_COLOR = { none: 'var(--c-none)', spelling: 'var(--c-spelling)', grammar: 'var(--c-grammar)', logic: 'var(--c-logic)', distractor: 'var(--c-distractor)' };
+  var SUBJECT_VI = { INT3202: 'Cơ sở dữ liệu', INT3304: 'Mạng máy tính', INT3306: 'Lập trình Java', INT3401: 'Trí tuệ nhân tạo', TOEIC: 'Tiếng Anh TOEIC', MATH: 'Toán học', PHYS: 'Vật lý', CHEM: 'Hóa học', HIST: 'Lịch sử Việt Nam', BIO: 'Sinh học' };
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function fmtPct(v, digits) {
+    if (v == null || isNaN(v)) return '—';
+    return (100 * v).toFixed(digits == null ? 1 : digits) + '%';
+  }
+  function fmtNum(v, digits) {
+    if (v == null || isNaN(v)) return '—';
+    return Number(v).toFixed(digits == null ? 3 : digits);
+  }
+  function fmtInt(v) { return v == null ? '—' : String(v); }
+  function chipClass(label) {
+    if (label === 'none' || label === 'spelling' || label === 'grammar' || label === 'logic' || label === 'distractor') return 'chip chip-' + label;
+    if (label === 'error') return 'chip chip-error';
+    return 'chip chip-outline';
+  }
+  function chip(label) { return '<span class="' + chipClass(label) + '">' + esc(label) + '</span>'; }
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  function showBanner(msg, kind) {
+    var b = $('#global-banner');
+    if (!msg) { b.classList.add('hidden'); b.textContent = ''; return; }
+    b.textContent = msg;
+    b.className = 'banner' + (kind === 'bad' ? ' banner-bad' : kind === 'ok' ? ' banner-ok' : '');
+    b.classList.remove('hidden');
+  }
+  function hideBanner() { $('#global-banner').classList.add('hidden'); }
+
+  /* ============ connection ============ */
+  var api = { base: '', jwt: '', connected: false, checkedOnce: false };
+  var BASE_KEY = 'ntt-demo-eval-api-base';
+
+  function defaultBase() {
+    return window.location.origin.indexOf('http') === 0 ? window.location.origin + '/api' : 'http://localhost:8082/api';
+  }
+  async function call(method, path, body, timeoutMs) {
+    var headers = { Accept: 'application/json' };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (api.jwt) headers.Authorization = 'Bearer ' + api.jwt;
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, timeoutMs || 30000);
+    var res;
+    try {
+      res = await fetch(api.base + path, { method: method, headers: headers, signal: ctl.signal, body: body === undefined ? undefined : JSON.stringify(body) });
+    } catch (e) {
+      clearTimeout(timer);
+      if (e.name === 'AbortError') throw new Error('Hết thời gian chờ máy chủ.');
+      throw new Error('Không kết nối được Server AI tại ' + api.base + '. Kiểm tra server đang chạy.');
+    }
+    clearTimeout(timer);
+    var text = await res.text();
+    var data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+    if (!res.ok) {
+      var msg = res.status === 401 ? 'Thiếu hoặc sai JWT / Internal Token (401).'
+        : res.status === 403 ? 'Không đủ quyền (403).'
+        : ((data && (data.error || data.message)) ? (data.error || data.message) : ('HTTP ' + res.status));
+      throw new Error(msg);
+    }
+    return data;
+  }
+  function setStatus(text, kind) {
+    var s = $('#server-status');
+    s.textContent = text;
+    s.dataset.kind = kind || '';
+  }
+  async function connect() {
+    var input = $('#api-base');
+    api.base = input.value.trim().replace(/\/+$/, '');
+    api.jwt = ($('#api-jwt').value || '').trim();
+    if (!/^https?:\/\/\S+$/i.test(api.base)) { setStatus('Base URL không hợp lệ', 'bad'); return; }
+    try { localStorage.setItem(BASE_KEY, api.base); } catch (e) {}
+    setStatus('Đang kiểm tra…', '');
+    try {
+      var summary = await call('GET', '/web/ai/demo/questions/summary', undefined, 8000);
+      api.connected = true;
+      setStatus('Đã kết nối · ' + fmtInt(summary.total) + ' câu trong bảng demo', 'ok');
+      renderSummary(summary);
+      loadDomains();
+      loadQuestions(0);
+      loadRuns();
+    } catch (e) {
+      api.connected = false;
+      setStatus(e.message, 'bad');
+      $('#stat-grid').innerHTML = '<p class="muted" style="grid-column: 1 / -1;margin:0">Không tải được dữ liệu — máy chủ chưa phản hồi. Trang vẫn hiển thị đầy đủ khi Server AI Worker chạy tại <code>' + esc(api.base) + '</code>.</p>';
+      $('#questions-table tbody').innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:18px">Chưa có dữ liệu — kiểm tra kết nối máy chủ.</td></tr>';
+    }
+  }
+  $('#btn-connect').addEventListener('click', connect);
+
+  /* ============ section 1 · overview ============ */
+  async function loadSummary() {
+    try {
+      var s = await call('GET', '/web/ai/demo/questions/summary', undefined, 15000);
+      renderSummary(s);
+    } catch (e) {
+      $('#stat-grid').innerHTML = '<p class="muted">Không tải được tổng quan: ' + esc(e.message) + '</p>';
+    }
+  }
+  function renderSummary(s) {
+    var byLabel = s.byLabel || {};
+    var grid = $('#stat-grid');
+    grid.innerHTML = '';
+    var stats = [
+      ['Tổng câu hỏi', fmtInt(s.total), ''],
+      ['Câu sạch (none)', fmtInt(byLabel.none), fmtPct(s.total ? (byLabel.none / s.total) : null, 0)],
+      ['Câu lỗi', fmtInt((s.total || 0) - (byLabel.none || 0)), fmtPct(s.total ? ((s.total - (byLabel.none || 0)) / s.total) : null, 0)],
+      ['Môn', '10', '100 câu / môn']
+    ];
+    stats.forEach(function (item) {
+      var d = el('div', 'stat');
+      d.appendChild(el('div', 'stat-k', esc(item[0])));
+      d.innerHTML += '<div class="stat-v">' + esc(item[1]) + (item[2] ? ' <small>' + esc(item[2]) + '</small>' : '') + '</div>';
+      grid.appendChild(d);
+    });
+
+    var bar = $('#dist-bar');
+    bar.innerHTML = '';
+    LABELS.forEach(function (lab) {
+      var n = byLabel[lab] || 0;
+      if (!n) return;
+      var pct = s.total ? (100 * n / s.total) : 0;
+      var seg = el('div', 'dist-seg', n + '');
+      seg.style.width = pct + '%';
+      seg.style.background = LABEL_COLOR[lab];
+      seg.title = LABEL_VI[lab] + ' — ' + n + ' câu (' + pct.toFixed(1) + '%)';
+      bar.appendChild(seg);
+    });
+    var legend = $('#dist-legend');
+    legend.innerHTML = LABELS.map(function (lab) {
+      return '<span class="legend-item"><span class="dot" style="background:' + LABEL_COLOR[lab] + '"></span>' + esc(LABEL_VI[lab]) + ': <strong>' + fmtInt(byLabel[lab]) + '</strong></span>';
+    }).join('');
+
+    var byDomain = s.byDomain || {};
+    populateSubjectFilter(byDomain);
+    var domainLabel = {};
+    (s.byDomainLabel || []).forEach(function (r) {
+      var m = domainLabel[r.subjectCode] || (domainLabel[r.subjectCode] = {});
+      m[r.label] = r.count;
+    });
+    var tbody = $('#domain-table tbody');
+    tbody.innerHTML = Object.keys(byDomain).sort().map(function (sub) {
+      var lab = domainLabel[sub] || {};
+      return '<tr><td><code>' + esc(sub) + '</code></td><td>' + esc(SUBJECT_VI[sub] || '') + '</td><td class="num">' + fmtInt(byDomain[sub]) + '</td>' +
+        LABELS.map(function (l) { return '<td class="num">' + fmtInt(lab[l] || 0) + '</td>'; }).join('') + '</tr>';
+    }).join('');
+  }
+  async function loadDomains() { /* bảng môn đã render từ summary; chỉ đổ dropdown lọc */ }
+  function populateSubjectFilter(byDomain) {
+    var select = $('#q-subject');
+    var current = select.value;
+    select.innerHTML = '<option value="">Tất cả môn</option>' + Object.keys(byDomain || {}).sort().map(function (sub) {
+      return '<option value="' + esc(sub) + '">' + esc(sub) + ' — ' + esc(SUBJECT_VI[sub] || '') + '</option>';
+    }).join('');
+    select.value = current;
+  }
+
+  /* ============ section 2 · explorer ============ */
+  var qState = { page: 0, size: 10, totalPages: 1 };
+  async function loadQuestions(page) {
+    if (!api.connected) return;
+    qState.page = page;
+    var subject = $('#q-subject').value;
+    var label = $('#q-label').value;
+    var url = '/web/ai/demo/questions?page=' + page + '&size=' + qState.size;
+    if (subject) url += '&subject=' + encodeURIComponent(subject);
+    if (label) url += '&label=' + encodeURIComponent(label);
+    try {
+      var data = await call('GET', url, undefined, 15000);
+      var tbody = $('#questions-table tbody');
+      tbody.innerHTML = (data.content || []).map(function (q) {
+        var stem = q.stem || '';
+        var shortStem = stem.length > 90 ? stem.slice(0, 90) + '…' : stem;
+        return '<tr data-id="' + esc(q.extId) + '" style="cursor:pointer">' +
+          '<td><code>' + esc(q.extId) + '</code></td>' +
+          '<td><code>' + esc(q.subjectCode) + '</code></td>' +
+          '<td>' + esc(q.topicName || '') + '</td>' +
+          '<td>' + esc(shortStem) + '</td>' +
+          '<td>' + chip(q.goldIssueType) + '</td>' +
+          '<td class="num">' + fmtInt(q.difficulty) + '</td></tr>';
+      }).join('');
+      if (!data.content || !data.content.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:18px">Không có câu hỏi khớp bộ lọc.</td></tr>';
+      }
+      qState.totalPages = data.totalPages || 1;
+      $('#q-page-info').textContent = 'Trang ' + (page + 1) + '/' + qState.totalPages + ' · ' + fmtInt(data.totalElements) + ' câu';
+      $('#q-prev').disabled = page <= 0;
+      $('#q-next').disabled = page >= qState.totalPages - 1;
+    } catch (e) {
+      $('#questions-table tbody').innerHTML = '<tr><td colspan="6" class="muted" style="padding:14px">Lỗi tải câu hỏi: ' + esc(e.message) + '</td></tr>';
+    }
+  }
+  $('#q-subject').addEventListener('change', function () { loadQuestions(0); });
+  $('#q-label').addEventListener('change', function () { loadQuestions(0); });
+  $('#btn-q-reset').addEventListener('click', function () { $('#q-subject').value = ''; $('#q-label').value = ''; loadQuestions(0); });
+  $('#q-prev').addEventListener('click', function () { if (qState.page > 0) loadQuestions(qState.page - 1); });
+  $('#q-next').addEventListener('click', function () { if (qState.page < qState.totalPages - 1) loadQuestions(qState.page + 1); });
+
+  /* ============ question modal ============ */
+  var questionCache = {};
+  async function fetchQuestion(extId) {
+    var data = await call('GET', '/web/ai/demo/questions/' + encodeURIComponent(extId), undefined, 15000);
+    return data;
+  }
+  function openModal(q) {
+    $('#modal-title').textContent = (q.extId || 'Câu hỏi') + ' · ' + (q.subjectCode || '');
+    $('#modal-meta').innerHTML = 'Chủ đề: ' + esc(q.topicName || '—') + ' · Độ khó: ' + esc(q.difficulty || '—') + ' · Gold: ' + chip(q.goldIssueType) + (q.trueCorrectIdx != null && q.trueCorrectIdx !== q.correctIdx ? ' · <span style="color:var(--bad)">Đáp án đúng thật (idx ' + esc(q.trueCorrectIdx) + ') khác đáp án đang đánh dấu (idx ' + esc(q.correctIdx) + ')</span>' : '');
+    $('#modal-stem').textContent = q.stem || '';
+    var optionKeys = ['optionA', 'optionB', 'optionC', 'optionD'];
+    var opts = [];
+    var swapped = q.trueCorrectIdx != null && q.correctIdx != null && q.trueCorrectIdx !== q.correctIdx;
+    for (var i = 0; i < 4; i++) {
+      var text = q[optionKeys[i]] == null ? '' : String(q[optionKeys[i]]);
+      if (!text) continue;
+      var cls = 'opt';
+      var tags = [];
+      if (swapped) {
+        if (i === q.correctIdx) { cls += ' opt-marked-wrong'; tags.push('đang được đánh dấu đúng'); }
+        if (i === q.trueCorrectIdx) { cls += ' opt-correct'; tags.push('đáp án đúng thật'); }
+      } else if (i === q.correctIdx) {
+        cls += ' opt-correct'; tags.push('đáp án đúng');
+      }
+      opts.push('<div class="' + cls + '"><strong>' + String.fromCharCode(65 + i) + '.</strong> ' + esc(text) + (tags.length ? '<div class="muted" style="font-size:11.5px;margin-top:3px">' + esc(tags.join(' · ')) + '</div>' : '') + '</div>');
+    }
+    $('#modal-options').innerHTML = opts.join('');
+    $('#modal-explanation').textContent = q.explanation ? 'Giải thích: ' + q.explanation : '';
+    $('#question-modal').classList.remove('hidden');
+  }
+  $('#questions-table tbody').addEventListener('click', async function (ev) {
+    var tr = ev.target.closest('tr[data-id]');
+    if (!tr) return;
+    var id = tr.dataset.id;
+    try {
+      var q = questionCache[id] || await fetchQuestion(id);
+      questionCache[id] = q;
+      openModal(q);
+    } catch (e) {
+      showBanner('Không tải được câu hỏi ' + id + ': ' + e.message, 'bad');
+    }
+  });
+  $('#modal-close').addEventListener('click', function () { $('#question-modal').classList.add('hidden'); });
+  $('#question-modal').addEventListener('click', function (ev) { if (ev.target === this) this.classList.add('hidden'); });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') $('#question-modal').classList.add('hidden'); });
+
+  /* ============ section 3 · run ============ */
+  var currentRunId = null;
+  var pollTimer = null;
+
+  function setRunning(running) {
+    $('#btn-start').disabled = running;
+    $('#btn-stop').disabled = !running;
+    $('#run-mode').disabled = running;
+    $('#run-limit').disabled = running;
+  }
+  function renderRunMeta(run) {
+    var meta = $('#run-meta');
+    if (!run) { meta.innerHTML = '<span>Chưa có run nào.</span>'; return; }
+    var done = run.processedCount || 0, total = run.totalQuestions || 0;
+    var pct = total ? Math.min(100, 100 * done / total) : 0;
+    $('#run-progress').style.width = pct.toFixed(1) + '%';
+    var parts = [
+      'Run #' + run.runId,
+      'chế độ ' + run.mode,
+      'trạng thái ' + run.status,
+      'đã xử lý ' + done + '/' + total,
+      'đúng ' + fmtInt(run.correctCount),
+      'lỗi ' + fmtInt(run.errorCount)
+    ];
+    if (run.accuracy != null) parts.push('accuracy ' + fmtPct(run.accuracy, 1));
+    if (run.macroF1 != null) parts.push('Macro-F1 ' + fmtNum(run.macroF1, 3));
+    meta.innerHTML = parts.map(function (p) { return '<span>' + esc(p) + '</span>'; }).join('<span aria-hidden="true">·</span>');
+  }
+  function showRunError(msg) {
+    var e = $('#run-error');
+    if (!msg) { e.classList.add('hidden'); e.textContent = ''; return; }
+    e.textContent = msg;
+    e.classList.remove('hidden');
+  }
+  async function pollRun(id) {
+    try {
+      var run = await call('GET', '/web/ai/demo/runs/' + id, undefined, 15000);
+      renderRunMeta(run);
+      if (run.status === 'running') {
+        pollTimer = setTimeout(function () { pollRun(id); }, 1500);
+      } else {
+        setRunning(false);
+        currentRunId = null;
+        await loadRuns();
+        await renderReport(id);
+        showBanner(run.status === 'done' ? 'Đánh giá hoàn tất.' : run.status === 'stopped' ? 'Đã dừng run theo yêu cầu — báo cáo dưới đây tính trên phần đã xử lý.' : 'Run kết thúc với lỗi: ' + (run.notes || run.status), run.status === 'done' ? 'ok' : 'bad');
+      }
+    } catch (e) {
+      setRunning(false);
+      showRunError(e.message);
+    }
+  }
+  $('#btn-start').addEventListener('click', async function () {
+    if (!api.connected) { showBanner('Chưa kết nối máy chủ — bấm “Kết nối” trước.', 'bad'); return; }
+    var mode = $('#run-mode').value;
+    var limit = parseInt($('#run-limit').value, 10) || 1000;
+    if (mode === 'ai' && !window.confirm('Chế độ AI đầy đủ sẽ gọi Ollama trên các node Colab và có thể mất rất lâu. Tiếp tục?')) return;
+    setRunning(true);
+    showRunError(null);
+    showBanner(null);
+    try {
+      var run = await call('POST', '/web/ai/demo/runs', { mode: mode, limit: limit }, 30000);
+      currentRunId = run.runId;
+      renderRunMeta({ runId: run.runId, mode: run.mode, status: run.status || 'running', totalQuestions: run.totalQuestions, processedCount: 0, correctCount: 0, errorCount: 0 });
+      pollRun(run.runId);
+    } catch (e) {
+      setRunning(false);
+      showRunError(e.message);
+    }
+  });
+  $('#btn-stop').addEventListener('click', async function () {
+    if (currentRunId == null) return;
+    $('#btn-stop').disabled = true;
+    try {
+      await call('POST', '/web/ai/demo/runs/' + currentRunId + '/stop', undefined, 15000);
+    } catch (e) {
+      showRunError(e.message);
+    }
+  });
+  async function loadRuns() {
+    if (!api.connected) return;
+    try {
+      var runs = await call('GET', '/web/ai/demo/runs', undefined, 15000);
+      var select = $('#report-run');
+      var current = select.value;
+      select.innerHTML = (runs || []).map(function (r) {
+        var label = '#' + r.runId + ' · ' + r.mode + ' · ' + r.status + ' · ' + (r.processedCount || 0) + '/' + (r.totalQuestions || 0) + ' câu · acc ' + fmtPct(r.accuracy, 1);
+        return '<option value="' + r.runId + '">' + esc(label) + '</option>';
+      }).join('');
+      if (current && $$('#report-run option[value="' + current + '"]').length) select.value = current;
+      var latest = runs && runs.length ? runs[0] : null;
+      if (latest) {
+        if (latest.status === 'running') { setRunning(true); currentRunId = latest.runId; pollRun(latest.runId); }
+        await renderReport(parseInt(select.value || (latest && latest.runId), 10));
+      } else {
+        $('#report-empty').classList.remove('hidden');
+        $('#report-body').classList.add('hidden');
+      }
+    } catch (e) {
+      $('#report-empty').textContent = 'Không tải được danh sách run: ' + e.message;
+    }
+  }
+
+  /* ============ section 4 · report ============ */
+  function renderStat(container, items) {
+    var grid = $(container);
+    grid.innerHTML = '';
+    items.forEach(function (item) {
+      var d = el('div', 'stat');
+      d.appendChild(el('div', 'stat-k', esc(item[0])));
+      d.innerHTML += '<div class="stat-v">' + esc(item[1]) + (item[2] ? ' <small>' + esc(item[2]) + '</small>' : '') + '</div>';
+      grid.appendChild(d);
+    });
+  }
+  function heatColor(value, max) {
+    if (!max || value <= 0) return 'transparent';
+    var t = Math.min(1, value / max);
+    var alpha = 0.08 + 0.5 * Math.pow(t, 0.75);
+    return 'rgba(14, 124, 134, ' + alpha.toFixed(3) + ')';
+  }
+  async function renderReport(runId) {
+    if (!runId) {
+      $('#report-empty').classList.remove('hidden');
+      $('#report-body').classList.add('hidden');
+      return;
+    }
+    try {
+      var m = await call('GET', '/web/ai/demo/runs/' + runId + '/metrics', undefined, 30000);
+      if (!m) throw new Error('Không tìm thấy run #' + runId);
+      $('#report-empty').classList.add('hidden');
+      $('#report-body').classList.remove('hidden');
+      renderRunMeta({ runId: m.runId, mode: m.mode, status: m.status, totalQuestions: m.totalQuestions, processedCount: m.evaluated + m.errors, correctCount: Math.round((m.accuracy || 0) * (m.evaluated || 0)), errorCount: m.errors, accuracy: m.accuracy, macroF1: m.macroF1 });
+
+      renderStat('#report-stats', [
+        ['Accuracy', fmtPct(m.accuracy, 1), 'trên ' + fmtInt(m.evaluated) + ' câu hợp lệ'],
+        ['Macro-F1', fmtNum(m.macroF1, 3), 'P ' + fmtNum(m.macroPrecision, 3) + ' · R ' + fmtNum(m.macroRecall, 3)],
+        ['Micro-F1', fmtNum(m.microF1, 3), '= accuracy (đơn nhãn)'],
+        ['Câu lỗi kỹ thuật', fmtInt(m.errors), m.errors ? 'loại khỏi chỉ số' : 'không có']
+      ]);
+
+      // per-label table
+      var maxF1 = 0;
+      (m.perLabel || []).forEach(function (l) { if (l.f1 > maxF1) maxF1 = l.f1; });
+      $('#per-label-table tbody').innerHTML = (m.perLabel || []).map(function (l) {
+        return '<tr><td>' + chip(l.label) + '</td><td class="num">' + fmtNum(l.precision, 3) + '</td><td class="num">' + fmtNum(l.recall, 3) + '</td><td class="num">' + fmtNum(l.f1, 3) + '</td><td class="num">' + fmtInt(l.support) + '</td><td class="bar-cell"><div class="bar"><i style="width:' + (maxF1 ? (100 * l.f1 / maxF1).toFixed(1) : 0) + '%"></i></div></td></tr>';
+      }).join('');
+
+      renderConfusion(m);
+
+      // per-domain table
+      $('#per-domain-table tbody').innerHTML = (m.perDomain || []).map(function (d) {
+        return '<tr><td><code>' + esc(d.subjectCode) + '</code> ' + esc(SUBJECT_VI[d.subjectCode] || '') + '</td><td class="num">' + fmtInt(d.correct) + '</td><td class="num">' + fmtInt(d.total) + '</td><td class="num">' + fmtPct(d.accuracy, 1) + '</td><td class="bar-cell"><div class="bar"><i style="width:' + (100 * (d.accuracy || 0)).toFixed(1) + '%"></i></div></td></tr>';
+      }).join('');
+
+      // wrong items
+      var wrong = await call('GET', '/web/ai/demo/runs/' + runId + '/items?onlyWrong=true&size=10', undefined, 30000);
+      var wb = $('#wrong-table tbody');
+      wb.innerHTML = (wrong.content || []).map(function (it) {
+        var stem = it.stem || '';
+        var shortStem = stem.length > 80 ? stem.slice(0, 80) + '…' : stem;
+        return '<tr><td><code>' + esc(it.extId) + '</code></td><td><code>' + esc(it.subjectCode) + '</code></td><td>' + chip(it.goldLabel) + ' → ' + chip(it.predictedLabel) + '</td><td>' + esc(shortStem) + '</td><td><button class="btn btn-xs" data-extid="' + esc(it.extId) + '" type="button">Xem</button></td></tr>';
+      }).join('');
+      if (!wrong.content || !wrong.content.length) wb.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">Không có câu sai — hoặc chưa có dữ liệu.</td></tr>';
+    } catch (e) {
+      $('#report-empty').textContent = 'Không tải được báo cáo: ' + e.message;
+      $('#report-empty').classList.remove('hidden');
+      $('#report-body').classList.add('hidden');
+    }
+  }
+  function renderConfusion(m) {
+    var pctMode = $('#cm-pct').checked;
+    var labels = m.labels || LABELS;
+    var max = 0;
+    (m.confusion || []).forEach(function (row) { row.forEach(function (v) { if (v > max) max = v; }); });
+    var html = '<thead><tr><th>gold \\ dự đoán</th>' + labels.map(function (l) { return '<th>' + esc(l) + '</th>'; }).join('') + '<th>Tổng</th></tr></thead><tbody>';
+    (m.confusion || []).forEach(function (row, i) {
+      var rowSum = row.reduce(function (a, b) { return a + b; }, 0);
+      html += '<tr><th>' + esc(labels[i]) + '</th>' + row.map(function (v, j) {
+        var shown = pctMode ? (rowSum ? fmtPct(v / rowSum, 1) : '—') : v;
+        var cls = i === j ? ' class="cm-diag"' : '';
+        return '<td' + cls + ' style="background:' + heatColor(v, max) + '">' + esc(shown) + '</td>';
+      }).join('') + '<td class="num">' + rowSum + '</td></tr>';
+    });
+    html += '</tbody>';
+    $('#confusion-table').innerHTML = html;
+  }
+  $('#cm-pct').addEventListener('change', function () {
+    var id = parseInt($('#report-run').value, 10);
+    if (id) renderReport(id);
+  });
+  $('#report-run').addEventListener('change', function () {
+    var id = parseInt(this.value, 10);
+    renderReport(id);
+  });
+  $('#btn-report-refresh').addEventListener('click', loadRuns);
+  $('#btn-delete-runs').addEventListener('click', async function () {
+    if (!api.connected) return;
+    if (!window.confirm('Xóa toàn bộ runs/items demo? Hành động này không thể hoàn tác.')) return;
+    try {
+      await call('DELETE', '/web/ai/demo/runs', undefined, 30000);
+      showBanner('Đã xóa toàn bộ runs/items demo.', 'ok');
+      await loadRuns();
+    } catch (e) {
+      showBanner(e.message, 'bad');
+    }
+  });
+  $('#wrong-table tbody').addEventListener('click', async function (ev) {
+    var btn = ev.target.closest('button[data-extid]');
+    if (!btn) return;
+    try {
+      var q = questionCache[btn.dataset.extid] || await fetchQuestion(btn.dataset.extid);
+      questionCache[btn.dataset.extid] = q;
+      openModal(q);
+    } catch (e) {
+      showBanner('Không tải được ' + btn.dataset.extid + ': ' + e.message, 'bad');
+    }
+  });
+
+  /* ============ seed / reseed ============ */
+  $('#btn-reseed').addEventListener('click', async function () {
+    if (!api.connected) { showBanner('Chưa kết nối máy chủ.', 'bad'); return; }
+    if (!window.confirm('Nạp lại bộ 1000 câu hỏi (xóa runs + items + questions rồi seed lại)?')) return;
+    try {
+      var r = await call('POST', '/web/ai/demo/seed?force=true', undefined, 60000);
+      showBanner('Đã nạp lại ' + fmtInt(r.loaded) + ' câu hỏi demo.', 'ok');
+      questionCache = {};
+      await connect();
+    } catch (e) {
+      showBanner(e.message, 'bad');
+    }
+  });
+
+  /* ============ boot ============ */
+  hideBanner();
+  $('#api-base').value = 'http://localhost:8082/api';
+  try { $('#api-base').value = localStorage.getItem(BASE_KEY) || (/^https?:/.test(window.location.origin) ? window.location.origin + '/api' : 'http://localhost:8082/api'); } catch (e) {}
+  connect();
+  </script>
+</body>
+</html>
