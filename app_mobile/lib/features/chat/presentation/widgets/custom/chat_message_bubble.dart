@@ -34,9 +34,9 @@ class ChatMessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final failed = message.status == ChatMessageStatus.failed;
     final sending = message.status == ChatMessageStatus.sending;
-    final Color bubbleColor = isMe ? AppColors.primaryBlue : AppColors.border;
-    final Color textColor = isMe ? Colors.white : Colors.black87;
-    final Color metaColor = isMe ? Colors.white70 : Colors.black54;
+    final Color bubbleColor = isMe ? AppColors.primaryBlue : Theme.of(context).colorScheme.surfaceContainerHighest;
+    final Color textColor = isMe ? Colors.white : Theme.of(context).colorScheme.onSurface;
+    final Color metaColor = isMe ? Colors.white70 : Theme.of(context).colorScheme.onSurfaceVariant;
 
     final bubble = Container(
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
@@ -54,10 +54,10 @@ class ChatMessageBubble extends StatelessWidget {
               senderLabel!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: AppColors.primaryBlue,
+                color: isMe ? Colors.white : Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 2),

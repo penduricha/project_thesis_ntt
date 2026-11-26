@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../../core/storage/auth_storage.dart';
+import '../../../../core/localization/mobile_server_messages.dart';
+import '../../../../core/network/server_connection.dart';
 import '../../../config/network/network_configuration.dart';
 import '../../presentation/screens/totp_generator.dart';
 
@@ -117,6 +119,7 @@ class SecureStorageEnrollmentAuth implements EnrollmentAuth {
           validateStatus: (s) => s != null && s < 500,
         ),
       );
+      dio.interceptors.add(ServerConnection.interceptor());
       final res = await dio.get<Map<String, dynamic>>(
         _refreshPath,
         options: Options(headers: {'Authorization': 'Bearer ${session.refreshToken}'}),
@@ -187,9 +190,15 @@ class EnrolledKey {
 
 /// Lỗi đã được dịch sang câu ngắn gọn để hiện dưới ô nhập khóa.
 class EnrollmentException implements Exception {
-  const EnrollmentException(this.message);
+  const EnrollmentException(this.message, {this.messageKey, this.params = const {}});
 
+  /// Original diagnostic text remains available to callers.
   final String message;
+  final String? messageKey;
+  final Map<String, Object> params;
+  String get userMessage => messageKey == null
+      ? message
+      : MobileServerMessages.lookup(messageKey!, params: params) ?? message;
 
   @override
   String toString() => message;
@@ -232,6 +241,8 @@ class EnrollmentService {
                 headers: {'Accept': 'application/json'},
               ),
             ) {
+    // Keep the existing 401 retry and validateStatus semantics unchanged.
+    if (dio == null) _dio.interceptors.add(ServerConnection.interceptor());
     // 401 (access token Java chỉ sống 5 phút) -> làm mới token rồi gửi lại ĐÚNG MỘT LẦN.
     // An toàn cho cả confirm: server kiểm tra token trước khi đếm số lần nhập sai.
     _dio.interceptors.add(
@@ -282,13 +293,13 @@ class EnrollmentService {
   Future<EnrolledKey> activate(String secret) async {
     final token = await _auth.accessToken();
     if (token == null || token.isEmpty) {
-      throw const EnrollmentException(_msgSession);
+      throw const EnrollmentException(_msgSession, messageKey: 'session');
     }
 
     // Kiểm tra TRƯỚC khi gọi confirm: không để server bật 2FA mà app thiếu thông tin tạo tài khoản.
     final profile = await _auth.profile();
     if (profile == null) {
-      throw const EnrollmentException('Admin info not found. Please sign in again.');
+      throw const EnrollmentException('Admin info not found. Please sign in again.', messageKey: 'adminMissing');
     }
 
     final pending = await _fetchPending(token);
@@ -302,7 +313,7 @@ class EnrollmentService {
         algorithm: pending.algorithm,
       );
     } on FormatException {
-      throw const EnrollmentException('Invalid key format.');
+      throw const EnrollmentException('Invalid key format.', messageKey: 'invalidKey');
     }
 
     // Token có thể vừa được làm mới ở bước pending: lấy lại token mới nhất cho bước confirm.
@@ -325,7 +336,7 @@ class EnrollmentService {
         options: _bearer(token),
       );
       final data = res.data?['data'] as Map<String, dynamic>?;
-      if (data == null) throw const EnrollmentException(_msgServer);
+      if (data == null) throw const EnrollmentException(_msgServer, messageKey: 'server');
 
       // Ba tham số này quyết định mã đúng/sai, nên phải kiểm trước khi dùng thay vì tin server:
       //  - periodSeconds = 0  -> AuthenticatorScreen tính `ms % (period * 1000)` = chia cho 0
@@ -336,10 +347,10 @@ class EnrollmentService {
       final digits = (data['digits'] as num).toInt();
       final periodSeconds = (data['periodSeconds'] as num).toInt();
       if (periodSeconds <= 0) {
-        throw const EnrollmentException('Server trả chu kỳ TOTP không hợp lệ.');
+        throw const EnrollmentException('Server trả chu kỳ TOTP không hợp lệ.', messageKey: 'invalidPeriod');
       }
       if (digits < 6 || digits > 9) {
-        throw const EnrollmentException('Server trả số chữ số TOTP không hợp lệ.');
+        throw const EnrollmentException('Server trả số chữ số TOTP không hợp lệ.', messageKey: 'invalidDigits');
       }
 
       return _PendingParams(
@@ -350,7 +361,7 @@ class EnrollmentService {
     } on DioException catch (e) {
       throw _map(e);
     } on FormatException {
-      throw const EnrollmentException('Unsupported algorithm from server.');
+      throw const EnrollmentException('Unsupported algorithm from server.', messageKey: 'invalidAlgorithm');
     }
   }
 
@@ -380,7 +391,7 @@ class EnrollmentService {
   }) async {
     final token = await _auth.accessToken();
     if (token == null || token.isEmpty) {
-      throw const EnrollmentException(_msgSession);
+      throw const EnrollmentException(_msgSession, messageKey: 'session');
     }
 
     final String code;
@@ -392,7 +403,7 @@ class EnrollmentService {
         algorithm: algorithm,
       );
     } on FormatException {
-      throw const EnrollmentException('Invalid key format.');
+      throw const EnrollmentException('Invalid key format.', messageKey: 'invalidKey');
     }
 
     try {
@@ -410,8 +421,8 @@ class EnrollmentService {
 
   EnrollmentException _mapDisable(DioException e) {
     final status = e.response?.statusCode;
-    if (status == null) return const EnrollmentException(_msgNetwork);
-    if (status == 401) return const EnrollmentException(_msgSession);
+    if (status == null) return const EnrollmentException(_msgNetwork, messageKey: 'network');
+    if (status == 401) return const EnrollmentException(_msgSession, messageKey: 'session');
     if (status == 422) {
       final data = e.response?.data;
       final code = (data is Map && data['data'] is Map)
@@ -420,10 +431,12 @@ class EnrollmentService {
       if (code == 'TOTP_REPLAYED') {
         return const EnrollmentException(
           'This code was just used. Wait for the next code and try again.',
+          messageKey: 'replayed',
         );
       }
       return const EnrollmentException(
         'Code rejected. Check that this device time is correct and try again.',
+        messageKey: 'disableInvalid',
       );
     }
     if (status == 429) {
@@ -434,10 +447,11 @@ class EnrollmentService {
       final minutes = seconds is num ? (seconds / 60).ceil() : 5;
       return EnrollmentException(
         'Too many wrong attempts. Try again in $minutes minute(s).',
+        messageKey: 'disableLocked', params: {'minutes': minutes},
       );
     }
-    if (status == 400) return const EnrollmentException('Invalid code.');
-    return const EnrollmentException(_msgServer);
+    if (status == 400) return const EnrollmentException('Invalid code.', messageKey: 'invalidCode');
+    return const EnrollmentException(_msgServer, messageKey: 'server');
   }
 
   Options _bearer(String token) =>
@@ -445,28 +459,31 @@ class EnrollmentService {
 
   EnrollmentException _map(DioException e) {
     final status = e.response?.statusCode;
-    if (status == null) return const EnrollmentException(_msgNetwork);
-    if (status == 401) return const EnrollmentException(_msgSession);
+    if (status == null) return const EnrollmentException(_msgNetwork, messageKey: 'network');
+    if (status == 401) return const EnrollmentException(_msgSession, messageKey: 'session');
     if (status == 404) {
       return const EnrollmentException(
         'Nothing to activate. Tap "Activate 2FA" on the web first.',
+        messageKey: 'noPending',
       );
     }
     if (status == 410) {
       return const EnrollmentException(
         'Activation expired (10 minutes). Tap "Activate 2FA" on the web again.',
+        messageKey: 'expired',
       );
     }
     if (status == 422) {
-      return const EnrollmentException('Incorrect key. Check it and try again.');
+      return const EnrollmentException('Incorrect key. Check it and try again.', messageKey: 'wrongKey');
     }
     if (status == 429) {
       // Server đã xóa phần cài dở sau khi nhập sai quá số lần.
       return const EnrollmentException(
         'Too many wrong attempts. Tap "Activate 2FA" on the web to start again.',
+        messageKey: 'confirmLocked',
       );
     }
-    if (status == 400) return const EnrollmentException('Invalid code.');
-    return const EnrollmentException(_msgServer);
+    if (status == 400) return const EnrollmentException('Invalid code.', messageKey: 'invalidCode');
+    return const EnrollmentException(_msgServer, messageKey: 'server');
   }
 }

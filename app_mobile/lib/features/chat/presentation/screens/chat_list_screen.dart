@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../../../core/utils/chat_time.dart';
 import '../../../main_shell/presentation/widgets/app_menu_bar.dart';
 import '../../application/chat_controller.dart';
@@ -76,7 +77,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       canPop: false,
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawer: const AppMenuBar(),
         body: SafeArea(
           child: Column(
@@ -105,26 +106,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
         children: [
           IconButton(
             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-            icon: const Icon(Icons.menu, color: Colors.black87),
+            icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.onSurface),
             tooltip: 'Menu',
           ),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Messages',
+              AppStrings.of(context).text('messages'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w600,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
           IconButton(
             onPressed: _openNewChat,
             icon: const Icon(Icons.edit, color: _blueColor, size: 26),
-            tooltip: 'Tin nhắn mới',
+            tooltip: AppStrings.of(context).text('newMessage'),
           ),
         ],
       ),
@@ -140,10 +141,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         textInputAction: TextInputAction.search,
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
-          hintText: 'Search',
+          hintText: AppStrings.of(context).text('search'),
           hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
           filled: true,
-          fillColor: AppColors.searchFill,
+          fillColor: Theme.of(context).colorScheme.surface,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 13),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -179,7 +180,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         return _scrollableMessage(
           icon: Icons.cloud_off_outlined,
           text: error,
-          action: TextButton(onPressed: _chat.refreshAll, child: const Text('Thử lại')),
+          action: TextButton(onPressed: _chat.refreshAll, child: Text(AppStrings.of(context).text('retryAction'))),
         );
       }
     }
@@ -189,8 +190,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
       return _scrollableMessage(
         icon: searching ? Icons.search_off : Icons.chat_bubble_outline,
         text: searching
-            ? 'Không tìm thấy cuộc trò chuyện'
-            : 'Chưa có cuộc trò chuyện nào.\nNhấn biểu tượng bút ở góc phải để bắt đầu.',
+            ? AppStrings.of(context).text('noConversationFound')
+            : AppStrings.of(context).text('noConversations'),
       );
     }
 
@@ -246,9 +247,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   String _preview(ChatConversation c) {
     final last = c.lastMessage;
-    if (last == null) return c.isGroup ? 'Nhóm vừa được tạo' : '';
+    if (last == null) return c.isGroup ? AppStrings.of(context).text('groupCreated') : '';
     final text = last.content.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (last.senderId == _chat.myId) return 'Bạn: $text';
+    if (last.senderId == _chat.myId) return AppStrings.of(context).format('mePrefix', {'text': text});
     // Chat nhóm cần biết ai nói; chat 1-1 thì người kia là tiêu đề rồi.
     if (c.isGroup && last.senderName.isNotEmpty) return '${last.senderName}: $text';
     return text;
@@ -310,7 +311,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-                            color: Colors.black,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -331,7 +332,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 14,
-                            color: isUnread ? Colors.black87 : Colors.grey[600],
+                            color: isUnread ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
                             fontStyle: last == null ? FontStyle.italic : FontStyle.normal,
                           ),

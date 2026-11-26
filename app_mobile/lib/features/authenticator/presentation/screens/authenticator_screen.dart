@@ -8,7 +8,7 @@ import '../../data/service/account_store.dart';
 import '../../data/service/enrollment_service.dart';
 import '../widgets/activate_key_dialog.dart';
 import '../../../../core/constants/app_colors.dart';
- // AppConfirmDialog + primaryRed
+import '../../../../core/localization/app_strings.dart';
 import '../widgets/app_confirm_delete_dialog.dart';
 import '../widgets/ring_painter.dart';
 import 'totp_generator.dart';
@@ -35,8 +35,6 @@ class AuthenticatorScreen extends StatefulWidget {
 class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   // ---- Colors ----
-  static const Color _blueColor = AppColors.primaryBlue; // "+" button top right
-  static const Color _searchFill = AppColors.searchFill;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
@@ -209,7 +207,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     final store = _store;
     final adminId = _adminId;
     if (store == null || adminId == null) {
-      _showToast('Loading login session, please try again');
+      _showToast(AppStrings.of(context).text('sessionLoading'));
       return;
     }
 
@@ -231,7 +229,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
             enrolled = await _enrollment.activate(enteredKey);
             return null; // success
           } on EnrollmentException catch (e) {
-            return e.message; // show under input, popup remains open
+            return e.userMessage; // show under input, popup remains open
           }
         },
       ),
@@ -242,7 +240,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
     // Server confirms this key belongs to an admin different from the current session: do not add to list
     if (result.adminId != adminId) {
-      _showToast('Key does not belong to the current logged-in account');
+      _showToast(AppStrings.of(context).text('wrongAccount'));
       return;
     }
 
@@ -268,10 +266,10 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
     try {
       await store.save(_enrolledAccounts);
-      if (mounted) _showToast('Activated successfully');
+      if (mounted) _showToast(AppStrings.of(context).text('activated'));
     } catch (_) {
       if (mounted) {
-        _showToast('Activated, but failed to save the key to the device');
+        _showToast(AppStrings.of(context).text('saveKeyFailed'));
       }
     }
   }
@@ -283,11 +281,10 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
     final confirmed = await AppConfirmDeleteDialog.show(
       context,
-      title: 'Turn off 2FA?',
-      message: 'Two-factor authentication of "${acc.issuer}" will be turned off '
-          'and the key removed from this device. Web login will only need '
-          'Admin ID and password. You can turn it on again later.',
-      confirmLabel: 'Turn off',
+      title: AppStrings.of(context).text('disableTitle'),
+      message: AppStrings.of(context).format('disableDesc', {'name': acc.issuer}),
+      cancelLabel: AppStrings.of(context).text('cancel'),
+      confirmLabel: AppStrings.of(context).text('disableAction'),
     );
     if (!confirmed || !mounted) return;
 
@@ -297,7 +294,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
       final outcome = await _disableOnServer(acc);
       if (outcome == null || !mounted) return; // error toast already shown
       if (outcome == DisableOutcome.alreadyOff) {
-        _showToast('2FA was already off on the server');
+        _showToast(AppStrings.of(context).text('alreadyOff'));
       }
     }
 
@@ -308,9 +305,9 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
     try {
       await _store?.save(_enrolledAccounts);
-      if (mounted) _showToast('2FA turned off');
+      if (mounted) _showToast(AppStrings.of(context).text('disabled'));
     } catch (_) {
-      if (mounted) _showToast('Failed to update the device storage');
+      if (mounted) _showToast(AppStrings.of(context).text('storageFailed'));
     }
   }
 
@@ -333,7 +330,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
         algorithm: acc.algorithm,
       );
     } on EnrollmentException catch (e) {
-      if (mounted) _showToast(e.message);
+      if (mounted) _showToast(e.userMessage);
       return null;
     } finally {
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
@@ -343,7 +340,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   Future<void> _copyCode(String code) async {
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
-    _showToast('Code copied');
+    _showToast(AppStrings.of(context).text('copied'));
   }
 
   void _showToast(String message) {
@@ -366,7 +363,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       drawer: const AppMenuBar(),
       body: SafeArea(
         child: Column(
@@ -390,7 +387,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
                     code: _codes[acc.id] ?? '------',
                     clock: _clockFor(acc.periodSeconds),
                     period: acc.periodSeconds,
-                    codeColor: _blueColor,
+                    codeColor: Theme.of(context).colorScheme.primary,
                     isOpen: _openedId == acc.id,
                     onOpenChanged: (open) => setState(() {
                       if (open) {
@@ -426,11 +423,11 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
         children: [
           IconButton(
             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-            icon: const Icon(Icons.menu, color: Colors.black87),
+            icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.onSurface),
             tooltip: 'Menu',
           ),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
               'Authenticator',
               maxLines: 1,
@@ -438,14 +435,14 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w600,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
           IconButton(
             onPressed: _onAddAccount,
-            icon: const Icon(Icons.add, color: _blueColor, size: 30),
-            tooltip: 'Add account',
+            icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary, size: 30),
+            tooltip: AppStrings.of(context).text('addAccount'),
           ),
         ],
       ),
@@ -462,10 +459,10 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
         textInputAction: TextInputAction.search,
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
-          hintText: 'Search',
+          hintText: AppStrings.of(context).text('search'),
           hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
           filled: true,
-          fillColor: _searchFill,
+          fillColor: Theme.of(context).colorScheme.surface,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 13),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -495,8 +492,8 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Text(
           noAccountsYet
-              ? 'No authenticator codes yet.\nTap + to add a secret key.'
-              : 'Account not found',
+              ? AppStrings.of(context).text('noCodes')
+              : AppStrings.of(context).text('notFound'),
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 15, color: Colors.grey),
         ),
@@ -588,10 +585,10 @@ class _AccountTile extends StatelessWidget {
                         account.issuer,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -765,7 +762,7 @@ class _SwipeToDeleteState extends State<_SwipeToDelete>
             onHorizontalDragUpdate: _onDragUpdate,
             onHorizontalDragEnd: _onDragEnd,
             child: Material(
-              color: Colors.white, // opaque: hides the red button when closed
+              color: Theme.of(context).colorScheme.surface, // opaque while the row slides
               child: InkWell(
                 onTap: widget.onTap, // tap to copy code
                 child: widget.child,

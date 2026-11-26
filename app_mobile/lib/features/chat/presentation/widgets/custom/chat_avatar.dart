@@ -30,8 +30,8 @@ class ChatAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color background = isUnread ? _blue : _blue.withValues(alpha: 0.10);
-    final Color foreground = isUnread ? Colors.white : _blue;
+    final Color background = isUnread ? _blue : Theme.of(context).colorScheme.primaryContainer;
+    final Color foreground = isUnread ? Colors.white : Theme.of(context).colorScheme.onPrimaryContainer;
 
     // Tên đã nằm ngay cạnh avatar nên không để screen reader đọc thêm chữ cái.
     return ExcludeSemantics(

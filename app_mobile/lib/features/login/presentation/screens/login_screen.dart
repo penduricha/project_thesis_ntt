@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_strings.dart';
+import '../../../../core/localization/mobile_server_messages.dart';
+import '../../../settings/presentation/settings_screen.dart';
 import '../../data/model/login_result.dart';
 import '../controller/login_controller.dart';
 import '../widgets/error_dialog.dart';
 import 'create_account_screen.dart';
-
-// ---- Màu dùng chung cho màn hình Login ----
-const Color _fieldFill = AppColors.fieldFill; // nền ô nhập
-const Color _fieldFillDisabled = AppColors.fieldFillDisabled; // nền ô nhập khi bị khóa
-const Color _fieldBorder = AppColors.divider; // viền nhạt khi bình thường
-const Color _errorColor = AppColors.primaryRed; // cùng đỏ với nút OK của popup
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,6 +32,20 @@ class _LoginScreenState extends State<LoginScreen> {
   // Trước đó người dùng đang gõ dở thì không báo đỏ.
   bool _submitted = false;
 
+  Locale? _lastLocale;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final current = Localizations.maybeLocaleOf(context);
+    if (_submitted && _lastLocale != current) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _formKey.currentState?.validate();
+      });
+    }
+    _lastLocale = current;
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -51,14 +62,14 @@ class _LoginScreenState extends State<LoginScreen> {
   // ---------------------------------------------------------------------------
   String? _validateId(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Enter your admin Id';
+      return AppStrings.of(context).text('enterId');
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Enter your password';
+      return AppStrings.of(context).text('enterPassword');
     }
     return null;
   }
@@ -111,27 +122,31 @@ class _LoginScreenState extends State<LoginScreen> {
         await showErrorDialog(
           context,
           icon: Icons.lock_outline_rounded,
-          title: 'Login failed',
-          message: '$message\nPlease check and try again.',
+          title: AppStrings.of(context).text('loginFailed'),
+          message: '${_loginRejectedMessage(message)}\n${AppStrings.of(context).text('retry')}',
           buttonText: 'OK',
         );
         _focusPasswordAndSelectAll();
 
     // Trường hợp 2a: tài khoản bật 2FA -> yêu cầu nhập mã 6 số hoặc đang bị khóa tạm.
-      case LoginTotpRequired(:final reason, :final message):
+      case LoginTotpRequired(:final reason, :final retryAfterSeconds):
         if (reason == LoginTotpFailureReason.locked) {
           HapticFeedback.heavyImpact();
           await showErrorDialog(
             context,
             icon: Icons.timer_off_outlined,
-            title: 'Too many attempts',
-            message: message,
+            title: AppStrings.of(context).text('tooManyAttempts'),
+            message: retryAfterSeconds > 0
+                ? MobileServerMessages.lookup('loginLockedSeconds', params: {'seconds': retryAfterSeconds})!
+                : MobileServerMessages.lookup('loginLocked')!,
             buttonText: 'OK',
           );
           return;
         }
         HapticFeedback.mediumImpact();
-        final code = await _promptTotpCode(message);
+        final code = await _promptTotpCode(MobileServerMessages.lookup(
+          reason == LoginTotpFailureReason.required ? 'totpRequired' : 'totpInvalid',
+        )!);
         if (!mounted || code == null) return;
         final retryResult = await _controller.login(
           adminId: adminId,
@@ -147,19 +162,19 @@ class _LoginScreenState extends State<LoginScreen> {
         await showErrorDialog(
           context,
           icon: Icons.devices_other_rounded,
-          title: 'Account in use',
+          title: AppStrings.of(context).text('accountInUse'),
           message: _buildBlockedMessage(blocked),
           buttonText: 'OK',
         );
 
     // Không gọi được server (mất mạng, quá thời gian chờ, lỗi 5xx).
-      case LoginFailure(:final message):
+      case LoginFailure(:final message, :final isNetworkFailure):
         HapticFeedback.mediumImpact();
         await showErrorDialog(
           context,
           icon: Icons.wifi_off_rounded,
-          title: 'Connection error',
-          message: message,
+          title: AppStrings.of(context).text('connectionError'),
+          message: isNetworkFailure ? AppStrings.of(context).text('network') : message,
           buttonText: 'OK',
         );
     }
@@ -176,14 +191,14 @@ class _LoginScreenState extends State<LoginScreen> {
           return StatefulBuilder(
             builder: (context, setDialogState) {
               return AlertDialog(
-                title: const Text('Two-Factor Verification'),
+                title: Text(AppStrings.of(context).text('twoFactor')),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       message,
-                      style: const TextStyle(fontSize: 14, color: Colors.black87),
+                      style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     const SizedBox(height: 14),
                     TextField(
@@ -210,20 +225,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(dialogContext).pop(),
-                    child: const Text('Cancel'),
+                    child: Text(AppStrings.of(context).text('cancel')),
                   ),
                   ElevatedButton(
                     onPressed: () {
                       final trimmed = codeController.text.trim();
                       if (!RegExp(r'^\d{6}$').hasMatch(trimmed)) {
                         setDialogState(() {
-                          inlineError = 'Enter all 6 digits';
+                          inlineError = AppStrings.of(context).text('enterSix');
                         });
                         return;
                       }
                       Navigator.of(dialogContext).pop(trimmed);
                     },
-                    child: const Text('Verify'),
+                    child: Text(AppStrings.of(context).text('verify')),
                   ),
                 ],
               );
@@ -236,6 +251,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // Legacy login failures do not carry a machine-readable code. Only override
+  // exact documented messages and retain any unrecognised server text.
+  String _loginRejectedMessage(String original) {
+    if (original == 'Admin Id or password is wrong.' ||
+        original == 'Admin Id or password is incorrect.') {
+      return MobileServerMessages.lookup('credentials') ?? original;
+    }
+    return original;
+  }
+
   /// Nội dung popup trường hợp 3: câu cảnh báo của server + thiết bị đang giữ phiên.
   String _buildBlockedMessage(LoginBlockedByOtherDevice blocked) {
     final deviceName = blocked.deviceName;
@@ -243,10 +268,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final loggedInAt = blocked.loggedInAt;
 
     return [
-      blocked.message,
+      MobileServerMessages.lookup('alreadyLoggedIn') ?? blocked.message,
       if (deviceName != null)
-        '\nDevice: $deviceName${platform != null ? ' ($platform)' : ''}',
-      if (loggedInAt != null) 'Since: ${_formatLocalTime(loggedInAt)}',
+        '\n${AppStrings.of(context).text('device')}: $deviceName${platform != null ? ' ($platform)' : ''}',
+      if (loggedInAt != null) '${AppStrings.of(context).text('since')}: ${_formatLocalTime(loggedInAt)}',
     ].join('\n');
   }
 
@@ -270,6 +295,14 @@ class _LoginScreenState extends State<LoginScreen> {
         : AutovalidateMode.disabled;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        actions: [IconButton(
+          tooltip: AppStrings.of(context).text('settings'),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen())),
+          icon: const Icon(Icons.settings_outlined),
+        )],
+      ),
       body: SafeArea(
         // Chạm ra ngoài để đóng bàn phím
         child: GestureDetector(
@@ -279,7 +312,14 @@ class _LoginScreenState extends State<LoginScreen> {
             child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Form(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(side: BorderSide(color: Theme.of(context).dividerColor), borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
                 key: _formKey,
                 // Chỉ phần phụ thuộc trạng thái loading mới được dựng lại
                 child: ListenableBuilder(
@@ -290,14 +330,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: double.infinity,
                           child: Text(
                             'Authenticator',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 24,
-                              color: AppColors.primaryBlue,
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -307,8 +347,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         // ---------- Admin Id ----------
                         _AuthTextField(
-                          label: 'Admin Id',
-                          hint: 'Enter admin Id',
+                          label: AppStrings.of(context).text('adminId'),
+                          hint: AppStrings.of(context).text('enterId'),
                           controller: _idController,
                           focusNode: _idFocus,
                           enabled: !isLoading,
@@ -327,8 +367,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         // ---------- Password ----------
                         _AuthTextField(
-                          label: 'Password',
-                          hint: 'Enter password',
+                          label: AppStrings.of(context).text('password'),
+                          hint: AppStrings.of(context).text('enterPassword'),
                           controller: _passwordController,
                           focusNode: _passwordFocus,
                           enabled: !isLoading,
@@ -339,7 +379,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onSubmitted: (_) => _onSubmit(), // phím Done = bấm Login
                           suffixIcon: IconButton(
                             tooltip:
-                            _obscurePassword ? 'Show password' : 'Hide password',
+                            AppStrings.of(context).text(_obscurePassword ? 'showPassword' : 'hidePassword'),
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_off_outlined
@@ -380,8 +420,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               duration: const Duration(milliseconds: 200),
                               child: isLoading
                                   ? const _ButtonSpinner(key: ValueKey('spinner'))
-                                  : const Text(
-                                'Login',
+                                  : Text(
+                                AppStrings.of(context).text('login'),
                                 key: ValueKey('label'),
                                 style: TextStyle(
                                   fontSize: 16,
@@ -408,10 +448,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               );
                             },
-                            child: const Text(
-                              'Create account',
+                            child: Text(
+                              AppStrings.of(context).text('createAccount'),
                               style: TextStyle(
-                                color: AppColors.primaryBlue,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -421,6 +461,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     );
                   },
+                ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -513,10 +556,10 @@ class _AuthTextField extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -539,17 +582,17 @@ class _AuthTextField extends StatelessWidget {
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
                 suffixIcon: suffixIcon,
                 filled: true,
-                fillColor: enabled ? _fieldFill : _fieldFillDisabled,
+                fillColor: enabled ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surfaceContainerHighest,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 16,
                 ),
-                border: _border(hasError ? _errorColor : _fieldBorder),
-                enabledBorder: _border(hasError ? _errorColor : _fieldBorder),
-                disabledBorder: _border(_fieldBorder),
+                border: _border(hasError ? Theme.of(context).colorScheme.error : Theme.of(context).dividerColor),
+                enabledBorder: _border(hasError ? Theme.of(context).colorScheme.error : Theme.of(context).dividerColor),
+                disabledBorder: _border(Theme.of(context).dividerColor),
                 focusedBorder: hasError
-                    ? _border(_errorColor, 1.5)
-                    : _border(AppColors.primaryBlue, 1.5),
+                    ? _border(Theme.of(context).colorScheme.error, 1.5)
+                    : _border(Theme.of(context).colorScheme.primary, 1.5),
               ),
             ),
             _FieldError(errorText),
@@ -589,11 +632,11 @@ class _FieldError extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 1),
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
                 child: Icon(
                   Icons.error_outline,
-                  color: _errorColor,
+                  color: Theme.of(context).colorScheme.error,
                   size: 16,
                 ),
               ),
@@ -601,8 +644,8 @@ class _FieldError extends StatelessWidget {
               Expanded(
                 child: Text(
                   message!,
-                  style: const TextStyle(
-                    color: _errorColor,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     height: 1.2,

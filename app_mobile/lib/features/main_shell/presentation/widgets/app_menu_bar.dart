@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_strings.dart';
+import '../../../settings/presentation/settings_screen.dart';
 import '../../../../core/storage/auth_storage.dart';
 import '../../../authenticator/data/service/enrollment_service.dart';
 import '../../../config/network/spring_config_header.dart';
@@ -92,7 +94,7 @@ class _AppMenuBarState extends State<AppMenuBar> {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.zero, // Giữ góc vuông chuẩn menu side
       ),
@@ -117,23 +119,24 @@ class _AppMenuBarState extends State<AppMenuBar> {
                 children: [
                   _MenuItem(
                     icon: Icons.person_outline,
-                    label: 'Account',
+                    label: AppStrings.of(context).text('account'),
                     onTap: () => _showAccountInfo(context),
                   ),
                   _MenuItem(
                     icon: Icons.settings_outlined,
-                    label: 'Settings',
-                    onTap: () => _showInfoMessage(
-                      context,
-                      '2FA & chat settings are managed in the app tabs.',
-                    ),
+                    label: AppStrings.of(context).text('settings'),
+                    onTap: () {
+                      final navigator = Navigator.of(context);
+                      navigator.pop();
+                      navigator.push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+                    },
                   ),
                   _MenuItem(
                     icon: Icons.feedback_outlined,
-                    label: 'Send Feedback',
+                    label: AppStrings.of(context).text('feedback'),
                     onTap: () => _showInfoMessage(
                       context,
-                      'Please contact the system administrator for feedback.',
+                      AppStrings.of(context).text('feedbackHint'),
                     ),
                   ),
                 ],
@@ -157,7 +160,7 @@ class _AppMenuBarState extends State<AppMenuBar> {
                 child: ElevatedButton.icon(
                   onPressed: () => _onLogout(context),
                   //icon: const Icon(Icons.logout_outlined, size: 20),
-                  label: const Text('Log out'),
+                  label: Text(AppStrings.of(context).text('logout')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryRed,
                     foregroundColor: Colors.white, // áp dụng cho cả icon và text
@@ -242,12 +245,12 @@ class _AppMenuBarState extends State<AppMenuBar> {
     showDialog<void>(
       context: navigator.context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Account'),
+        title: Text(AppStrings.of(dialogContext).text('account')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Name: $displayName'),
+            Text('${AppStrings.of(dialogContext).text('name')}: $displayName'),
             if (adminId != null) ...[
               const SizedBox(height: 6),
               Text('Admin ID: $adminId'),
@@ -257,7 +260,7 @@ class _AppMenuBarState extends State<AppMenuBar> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
+            child: Text(AppStrings.of(dialogContext).text('close')),
           ),
         ],
       ),
@@ -305,12 +308,12 @@ class _MenuItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      leading: Icon(icon, color: Colors.black87),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
       title: Text(
         label,
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
       onTap: onTap,
     );
   }

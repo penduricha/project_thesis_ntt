@@ -89,6 +89,7 @@ class ChatController extends ChangeNotifier {
   bool _listLoading = false;
   bool _listLoaded = false;
   String? _listError;
+  ChatApiException? _listApiError;
 
   /// Số lần tải danh sách đang chạy, và các cuộc được thêm vào máy này TRONG lúc đó (vừa tạo nhóm, vừa mở chat 1-1,
   /// sự kiện conversation.created). Một lần tải bắt đầu trước khi cuộc đó có trên server sẽ không có nó trong kết quả,
@@ -133,7 +134,7 @@ class ChatController extends ChangeNotifier {
 
   bool get listLoading => _listLoading;
   bool get listLoaded => _listLoaded;
-  String? get listError => _listError;
+  String? get listError => _listApiError?.userMessage ?? _listError;
 
   /// true sau khi mất kết nối quá 3 giây (không nhấp nháy với đứt ngắn).
   bool get showReconnecting => _showReconnecting;
@@ -238,6 +239,7 @@ class ChatController extends ChangeNotifier {
     _listLoading = false;
     _listLoaded = false;
     _listError = null;
+    _listApiError = null;
     _openId = null;
     _atBottom = true;
     _showReconnecting = false;
@@ -356,15 +358,18 @@ class ChatController extends ChangeNotifier {
       if (!_running) return;
       _applyConversationList(fresh);
       _listError = null;
+      _listApiError = null;
       _authLost = false;
     } on ChatApiException catch (e) {
       debugPrint('Chat: tải danh sách lỗi: $e');
       _noteApiError(e);
-      _listError = e.userMessage;
+      _listError = null;
+      _listApiError = e;
     } catch (e, stack) {
       // Lỗi ngoài dự kiến (không phải lỗi HTTP/mạng đã được gói): ghi log, và khi chạy debug hiện luôn nguyên nhân
       // trên màn hình để dễ tìm. Bản release chỉ hiện câu chung.
       debugPrint('Chat: tải danh sách lỗi ngoài dự kiến: $e\n$stack');
+      _listApiError = null;
       _listError = kDebugMode
           ? 'Không tải được danh sách. Kéo để thử lại.\n[$e]'
           : 'Không tải được danh sách. Kéo để thử lại.';

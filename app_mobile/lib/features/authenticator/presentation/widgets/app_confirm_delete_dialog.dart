@@ -37,10 +37,6 @@ class AppConfirmDeleteDialog extends StatelessWidget {
   final Color confirmColor;
 
   // ---- Style tokens (match the secret-key dialog) ----
-  static const Color _brandBlue = AppColors.primaryBlue;
-  static const Color _iconCircle = AppColors.primaryBlueSoft;
-  static const Color _titleColor = AppColors.textTitle;
-  static const Color _messageColor = AppColors.textMuted;
   static const Color _cancelBorder = AppColors.borderCancel;
   static const double _radius = 20;
   static const double _buttonRadius = 12;
@@ -78,7 +74,7 @@ class AppConfirmDeleteDialog extends StatelessWidget {
     const buttonText = TextStyle(fontSize: 15, fontWeight: FontWeight.w700);
 
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
       shape: RoundedRectangleBorder(
@@ -93,30 +89,30 @@ class AppConfirmDeleteDialog extends StatelessWidget {
             Container(
               width: 52,
               height: 52,
-              decoration: const BoxDecoration(
-                color: _iconCircle,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: _brandBlue, size: 26),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 26),
             ),
             const SizedBox(height: 14),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: _titleColor,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 height: 1.4,
-                color: _messageColor,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 24),
@@ -128,8 +124,8 @@ class AppConfirmDeleteDialog extends StatelessWidget {
                     onPressed: () => Navigator.of(context).pop(false),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(_buttonHeight),
-                      foregroundColor: Colors.black87,
-                      backgroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
                       side: const BorderSide(color: _cancelBorder),
                       shape: buttonShape,
                       textStyle: buttonText,

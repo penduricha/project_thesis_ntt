@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../../core/network/server_connection.dart';
 
 import '../../../config/network/spring_config_header.dart';
 import '../model/logout_result.dart';
@@ -31,8 +32,8 @@ class LogoutService {
       return response.statusCode == 200
           ? const LogoutSuccess()
           : const LogoutRejected();
-    } on DioException {
-      return const LogoutFailure();
+    } on DioException catch (error) {
+      return LogoutFailure(isNetworkFailure: ServerConnection.isConnectivityFailure(error));
     }
   }
 }

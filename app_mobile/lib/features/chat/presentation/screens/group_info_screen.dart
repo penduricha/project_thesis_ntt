@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../application/chat_controller.dart';
 import '../../data/api/chat_api_exception.dart';
 import '../../data/model/chat_conversation.dart';
@@ -44,7 +45,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     } on ChatApiException catch (e) {
       _toast(e.userMessage);
     } catch (_) {
-      _toast('Không tải được thông tin nhóm.');
+      if (mounted) _toast(AppStrings.of(context).text('groupLoadFailed'));
     } finally {
       if (mounted) setState(() => _loadingDetail = false);
     }
@@ -65,14 +66,14 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         title: Text(title),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Hủy'),
+            child: Text(AppStrings.of(context).text('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -86,9 +87,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   Future<void> _kick(ChatMember member) async {
     final confirmed = await _confirm(
-      title: 'Kick thành viên?',
-      message: 'Mời ${member.displayName} ra khỏi nhóm? Tin nhắn cũ của họ vẫn ở lại trong nhóm.',
-      actionLabel: 'Kick',
+      title: AppStrings.of(context).text('removeMemberTitle'),
+      message: AppStrings.of(context).format('removeMemberDesc', {'name': member.displayName}),
+      actionLabel: AppStrings.of(context).text('removeMember'),
     );
     if (!confirmed || !mounted) return;
     setState(() {
@@ -97,13 +98,13 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     });
     try {
       await _chat.kickMember(_id, member.adminId);
-      _toast('Đã mời ${member.displayName} ra khỏi nhóm.');
+      if (mounted) _toast(AppStrings.of(context).format('memberRemoved', {'name': member.displayName}));
     } on ChatApiException catch (e) {
       _toast(e.userMessage);
       // Có thể danh sách thành viên đã đổi (người khác bị kick trước): tải lại cho đúng.
       if (!e.isNotFound && !e.isNetwork) _loadDetail();
     } catch (_) {
-      _toast('Không kick được, thử lại.');
+      if (mounted) _toast(AppStrings.of(context).text('removeMemberFailed'));
     } finally {
       if (mounted) {
         setState(() {
@@ -116,24 +117,24 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   Future<void> _dissolve(ChatConversation conversation) async {
     final confirmed = await _confirm(
-      title: 'Giải tán nhóm?',
-      message: 'Toàn bộ tin nhắn của nhóm "${conversation.displayName}" sẽ bị xóa với mọi thành viên. '
-          'Không thể hoàn tác.',
-      actionLabel: 'Giải tán',
+      title: AppStrings.of(context).text('dissolveTitle'),
+      message: AppStrings.of(context).format('dissolveDesc', {'name': conversation.displayName}),
+      actionLabel: AppStrings.of(context).text('dissolve'),
     );
     if (!confirmed || !mounted) return;
     setState(() => _busy = true);
     // Lấy sẵn trước khi chờ mạng: sau khi giải tán màn này có thể không còn trong cây.
     final messenger = ScaffoldMessenger.of(context);
+    final doneMessage = AppStrings.of(context).text('dissolved');
     final navigator = Navigator.of(context);
     try {
       await _chat.dissolveGroup(_id);
       navigator.popUntil((route) => route.isFirst);
-      messenger.showSnackBar(const SnackBar(content: Text('Nhóm đã được giải tán.')));
+      messenger.showSnackBar(SnackBar(content: Text(doneMessage)));
     } on ChatApiException catch (e) {
       _toast(e.userMessage);
     } catch (_) {
-      _toast('Không giải tán được, thử lại.');
+      if (mounted) _toast(AppStrings.of(context).text('dissolveFailed'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -146,16 +147,16 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       builder: (context, _) {
         final conversation = _chat.conversationById(_id);
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           appBar: AppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             surfaceTintColor: Colors.transparent,
             elevation: 0.5,
             iconTheme: const IconThemeData(color: AppColors.primaryBlue),
             centerTitle: true,
-            title: const Text(
-              'Thông tin nhóm',
-              style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
+            title: Text(
+              AppStrings.of(context).text('groupInfo'),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
           body: Column(
@@ -196,7 +197,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${conversation.memberCount} thành viên',
+                AppStrings.of(context).format('memberCount', {'count': conversation.memberCount}),
                 style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
               ),
             ],
@@ -206,11 +207,10 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
         if (isOwner && !canKick)
           Container(
             width: double.infinity,
-            color: AppColors.backgroundLight,
+            color: Theme.of(context).scaffoldBackgroundColor,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: const Text(
-              'Nhóm đang có số thành viên tối thiểu ($_minMembers người) nên không thể kick thêm. '
-              'Muốn kết thúc nhóm, hãy giải tán.',
+            child: Text(
+              AppStrings.of(context).format('minMembers', {'count': _minMembers}),
               style: TextStyle(fontSize: 13, color: AppColors.textMuted),
             ),
           ),
@@ -228,7 +228,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             child: OutlinedButton.icon(
               onPressed: _busy ? null : () => _dissolve(conversation),
               icon: const Icon(Icons.delete_forever_outlined),
-              label: const Text('Giải tán nhóm'),
+              label: Text(AppStrings.of(context).text('dissolveGroup')),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
                 foregroundColor: AppColors.primaryRed,
@@ -253,12 +253,12 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     return ListTile(
       leading: ChatAvatar(name: member.displayName),
       title: Text(
-        isMe ? '${member.displayName} (Bạn)' : member.displayName,
+        isMe ? AppStrings.of(context).format('youSuffix', {'name': member.displayName}) : member.displayName,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(
-        member.isOwner ? 'Chủ nhóm' : 'Admin ${member.adminId}',
+        member.isOwner ? AppStrings.of(context).text('groupOwner') : 'Admin ${member.adminId}',
         style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
       ),
       // Chủ nhóm không tự kick mình và không kick được chính mình hay chủ nhóm.
@@ -271,7 +271,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                 )
               : TextButton(
                   onPressed: (!canKick || _busy) ? null : () => _kick(member),
-                  child: const Text('Kick', style: TextStyle(color: AppColors.primaryRed)),
+                  child: Text(AppStrings.of(context).text('removeMember'), style: const TextStyle(color: AppColors.primaryRed)),
                 ))
           : null,
     );

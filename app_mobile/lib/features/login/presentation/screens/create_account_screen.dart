@@ -36,18 +36,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       initialDate: DateTime(2003, 1, 1),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primaryBlue,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -116,7 +104,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -136,7 +123,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                         size: 20,
                       ),
                       filled: true,
-                      fillColor: AppColors.fieldFill,
+                      fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -152,7 +139,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -178,7 +164,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                         size: 20,
                       ),
                       filled: true,
-                      fillColor: AppColors.fieldFill,
+                      fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -194,7 +180,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
                     ),
                   ),
 
@@ -243,7 +228,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -265,7 +249,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                         size: 20,
                       ),
                       filled: true,
-                      fillColor: AppColors.fieldFill,
+                      fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -281,7 +265,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -316,7 +299,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                         },
                       ),
                       filled: true,
-                      fillColor: AppColors.fieldFill,
+                      fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,

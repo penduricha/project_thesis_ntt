@@ -52,7 +52,8 @@ final class LoginBlockedByOtherDevice extends LoginResult {
 
 /// Không gọi được server: mất mạng, quá thời gian chờ, lỗi 5xx...
 final class LoginFailure extends LoginResult {
-  const LoginFailure(this.message);
+  const LoginFailure(this.message, {this.isNetworkFailure = false});
 
   final String message;
+  final bool isNetworkFailure;
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../../../core/utils/chat_time.dart';
 import '../../application/chat_controller.dart';
 import '../../data/model/chat_conversation.dart';
@@ -155,27 +156,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void _showMessageMenu(ChatMessage message, bool isMe) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.copy_outlined),
-              title: const Text('Sao chép'),
+              title: Text(AppStrings.of(context).text('copyAction')),
               onTap: () {
                 Navigator.pop(sheetContext);
                 Clipboard.setData(ClipboardData(text: message.content));
                 ScaffoldMessenger.of(context)
                   ..hideCurrentSnackBar()
-                  ..showSnackBar(const SnackBar(content: Text('Đã sao chép')));
+                  ..showSnackBar(SnackBar(content: Text(AppStrings.of(context).text('copiedMessage'))));
               },
             ),
             // Chỉ người gửi mới xóa được, và chỉ tin đã có id server. Chỉ có MỘT kiểu xóa: cho tất cả mọi người.
             if (isMe && message.id != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: AppColors.primaryRed),
-                title: const Text('Xóa', style: TextStyle(color: AppColors.primaryRed)),
+                title: Text(AppStrings.of(context).text('deleteAction'), style: const TextStyle(color: AppColors.primaryRed)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _confirmDelete(message);
@@ -191,18 +192,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Xóa tin nhắn?'),
-        content: const Text('Xóa tin nhắn này cho tất cả mọi người? Không thể hoàn tác.'),
+        title: Text(AppStrings.of(context).text('deleteMessageTitle')),
+        content: Text(AppStrings.of(context).text('deleteMessageDesc')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Hủy'),
+            child: Text(AppStrings.of(context).text('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Xóa', style: TextStyle(color: AppColors.primaryRed)),
+            child: Text(AppStrings.of(context).text('deleteAction'), style: const TextStyle(color: AppColors.primaryRed)),
           ),
         ],
       ),
@@ -214,7 +215,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void _showFailedMenu(ChatMessage message) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -222,7 +223,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             if (message.retryable)
               ListTile(
                 leading: const Icon(Icons.refresh, color: AppColors.primaryBlue),
-                title: const Text('Gửi lại'),
+                title: Text(AppStrings.of(context).text('resend')),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _chat.retrySend(_id, message.clientMsgId);
@@ -231,7 +232,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             // Tin chưa từng tới server: gỡ khỏi máy này (không phải "xóa chỉ phía mình" của tin đã gửi).
             ListTile(
               leading: const Icon(Icons.close, color: AppColors.primaryRed),
-              title: const Text('Bỏ tin nhắn', style: TextStyle(color: AppColors.primaryRed)),
+              title: Text(AppStrings.of(context).text('discardMessage'), style: const TextStyle(color: AppColors.primaryRed)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _chat.discardFailed(_id, message.clientMsgId);
@@ -253,7 +254,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         final conversation = _chat.conversationById(_id);
         final messages = _chat.messagesOf(_id);
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           appBar: _buildAppBar(conversation),
           body: Column(
             children: [
@@ -269,7 +270,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   PreferredSizeWidget _buildAppBar(ChatConversation? conversation) {
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0.5,
       iconTheme: const IconThemeData(color: AppColors.primaryBlue),
@@ -278,18 +279,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            conversation?.displayName ?? 'Đang tải...',
+            conversation?.displayName ?? AppStrings.of(context).text('loading'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.black,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
           if (conversation != null && conversation.isGroup)
             Text(
-              '${conversation.memberCount} thành viên',
+              AppStrings.of(context).format('memberCount', {'count': conversation.memberCount}),
               style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
         ],
@@ -297,7 +298,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       actions: [
         if (conversation != null && conversation.isGroup)
           IconButton(
-            tooltip: 'Thông tin nhóm',
+            tooltip: AppStrings.of(context).text('groupInfo'),
             icon: const Icon(Icons.info_outline, color: AppColors.primaryBlue),
             onPressed: () {
               Navigator.push(
@@ -323,20 +324,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Không tải được tin nhắn.',
+              Text(AppStrings.of(context).text('messagesFailed'),
                   style: TextStyle(fontSize: 15, color: AppColors.textMuted)),
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: () => _chat.reloadLatest(_id),
-                child: const Text('Thử lại'),
+                child: Text(AppStrings.of(context).text('retryAction')),
               ),
             ],
           ),
         );
       }
-      return const Center(
+      return Center(
         child: Text(
-          'Chưa có tin nhắn. Hãy gửi lời chào!',
+          AppStrings.of(context).text('noMessages'),
           style: TextStyle(fontSize: 15, color: AppColors.textMuted),
         ),
       );
@@ -416,7 +417,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -426,13 +427,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                   ],
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.keyboard_arrow_down, color: AppColors.primaryBlue, size: 20),
-                    SizedBox(width: 4),
+                    const Icon(Icons.keyboard_arrow_down, color: AppColors.primaryBlue, size: 20),
+                    const SizedBox(width: 4),
                     Text(
-                      'Tin mới',
+                      AppStrings.of(context).text('newMessages'),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -465,7 +466,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Widget _buildInputArea(bool enabled) {
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -478,7 +479,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   constraints: const BoxConstraints(minHeight: _inputHeight),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.chatFieldFill,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: AppColors.borderIos),
                   ),
@@ -493,8 +494,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     // Giới hạn theo đơn vị UTF-16 của Dart (chặt hơn hoặc bằng ký tự Unicode server đếm) nên luôn hợp lệ.
                     inputFormatters: [LengthLimitingTextInputFormatter(_maxLength)],
                     style: const TextStyle(fontSize: 16),
-                    decoration: const InputDecoration(
-                      hintText: 'Nhập tin nhắn',
+                    decoration: InputDecoration(
+                      hintText: AppStrings.of(context).text('messageHint'),
                       hintStyle: TextStyle(color: AppColors.textInactive),
                       border: InputBorder.none,
                       isDense: true,
@@ -519,7 +520,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                     child: IconButton(
                       padding: EdgeInsets.zero,
-                      tooltip: 'Gửi',
+                      tooltip: AppStrings.of(context).text('send'),
                       icon: const Icon(Icons.send, color: Colors.white, size: 20),
                       onPressed: hasText ? _send : null,
                     ),

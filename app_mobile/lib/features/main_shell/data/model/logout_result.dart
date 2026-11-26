@@ -16,5 +16,7 @@ final class LogoutRejected extends LogoutResult {
 
 /// Không gọi được server: mất mạng, quá thời gian chờ, lỗi 5xx...
 final class LogoutFailure extends LogoutResult {
-  const LogoutFailure();
+  const LogoutFailure({this.isNetworkFailure = false});
+
+  final bool isNetworkFailure;
 }

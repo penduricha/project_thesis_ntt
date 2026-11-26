@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../../../authenticator/presentation/screens/authenticator_screen.dart';
 import '../../../chat/application/chat_controller.dart';
 import '../../../chat/presentation/screens/chat_list_screen.dart';
-import '../../../../core/constants/app_colors.dart';
 
 // ============================================================================
 //  DANH SÁCH TAB: nhãn + icon (thường / đang chọn)
@@ -75,11 +74,6 @@ class AppTabBar extends StatefulWidget {
 }
 
 class AppTabBarState extends State<AppTabBar> {
-  // ---- Màu sắc ----
-  static const Color _brandColor = AppColors.primaryBlue; // tab đang chọn
-  static const Color _inactiveColor = AppColors.textInactive; // tab chưa chọn
-  static const Color _borderColor = AppColors.divider;
-
   late AppTab _currentTab;
 
   // Chỉ dựng tab khi người dùng mở lần đầu (tiết kiệm tài nguyên lúc khởi động)
@@ -148,7 +142,7 @@ class AppTabBarState extends State<AppTabBar> {
       canPop: false, // tự xử lý nút Back ở _onBack
       onPopInvokedWithResult: _onBack,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: IndexedStack(
           index: _currentTab.index,
           children: [
@@ -187,9 +181,9 @@ class AppTabBarState extends State<AppTabBar> {
 
   Widget _buildBottomBar() {
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: _borderColor, width: 1)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor, width: 1)),
       ),
       child: BottomNavigationBar(
         currentIndex: _currentTab.index,
@@ -199,10 +193,10 @@ class AppTabBarState extends State<AppTabBar> {
           navigate(tab, popToRoot: tab == _currentTab);
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        selectedItemColor: _brandColor,
-        unselectedItemColor: _inactiveColor,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
         selectedFontSize: 12,
         unselectedFontSize: 12,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),

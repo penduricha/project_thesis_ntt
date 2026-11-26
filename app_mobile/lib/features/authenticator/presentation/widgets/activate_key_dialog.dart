@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../screens/totp_generator.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_strings.dart';
 
 // ============================================================================
 //  POPUP NHẬP KHÓA BÍ MẬT (Base32) + NÚT ACTIVATE
@@ -50,7 +51,6 @@ class ActivateKeyDialog extends StatefulWidget {
 class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
   static const Color _brandColor = AppColors.primaryBlue; // nút Activate
   static const Color _errorColor = AppColors.primaryRed;
-  static const Color _fieldFill = AppColors.searchFill;
 
   // ---- Quy tắc khóa (khớp EncryptionUtil.generateSecretKey() bên Java) ----
   // Java: 20 byte ngẫu nhiên (160 bit) -> Base32 RFC 4648, KHÔNG padding '='.
@@ -85,21 +85,21 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
   // Validator: trả về câu lỗi ngắn gọn (1 dòng) hoặc null nếu hợp lệ.
   // ---------------------------------------------------------------------------
   String? _validate(String secret) {
-    if (secret.isEmpty) return 'Enter your secret key';
+    if (secret.isEmpty) return AppStrings.of(context).text('secretEmpty');
 
     if (_invalidChar.hasMatch(secret)) {
-      return 'Use only letters A-Z and digits 2-7';
+      return AppStrings.of(context).text('secretChars');
     }
 
     if (secret.length != _keyLength) {
-      return 'Key must be $_keyLength characters (now ${secret.length})';
+      return AppStrings.of(context).text('secretLength').replaceAll('{length}', '$_keyLength').replaceAll('{count}', '${secret.length}');
     }
 
     // Chốt chặn cuối bằng biểu thức chính quy đầy đủ ^[A-Z2-7]{32}$
-    if (!_base32Pattern.hasMatch(secret)) return 'Invalid key format';
+    if (!_base32Pattern.hasMatch(secret)) return AppStrings.of(context).text('secretInvalid');
 
     if (widget.existingSecrets.contains(secret)) {
-      return 'This key has already been added';
+      return AppStrings.of(context).text('secretDuplicate');
     }
     return null;
   }
@@ -129,10 +129,11 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
     // Định dạng đúng -> nhờ server đối chiếu khóa (DB + Redis)
     setState(() => _loading = true);
     String? serverError;
+    final fallbackError = AppStrings.of(context).text('unexpected');
     try {
       serverError = await widget.onVerify(secret);
     } catch (_) {
-      serverError = 'Something went wrong. Please try again.';
+      serverError = fallbackError;
     }
     if (!mounted) return;
 
@@ -197,7 +198,7 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
     return PopScope(
       canPop: !_loading, // đang gọi server thì không cho Back
       child: Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -226,20 +227,20 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Enter secret key',
+                Text(
+                  AppStrings.of(context).text('secretTitle'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Enter or paste the 32-character secret key you were given to activate your 6-digit verification code.',
+                Text(
+                  AppStrings.of(context).text('secretHint'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, height: 1.4, color: Colors.black54),
+                  style: TextStyle(fontSize: 14, height: 1.4, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
                 _buildKeyField(),
@@ -276,20 +277,20 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
       onSubmitted: (_) => _onActivate(), // phím Done = bấm Activate
       style: const TextStyle(fontSize: 16, letterSpacing: 1),
       decoration: InputDecoration(
-        hintText: 'Enter secret key',
+        hintText: AppStrings.of(context).text('secretTitle'),
         hintStyle: const TextStyle(
           color: Colors.grey,
           fontSize: 16,
           letterSpacing: 0,
         ),
         filled: true,
-        fillColor: _fieldFill,
+        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         // Rỗng -> nút Paste; có chữ -> nút Clear
         suffixIcon: _hasText
             ? IconButton(
           icon: const Icon(Icons.close, color: Colors.grey, size: 20),
-          tooltip: 'Clear',
+          tooltip: AppStrings.of(context).text('clear'),
           onPressed: _clear,
         )
             : IconButton(
@@ -298,7 +299,7 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
             color: _brandColor,
             size: 22,
           ),
-          tooltip: 'Paste',
+          tooltip: AppStrings.of(context).text('paste'),
           onPressed: _paste,
         ),
         // Có lỗi -> viền đỏ (kể cả khi đang focus), không lỗi -> không viền
@@ -319,7 +320,7 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
             onPressed: _loading ? null : () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(0, 48),
-              foregroundColor: Colors.black87,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               side: const BorderSide(color: AppColors.borderStrong, width: 1.2),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -329,7 +330,7 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            child: const Text('Cancel'),
+            child: Text(AppStrings.of(context).text('cancel')),
           ),
         ),
         const SizedBox(width: 12),
@@ -362,7 +363,7 @@ class _ActivateKeyDialogState extends State<ActivateKeyDialog> {
                 color: Colors.white,
               ),
             )
-                : const Text('Activate'),
+                : Text(AppStrings.of(context).text('activate')),
           ),
         ),
       ],

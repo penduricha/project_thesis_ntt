@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/constants/app_colors.dart';
+import '../../../../../core/localization/app_strings.dart';
 import '../../../../../core/storage/auth_storage.dart';
 import '../../../application/chat_controller.dart';
 
@@ -32,22 +32,22 @@ class ChatStatusBanner extends StatelessWidget {
       builder: (context, _) {
         if (chat.authLost) {
           return Material(
-            color: AppColors.dangerSoft,
+            color: Theme.of(context).colorScheme.errorContainer,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.lock_outline, size: 18, color: AppColors.primaryRed),
+                  Icon(Icons.lock_outline, size: 18, color: Theme.of(context).colorScheme.onErrorContainer),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Phiên đăng nhập đã hết hạn.',
-                      style: TextStyle(fontSize: 13, color: AppColors.primaryRed),
+                      AppStrings.of(context).text('expiredSession'),
+                      style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onErrorContainer),
                     ),
                   ),
                   TextButton(
                     onPressed: () => _relogin(context),
-                    child: const Text('Đăng nhập lại'),
+                    child: Text(AppStrings.of(context).text('relogin')),
                   ),
                 ],
               ),
@@ -56,20 +56,20 @@ class ChatStatusBanner extends StatelessWidget {
         }
         if (chat.showReconnecting) {
           return Material(
-            color: AppColors.backgroundLight,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
-                children: const [
-                  SizedBox(
+                children: [
+                  const SizedBox(
                     width: 14,
                     height: 14,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Text(
-                    'Đang kết nối lại...',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                    AppStrings.of(context).text('reconnecting'),
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),

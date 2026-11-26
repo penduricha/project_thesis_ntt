@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../application/chat_controller.dart';
 import '../../data/api/chat_api_exception.dart';
 import '../../data/model/chat_admin_brief.dart';
@@ -88,7 +89,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
       if (!mounted || token != _searchToken) return;
       setState(() {
         _searching = false;
-        _searchError = 'Không tìm được. Thử lại.';
+        _searchError = AppStrings.of(context).text('searchFailed');
       });
     }
   }
@@ -128,7 +129,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     } on ChatApiException catch (e) {
       _toast(e.userMessage);
     } catch (_) {
-      _toast('Không mở được cuộc trò chuyện. Thử lại.');
+      if (mounted) _toast(AppStrings.of(context).text('openFailed'));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -148,7 +149,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     } on ChatApiException catch (e) {
       _toast(e.userMessage);
     } catch (_) {
-      _toast('Không tạo được nhóm. Thử lại.');
+      if (mounted) _toast(AppStrings.of(context).text('createGroupFailed'));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -176,25 +177,25 @@ class _NewChatScreenState extends State<NewChatScreen> {
           builder: (context, setDialogState) {
             final valid = controller.text.trim().isNotEmpty;
             return AlertDialog(
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               surfaceTintColor: Colors.transparent,
-              title: const Text('Tên nhóm'),
+              title: Text(AppStrings.of(context).text('groupName')),
               content: TextField(
                 controller: controller,
                 autofocus: true,
                 maxLength: _maxGroupName,
                 textCapitalization: TextCapitalization.sentences,
                 onChanged: (_) => setDialogState(() {}),
-                decoration: const InputDecoration(hintText: 'Nhập tên nhóm'),
+                decoration: InputDecoration(hintText: AppStrings.of(context).text('enterGroupName')),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Hủy'),
+                  child: Text(AppStrings.of(context).text('cancel')),
                 ),
                 TextButton(
                   onPressed: valid ? () => Navigator.pop(dialogContext, controller.text.trim()) : null,
-                  child: const Text('Tạo nhóm'),
+                  child: Text(AppStrings.of(context).text('createGroup')),
                 ),
               ],
             );
@@ -209,16 +210,16 @@ class _NewChatScreenState extends State<NewChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0.5,
         iconTheme: const IconThemeData(color: AppColors.primaryBlue),
         centerTitle: true,
-        title: const Text(
-          'Tin nhắn mới',
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
+        title: Text(
+          AppStrings.of(context).text('newMessage'),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
       body: Column(
@@ -243,10 +244,10 @@ class _NewChatScreenState extends State<NewChatScreen> {
         textInputAction: TextInputAction.search,
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
-          hintText: 'Tìm theo tên hoặc mã admin',
+          hintText: AppStrings.of(context).text('searchAdmin'),
           hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
           filled: true,
-          fillColor: AppColors.searchFill,
+          fillColor: Theme.of(context).colorScheme.surface,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 13),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -271,7 +272,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
               padding: const EdgeInsets.only(right: 8),
               child: InputChip(
                 label: Text(admin.displayName),
-                backgroundColor: AppColors.primaryBlueSoft,
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                 side: BorderSide.none,
                 onDeleted: () => _toggle(admin),
               ),
@@ -303,7 +304,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            hasQuery ? 'Không tìm thấy admin nào.' : 'Chưa có admin nào khác để nhắn tin.',
+            AppStrings.of(context).text(hasQuery ? 'noAdminFound' : 'noOtherAdmin'),
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 15, color: AppColors.textMuted),
           ),
@@ -340,11 +341,11 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final isGroup = count >= 2;
     final enabled = !_submitting && count >= 1 && (!isGroup || count + 1 >= _minGroupMembers);
     final label = count == 0
-        ? 'Chọn người để bắt đầu'
-        : (isGroup ? 'Tạo nhóm (${count + 1} người)' : 'Nhắn tin');
+        ? AppStrings.of(context).text('selectPerson')
+        : (isGroup ? AppStrings.of(context).format('createGroupCount', {'count': count + 1}) : AppStrings.of(context).text('sendMessage'));
 
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       child: SafeArea(
         top: false,
         child: Padding(

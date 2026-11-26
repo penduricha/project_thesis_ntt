@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'network_configuration.dart';
+import '../../../core/network/server_connection.dart';
 
 /// Tạo các HTTP client (Dio) gọi RESTful API của Spring Boot.
 /// Mọi thông số (host, port, giao thức, timeout, Basic Auth) đọc từ .env
@@ -10,7 +11,7 @@ import 'network_configuration.dart';
 /// Tương đương SpringConfigHeader.js ở Web (Axios -> Dio).
 class SpringConfigHeader {
   Dio _createClient({Map<String, String>? extraHeaders}) {
-    return Dio(
+    final client = Dio(
       BaseOptions(
         baseUrl: NetworkConfiguration.requestSpringBoot(),
         connectTimeout: NetworkConfiguration.connectTimeout,
@@ -26,6 +27,8 @@ class SpringConfigHeader {
         validateStatus: (status) => status != null && status < 500,
       ),
     );
+    client.interceptors.add(ServerConnection.interceptor());
+    return client;
   }
 
   /// Không có header xác thực (đăng nhập, gọi API công khai).

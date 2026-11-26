@@ -35,7 +35,6 @@ class _SplashScreenState extends State<SplashScreen> {
     return const PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.white,
         body: Center(
           child: CircularProgressIndicator(semanticsLabel: 'Đang kiểm tra phiên đăng nhập'),
         ),

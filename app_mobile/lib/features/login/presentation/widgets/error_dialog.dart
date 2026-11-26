@@ -38,14 +38,11 @@ class ErrorDialog extends StatelessWidget {
   final IconData icon;
 
   static const Color danger = AppColors.primaryRed; // màu nút OK
-  static const Color _dangerSoft = AppColors.primaryRedSoft; // danger ~10% opacity
-  static const Color _titleColor = AppColors.textHeading;
-  static const Color _messageColor = AppColors.textSecondary;
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -59,11 +56,11 @@ class ErrorDialog extends StatelessWidget {
               Container(
                 width: 64,
                 height: 64,
-                decoration: const BoxDecoration(
-                  color: _dangerSoft,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: danger, size: 30),
+                child: Icon(icon, color: Theme.of(context).colorScheme.error, size: 30),
               ),
 
               const SizedBox(height: 16),
@@ -72,20 +69,20 @@ class ErrorDialog extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: _titleColor,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   height: 1.4,
-                  color: _messageColor,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
 

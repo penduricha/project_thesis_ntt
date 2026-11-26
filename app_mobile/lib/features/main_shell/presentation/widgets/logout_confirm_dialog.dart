@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/button_spinner.dart';
+import '../../../../core/localization/app_strings.dart';
 
 import '../../../login/presentation/widgets/error_dialog.dart';
 import '../../data/model/logout_result.dart';
@@ -49,9 +50,8 @@ class _LogoutConfirmDialogState extends State<LogoutConfirmDialog> {
       case LogoutFailure():
         await _showError(
           icon: Icons.wifi_off_rounded,
-          title: 'Connection error',
-          message: 'Cannot connect to the server.\n'
-              'Please check your network connection and try again.',
+          title: AppStrings.of(context).text('connectionError'),
+          message: (result as LogoutFailure).isNetworkFailure ? AppStrings.of(context).text('network') : 'The server could not process the request. Please try again.',
         );
     }
   }
@@ -81,7 +81,7 @@ class _LogoutConfirmDialogState extends State<LogoutConfirmDialog> {
           // Khóa nút Back và chạm ra ngoài khi đang gọi API
           canPop: !isLoading,
           child: Dialog(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             surfaceTintColor: Colors.transparent,
             insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -105,23 +105,23 @@ class _LogoutConfirmDialogState extends State<LogoutConfirmDialog> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Log out?',
+                  Text(
+                    '${AppStrings.of(context).text('logout')}',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Are you sure you want to log out?',
+                  Text(
+                    AppStrings.of(context).text('logoutConfirm'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15,
                       height: 1.4,
-                      color: Colors.black54,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -134,7 +134,7 @@ class _LogoutConfirmDialogState extends State<LogoutConfirmDialog> {
                           isLoading ? null : () => Navigator.pop(context, false),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(0, 48),
-                            foregroundColor: Colors.black87,
+                            foregroundColor: Theme.of(context).colorScheme.onSurface,
                             side: const BorderSide(
                               color: AppColors.borderStrong,
                               width: 1.2,
@@ -147,7 +147,7 @@ class _LogoutConfirmDialogState extends State<LogoutConfirmDialog> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          child: const Text('Cancel'),
+                          child: Text(AppStrings.of(context).text('cancel')),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -178,7 +178,7 @@ class _LogoutConfirmDialogState extends State<LogoutConfirmDialog> {
                               key: ValueKey('spinner'),
                               semanticsLabel: 'Logging out',
                             )
-                                : const Text('Log out', key: ValueKey('label')),
+                                : Text(AppStrings.of(context).text('logout'), key: const ValueKey('label')),
                           ),
                         ),
                       ),

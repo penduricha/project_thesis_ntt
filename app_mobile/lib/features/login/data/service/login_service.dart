@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../../core/network/server_connection.dart';
 
 
 import '../../../config/network/spring_config_header.dart';
@@ -30,7 +31,7 @@ class LoginService {
       );
       return _mapResponse(response, admin.adminId);
     } on DioException catch (error) {
-      return LoginFailure(_describeNetworkError(error));
+      return LoginFailure(_describeNetworkError(error), isNetworkFailure: ServerConnection.isConnectivityFailure(error));
     }
   }
 
