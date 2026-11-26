@@ -55,6 +55,11 @@ export const qbankApi = {
     const { data } = await client().post(url('/questions'), body)
     return data
   },
+  // Server validates the complete batch, then commits each question separately.
+  async importQuestions(body) {
+    const { data } = await client().post(url('/questions/import'), body, { timeout: 180000 })
+    return data
+  },
   async updateQuestion(questionId, body) {
     const { data } = await client().put(url(`/questions/${questionId}`), body)
     return data

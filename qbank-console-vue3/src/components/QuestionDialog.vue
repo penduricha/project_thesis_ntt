@@ -3,6 +3,7 @@ import { reactive, ref, computed, watch, nextTick } from 'vue'
 import BaseModal from './BaseModal.vue'
 import { t } from '../i18n/index.js'
 import CourseCombobox from './CourseCombobox.vue'
+import CourseQuestionImport from './CourseQuestionImport.vue'
 import { COURSES, S, code, nowStr, saveQuestion, toast, subjOk } from '../store.js'
 import { LV, LV_DB, ENUM_DB } from '../data/mock.js'
 import { norm } from '../utils.js'
@@ -16,6 +17,13 @@ const f = reactive({
   tp: Math.min(base.tp || 0, Math.max(0, (COURSES[base.c]?.topics.length || 1) - 1)),
 })
 const err = reactive({}), dirty = ref(false), saving = ref(false), apiErr = ref('')
+const mode = ref('manual'), importBusy = ref(false), importDirty = ref(false)
+function setMode(value) {
+  if (value === mode.value || saving.value || importBusy.value) return
+  if ((mode.value === 'manual' ? dirty.value : importDirty.value) && !confirm(t('validation.discard'))) return
+  mode.value = value
+  if (value === 'manual') importDirty.value = false
+}
 watch(f, () => { dirty.value = true }, { deep: true })
 
 const dupOpt = computed(() => { const v = f.o.map(x => x.trim().toLowerCase()).filter(Boolean); return new Set(v).size < v.length })
@@ -59,6 +67,7 @@ const dto = computed(() => {
 
 function pickCourse(v) { f.c = +v; f.tp = 0; err.c = ''; err.chips = '' }
 function cancel() { if (dirty.value && !confirm(t('validation.discard'))) return; emit('close') }
+function closeImport() { if (importDirty.value && !confirm(t('validation.discard'))) return; emit('close') }
 function focusFirstInvalid() {
   const e = document.querySelector('#dlg .invalid'); if (!e) return
   const t = e.matches('input,textarea,select') ? e : (e.querySelector('button,input') || e)
@@ -88,7 +97,13 @@ async function save() {
 </script>
 
 <template>
-  <BaseModal :title="id ? $t('bank.editPrefix') + code({ id }) : $t('bank.addNew')" :dirty="dirty" @close="emit('close')">
+  <BaseModal :title="id ? $t('bank.editPrefix') + code({ id }) : $t('bank.addNew')" :dirty="mode === 'manual' ? dirty : importDirty" :locked="importBusy || saving" @close="emit('close')">
+    <div v-if="!id && ctx.courseImport" class="import-mode" role="group" :aria-label="$t('courseImport.mode')">
+      <button type="button" class="btn sm" :class="{ pri: mode === 'manual' }" :aria-pressed="mode === 'manual'" :disabled="importBusy || saving" @click="setMode('manual')">{{ $t('courseImport.manual') }}</button>
+      <button type="button" class="btn sm" :class="{ pri: mode === 'import' }" :aria-pressed="mode === 'import'" :disabled="importBusy || saving" @click="setMode('import')">{{ $t('courseImport.mode') }}</button>
+    </div>
+    <CourseQuestionImport v-if="mode === 'import'" :course-index="ctx.c" :initial-topic="ctx.tp ?? 0" @busy="importBusy = $event" @dirty="importDirty = $event" />
+    <template v-else>
     <label>{{ $t('bank.titleOptional') }}
       <input id="f-ti" maxlength="255" v-model="f.title" :class="{ invalid: err.ti }" :aria-invalid="err.ti ? 'true' : null"
              :placeholder="id ? code({ id }) : $t('bank.codeAuto')" autocomplete="off"
@@ -135,9 +150,17 @@ async function save() {
     </label>
     <details class="api-prev"><summary>{{ $t('ai.payloadPreview') }}</summary><pre id="f-api" class="codeblock" style="margin-top:.5rem">{{ JSON.stringify(dto, null, 2) }}</pre></details>
     <p id="f-e" class="err">{{ apiErr }}</p>
+    </template>
     <template #footer>
+      <button v-if="mode === 'import'" class="btn" :disabled="importBusy" @click="closeImport">{{ $t('common.close') }}</button>
+      <template v-else>
       <button class="btn" @click="cancel">{{ $t('common.cancel') }}</button>
       <button class="btn pri" :disabled="saving" @click="save">{{ saving ? $t('common.saving') : $t('bank.saveQuestion') }}</button>
+      </template>
     </template>
   </BaseModal>
 </template>
+
+<style scoped>
+.import-mode { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+</style>

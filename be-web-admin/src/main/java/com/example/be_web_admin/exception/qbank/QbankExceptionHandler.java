@@ -8,6 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -50,6 +51,12 @@ public class QbankExceptionHandler {
         log.warn("Qbank: vi phạm ràng buộc CSDL: {}", e.getMostSpecificCause().getMessage());
         return build(HttpStatus.CONFLICT, "DB_CONSTRAINT",
                 "Dữ liệu vi phạm ràng buộc của CSDL (trùng mã/khóa ngoại/CHECK).");
+    }
+
+    /** JSON sai định dạng hoặc có trường nhập không được hỗ trợ. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadable(HttpMessageNotReadableException e) {
+        return build(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Dữ liệu yêu cầu không hợp lệ.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
