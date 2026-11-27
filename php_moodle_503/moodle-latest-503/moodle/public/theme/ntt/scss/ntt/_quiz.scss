@@ -174,8 +174,8 @@
 // BA chi tiết đọc từ mã nguồn, bỏ qua là hỏng giao diện:
 //  a) mod/quiz/templates/timer.mustache:26 dựng `#quiz-timer-wrapper` bọc `#quiz-timer`. Khung
 //     ngoài có thể nằm NGOÀI .path-mod-quiz (trang tổng kết), nên style ở cấp ngoài cùng.
-//  b) `#quiz-timer` mang class `ms-auto` (đẩy sang phải). KHÔNG đổi display sang inline-flex:
-//     sẽ vô hiệu margin auto và đồng hồ nhảy về trái.
+//  b) `#quiz-timer` mang class `ms-auto` (đẩy sang phải). Nó là flex item của #quiz-timer-wrapper nên
+//     margin auto vẫn có tác dụng dù chính nó đặt display:flex để căn giữa chữ bên trong.
 //  c) mod/quiz/module.js:193 gắn `timeleft<N>` trực tiếp lên `#quiz-timer` khi còn < 100 giây,
 //     KHÔNG phải lên khung ngoài — nên selector cảnh báo phải bám vào #quiz-timer.
 //
@@ -185,11 +185,32 @@
 #quiz-timer {
     padding: .375rem .75rem;
     border: 1px solid var(--ntt-warning-border);
-    border-radius: 999px;
+    border-radius: $ntt-radius;           // 8px: CÙNG bo góc với nút "Hide" (.btn), không dùng viên thuốc 999px
     background-color: var(--ntt-warning-tint);
     color: var(--ntt-warning-text);
     font-variant-numeric: tabular-nums;   // số không nhảy bề rộng khi đếm
     font-weight: 600;
+
+    // Cao bằng nút "Hide" (flex item mặc định chỉ cao theo chữ: 34,8px so với 37,6px của nút) và tự căn giữa
+    // chữ. Dùng gap thay cho dấu cách giữa "Time left" và số vì khoảng trắng cuối bị bỏ trong flex.
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3em;
+}
+
+// Đồng hồ và nút "Hide" phải CÙNG HÀNG. Nguyên nhân lệch (đo bằng Chromium: đồng hồ thấp hơn nút 8px):
+// mod/quiz/styles.css đặt `#page-mod-quiz-summary #quiz-timer { margin-top: 1em }` cho bố cục cũ (đồng hồ nằm
+// riêng một dòng). Trong khung flex + align-items:center, margin 16px đó đẩy hộp đồng hồ xuống 8px so với nút.
+// Selector 2 ID để thắng quy tắc gốc (cùng độ ưu tiên, theme đứng sau). Khoảng cách phía trên trả về khung ngoài.
+#quiz-timer-wrapper #quiz-timer {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#page-mod-quiz-summary #quiz-timer-wrapper {
+    margin-top: 1rem;
 }
 
 // Sắp hết giờ: module.js gắn timeleft99 … timeleft0. Dùng [class*="timeleft"] để bắt cả khoảng

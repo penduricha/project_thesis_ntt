@@ -153,6 +153,28 @@ chỉ ghi "đã sửa X".
   đúng/sai. Đo lại: trang làm bài và trang review giữ nguyên số liệu như trước.
   *Sau khi áp:* cần **Purge all caches** (Site administration → Development) để Moodle biên dịch lại CSS.
 
+### Giao diện Moodle: đồng hồ "Time left" / nút "Hide", viền trắng menu tài khoản, dấu chấm điều hướng
+
+#### Sửa lỗi
+
+- **Nút "Hide" không cùng hàng với "Time left" (trang Summary of attempt).** Đo bằng Chromium: đồng hồ thấp
+  hơn nút **8px**. Nguyên nhân: `mod/quiz/styles.css` đặt `#page-mod-quiz-summary #quiz-timer { margin-top: 1em }`
+  cho bố cục cũ; trong khung flex + `align-items: center`, margin 16px đó đẩy hộp đồng hồ xuống nửa margin
+  (8px). Đã đặt margin dọc của `#quiz-timer` về 0 (selector 2 ID để thắng quy tắc gốc) và trả khoảng cách
+  phía trên về khung ngoài `#quiz-timer-wrapper`. Đồng hồ cũng được giãn cao bằng nút (34,8 → 37,6px) và
+  tự căn giữa chữ. Sau sửa: cùng `top`, cùng chiều cao, lệch tâm **0px**.
+- **"Time left" bo tròn viên thuốc (999px) trong khi "Hide" bo 8px.** Đồng hồ dùng `$ntt-radius` (8px), cùng
+  token với `.btn`.
+- **Bấm vào menu tài khoản (Admin) hiện viền trắng và mất nền hover.** Bootstrap gắn `.show` lên nút khi menu
+  mở và đọc `--bs-btn-active-border-color` / `--bs-btn-active-bg`; `.btn` thường không khai báo hai biến này
+  nên viền rơi về `currentcolor` (trắng trên nền xanh) và nền biến mất ngay lúc bấm. Nay `.show` giữ nền
+  hover và viền trong suốt (menu người dùng, ngôn ngữ, chế độ màu). Đo lại: viền `rgba(255,255,255,.91)` →
+  trong suốt, nền ổn định `rgba(255,255,255,.14)` từ lúc rê chuột tới lúc menu mở.
+- **Dấu chấm 4px trước mục đang chọn** ở thanh điều hướng chính (Dashboard, Site administration) và ở tab
+  điều hướng phụ (Quiz, Settings, ...). Đã ẩn `.mds-nav-pill__indicator` và `.mds-nav-pill.active::before`.
+  Mục đang chọn vẫn phân biệt nhờ nền viên thuốc, chữ đậm và `aria-current`.
+  *Sau khi áp:* **Purge all caches** để Moodle biên dịch lại CSS.
+
 ### Giao diện Moodle: style trang quiz + tắt trạng thái :active
 
 #### Thêm mới

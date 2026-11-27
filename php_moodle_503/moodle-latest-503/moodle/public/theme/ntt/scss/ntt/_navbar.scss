@@ -102,6 +102,24 @@ $ntt-topbar-selected: rgba(255, 255, 255, .22);
         font-weight: 600;
     }
 
+    // Bỏ dấu chấm 4px trước mục đang chọn (Dashboard, Site administration, ...): Design System chèn thêm
+    // <span class="mds-nav-pill__indicator"> chỉ khi pill được chọn. Mục đang chọn vẫn rõ nhờ nền + chữ đậm.
+    .mds-nav-pill__indicator {
+        display: none;
+    }
+
+    // Menu đang MỞ (Bootstrap gắn .show lên nút: người dùng, ngôn ngữ, chế độ màu).
+    // .btn thường không khai báo --bs-btn-active-border-color / --bs-btn-active-bg, nên `.btn.show` của Bootstrap
+    // rơi về border-color: currentcolor (VIỀN TRẮNG trên nền xanh) và mất luôn nền hover ngay lúc bấm.
+    // Giữ nền hover đã có (không nháy) và để viền trong suốt.
+    .usermenu .dropdown-toggle.show,
+    .langmenu .dropdown-toggle.show,
+    .colourmodemenu .dropdown-toggle.show {
+        color: $ntt-on-topbar;
+        background-color: $ntt-topbar-hover;
+        border-color: transparent;
+    }
+
     .mds-nav-pill:focus-visible,
     .nav-link:focus-visible,
     .navbar-brand:focus-visible {

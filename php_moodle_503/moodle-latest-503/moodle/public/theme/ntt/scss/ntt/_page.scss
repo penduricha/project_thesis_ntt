@@ -30,6 +30,12 @@
     .nav-link[aria-current="true"] {
         font-weight: 600;
     }
+
+    // Bỏ dấu chấm 4px trước tab đang chọn (Boost vẽ bằng ::before của .mds-nav-pill.active). Tab đang chọn vẫn
+    // phân biệt được nhờ nền viên thuốc + chữ đậm + aria-current. Cùng selector với Boost, theme đứng sau nên thắng.
+    .navigation.secondarynav-tabbar .mds-nav-pill.active::before {
+        display: none;
+    }
 }
 
 // Nút trợ giúp ở chân trang (popover).
