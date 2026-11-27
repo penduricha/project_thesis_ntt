@@ -1,5 +1,6 @@
 package com.example.be_web_admin.security.jwt;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
@@ -64,17 +65,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String header = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (header != null && header.regionMatches(true, 0, BEARER, 0, BEARER.length())) {
                 String token = header.substring(BEARER.length()).trim();
-                Long adminId = tokenProvider.parseAccessTokenAdminId(token);
-                if (adminId != null) {
+                AuthSessionStore.Identity identity = tokenProvider.parseIdentity(token, "ACCESS");
+                String path = request.getServletPath();
+                boolean allowedClient = identity != null &&
+                        ((path.startsWith("/web/") && identity.client() == AuthSessionStore.Client.WEB) ||
+                         (path.startsWith("/mobile/") && identity.client() == AuthSessionStore.Client.MOBILE));
+                if (allowedClient) {
+                    Long adminId = identity.adminId();
                     try {
                         if (adminTokenService.findAdminAccessTokenByJwtToken(token)) {
                             String role = resolveRole(adminId);
                             if (role != null) {
-                                SecurityContextHolder.getContext().setAuthentication(
-                                        new UsernamePasswordAuthenticationToken(
-                                                adminId,
-                                                null,
-                                                List.of(new SimpleGrantedAuthority("ROLE_" + role))));
+                                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                        adminId, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+                                authentication.setDetails(identity);
+                                SecurityContextHolder.getContext().setAuthentication(authentication);
                             }
                         }
                     } catch (Exception e) {

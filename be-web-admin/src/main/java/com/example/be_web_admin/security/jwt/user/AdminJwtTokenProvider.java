@@ -1,5 +1,6 @@
 package com.example.be_web_admin.security.jwt.user;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -83,37 +84,41 @@ public class AdminJwtTokenProvider {
     /**
      * 1. Tạo Access Token (Thời hạn 5 phút)
      */
-    public String generateAccessToken(Long adminId) {
+    public String generateAccessToken(Long adminId) { return generateAccessToken(adminId, null); }
+
+    public String generateAccessToken(Long adminId, AuthSessionStore.Identity identity) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 // jti: iat/exp chỉ chính xác đến GIÂY, nên hai lần cấp token cho cùng admin trong cùng một giây
                 // sẽ ra chuỗi y hệt nếu không có jti.
                 .id(java.util.UUID.randomUUID().toString())
                 .subject(String.valueOf(adminId))
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .claim("token_type", "ACCESS")
-                .signWith(getSigningKey())
-                .compact();
+                .claim("token_type", "ACCESS");
+        if (identity != null) builder.claim("session_id", identity.sessionId()).claim("client", identity.client().name());
+        return builder.signWith(getSigningKey()).compact();
     }
 
     /**
      * 2. Tạo Refresh Token (Thời hạn 30 ngày)
      */
-    public String generateRefreshToken(Long adminId) {
+    public String generateRefreshToken(Long adminId) { return generateRefreshToken(adminId, null); }
+
+    public String generateRefreshToken(Long adminId, AuthSessionStore.Identity identity) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .id(java.util.UUID.randomUUID().toString())
                 .subject(String.valueOf(adminId))
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .claim("token_type", "REFRESH")
-                .signWith(getSigningKey())
-                .compact();
+                .claim("token_type", "REFRESH");
+        if (identity != null) builder.claim("session_id", identity.sessionId()).claim("client", identity.client().name());
+        return builder.signWith(getSigningKey()).compact();
     }
 
     /**
@@ -156,6 +161,20 @@ public class AdminJwtTokenProvider {
      */
     public Long parseRefreshTokenAdminId(String token) {
         return parseAdminIdWithType(token, "REFRESH");
+    }
+
+    /** Session claims are mandatory for live tokens. Legacy tokens must log in again. */
+    public AuthSessionStore.Identity parseIdentity(String token, String expectedType) {
+        if (token == null || token.isBlank()) return null;
+        try {
+            Claims claims = Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token).getPayload();
+            if (!expectedType.equals(claims.get("token_type", String.class))) return null;
+            String sessionId = claims.get("session_id", String.class);
+            String client = claims.get("client", String.class);
+            if (sessionId == null || !sessionId.matches("[0-9a-fA-F-]{36}") || client == null) return null;
+            return new AuthSessionStore.Identity(Long.parseLong(claims.getSubject()),
+                    AuthSessionStore.Client.valueOf(client), sessionId);
+        } catch (JwtException | IllegalArgumentException | NullPointerException e) { return null; }
     }
 
     private Long parseAdminIdWithType(String token, String expectedType) {

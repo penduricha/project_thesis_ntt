@@ -1,5 +1,6 @@
 package com.example.be_web_admin.service.redis.impl;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.model.redis.AdminAccessToken;
 import com.example.be_web_admin.model.redis.AdminRefreshToken;
 import com.example.be_web_admin.model.jpa.Admin;
@@ -31,18 +32,20 @@ public class AdminTokenServiceImpl implements AdminTokenService {
 
     private final AdminJwtTokenProvider adminJwtTokenProvider;
     private final StringRedisTemplate redis;
+    private final AuthSessionStore sessions;
 
-    public AdminTokenServiceImpl(AdminAccessTokenRepository adminAccessTokenRepository, AdminRefreshTokenRepository adminRefreshTokenRepository, AdminRepository adminRepository, AdminJwtTokenProvider adminJwtTokenProvider, StringRedisTemplate redis) {
+    public AdminTokenServiceImpl(AdminAccessTokenRepository adminAccessTokenRepository, AdminRefreshTokenRepository adminRefreshTokenRepository, AdminRepository adminRepository, AdminJwtTokenProvider adminJwtTokenProvider, StringRedisTemplate redis, AuthSessionStore sessions) {
         this.adminAccessTokenRepository = adminAccessTokenRepository;
         this.adminRefreshTokenRepository = adminRefreshTokenRepository;
         this.adminRepository = adminRepository;
         this.adminJwtTokenProvider = adminJwtTokenProvider;
         this.redis = redis;
+        this.sessions = sessions;
     }
 
     @Override
     public boolean addAdminAccessToken(AdminAccessToken adminAccessToken) throws RedisBusyException {
-        boolean adminAccessTokenFound = findAdminAccessTokenByJwtToken(adminAccessToken.getJwtToken());
+        boolean adminAccessTokenFound = adminAccessTokenRepository.findAdminAccessTokenByJwtToken(adminAccessToken.getJwtToken()) != null;
         if(!adminAccessTokenFound) {
             adminAccessTokenRepository.save(adminAccessToken);
             return true;
@@ -55,13 +58,13 @@ public class AdminTokenServiceImpl implements AdminTokenService {
         AdminAccessToken adminAccessTokenFound = adminAccessTokenRepository
                 .findAdminAccessTokenByJwtToken(jwtToken);
         if (adminAccessTokenFound == null) return false;
-        Long adminId = adminJwtTokenProvider.parseAccessTokenAdminId(jwtToken);
-        return isAccountAllowed(adminId);
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(jwtToken, "ACCESS");
+        return identity != null && sessions.isActive(identity) && isAccountAllowed(identity.adminId());
     }
 
     @Override
     public boolean addAdminRefreshToken(AdminRefreshToken adminRefreshToken) throws RedisBusyException {
-        boolean adminRefreshTokenFound = findAdminRefreshTokenByJwtToken(adminRefreshToken.getJwtToken());
+        boolean adminRefreshTokenFound = adminRefreshTokenRepository.findAdminRefreshTokenByJwtToken(adminRefreshToken.getJwtToken()) != null;
         if(!adminRefreshTokenFound) {
             adminRefreshTokenRepository.save(adminRefreshToken);
             return true;
@@ -74,8 +77,8 @@ public class AdminTokenServiceImpl implements AdminTokenService {
         AdminRefreshToken adminRefreshToken = adminRefreshTokenRepository
                 .findAdminRefreshTokenByJwtToken(jwtToken);
         if (adminRefreshToken == null || Boolean.TRUE.equals(redis.hasKey(consumedKey(jwtToken)))) return false;
-        Long adminId = adminJwtTokenProvider.parseRefreshTokenAdminId(jwtToken);
-        return isAccountAllowed(adminId);
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(jwtToken, "REFRESH");
+        return identity != null && sessions.isActive(identity) && isAccountAllowed(identity.adminId());
     }
 
 //    String accessToken = jwtTokenProvider.generateAccessToken(adminFound.getAdminId());
@@ -103,14 +106,16 @@ public class AdminTokenServiceImpl implements AdminTokenService {
     }
 
     @Override
-    public Map<String, Object> createTokenAdmin(Long adminId) throws RedisBusyException {
+    public Map<String, Object> createTokenAdmin(AuthSessionStore.Identity identity) throws RedisBusyException {
         Map<String, Object> dataResult = new HashMap<>();
+        if (identity == null || !sessions.isActive(identity)) return dataResult;
+        Long adminId = identity.adminId();
 
         Admin adminFound = adminRepository.findAdminByAdminId(adminId);
 
         if(adminFound != null && adminFound.isLoginAllowed()) {
-            String accessToken = adminJwtTokenProvider.generateAccessToken(adminId);
-            String refreshToken = adminJwtTokenProvider.generateRefreshToken(adminId);
+            String accessToken = adminJwtTokenProvider.generateAccessToken(adminId, identity);
+            String refreshToken = adminJwtTokenProvider.generateRefreshToken(adminId, identity);
             LocalDateTime now = LocalDateTime.now();
 
             AdminAccessToken adminAccessToken = new AdminAccessToken();

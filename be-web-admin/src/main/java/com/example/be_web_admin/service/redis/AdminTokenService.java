@@ -2,6 +2,7 @@ package com.example.be_web_admin.service.redis;
 
 import com.example.be_web_admin.model.redis.AdminAccessToken;
 import com.example.be_web_admin.model.redis.AdminRefreshToken;
+import com.example.be_web_admin.security.AuthSessionStore;
 import io.lettuce.core.RedisBusyException;
 
 import java.util.Map;
@@ -20,5 +21,5 @@ public interface AdminTokenService {
 
     public void removeAdminAccessTokenByJwtToken(String jwtToken) throws RedisBusyException;
 
-    public Map<String, Object> createTokenAdmin(Long adminId) throws RedisBusyException;
+    public Map<String, Object> createTokenAdmin(AuthSessionStore.Identity identity) throws RedisBusyException;
 }

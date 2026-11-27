@@ -44,10 +44,11 @@ class DefaultUserSecurityTest {
         Admin admin = new Admin();
         admin.setRole(Role.LECTURER);
         admin.setAccountStatus(AccountStatus.ACTIVE);
-        when(provider.parseAccessTokenAdminId("valid")).thenReturn(7L);
+        when(provider.parseIdentity("valid", "ACCESS")).thenReturn(new AuthSessionStore.Identity(7L, AuthSessionStore.Client.WEB, "00000000-0000-0000-0000-000000000007"));
         when(tokens.findAdminAccessTokenByJwtToken("valid")).thenReturn(true);
         when(admins.findAdminByAdminId(7L)).thenReturn(admin);
         MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/web/admin/questions");
         request.addHeader("Authorization", "Bearer valid");
         new JwtAuthenticationFilter(provider, tokens, admins).doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
         assertNotNull(SecurityContextHolder.getContext().getAuthentication());
@@ -63,13 +64,29 @@ class DefaultUserSecurityTest {
         Admin admin = new Admin();
         admin.setRole(Role.ADMIN);
         admin.setAccountStatus(AccountStatus.DISABLED);
-        when(provider.parseAccessTokenAdminId("valid")).thenReturn(7L);
+        when(provider.parseIdentity("valid", "ACCESS")).thenReturn(new AuthSessionStore.Identity(7L, AuthSessionStore.Client.WEB, "00000000-0000-0000-0000-000000000007"));
         when(tokens.findAdminAccessTokenByJwtToken("valid")).thenReturn(true);
         when(admins.findAdminByAdminId(7L)).thenReturn(admin);
         MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/web/admin/questions");
         request.addHeader("Authorization", "Bearer valid");
         new JwtAuthenticationFilter(provider, tokens, admins).doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
         assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void mobileTokenCannotAuthenticateWebEndpoint() throws Exception {
+        AdminJwtTokenProvider provider = mock(AdminJwtTokenProvider.class);
+        AdminTokenService tokens = mock(AdminTokenService.class);
+        AdminRepository admins = mock(AdminRepository.class);
+        when(provider.parseIdentity("mobile", "ACCESS")).thenReturn(new AuthSessionStore.Identity(
+                7L, AuthSessionStore.Client.MOBILE, "00000000-0000-0000-0000-000000000007"));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/web/admin/questions");
+        request.addHeader("Authorization", "Bearer mobile");
+        new JwtAuthenticationFilter(provider, tokens, admins).doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verifyNoInteractions(tokens);
     }
 
     @Test
@@ -82,7 +99,7 @@ class DefaultUserSecurityTest {
         filter.doFilter(basic, new MockHttpServletResponse(), new MockFilterChain());
         assertNull(SecurityContextHolder.getContext().getAuthentication());
 
-        when(provider.parseAccessTokenAdminId("valid")).thenReturn(7L);
+        when(provider.parseIdentity("valid", "ACCESS")).thenReturn(new AuthSessionStore.Identity(7L, AuthSessionStore.Client.MOBILE, "00000000-0000-0000-0000-000000000007"));
         when(tokens.findAdminAccessTokenByJwtToken("valid")).thenReturn(true);
         MockHttpServletRequest bearer = new MockHttpServletRequest();
         bearer.addHeader("Authorization", "Bearer valid");

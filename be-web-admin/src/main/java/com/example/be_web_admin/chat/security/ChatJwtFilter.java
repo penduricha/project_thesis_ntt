@@ -1,5 +1,6 @@
 package com.example.be_web_admin.chat.security;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.redis.AdminTokenService;
 import jakarta.servlet.FilterChain;
@@ -39,12 +40,14 @@ public class ChatJwtFilter extends OncePerRequestFilter {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.regionMatches(true, 0, BEARER, 0, BEARER.length())) {
             String token = header.substring(BEARER.length()).trim();
-            Long adminId = tokenProvider.parseAccessTokenAdminId(token);
-            if (adminId != null) {
+            AuthSessionStore.Identity identity = tokenProvider.parseIdentity(token, "ACCESS");
+            if (identity != null && identity.client() == AuthSessionStore.Client.MOBILE) {
+                Long adminId = identity.adminId();
                 try {
                     if (adminTokenService.findAdminAccessTokenByJwtToken(token)) {
-                        SecurityContextHolder.getContext().setAuthentication(
-                                new UsernamePasswordAuthenticationToken(adminId, null, AuthorityUtils.NO_AUTHORITIES));
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(adminId, null, AuthorityUtils.NO_AUTHORITIES);
+                        authentication.setDetails(identity);
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
                 } catch (Exception e) {
                     log.warn("Chat: không kiểm tra được access token trên Redis: {}", e.getMessage());

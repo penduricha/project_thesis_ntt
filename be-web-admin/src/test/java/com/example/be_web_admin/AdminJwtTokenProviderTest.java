@@ -1,5 +1,6 @@
 package com.example.be_web_admin;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.security.JwtSecretGuard;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,18 @@ class AdminJwtTokenProviderTest {
         assertFalse(provider.validateAccessToken(refreshToken));
         assertEquals(2500021775L, provider.parseRefreshTokenAdminId(refreshToken));
         assertNull(provider.parseAccessTokenAdminId(refreshToken));
+    }
+
+    @Test
+    void accessAndRefreshCarryTheSameSessionAndLegacyTokensHaveNoIdentity() {
+        AdminJwtTokenProvider provider = new AdminJwtTokenProvider(VALID_TEST_SECRET);
+        AuthSessionStore.Identity identity = new AuthSessionStore.Identity(7L, AuthSessionStore.Client.MOBILE, "00000000-0000-0000-0000-000000000007");
+        String access = provider.generateAccessToken(7L, identity);
+        String refresh = provider.generateRefreshToken(7L, identity);
+        assertEquals(identity, provider.parseIdentity(access, "ACCESS"));
+        assertEquals(identity, provider.parseIdentity(refresh, "REFRESH"));
+        assertNull(provider.parseIdentity(access, "REFRESH"));
+        assertNull(provider.parseIdentity(provider.generateAccessToken(7L), "ACCESS"));
     }
 
     @Test

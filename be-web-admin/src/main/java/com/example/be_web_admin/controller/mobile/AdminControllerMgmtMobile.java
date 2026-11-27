@@ -1,5 +1,7 @@
 package com.example.be_web_admin.controller.mobile;
 
+import com.example.be_web_admin.security.AuthSessionStore;
+import com.example.be_web_admin.security.SessionLogoutService;
 import com.example.be_web_admin.dto.AdminLoginDTO;
 import com.example.be_web_admin.dto.LoginOutcome;
 import com.example.be_web_admin.enums.LoginStatus;
@@ -7,7 +9,6 @@ import com.example.be_web_admin.model.redis.SessionLoginMobile;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
 import com.example.be_web_admin.service.jpa.impl.AdminLoginServiceImpl;
 import com.example.be_web_admin.service.jpa.impl.AdminServiceImpl;
-import com.example.be_web_admin.service.redis.SessionLoginMobileService;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -31,19 +32,21 @@ public class AdminControllerMgmtMobile {
 
     private final AdminTokenServiceImpl adminTokenService;
 
-    private final SessionLoginMobileService sessionLoginMobileService;
+    private final AuthSessionStore sessions;
+    private final SessionLogoutService logoutService;
 
     private final AdminJwtTokenProvider adminJwtTokenProvider;
 
     public AdminControllerMgmtMobile(AdminServiceImpl adminService,
                                      AdminLoginServiceImpl adminLoginService,
                                      AdminTokenServiceImpl adminTokenService,
-                                     SessionLoginMobileService sessionLoginMobileService,
+                                     AuthSessionStore sessions, SessionLogoutService logoutService,
                                      AdminJwtTokenProvider adminJwtTokenProvider) {
         this.adminService = adminService;
         this.adminLoginService = adminLoginService;
         this.adminTokenService = adminTokenService;
-        this.sessionLoginMobileService = sessionLoginMobileService;
+        this.sessions = sessions;
+        this.logoutService = logoutService;
         this.adminJwtTokenProvider = adminJwtTokenProvider;
     }
 
@@ -94,23 +97,13 @@ public class AdminControllerMgmtMobile {
         //    nên người chưa qua đủ các lớp xác thực không dò được trạng thái phiên.
         AdminLoginDTO loginRequest = new AdminLoginDTO(adminId, password);
         loginRequest.setTotpCode(toStringOrNull(adminRequestLogin.get("totpCode")));
-        LoginOutcome outcome = adminLoginService.login(
-                loginRequest, httpRequest.getRemoteAddr(), httpRequest.getHeader("User-Agent"));
-        if (outcome.status() != LoginStatus.OK) {
-            return ResponseEntity.ok(buildLoginFailure(outcome));
+        LoginOutcome outcome = adminLoginService.loginMobile(
+                loginRequest, httpRequest.getRemoteAddr(), httpRequest.getHeader("User-Agent"), deviceName, platform);
+        if (outcome.status() == LoginStatus.MOBILE_CONFLICT) {
+            Optional<SessionLoginMobile> existing = sessions.mobileInfo(adminId);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(buildAlreadyLoggedInWarning(existing.orElse(null)));
         }
-
-        // 2+3. Giành phiên mobile: kiểm tra tồn tại + tạo phiên nguyên tử (một khóa theo service).
-        //      Nếu đã có phiên ở thiết bị khác thì thu hồi cặp token vừa cấp và cảnh báo.
-        //      Trước đây: kiểm tra xong mới tạo phiên trong 2 bước riêng -> race khi 2 thiết bị đăng nhập cùng lúc.
-        boolean claimed = sessionLoginMobileService.claimSession(
-                adminId, deviceName, platform, httpRequest.getRemoteAddr());
-        if (!claimed) {
-            revokeIssuedTokens(outcome);
-            Optional<SessionLoginMobile> existingSession = sessionLoginMobileService.findByAdminId(adminId);
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(buildAlreadyLoggedInWarning(existingSession.orElse(null)));
-        }
+        if (outcome.status() != LoginStatus.OK) return ResponseEntity.ok(buildLoginFailure(outcome));
 
         return ResponseEntity.ok(buildLoginSuccess(adminId, outcome));
     }
@@ -132,23 +125,12 @@ public class AdminControllerMgmtMobile {
         }
 
         try {
-            // Only a token still present in Redis can identify a session for logout.
-            Long adminId = resolveAdminIdForLogout(refreshToken, accessToken);
-            if (accessToken != null) {
-                adminTokenService.removeAdminAccessTokenByJwtToken(accessToken);
-            }
-            if (refreshToken != null) {
-                adminTokenService.removeAdminRefreshTokenByJwtToken(refreshToken);
-            }
-            // Xoá phiên đăng nhập mobile để thiết bị khác có thể đăng nhập.
-            if (adminId != null) {
-                sessionLoginMobileService.removeByAdminId(adminId);
+            if (!logoutService.logout(accessToken, refreshToken, AuthSessionStore.Client.MOBILE)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorBody("Session is invalid or ended."));
             }
         } catch (Exception e) {
             log.error("Exception logout mobile: {}", e.getMessage());
-            responseReturn.put("status", 401);
-            responseReturn.put("message", "Can't remove access token, refresh token or mobile session.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseReturn);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorBody("Cannot revoke session."));
         }
 
         responseReturn.put("status", HttpStatus.OK.value());
@@ -183,14 +165,13 @@ public class AdminControllerMgmtMobile {
         }
 
         // 5. Trích xuất adminId từ Token hợp lệ
-        Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(jwtToken, "ACCESS");
+        Long adminId = identity == null ? null : identity.adminId();
 
-        // 6. Phải còn phiên đăng nhập mobile
-        if (!sessionLoginMobileService.existsByAdminId(adminId)) {
+        if (identity == null || identity.client() != AuthSessionStore.Client.MOBILE || !sessions.touch(identity)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(errorBody("Mobile session is unexisted or ended."));
         }
-        sessionLoginMobileService.touch(adminId);
 
         // 7. Trả về Response thành công (HTTP 200 OK)
         Map<String, Object> responseSuccess = new HashMap<>();
@@ -228,10 +209,10 @@ public class AdminControllerMgmtMobile {
         }
 
         // 5. Trích xuất adminId từ Token hợp lệ
-        Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(jwtToken, "REFRESH");
+        Long adminId = identity == null ? null : identity.adminId();
 
-        // 6. Phải còn phiên đăng nhập mobile
-        if (!sessionLoginMobileService.existsByAdminId(adminId)) {
+        if (identity == null || identity.client() != AuthSessionStore.Client.MOBILE || !sessions.touch(identity)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(errorBody("Mobile session is unexisted or ended."));
         }
@@ -241,14 +222,13 @@ public class AdminControllerMgmtMobile {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(errorBody("Can't remove old refresh token."));
         }
-        Map<String, Object> tokenNew = adminTokenService.createTokenAdmin(adminId);
+        Map<String, Object> tokenNew = adminTokenService.createTokenAdmin(identity);
         if (tokenNew == null || tokenNew.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(errorBody("Can't create new tokens."));
         }
 
         // 8. Gia hạn phiên mobile theo token mới
-        sessionLoginMobileService.touch(adminId);
 
         Map<String, Object> responseSuccess = new HashMap<>();
         responseSuccess.put("success", true);
@@ -361,7 +341,7 @@ public class AdminControllerMgmtMobile {
             }
             case LOCKED -> {
                 // Như bản web: khoá có thể do sai mật khẩu, không chỉ do sai mã TOTP.
-                body.put("message", "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau.");
+                body.put("message", "Quá nhiều lần thử. Vui lòng thử lại sau.");
                 body.put("data", Map.of("code", "LOCKED", "retryAfterSeconds", outcome.retryAfterSeconds()));
             }
             default -> { // BAD_CREDENTIALS
@@ -370,31 +350,6 @@ public class AdminControllerMgmtMobile {
             }
         }
         return body;
-    }
-
-    private void revokeIssuedTokens(LoginOutcome outcome) {
-        try {
-            if (outcome.accessToken() != null) {
-                adminTokenService.removeAdminAccessTokenByJwtToken(outcome.accessToken());
-            }
-            if (outcome.refreshToken() != null) {
-                adminTokenService.removeAdminRefreshTokenByJwtToken(outcome.refreshToken());
-            }
-        } catch (Exception e) {
-            log.error("Can't revoke tokens issued for rejected mobile login: {}", e.getMessage());
-        }
-    }
-
-    private Long resolveAdminIdForLogout(String refreshToken, String accessToken) {
-        if (refreshToken != null) {
-            Long id = adminJwtTokenProvider.parseRefreshTokenAdminId(refreshToken);
-            if (id != null && adminTokenService.findAdminRefreshTokenByJwtToken(refreshToken)) return id;
-        }
-        if (accessToken != null) {
-            Long id = adminJwtTokenProvider.parseAccessTokenAdminId(accessToken);
-            if (id != null && adminTokenService.findAdminAccessTokenByJwtToken(accessToken)) return id;
-        }
-        return null;
     }
 
     private Long toLong(Object value) {

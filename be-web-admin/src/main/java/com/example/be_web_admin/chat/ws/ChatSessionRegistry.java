@@ -1,5 +1,6 @@
 package com.example.be_web_admin.chat.ws;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.chat.ChatProperties;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -34,9 +35,11 @@ public class ChatSessionRegistry {
 
     private final Map<Long, CopyOnWriteArrayList<ChatConnection>> byAdmin = new ConcurrentHashMap<>();
     private final ChatProperties properties;
+    private final AuthSessionStore sessions;
 
-    public ChatSessionRegistry(ChatProperties properties) {
+    public ChatSessionRegistry(ChatProperties properties, AuthSessionStore sessions) {
         this.properties = properties;
+        this.sessions = sessions;
     }
 
     /** Số kết nối đang mở của một admin (dùng để từ chối sớm ở bước bắt tay). */
@@ -93,6 +96,7 @@ public class ChatSessionRegistry {
             unregister(connection);
             return;
         }
+        if (!enforceSession(connection)) return;
         try {
             connection.send(json);
         } catch (Exception e) {
@@ -102,7 +106,27 @@ public class ChatSessionRegistry {
         }
     }
 
-    /** Đóng mọi kết nối của một admin (đăng xuất, thu hồi phiên). Chưa được nối vào luồng đăng xuất hiện có. */
+    /** Revalidate before every outbound frame and on each sweep, even across instances. */
+    public boolean enforceSession(ChatConnection connection) {
+        AuthSessionStore.State state = sessions.state(connection.identity());
+        if (state == AuthSessionStore.State.ACTIVE) return true;
+        unregister(connection);
+        connection.close(state == AuthSessionStore.State.REVOKED ? SESSION_REVOKED : CloseStatus.SERVER_ERROR);
+        return false;
+    }
+
+    public void closeSession(AuthSessionStore.Identity identity) {
+        List<ChatConnection> connections = byAdmin.get(identity.adminId());
+        if (connections == null) return;
+        for (ChatConnection connection : connections) {
+            if (identity.equals(connection.identity())) {
+                unregister(connection);
+                connection.close(SESSION_REVOKED);
+            }
+        }
+    }
+
+    /** Đóng mọi kết nối của một admin (chỉ dùng khi cần thu hồi toàn bộ). */
     public void closeAll(Long adminId, CloseStatus status) {
         List<ChatConnection> connections = byAdmin.remove(adminId);
         if (connections != null) {

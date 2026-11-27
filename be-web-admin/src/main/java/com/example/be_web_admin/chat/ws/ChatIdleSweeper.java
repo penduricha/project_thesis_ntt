@@ -43,6 +43,7 @@ public class ChatIdleSweeper {
         try {
             long limitMs = properties.getWs().getIdleTimeoutSeconds() * 1_000L;
             for (ChatConnection connection : registry.snapshot()) {
+                if (!registry.enforceSession(connection)) continue;
                 if (connection.idleMillis() > limitMs) {
                     log.debug("Chat: đóng kết nối im lặng của adminId={}", connection.adminId());
                     registry.unregister(connection);

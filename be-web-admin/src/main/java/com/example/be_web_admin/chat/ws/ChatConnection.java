@@ -1,5 +1,6 @@
 package com.example.be_web_admin.chat.ws;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -15,18 +16,20 @@ public final class ChatConnection {
     /** Khóa thuộc tính phiên: chứa ChatConnection để handler tra lại từ phiên gốc. */
     public static final String ATTR = "chat.connection";
 
-    private final Long adminId;
+    private final AuthSessionStore.Identity identity;
     private final WebSocketSession session;
     private volatile long lastSeenNanos = System.nanoTime();
 
-    public ChatConnection(Long adminId, WebSocketSession decoratedSession) {
-        this.adminId = adminId;
+    public ChatConnection(AuthSessionStore.Identity identity, WebSocketSession decoratedSession) {
+        this.identity = identity;
         this.session = decoratedSession;
     }
 
     public Long adminId() {
-        return adminId;
+        return identity.adminId();
     }
+
+    public AuthSessionStore.Identity identity() { return identity; }
 
     public String sessionId() {
         return session.getId();
