@@ -1,0 +1,110 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_nttchat/group_card
+
+    Một nhóm chat. Nút quản lý (đổi tên, thêm/xoá thành viên, giải tán) chỉ hiện với chủ nhóm.
+
+    Example context (json):
+    {
+        "id": 7,
+        "name": "Nhóm ôn TOEIC",
+        "isowner": true,
+        "membercount": 2,
+        "members": [
+            {"id": 2, "fullname": "An Nguyen", "profileimageurlsmall": "https://example.com/a.png", "isowner": true},
+            {"id": 3, "fullname": "Binh Tran", "profileimageurlsmall": "https://example.com/b.png", "isowner": false}
+        ]
+    }
+}}
+<article class="card mb-3" data-region="group" data-groupid="{{id}}">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+                <h3 class="h6 mb-1">
+                    <span data-region="group-name">{{name}}</span>
+                    {{#isowner}}<span class="badge bg-primary ms-1">{{#str}}owner, local_nttchat{{/str}}</span>{{/isowner}}
+                </h3>
+                <div class="text-muted small">{{#str}}membercount, local_nttchat, {{membercount}}{{/str}}</div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    {{#members}}
+                        <img src="{{profileimageurlsmall}}" alt="{{fullname}}" title="{{fullname}}" class="nttchat-avatar" width="28" height="28">
+                    {{/members}}
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-primary" data-action="open-chat" data-groupid="{{id}}">
+                    {{#str}}openchat, local_nttchat{{/str}}
+                </button>
+                {{#isowner}}
+                    <button type="button" class="btn btn-outline-secondary" data-action="toggle-manage" data-groupid="{{id}}" aria-expanded="false">
+                        {{#str}}manage, local_nttchat{{/str}}
+                    </button>
+                {{/isowner}}
+                <button type="button" class="btn btn-outline-secondary" data-action="leave" data-groupid="{{id}}">
+                    {{#str}}leavegroup, local_nttchat{{/str}}
+                </button>
+            </div>
+        </div>
+
+        {{#isowner}}
+        <div class="mt-3 pt-3 border-top d-none" data-region="manage">
+            <div class="mb-3">
+                <label class="form-label" for="nttchat-rename-{{id}}">{{#str}}groupname, local_nttchat{{/str}}</label>
+                <div class="d-flex gap-2">
+                    <input type="text" id="nttchat-rename-{{id}}" class="form-control" maxlength="100" value="{{name}}" data-region="rename-input">
+                    <button type="button" class="btn btn-primary" data-action="rename" data-groupid="{{id}}">{{#str}}save, local_nttchat{{/str}}</button>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-label">{{#str}}members, local_nttchat{{/str}}</div>
+                <ul class="list-unstyled mb-0">
+                    {{#members}}
+                        <li class="d-flex align-items-center justify-content-between py-1">
+                            <span class="d-flex align-items-center gap-2">
+                                <img src="{{profileimageurlsmall}}" alt="" class="nttchat-avatar" width="28" height="28">
+                                <span>{{fullname}}</span>
+                                {{#isowner}}<span class="badge bg-primary">{{#str}}owner, local_nttchat{{/str}}</span>{{/isowner}}
+                            </span>
+                            {{^isowner}}
+                                {{! Trong vòng lặp members, {{id}} là id THÀNH VIÊN; id nhóm lấy từ thẻ cha [data-region="group"]. }}
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-action="remove-member"
+                                        data-userid="{{id}}" data-fullname="{{fullname}}">
+                                    {{#str}}remove, local_nttchat{{/str}}
+                                </button>
+                            {{/isowner}}
+                        </li>
+                    {{/members}}
+                </ul>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="nttchat-add-{{id}}">{{#str}}searchmembers, local_nttchat{{/str}}</label>
+                <input type="search" id="nttchat-add-{{id}}" class="form-control" autocomplete="off"
+                       data-region="search-input" data-search="manage" data-groupid="{{id}}"
+                       placeholder="{{#str}}searchplaceholder, local_nttchat{{/str}}">
+                <ul class="list-unstyled mt-2 mb-0" data-region="search-results" aria-live="polite"></ul>
+            </div>
+
+            <button type="button" class="btn btn-outline-danger" data-action="delete" data-groupid="{{id}}">
+                {{#str}}deletegroup, local_nttchat{{/str}}
+            </button>
+        </div>
+        {{/isowner}}
+    </div>
+</article>

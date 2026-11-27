@@ -1,0 +1,33 @@
+/* local_nttchat: chỉ chỉnh những chỗ Bootstrap/theme chưa có. Màu và bo góc lấy từ biến của theme. */
+.local-nttchat .nttchat-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: none;
+}
+
+.local-nttchat [data-region="search-results"] li + li {
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.local-nttchat .nttchat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    padding: .25rem .5rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: var(--bs-border-radius, .375rem);
+    background-color: var(--bs-body-bg, #fff);
+}
+
+/* Thông báo tin mới (toast bấm được để mở chat). */
+.nttchat-toast-link {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    text-align: start;
+    cursor: pointer;
+}

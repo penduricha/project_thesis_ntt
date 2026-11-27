@@ -216,6 +216,37 @@ chỉ ghi "đã sửa X".
 
 Biên dịch kiểm chứng bằng dart-sass thật: 220 dòng CSS, **0 lỗi**.
 
+### Moodle: plugin chat đơn + chat nhóm `local_nttchat` (PHP, Redis)
+
+#### Thêm mới
+
+- **`public/local/nttchat/`** (Moodle 5.3): bổ sung tính năng chat trên nền nhắn tin có sẵn của Moodle
+  (`core_message`), không tạo bảng riêng trong `moodle_503`.
+  - *Chat đơn*: dùng nguyên chat 1-1 của lõi; plugin thêm **thông báo tin mới theo thời gian thực** qua Redis
+    (hộp thư theo người nhận, trình duyệt hỏi mỗi 4 giây, bấm thông báo là mở đúng cuộc chat).
+  - *Chat nhóm*: trang **Nhóm chat** (mục trong menu tài khoản) để tự tạo nhóm, mời người, đổi tên, thêm/xoá
+    thành viên, rời, giải tán. Nhóm là hội thoại nhóm của lõi nên nằm chung ngăn kéo chat với chat đơn.
+  - *Phân quyền*: chỉ chủ nhóm quản lý; chỉ thêm được người cho phép nhận tin (theo quyền riêng tư và danh sách
+    chặn của lõi); tìm người dùng đúng bộ tìm kiếm của lõi (mặc định chỉ người cùng khoá học).
+  - *Redis tắt hoặc chưa cấu hình*: gửi/nhận tin vẫn chạy bình thường, chỉ mất thông báo tức thời.
+  - Cấu hình Redis đặt ở `config.php` **cục bộ** (xem `local/nttchat/README.md`); **không commit mật khẩu**.
+    Không dùng Redis DB 1 (Spring Boot đang dùng).
+
+#### Đã kiểm thử
+
+- Moodle 5.3 + MariaDB + Redis thật: 43 kiểm tra PHP đạt; 14 kiểm tra trình duyệt (Chromium, hai người dùng) đạt.
+  Kiểm thử đã bắt được hai lỗi thật của chính plugin, đã sửa:
+  1. JS hỏi tin mới gọi `Ajax.call` với `loginrequired=false` nên vào endpoint không có phiên và bị từ chối
+     (thông báo không bao giờ hiện).
+  2. `DrawerHelper.showConversation` đọc tham số **`conversationid`** (chữ thường); JSDoc của lõi ghi
+     `conversationId` là sai, truyền theo JSDoc thì ngăn kéo mở trống.
+- Tránh một lỗi của lõi (MDL-63814): hội thoại có `component` khác `core_group` kèm `itemtype` làm đầy log bằng
+  `Undefined array key "core_group"`, nên plugin để `itemtype = NULL`.
+
+#### Chưa làm
+
+- Phòng chat **tự động theo khoá học** (thành viên lấy từ danh sách ghi danh): làm ở bản vá kế tiếp.
+
 ### Khảo sát giao diện Moodle để custom UI
 
 #### Thêm mới

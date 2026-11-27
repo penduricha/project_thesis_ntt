@@ -1,0 +1,31 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Phiên bản plugin local_nttchat: nhóm chat do người dùng tự tạo + báo tin mới qua Redis.
+ *
+ * @package    local_nttchat
+ * @copyright  2026 NTTU
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+defined('MOODLE_INTERNAL') || die();
+
+$plugin->component = 'local_nttchat';
+$plugin->version = 2026112600;
+$plugin->requires = 2025041400; // Moodle 5.0 trở lên (cần API core_message và hook before_footer_html_generation).
+$plugin->maturity = MATURITY_STABLE;
+$plugin->release = '1.0.0';
