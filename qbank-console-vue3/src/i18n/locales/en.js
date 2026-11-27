@@ -686,7 +686,7 @@ export default {
   "login.error.totpRequired": "Two-factor authentication is enabled. Enter the six-digit code from your Authenticator app.",
   "login.error.totpFormat": "The authentication code must contain exactly six digits.",
   "login.error.totpInvalid": "The code is incorrect or has expired. Enter the current code from your app.",
-  "login.error.locked": "Too many failed attempts. The form is temporarily locked until the countdown ends.",
+  "login.error.locked": "Too many attempts. The form is temporarily locked until the countdown ends.",
   "selection.pick": "Select at least one question first.",
   "selection.busy": "All selected questions are being validated and cannot be deleted.",
   "selection.deleteTitle": "Delete {n} selected questions?",

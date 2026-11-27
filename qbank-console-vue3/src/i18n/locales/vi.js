@@ -711,7 +711,7 @@ export default {
   "login.error.totpRequired": "Tài khoản đã bật xác thực 2 lớp. Nhập mã 6 số đang hiển thị trong ứng dụng Authenticator.",
   "login.error.totpFormat": "Mã xác thực gồm đúng 6 chữ số.",
   "login.error.totpInvalid": "Mã xác thực không đúng hoặc đã hết hạn. Hãy nhập mã mới đang hiển thị trên ứng dụng.",
-  "login.error.locked": "Nhập sai quá nhiều lần. Biểu mẫu tạm khóa, sẽ tự mở lại khi hết thời gian đếm ngược.",
+  "login.error.locked": "Quá nhiều lần thử. Biểu mẫu tạm khóa, sẽ tự mở lại khi hết thời gian đếm ngược.",
   "selection.pick": "Hãy chọn ít nhất một câu hỏi trước",
   "selection.busy": "Các câu đang chọn đều đang kiểm định, không thể xóa",
   "selection.deleteTitle": "Xóa {n} câu hỏi đã chọn?",

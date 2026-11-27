@@ -686,7 +686,7 @@ export default {
   "login.error.totpRequired": "二要素認証が有効です。認証アプリに表示された 6 桁のコードを入力してください。",
   "login.error.totpFormat": "認証コードは 6 桁の数字で入力してください。",
   "login.error.totpInvalid": "認証コードが正しくないか期限切れです。アプリに表示されている新しいコードを入力してください。",
-  "login.error.locked": "失敗回数が多すぎます。フォームは一時的にロックされ、カウントダウン終了後に自動解除されます。",
+  "login.error.locked": "試行回数が多すぎます。フォームは一時的にロックされ、カウントダウン終了後に自動解除されます。",
   "selection.pick": "まず問題を 1 件以上選択してください。",
   "selection.busy": "選択した問題はすべて検証中のため削除できません。",
   "selection.deleteTitle": "選択した {n} 件の問題を削除しますか？",

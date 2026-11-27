@@ -87,8 +87,8 @@ class LoginService {
           reason: LoginTotpFailureReason.locked,
           retryAfterSeconds: retry,
           message: retry > 0
-              ? 'Too many wrong codes. Try again in $retry seconds.'
-              : 'Too many wrong codes. Try again later.',
+              ? 'Too many attempts. Try again in $retry seconds.'
+              : 'Too many attempts. Try again later.',
         );
     }
     return null;

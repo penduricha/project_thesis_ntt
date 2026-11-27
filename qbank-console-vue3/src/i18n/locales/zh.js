@@ -686,7 +686,7 @@ export default {
   "login.error.totpRequired": "账户已启用双重验证，请输入验证器应用中的六位验证码。",
   "login.error.totpFormat": "验证码必须为六位数字。",
   "login.error.totpInvalid": "验证码不正确或已过期，请输入应用中当前显示的验证码。",
-  "login.error.locked": "错误次数过多。表单暂时锁定，倒计时结束后自动解锁。",
+  "login.error.locked": "尝试次数过多。表单暂时锁定，倒计时结束后自动解锁。",
   "selection.pick": "请先选择至少一道题目。",
   "selection.busy": "所选题目都在审核中，无法删除。",
   "selection.deleteTitle": "删除选中的 {n} 道题目？",

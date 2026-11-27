@@ -79,6 +79,7 @@ void main() {
     final locked = result as LoginTotpRequired;
     expect(locked.reason, LoginTotpFailureReason.locked);
     expect(locked.retryAfterSeconds, 77);
+    expect(locked.message, 'Too many attempts. Try again in 77 seconds.');
     expect(adapter.requests, 1);
     dio.close();
   });

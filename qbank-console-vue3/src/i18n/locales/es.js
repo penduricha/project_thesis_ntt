@@ -654,7 +654,7 @@ export default {
   "login.error.totpRequired": "La autenticación de dos factores está activada. Introduce el código de 6 dígitos de la aplicación Authenticator.",
   "login.error.totpFormat": "El código de autenticación debe tener exactamente 6 dígitos.",
   "login.error.totpInvalid": "El código no es correcto o ha caducado. Introduce el código actual de la aplicación.",
-  "login.error.locked": "Demasiados intentos fallidos. El formulario se desbloqueará automáticamente cuando termine la cuenta atrás.",
+  "login.error.locked": "Demasiados intentos. El formulario se desbloqueará automáticamente cuando termine la cuenta atrás.",
   "selection.pick": "Selecciona al menos una pregunta.",
   "selection.busy": "Las preguntas seleccionadas están en validación y no se pueden eliminar.",
   "selection.deleteTitle": "¿Eliminar {n} preguntas seleccionadas?",

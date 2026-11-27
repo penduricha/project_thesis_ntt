@@ -13,7 +13,7 @@ export const REQUEST_STATUS = Object.freeze({
     // Thêm cho 2FA (không ảnh hưởng nơi đang so sánh với 3 giá trị cũ)
     TOTP_REQUIRED: "TotpRequired",   // mật khẩu đúng + tài khoản đã bật 2FA -> cần mã 6 số
     TOTP_INVALID: "TotpInvalid",     // mã 6 số sai / hết hạn / đã dùng
-    LOCKED: "Locked",                // nhập sai mã quá nhiều lần
+    LOCKED: "Locked",                // vượt giới hạn lượt thử
 });
 
 // Mã nghiệp vụ backend đặt trong data.code khi success = false
@@ -63,6 +63,11 @@ export default class AdminRepository {
             return this.#toLoginResult(adminAccount, response.data);
         } catch (error) {
             // Nếu backend trả 401/429 kèm body nghiệp vụ thì axios sẽ ném lỗi; vẫn đọc body đó.
+            // 5xx is a service failure, not a credential rejection even when a proxy or
+            // server returns a JSON body with success=false.
+            if ((error.response?.status ?? 0) >= 500) {
+                return new LoginResult(REQUEST_STATUS.EXCEPTION);
+            }
             const body = error.response?.data;
             if (body && typeof body === "object" && body.success === false) {
                 return this.#toLoginResult(adminAccount, body);
