@@ -1,7 +1,7 @@
 // Español de España: traducciones de la interfaz.
 export default {
-  "subject.codeHint": "Use letras, números y - o _ entre grupos (máximo 30 caracteres).",
-  "subject.codeInvalid": "Use letras y números, con - o _ solo entre grupos.",
+  "subject.codeHint": "Escriba 3 letras ASCII mayúsculas seguidas de 4–6 dígitos, p. ej. INT3202.",
+  "subject.codeInvalid": "Use exactamente 3 letras mayúsculas seguidas de 4–6 dígitos, p. ej. INT3202.",
   "subject.nameHint": "Use letras Unicode, números y puntuación común (máximo 200 caracteres).  . , ' ’ ( ) & + / # : ; – — -",
   "subject.nameInvalid": "Nombre no válido: use letras, números y puntuación común.",
   "subject.descriptionInvalid": "La descripción contiene caracteres de control o supera los 500 caracteres.",

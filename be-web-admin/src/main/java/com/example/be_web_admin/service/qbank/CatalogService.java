@@ -19,7 +19,6 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.time.Instant;
@@ -57,7 +56,7 @@ public class CatalogService {
     }
 
     // Restrict identifiers without restricting Vietnamese or other Unicode names.
-    private static final Pattern CODE = Pattern.compile("[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*");
+    private static final Pattern CODE = Pattern.compile("[A-Z]{3}[0-9]{4,6}");
     private static final Pattern NAME = Pattern.compile("[\\p{L}\\p{M}\\p{N}][\\p{L}\\p{M}\\p{N} .,\u0027’()&+/#:;–—-]*");
 
     @Transactional(readOnly = true)
@@ -145,11 +144,11 @@ public class CatalogService {
     }
 
     private static String code(String raw) {
-        String value = raw == null ? "" : raw.strip();
-        if (value.length() > 30 || !CODE.matcher(value).matches()) {
-            throw QbankException.badRequest("SUBJECT_CODE_INVALID", "Mã môn chỉ gồm chữ, số và dấu - hoặc _ giữa các nhóm (tối đa 30 ký tự).");
+        String value = raw == null ? "" : raw;
+        if (!CODE.matcher(value).matches()) {
+            throw QbankException.badRequest("SUBJECT_CODE_INVALID", "Mã học phần phải gồm 3 chữ cái in hoa và 4–6 chữ số, ví dụ INT3202.");
         }
-        return value.toUpperCase(Locale.ROOT);
+        return value;
     }
 
     private static String name(String raw, int max, String errorCode) {

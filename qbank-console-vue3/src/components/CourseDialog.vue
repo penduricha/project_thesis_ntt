@@ -3,25 +3,26 @@ import { reactive, ref, computed } from 'vue'
 import BaseModal from './BaseModal.vue'
 import { t } from '../i18n/index.js'
 import { COURSES, addCourse, updateCourse } from '../store.js'
-import { validateSubject, normalizeSubjectCode, normalizeSubjectName } from '../services/subjectValidation.js'
+import { validateSubject, normalizeSubjectName } from '../services/subjectValidation.js'
 
 const props = defineProps({ index: { type: Number, default: -1 } })
 const emit = defineEmits(['close'])
 const edit = props.index >= 0, old = edit ? COURSES[props.index] : null
 const snapshot = edit ? { subjectId: old?.subjectId, updatedAt: old?.updatedAt } : null
 const f = reactive({ id: old?.id || '', name: old?.name || '', dept: old?.dept || '', t1: 'Chương 1: Tổng quan', active: old ? old.active !== false : true })
-const touched = reactive({ id: false, name: false, dept: false, t1: false })
+const touched = reactive({ id: edit, name: false, dept: false, t1: false })
 const saving = ref(false), dirty = ref(false), uncertain = ref(false), apiError = ref('')
 const excludeIndex = computed(() => !edit ? -1 : snapshot?.subjectId == null ? props.index : COURSES.findIndex(c => c.subjectId === snapshot.subjectId))
 const errors = computed(() => validateSubject({ ...f, edit }, COURSES, excludeIndex.value))
 const invalid = key => touched[key] && !!errors.value[key]
+function onCodeInput(event) { f.id = event.target.value; changed('id') }
 function changed(key) { touched[key] = true; dirty.value = true; apiError.value = '' }
 function cancel() { if (saving.value) return; if (dirty.value && !confirm(t('validation.discard'))) return; emit('close') }
 async function submit() {
   if (saving.value || uncertain.value || Object.keys(errors.value).length) return
   saving.value = true; apiError.value = ''
   try {
-    const d = { id: normalizeSubjectCode(f.id), name: normalizeSubjectName(f.name), dept: f.dept.trim(), active: f.active }
+    const d = { id: f.id, name: normalizeSubjectName(f.name), dept: f.dept.trim(), active: f.active }
     const result = edit ? await updateCourse(props.index, d, snapshot) : await addCourse({ ...d, topic: normalizeSubjectName(f.t1) })
     if (result?.ok) { dirty.value = false; emit('close') }
     else if (!result?.abandoned) { apiError.value = result?.message || t('subject.saveFailed'); uncertain.value = !!result?.uncertain }
@@ -33,7 +34,7 @@ async function submit() {
 <template>
   <BaseModal :title="edit ? $t('course.editTitle') : $t('course.addTitle')" :dirty="dirty" :locked="saving" @close="emit('close')">
     <label>{{ $t('course.code') }} <span style="color:var(--danger-strong)">*</span>
-      <input id="f-cid" maxlength="30" :placeholder="$t('course.exampleCode')" autocomplete="off" v-model="f.id" :disabled="saving" :class="{ invalid: invalid('id') }" :aria-invalid="invalid('id') ? 'true' : null" aria-describedby="subject-code-hint subject-code-error" @input="changed('id')" @blur="touched.id = true">
+      <input id="f-cid" maxlength="30" :placeholder="$t('course.exampleCode')" autocomplete="off" :value="f.id" :disabled="saving" :class="{ invalid: invalid('id') }" :aria-invalid="invalid('id') ? 'true' : null" aria-describedby="subject-code-hint subject-code-error" @input="onCodeInput" @blur="touched.id = true">
       <small id="subject-code-hint">{{ $t('subject.codeHint') }}</small>
       <small v-if="invalid('id')" id="subject-code-error" class="fe" role="alert">{{ $t(errors.id) }}</small>
     </label>

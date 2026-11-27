@@ -34,8 +34,8 @@ class CatalogSubjectServiceTest {
         when(subjects.saveAndFlush(any(Subject.class))).thenAnswer(call -> {
             Subject s = call.getArgument(0); s.setSubjectId(12L); s.setUpdatedAt(TIME); return s;
         });
-        SubjectView result = service.createSubject(new SubjectCreateRequest(" it-101 ", "Cơ sở dữ liệu", "Mô tả", true, "Chương 1: Tổng quan"), 7L);
-        assertEquals("IT-101", result.subjectCode());
+        SubjectView result = service.createSubject(new SubjectCreateRequest("INT3202", "Cơ sở dữ liệu", "Mô tả", true, "Chương 1: Tổng quan"), 7L);
+        assertEquals("INT3202", result.subjectCode());
         ArgumentCaptor<Subject> subject = ArgumentCaptor.forClass(Subject.class);
         verify(subjects).saveAndFlush(subject.capture());
         assertEquals(7L, subject.getValue().getCreatedBy());
@@ -51,13 +51,39 @@ class CatalogSubjectServiceTest {
     void invalidCharactersAndDuplicateAreRejectedBeforeWriting() {
         QbankException badCode = assertThrows(QbankException.class, () -> service.createSubject(new SubjectCreateRequest("A@1", "Mạng máy tính", "", true, "Chương 1"), 7L));
         assertEquals("SUBJECT_CODE_INVALID", badCode.getCode());
-        QbankException badName = assertThrows(QbankException.class, () -> service.createSubject(new SubjectCreateRequest("A1", "Môn <script>", "", true, "Chương 1"), 7L));
+        QbankException badName = assertThrows(QbankException.class, () -> service.createSubject(new SubjectCreateRequest("ABC1234", "Môn <script>", "", true, "Chương 1"), 7L));
         assertEquals("SUBJECT_NAME_INVALID", badName.getCode());
-        when(subjects.existsBySubjectCodeIgnoreCase("A1")).thenReturn(true);
-        QbankException duplicate = assertThrows(QbankException.class, () -> service.createSubject(new SubjectCreateRequest("a1", "Môn học", "", true, "Chương 1"), 7L));
+        when(subjects.existsBySubjectCodeIgnoreCase("ABC1234")).thenReturn(true);
+        QbankException duplicate = assertThrows(QbankException.class, () -> service.createSubject(new SubjectCreateRequest("ABC1234", "Môn học", "", true, "Chương 1"), 7L));
         assertEquals("SUBJECT_CODE_DUPLICATED", duplicate.getCode());
         verify(subjects, never()).saveAndFlush(any());
         verifyNoInteractions(topics);
+    }
+
+
+    @Test
+    void rejectsInvalidCodePatternsForCreateAndUpdate() {
+        for (String invalid : new String[]{"haG8342", "325as", "fds", "ABC123", "ABC1234567", "ABC-1234", "ABC_1234", " ABC1234", "ABC1234 ", "ABC1234\n", "ÁBC1234", "ABC１２３４"}) {
+            QbankException error = assertThrows(QbankException.class,
+                    () -> service.createSubject(new SubjectCreateRequest(invalid, "Môn học", null, true, "Chương 1"), 7L), invalid);
+            assertEquals("SUBJECT_CODE_INVALID", error.getCode());
+        }
+        Subject subject = new Subject(); subject.setSubjectId(12L); subject.setUpdatedAt(TIME);
+        when(subjects.findForQuestionCreate(12L)).thenReturn(Optional.of(subject));
+        QbankException error = assertThrows(QbankException.class, () -> service.updateSubject(12L,
+                new SubjectUpdateRequest("haG8342", "Môn học", null, true, TIME)));
+        assertEquals("SUBJECT_CODE_INVALID", error.getCode());
+        verify(subjects, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void acceptsFourToSixDigitsWithoutCaseConversion() {
+        when(subjects.saveAndFlush(any(Subject.class))).thenAnswer(call -> {
+            Subject s = call.getArgument(0); s.setSubjectId(12L); s.setUpdatedAt(TIME); return s;
+        });
+        for (String code : new String[]{"INT3202", "BAH21399", "ABC123456"}) {
+            assertEquals(code, service.createSubject(new SubjectCreateRequest(code, "Môn học", null, true, "Chương 1"), 7L).subjectCode());
+        }
     }
 
     @Test

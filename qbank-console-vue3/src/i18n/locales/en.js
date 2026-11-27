@@ -3,8 +3,8 @@
  * Tên riêng, mã lỗi, phím giữ nguyên. Câu ngắn gọn, tránh dịch máy móc.
  */
 export default {
-  "subject.codeHint": "Use ASCII letters, digits, and - or _ between groups (max 30 characters).",
-  "subject.codeInvalid": "Use letters and digits, with - or _ between groups only.",
+  "subject.codeHint": "Enter 3 uppercase ASCII letters followed by 4–6 digits, e.g. INT3202.",
+  "subject.codeInvalid": "Use exactly 3 uppercase letters followed by 4–6 digits, e.g. INT3202.",
   "subject.nameHint": "Use Unicode letters, digits and common punctuation . , ' ’ ( ) & + / # : ; – — - (max 200 characters).",
   "subject.nameInvalid": "Invalid name: use letters, digits and common punctuation.",
   "subject.descriptionInvalid": "The description contains invalid control characters or exceeds 500 characters.",

@@ -3,8 +3,8 @@
  * 保留：专有名词（NTTU、Moodle、Spring Boot、JWT、Qwen2.5）、错误代码、按键名。
  */
 export default {
-  "subject.codeHint": "使用字母、数字以及组间的 - 或 _（最多 30 个字符）。",
-  "subject.codeInvalid": "只能使用字母和数字，- 或 _ 只能位于组之间。",
+  "subject.codeHint": "输入 3 个大写英文字母，后接 4–6 位数字，例如 INT3202。",
+  "subject.codeInvalid": "必须由 3 个大写英文字母和 4–6 位数字组成，例如 INT3202。",
   "subject.nameHint": "使用 Unicode 字母、数字和常用标点（最多 200 个字符）。  . , ' ’ ( ) & + / # : ; – — -",
   "subject.nameInvalid": "名称无效：请使用字母、数字和常用标点。",
   "subject.descriptionInvalid": "描述包含无效控制字符或超过 500 个字符。",

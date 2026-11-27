@@ -11,8 +11,8 @@
  *     Qwen2.5), mã lỗi (404), phím (Ctrl, Esc), ký hiệu (·, ‹, ›).
  */
 export default {
-  "subject.codeHint": "Mã gồm chữ cái ASCII, số; dấu - hoặc _ chỉ dùng giữa các nhóm (tối đa 30 ký tự).",
-  "subject.codeInvalid": "Mã chỉ được chứa chữ, số và dấu - hoặc _ giữa các nhóm.",
+  "subject.codeHint": "Gồm 3 chữ cái ASCII in hoa và 4–6 chữ số liền nhau, ví dụ INT3202.",
+  "subject.codeInvalid": "Mã phải gồm đúng 3 chữ cái in hoa và 4–6 chữ số, ví dụ INT3202.",
   "subject.nameHint": "Tên gồm chữ có dấu, số và dấu câu thông dụng . , ' ’ ( ) & + / # : ; – — - (tối đa 200 ký tự).",
   "subject.nameInvalid": "Tên không hợp lệ: dùng chữ, số và dấu câu thông dụng.",
   "subject.descriptionInvalid": "Mô tả chứa ký tự điều khiển không hợp lệ hoặc vượt quá 500 ký tự.",

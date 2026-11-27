@@ -3,8 +3,8 @@
  * 固有名詞（NTTU、Moodle、Spring Boot、JWT、Qwen2.5）、エラーコード、キー名はそのまま。
  */
 export default {
-  "subject.codeHint": "英数字と、区切りとして - または _ を使用できます（最大30文字）。",
-  "subject.codeInvalid": "英数字を使い、- または _ は区切りにのみ使用してください。",
+  "subject.codeHint": "半角英大文字3文字と数字4〜6桁を続けて入力してください。例：INT3202",
+  "subject.codeInvalid": "半角英大文字3文字と数字4〜6桁が必要です。例：INT3202",
   "subject.nameHint": "文字、数字、一般的な句読点を使用できます（最大200文字）。  . , ' ’ ( ) & + / # : ; – — -",
   "subject.nameInvalid": "無効な名前です。文字、数字、一般的な句読点を使用してください。",
   "subject.descriptionInvalid": "説明に無効な制御文字があるか、500文字を超えています。",

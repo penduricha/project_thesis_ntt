@@ -3,8 +3,8 @@
  * 고유명사(NTTU, Moodle, Spring Boot, JWT, Qwen2.5), 오류 코드, 키 이름은 그대로 둡니다.
  */
 export default {
-  "subject.codeHint": "영문자와 숫자, 그룹 사이의 - 또는 _를 사용하세요(최대 30자).",
-  "subject.codeInvalid": "영문자와 숫자를 사용하고 - 또는 _는 그룹 사이에만 사용하세요.",
+  "subject.codeHint": "영문 대문자 3자 뒤에 숫자 4~6자를 붙여 입력하세요. 예: INT3202",
+  "subject.codeInvalid": "영문 대문자 3자와 숫자 4~6자가 필요합니다. 예: INT3202",
   "subject.nameHint": "유니코드 문자, 숫자와 일반 구두점을 사용하세요(최대 200자).  . , ' ’ ( ) & + / # : ; – — -",
   "subject.nameInvalid": "이름이 올바르지 않습니다. 문자, 숫자와 일반 구두점을 사용하세요.",
   "subject.descriptionInvalid": "설명에 허용되지 않는 제어 문자가 있거나 500자를 초과합니다.",

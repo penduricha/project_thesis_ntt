@@ -22,10 +22,13 @@ try {
   const { qbankApi } = await server.ssrLoadModule('/src/api/qbankApi.js')
   const { t } = await server.ssrLoadModule('/src/i18n/index.js')
   const { validateSubject } = await server.ssrLoadModule('/src/services/subjectValidation.js')
-  assert.equal(validateSubject({ id: 'A--B', name: 'Môn học', t1: 'Chương 1', dept: '' }).id, 'subject.codeInvalid')
-  assert.equal(validateSubject({ id: 'NET_1', name: 'Mạng máy tính (C++)', t1: 'Chương 1: Tổng quan', dept: '' }).name, undefined)
-  assert.equal(validateSubject({ id: 'NET1', name: 'Cơ sở <script>', t1: 'Chương 1', dept: '' }).name, 'subject.nameInvalid')
-  assert.equal(validateSubject({ id: 'NET1', name: 'Cơ sở', t1: 'Chương 1', dept: 'test\u0001' }).dept, 'subject.descriptionInvalid')
+  const validateCode = id => validateSubject({ id, name: 'Môn học', t1: 'Chương 1', dept: '' }).id
+  for (const code of ['INT3202', 'BAH21399', 'ABC123456']) assert.equal(validateCode(code), undefined, code)
+  for (const code of ['haG8342', '325as', 'fds', 'INT320', 'INT3202000', 'INT-3202', 'INT_3202', ' INT3202', 'INT3202 ', 'INT3202\n', 'ÁBC1234', 'ABC１２３４']) assert.equal(validateCode(code), 'subject.codeInvalid', code)
+  assert.equal(validateCode(''), 'validation.courseIdEmpty')
+  assert.equal(validateSubject({ id: 'NET0101', name: 'Mạng máy tính (C++)', t1: 'Chương 1: Tổng quan', dept: '' }).name, undefined)
+  assert.equal(validateSubject({ id: 'NET0101', name: 'Cơ sở <script>', t1: 'Chương 1', dept: '' }).name, 'subject.nameInvalid')
+  assert.equal(validateSubject({ id: 'NET0101', name: 'Cơ sở', t1: 'Chương 1', dept: 'test\u0001' }).dept, 'subject.descriptionInvalid')
 
   for (const name of ['BaseModal', 'CourseDialog']) {
     const component = (await server.ssrLoadModule(`/src/components/${name}.vue`)).default
@@ -38,9 +41,9 @@ try {
   const Component = (await server.ssrLoadModule('/src/components/CourseDialog.vue')).default
   auth.isAuthenticated = true; auth.isDemo = false; auth.adminId = 7
   S.role = 'admin'; S.dataMode = 'real'; S.status = 'ready'
-  const original = { subjectId: 7, subjectCode: 'DB101', subjectName: 'Cơ sở dữ liệu', description: 'DB', active: true, updatedAt: '2026-01-01T00:00:00.123456Z' }
+  const original = { subjectId: 7, subjectCode: 'DBC0101', subjectName: 'Cơ sở dữ liệu', description: 'DB', active: true, updatedAt: '2026-01-01T00:00:00.123456Z' }
   let db = [original]
-  COURSES.splice(0, COURSES.length, { id: 'DB101', name: original.subjectName, dept: 'DB', subjectId: 7, updatedAt: original.updatedAt, topics: ['Chương 1'], topicIds: [42], active: true })
+  COURSES.splice(0, COURSES.length, { id: 'DBC0101', name: original.subjectName, dept: 'DB', subjectId: 7, updatedAt: original.updatedAt, topics: ['Chương 1'], topicIds: [42], active: true })
   S.q = [{ id: 100, c: 0, tp: 0, text: 'Question', o: ['A', 'B', 'C', 'D'], a: 0, st: 'draft' }]
   qbankApi.subjects = async () => db
   qbankApi.topics = async subjectId => [{ topicId: subjectId === 7 ? 42 : 43, topicName: 'Chương 1' }]
@@ -57,9 +60,18 @@ try {
   await input('#f-cid', 'MẠNG')
   assert.equal(document.querySelector('#subject-code-error').textContent, t('subject.codeInvalid'))
   assert.equal(save().disabled, true); assert.equal(posted, 0)
-  await input('#f-cid', 'db101')
+  await input('#f-cid', 'haG8342')
+  assert.equal(document.querySelector('#subject-code-error').textContent, t('subject.codeInvalid'))
+  await input('#f-cid', 'DBC0101')
   assert.equal(document.querySelector('#subject-code-error').textContent, t('validation.courseIdTaken'))
-  await input('#f-cid', 'NET-101')
+  // A composing input must validate the visible value, not the previous v-model value.
+  const codeEl = document.querySelector('#f-cid')
+  codeEl.dispatchEvent(new dom.window.CompositionEvent('compositionstart', { bubbles: true }))
+  await input('#f-cid', 'fds')
+  assert.equal(document.querySelector('#subject-code-error').textContent, t('subject.codeInvalid'))
+  assert.equal(codeEl.getAttribute('aria-invalid'), 'true')
+  codeEl.dispatchEvent(new dom.window.CompositionEvent('compositionend', { bubbles: true }))
+  await input('#f-cid', 'NET0101')
   await input('#f-cn', 'Tên <script>')
   assert.equal(document.querySelector('#subject-name-error').textContent, t('subject.nameInvalid'))
   await input('#f-cn', 'Mạng máy tính (C++)')
@@ -72,10 +84,10 @@ try {
   qbankApi.createSubject = body => { posted++; createdBody = body; return response.promise }
   save().click(); await vue.nextTick(); assert.equal(save().disabled, true)
   save().click(); assert.equal(posted, 1, 'no duplicate POST')
-  const added = { subjectId: 8, subjectCode: 'NET-101', subjectName: 'Mạng máy tính (C++)', description: null, active: true, updatedAt: '2026-01-01T00:00:01.123456Z' }
+  const added = { subjectId: 8, subjectCode: 'NET0101', subjectName: 'Mạng máy tính (C++)', description: null, active: true, updatedAt: '2026-01-01T00:00:01.123456Z' }
   db = [original, added]; response.resolve(added); await tick(); await tick()
   assert.equal(isOpen.value, false); assert.equal(createdBody.firstTopic, 'Chương 1: Tổng quan')
-  assert.equal(createdBody.subjectCode, 'NET-101'); assert.equal(COURSES[1].topicIds[0], 43)
+  assert.equal(createdBody.subjectCode, 'NET0101'); assert.equal(COURSES[1].topicIds[0], 43)
 
   // Edit keeps its opening version and remains open on a server conflict.
   index.value = 1; isOpen.value = true; await tick()
@@ -121,9 +133,18 @@ try {
 
   // Unknown create response is not retried or reported as a success.
   index.value = -1; isOpen.value = true; await tick()
-  await input('#f-cid', 'X-123'); await input('#f-cn', 'Môn thử')
+  await input('#f-cid', 'XXX0123'); await input('#f-cn', 'Môn thử')
   qbankApi.createSubject = async () => { throw new Error('timeout') }
   save().click(); await tick()
   assert.equal(isOpen.value, true); assert.equal(document.querySelector('#f-e').textContent, t('subject.saveUncertain')); assert.equal(save().disabled, true)
+  // Legacy subjects remain readable, but their invalid codes must be corrected when edited.
+  isOpen.value = false; await tick()
+  COURSES.push({ id: 'legacy1', name: 'Môn cũ', dept: '', subjectId: 9, updatedAt: original.updatedAt, topics: [], topicIds: [], active: true })
+  index.value = COURSES.length - 1; isOpen.value = true; await tick()
+  assert.equal(document.querySelector('#subject-code-error').textContent, t('subject.codeInvalid'))
+  assert.equal(save().disabled, true)
+  await input('#f-cid', 'LEG1234')
+  assert.equal(document.querySelector('#subject-code-error'), null)
+  assert.equal(save().disabled, false)
   console.log('Subject CRUD: live regex, duplicates, payload, version conflict, archive and unknown response passed')
 } finally { app?.unmount(); await server.close(); dom.window.close() }
