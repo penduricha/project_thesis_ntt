@@ -3,6 +3,10 @@
  * 고유명사(NTTU, Moodle, Spring Boot, JWT, Qwen2.5), 오류 코드, 키 이름은 그대로 둡니다.
  */
 export default {
+  "topicPicker.placeholder": "단원 선택 또는 검색",
+  "topicPicker.all": "모든 단원",
+  "topicPicker.open": "단원 목록 열기",
+  "topicPicker.notFound": "일치하는 단원이 없습니다.",
   "subject.codeHint": "영문 대문자 3자 뒤에 숫자 4~6자를 붙여 입력하세요. 예: INT3202",
   "subject.codeInvalid": "영문 대문자 3자와 숫자 4~6자가 필요합니다. 예: INT3202",
   "subject.nameHint": "유니코드 문자, 숫자와 일반 구두점을 사용하세요(최대 200자).  . , ' ’ ( ) & + / # : ; – — -",

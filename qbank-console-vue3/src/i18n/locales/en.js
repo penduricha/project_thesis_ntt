@@ -3,6 +3,10 @@
  * Tên riêng, mã lỗi, phím giữ nguyên. Câu ngắn gọn, tránh dịch máy móc.
  */
 export default {
+  "topicPicker.placeholder": "Select or search chapters",
+  "topicPicker.all": "All chapters",
+  "topicPicker.open": "Open chapter list",
+  "topicPicker.notFound": "No matching chapters found.",
   "subject.codeHint": "Enter 3 uppercase ASCII letters followed by 4–6 digits, e.g. INT3202.",
   "subject.codeInvalid": "Use exactly 3 uppercase letters followed by 4–6 digits, e.g. INT3202.",
   "subject.nameHint": "Use Unicode letters, digits and common punctuation . , ' ’ ( ) & + / # : ; – — - (max 200 characters).",

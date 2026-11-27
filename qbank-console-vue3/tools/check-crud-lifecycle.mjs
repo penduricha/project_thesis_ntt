@@ -118,7 +118,7 @@ try {
   assert.deepEqual(decisions, [10]); assert.equal(S.sug.length, 0); assert.equal(S.q[0].text, 'Revised')
 
   // Actual dialog: 409 and timeout keep the user's edits; timeout blocks accidental retry.
-  for (const name of ['BaseModal', 'CourseCombobox', 'CourseQuestionImport', 'QuestionDialog']) {
+  for (const name of ['BaseModal', 'CourseCombobox', 'TopicCombobox', 'CourseQuestionImport', 'QuestionDialog']) {
     const component = (await server.ssrLoadModule(`/src/components/${name}.vue`)).default
     const { descriptor } = parse(readFileSync(`src/components/${name}.vue`, 'utf8'))
     const script = compileScript(descriptor, { id: `test-${name}` })

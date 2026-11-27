@@ -3,6 +3,10 @@
  * 固有名詞（NTTU、Moodle、Spring Boot、JWT、Qwen2.5）、エラーコード、キー名はそのまま。
  */
 export default {
+  "topicPicker.placeholder": "章を選択または検索",
+  "topicPicker.all": "すべての章",
+  "topicPicker.open": "章の一覧を開く",
+  "topicPicker.notFound": "一致する章がありません。",
   "subject.codeHint": "半角英大文字3文字と数字4〜6桁を続けて入力してください。例：INT3202",
   "subject.codeInvalid": "半角英大文字3文字と数字4〜6桁が必要です。例：INT3202",
   "subject.nameHint": "文字、数字、一般的な句読点を使用できます（最大200文字）。  . , ' ’ ( ) & + / # : ; – — -",

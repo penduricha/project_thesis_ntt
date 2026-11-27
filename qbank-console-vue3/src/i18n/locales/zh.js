@@ -3,6 +3,10 @@
  * 保留：专有名词（NTTU、Moodle、Spring Boot、JWT、Qwen2.5）、错误代码、按键名。
  */
 export default {
+  "topicPicker.placeholder": "选择或搜索章节",
+  "topicPicker.all": "所有章节",
+  "topicPicker.open": "打开章节列表",
+  "topicPicker.notFound": "未找到匹配的章节。",
   "subject.codeHint": "输入 3 个大写英文字母，后接 4–6 位数字，例如 INT3202。",
   "subject.codeInvalid": "必须由 3 个大写英文字母和 4–6 位数字组成，例如 INT3202。",
   "subject.nameHint": "使用 Unicode 字母、数字和常用标点（最多 200 个字符）。  . , ' ’ ( ) & + / # : ; – — -",

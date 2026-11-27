@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, onBeforeUnmount } from 'vue'
+import TopicCombobox from './TopicCombobox.vue'
 import { COURSES, S, subjOk, useRealApi, loadDashboard, beginQuestionMutation } from '../store.js'
 import { qbankApi } from '../api/qbankApi.js'
 import { detailToQuestion, LV_DB } from '../api/mappers.js'
@@ -10,10 +11,13 @@ const props = defineProps({ courseIndex: { type: Number, required: true }, initi
 const emit = defineEmits(['busy', 'dirty', 'success'])
 const course = computed(() => COURSES[props.courseIndex])
 const topic = ref(props.initialTopic), level = ref(1), fileName = ref(''), parsed = ref(null)
+const catalogAtOpen = { subjectId: course.value?.subjectId, topicIds: [...(course.value?.topicIds || [])] }
+const catalogStable = computed(() => course.value?.subjectId === catalogAtOpen.subjectId &&
+  course.value?.topicIds?.[topic.value] === catalogAtOpen.topicIds[topic.value])
 const error = ref(null), busy = ref(false), parsing = ref(false), result = ref(null)
 let fileSequence = 0
 onBeforeUnmount(() => { fileSequence++ })
-const canSave = computed(() => !busy.value && !parsing.value && !result.value && parsed.value?.items.length && !parsed.value.errors.length && course.value?.topicIds?.[topic.value] != null && useRealApi() && S.dataMode === 'real' && subjOk(props.courseIndex))
+const canSave = computed(() => !busy.value && !parsing.value && !result.value && parsed.value?.items.length && !parsed.value.errors.length && course.value?.topicIds?.[topic.value] != null && catalogStable.value && useRealApi() && S.dataMode === 'real' && subjOk(props.courseIndex))
 const jsonExample = '[\n  {"stem":"Question?","optionA":"A","optionB":"B","optionC":"C","optionD":"D","correctLabel":"A","title":"","generalFeedback":""}\n]'
 
 async function selectFile(event) {
@@ -60,11 +64,12 @@ defineExpose({ canSave, save })
   <section class="course-import" data-enter="none">
     <p>{{ $t('courseImport.destination', { course: course ? `${course.id} – ${course.name}` : '' }) }}</p>
     <p class="mut">{{ $t('courseImport.scopeHint') }}</p>
-    <label>{{ $t('course.chapters') }}
-      <select v-model.number="topic" :disabled="busy || !!result">
-        <option v-for="(name, index) in course?.topics || []" :key="index" :value="index">{{ name }}</option>
-      </select>
-    </label>
+    <div class="topic-field">
+      <label for="course-import-topic-input">{{ $t('course.chapters') }}</label>
+      <TopicCombobox uid="course-import-topic" :course="course" :model-value="topic" :disabled="busy || !!result"
+                     @update:model-value="topic = $event" />
+    </div>
+    <p v-if="!catalogStable" class="err" role="alert">{{ $t('crud.catalogChanged') }}</p>
     <p v-if="!course?.topics?.length || course?.topicIds?.[topic] == null" class="err">{{ $t('courseImport.noTopic') }}</p>
     <label>{{ $t('bank.defaultLevel') }}
       <select v-model.number="level" :disabled="busy || !!result">
@@ -116,6 +121,7 @@ defineExpose({ canSave, save })
 </template>
 
 <style scoped>
+.topic-field { display: grid; gap: .35rem; }
 .course-import { display: grid; gap: .8rem; }
 .course-import p { margin: 0; }
 .course-import label { display: grid; gap: .3rem; }

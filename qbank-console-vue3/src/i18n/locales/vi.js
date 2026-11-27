@@ -11,6 +11,10 @@
  *     Qwen2.5), mã lỗi (404), phím (Ctrl, Esc), ký hiệu (·, ‹, ›).
  */
 export default {
+  "topicPicker.placeholder": "Chọn hoặc tìm chương",
+  "topicPicker.all": "Tất cả chương",
+  "topicPicker.open": "Mở danh sách chương",
+  "topicPicker.notFound": "Không tìm thấy chương phù hợp.",
   "subject.codeHint": "Gồm 3 chữ cái ASCII in hoa và 4–6 chữ số liền nhau, ví dụ INT3202.",
   "subject.codeInvalid": "Mã phải gồm đúng 3 chữ cái in hoa và 4–6 chữ số, ví dụ INT3202.",
   "subject.nameHint": "Tên gồm chữ có dấu, số và dấu câu thông dụng . , ' ’ ( ) & + / # : ; – — - (tối đa 200 ký tự).",

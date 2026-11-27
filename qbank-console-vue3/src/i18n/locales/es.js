@@ -1,5 +1,9 @@
 // Español de España: traducciones de la interfaz.
 export default {
+  "topicPicker.placeholder": "Seleccionar o buscar capítulos",
+  "topicPicker.all": "Todos los capítulos",
+  "topicPicker.open": "Abrir lista de capítulos",
+  "topicPicker.notFound": "No se encontraron capítulos.",
   "subject.codeHint": "Escriba 3 letras ASCII mayúsculas seguidas de 4–6 dígitos, p. ej. INT3202.",
   "subject.codeInvalid": "Use exactamente 3 letras mayúsculas seguidas de 4–6 dígitos, p. ej. INT3202.",
   "subject.nameHint": "Use letras Unicode, números y puntuación común (máximo 200 caracteres).  . , ' ’ ( ) & + / # : ; – — -",

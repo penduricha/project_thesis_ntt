@@ -3,6 +3,7 @@ import { reactive, ref, computed, watch, nextTick } from 'vue'
 import BaseModal from './BaseModal.vue'
 import { t } from '../i18n/index.js'
 import CourseCombobox from './CourseCombobox.vue'
+import TopicCombobox from './TopicCombobox.vue'
 import CourseQuestionImport from './CourseQuestionImport.vue'
 import { COURSES, S, code, nowStr, saveQuestion, toast, subjOk } from '../store.js'
 import { LV } from '../data/mock.js'
@@ -66,7 +67,7 @@ const dupStem = computed(() => {
   return S.q.find(x => x.c === f.c && nstem(x.text) === t) || null
 })
 
-function pickCourse(v) { f.c = +v; f.tp = 0; topicTouched.value = true; err.c = ''; err.chips = '' }
+function pickCourse(v) { const next = +v; if (next === f.c) return; f.c = next; f.tp = 0; topicTouched.value = true; err.c = ''; err.chips = '' }
 function importSucceeded({ saved, total }) {
   toast(t('courseImport.saved', { n: saved, total }), 'ok')
   emit('close')
@@ -141,14 +142,11 @@ async function save() {
       <small v-if="err.c" class="fe" role="alert">{{ err.c }}</small>
       <small style="margin-top:.25rem">{{ $t('bank.courseCountHint', { n: COURSES.length }) }}</small>
     </label>
-    <div class="cc-f">{{ $t('course.chapters') }}
-      <div id="cf-chips" class="cc-chips" :class="{ invalid: err.chips }">
-        <template v-if="COURSES[f.c]?.topics.length">
-          <small style="flex:1 1 100%">{{ $t('course.chapterPickHint', { n: COURSES[f.c].topics.length }) }}</small>
-          <button v-for="(x, i) in COURSES[f.c].topics" :key="i" type="button" class="btn sm" :class="{ pri: i === f.tp }" @click="f.tp = i; topicTouched = true; err.chips = ''">{{ x }}</button>
-        </template>
-        <small v-else>{{ $t('course.noTopic') }}</small>
-      </div>
+    <div class="topic-field">
+      <label for="question-topic-input">{{ $t('course.chapters') }}</label>
+      <TopicCombobox uid="question-topic" :course="COURSES[f.c]" :model-value="f.tp" :invalid="!!err.chips"
+                     @update:model-value="v => { f.tp = v; topicTouched = true; err.chips = '' }" />
+      <small v-if="!COURSES[f.c]?.topics.length">{{ $t('course.noTopic') }}</small>
       <small v-if="err.chips" class="fe" role="alert">{{ err.chips }}</small>
     </div>
     <label>{{ $t('bank.level') }}
@@ -173,5 +171,6 @@ async function save() {
 </template>
 
 <style scoped>
+.topic-field { display: grid; gap: .35rem; }
 .import-mode { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 </style>

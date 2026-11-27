@@ -12,7 +12,7 @@ const items = computed(() => {
   const q = typing.value ? norm(text.value.trim()) : ''
   return COURSES.map((c, i) => [c, i]).filter(([c, i]) => subjOk(i) && (props.all || c.active !== false || i === cur.value) && (!q || norm(c.name).includes(q) || norm(c.id).includes(q)))
 })
-function pick(i) { open.value = false; typing.value = false; text.value = COURSES[i]?.name || ''; emit('update:modelValue', i < 0 ? '' : String(i)) }
+function pick(i) { open.value = false; typing.value = false; text.value = COURSES[i]?.name || ''; if (i !== cur.value) emit('update:modelValue', i < 0 ? '' : String(i)) }
 function blur() {
   open.value = false
   const t = norm(text.value.trim()); if (!t) { if (props.all) pick(-1); else { text.value = label(); typing.value = false } return }
