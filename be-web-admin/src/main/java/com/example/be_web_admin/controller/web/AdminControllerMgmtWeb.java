@@ -172,8 +172,7 @@ public class AdminControllerMgmtWeb {
         Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
 
         // 6. Xoay vòng token: xóa refresh token cũ, tạo cặp token mới.
-        //    Lỗi ở bước nào cũng trả 401 kèm thông báo (giống bản mobile). Bản cũ trả 200 với thân rỗng,
-        //    khiến Vue đọc data.accessToken bị TypeError rồi xóa phiên đăng nhập oan.
+        //    Phân biệt từ chối token với lỗi cấp token sau khi đã tiêu thụ token cũ.
         if (!sessions.touch(identity) || !adminTokenService.removeAdminRefreshTokenByJwtToken(jwtToken)) {
             Map<String, Object> responseRemoveFailed = new HashMap<>();
             responseRemoveFailed.put("success", false);
@@ -186,9 +185,9 @@ public class AdminControllerMgmtWeb {
         if (tokenNew == null || tokenNew.isEmpty()) {
             Map<String, Object> responseCreateFailed = new HashMap<>();
             responseCreateFailed.put("success", false);
-            responseCreateFailed.put("message", "Can't create new tokens.");
+            responseCreateFailed.put("message", "Can't create new tokens; refresh state is uncertain.");
             responseCreateFailed.put("data", null);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseCreateFailed);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(responseCreateFailed);
         }
 
         // 7. Trả về Response thành công (HTTP 200 OK)

@@ -50,7 +50,12 @@ public class ChatJwtFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
                 } catch (Exception e) {
-                    log.warn("Chat: không kiểm tra được access token trên Redis: {}", e.getMessage());
+                    log.warn("Chat: không kiểm tra được trạng thái xác thực: {}", e.getMessage());
+                    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"code\":\"AUTH_UNAVAILABLE\",\"message\":\"Authentication temporarily unavailable\"}");
+                    return;
                 }
             }
         }

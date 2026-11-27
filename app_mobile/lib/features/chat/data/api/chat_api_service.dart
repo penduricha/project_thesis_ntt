@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../authenticator/data/service/enrollment_service.dart'
-    show EnrollmentAuth, SecureStorageEnrollmentAuth;
+    show EnrollmentAuth, SecureStorageEnrollmentAuth, AuthenticationUnavailable;
 import '../../../config/network/spring_config_header.dart';
 import '../model/chat_admin_brief.dart';
 import '../model/chat_conversation.dart';
@@ -197,8 +197,9 @@ class ChatApiService {
     }
     try {
       return await _auth.refreshAccessToken();
-    } catch (_) {
-      return null;
+    } on AuthenticationUnavailable catch (failure) {
+      throw ChatApiException(statusCode: failure.network ? null : 503,
+          code: 'AUTH_UNAVAILABLE', message: 'Authentication temporarily unavailable.');
     }
   }
 
@@ -208,6 +209,9 @@ class ChatApiService {
   Future<String?> _readToken() async {
     try {
       return await _auth.accessToken();
+    } on AuthenticationUnavailable catch (failure) {
+      throw ChatApiException(statusCode: failure.network ? null : 503,
+          code: 'AUTH_UNAVAILABLE', message: 'Authentication temporarily unavailable.');
     } catch (_) {
       return null;
     }

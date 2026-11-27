@@ -21,7 +21,7 @@ public class AuthSessionStore {
     public record Identity(Long adminId, Client client, String sessionId) { }
     public enum State { ACTIVE, REVOKED, UNAVAILABLE }
     private static final String TTL = "2592000"; // 30 days, matches refresh-token lifetime
-    // All three keys use the same Redis Cluster hash tag (the admin ID).
+    // All keys use the same Redis Cluster hash tag (the admin ID).
     private static final DefaultRedisScript<Long> OPEN = new DefaultRedisScript<>(
             "if ARGV[1]=='MOBILE' and redis.call('EXISTS',KEYS[2])==1 then return 0 end " +
             "if redis.call('EXISTS',KEYS[1])==1 then return 0 end " +
@@ -39,7 +39,10 @@ public class AuthSessionStore {
     private static final DefaultRedisScript<Long> REVOKE = new DefaultRedisScript<>(
             "if redis.call('GET',KEYS[1]) ~= ARGV[1] then return 0 end " +
             "redis.call('DEL',KEYS[1]); if ARGV[1]=='MOBILE' and redis.call('GET',KEYS[2])==ARGV[2] " +
-            "then redis.call('DEL',KEYS[2],KEYS[3]) end return 1", Long.class);
+            "then redis.call('DEL',KEYS[2],KEYS[3]) end " +
+            "redis.call('SET',KEYS[4],ARGV[1],'EX',ARGV[3]); return 1", Long.class);
+    private static final DefaultRedisScript<Long> REVOKED = new DefaultRedisScript<>(
+            "if redis.call('GET',KEYS[4]) == ARGV[1] then return 1 end return 0", Long.class);
 
     private final StringRedisTemplate redis;
     private final AdminRepository admins;
@@ -82,7 +85,13 @@ public class AuthSessionStore {
 
     public boolean revoke(Identity id) {
         if (!valid(id)) return false;
-        return accepted(redis.execute(REVOKE, keys(id), id.client().name(), id.sessionId()));
+        return accepted(redis.execute(REVOKE, keys(id), id.client().name(), id.sessionId(), TTL));
+    }
+
+    /** Only a session actually revoked by logout has a tombstone; never infer success from absence alone. */
+    public boolean wasRevoked(Identity id) {
+        if (!valid(id)) return false;
+        return accepted(redis.execute(REVOKED, keys(id), id.client().name()));
     }
 
     /** Used on WebSocket sends/sweeps: account lock and session revocation apply after handshake. */
@@ -104,7 +113,8 @@ public class AuthSessionStore {
     }
     private static List<String> keys(Identity id) {
         return List.of("auth:session:{" + id.adminId() + "}:" + id.sessionId(),
-                "auth:mobile:{" + id.adminId() + "}", infoKey(id.adminId()));
+                "auth:mobile:{" + id.adminId() + "}", infoKey(id.adminId()),
+                "auth:revoked:{" + id.adminId() + "}:" + id.sessionId());
     }
     private static String infoKey(Long adminId) { return "auth:mobile-info:{" + adminId + "}"; }
     private static String truncate(String s, int max) { return s == null ? null : s.substring(0, Math.min(s.length(), max)); }

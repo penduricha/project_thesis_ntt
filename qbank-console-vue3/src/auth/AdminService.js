@@ -121,14 +121,23 @@ export class AdminService {
     async getDataToRenewTokens(tokenLogin) {
         assertInstanceOf(tokenLogin, TokenLogin, 'TokenLogin');
 
+        const expectedRefresh = tokenLogin.getRefreshToken();
+        const assertSameSession = () => {
+            if (tokenLogin.getRefreshTokenFromStorage() !== expectedRefresh) {
+                const error = new Error('Session changed while refresh was in flight');
+                error.code = 'AUTH_SESSION_CHANGED';
+                throw error;
+            }
+        };
         let response;
         try {
             response = await this.springConfigHeader
-                .getAPIClientWithHeadersToken(tokenLogin.getRefreshToken())
+                .getAPIClientWithHeadersToken(expectedRefresh)
                 .get(ENDPOINTS.AUTO_LOGIN_REFRESH_TOKEN);
         } catch (error) {
             const status = error.response?.status;
             if (status === HTTP_UNAUTHORIZED) {
+                assertSameSession(); // Another tab may have logged out or rotated the token.
                 this.#clearSession(tokenLogin); // 401: refresh token không còn dùng được
                 return false;
             }
@@ -137,10 +146,9 @@ export class AdminService {
 
         const data = response?.data?.data;
         if (response?.status !== HTTP_OK || !data?.accessToken || !data?.refreshToken) {
-            this.#clearSession(tokenLogin);
-            return false;
+            throw new Error('Invalid refresh response; session state is unknown');
         }
-
+        assertSameSession();
         this.#storeTokens(tokenLogin, data.accessToken, data.refreshToken);
         return true;
     }

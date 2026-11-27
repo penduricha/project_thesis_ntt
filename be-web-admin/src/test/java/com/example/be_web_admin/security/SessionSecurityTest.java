@@ -39,6 +39,21 @@ class SessionSecurityTest {
     }
 
     @Test
+    void retryAfterConfirmedRevokeDoesNotRequireTokenRecordsAndDoesNotTouchOtherSessions() {
+        AdminJwtTokenProvider jwt = mock(AdminJwtTokenProvider.class);
+        AdminTokenService tokens = mock(AdminTokenService.class);
+        AuthSessionStore sessions = mock(AuthSessionStore.class);
+        ChatSessionRegistry sockets = mock(ChatSessionRegistry.class);
+        SessionLogoutService logout = new SessionLogoutService(jwt, tokens, sessions, sockets);
+        when(jwt.parseIdentity("refresh", "REFRESH")).thenReturn(mobile);
+        when(sessions.wasRevoked(mobile)).thenReturn(true);
+        assertTrue(logout.logout(null, "refresh", AuthSessionStore.Client.MOBILE));
+        verifyNoInteractions(tokens, sockets);
+        assertFalse(logout.logout(null, "refresh", AuthSessionStore.Client.WEB));
+        verify(sessions, never()).revoke(any());
+    }
+
+    @Test
     void outboundSocketRejectsRevokedSession() throws Exception {
         AuthSessionStore sessions = mock(AuthSessionStore.class);
         ChatSessionRegistry registry = new ChatSessionRegistry(new ChatProperties(), sessions);

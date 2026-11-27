@@ -117,12 +117,15 @@ class SilentTokenRefresher {
    *                   trang đăng nhập (dùng lúc khởi động app, nơi main.js tự chọn route theo kết quả).
    * @returns {Promise<boolean>} true = đã có access token mới dùng được
    */
-  refreshNow(staleToken = null, { notifyExpired = true } = {}) {
+  refreshNow(staleToken = null, { notifyExpired = true, throwOnUnavailable = false } = {}) {
     if (!this.inflight) {
       this.inflight = this.runExclusive(() => this.doRefresh(staleToken, notifyExpired))
           .finally(() => { this.inflight = null })
     }
-    return this.inflight
+    return this.inflight.catch(error => {
+      if (throwOnUnavailable) throw error
+      return false
+    })
   }
 
   /**
@@ -132,7 +135,7 @@ class SilentTokenRefresher {
    */
   async ensureFresh() {
     if (!this.isReady() || !this.isDue()) return true
-    return this.refreshNow()
+    return this.refreshNow(null, { throwOnUnavailable: true })
   }
 
   /** Web Locks: chỉ 1 tab được gọi refresh tại một thời điểm (refresh token có thể bị xoay vòng). */
@@ -173,11 +176,15 @@ class SilentTokenRefresher {
       return true
     } catch (error) {
       // Lỗi mạng / server tạm thời: giữ phiên, thử lại sau
-      console.warn('Silent refresh failed, will retry:', error)
-      const delay = RETRY_DELAYS_MS[Math.min(this.retryCount++, RETRY_DELAYS_MS.length - 1)]
-      clearTimeout(this.retryTimer)
-      this.retryTimer = setTimeout(() => this.refreshNow(), delay)
-      return false
+      if (error?.code !== 'AUTH_SESSION_CHANGED') {
+        console.warn('Silent refresh failed, will retry:', error)
+        if (this.started) {
+          const delay = RETRY_DELAYS_MS[Math.min(this.retryCount++, RETRY_DELAYS_MS.length - 1)]
+          clearTimeout(this.retryTimer)
+          this.retryTimer = setTimeout(() => this.refreshNow(), delay)
+        }
+      }
+      throw error
     }
   }
 
@@ -210,7 +217,7 @@ export async function retryOn401(sendRequest, tokenLogin) {
   let response = await sendRequest()
   if (response.status !== 401) return response
 
-  const refreshed = await silentRefresher.refreshNow(staleToken)
+  const refreshed = await silentRefresher.refreshNow(staleToken, { throwOnUnavailable: true })
   if (!refreshed) return response // phiên đã hết hoặc đang lỗi mạng: trả 401 gốc cho nơi gọi xử lý
 
   response = await sendRequest()

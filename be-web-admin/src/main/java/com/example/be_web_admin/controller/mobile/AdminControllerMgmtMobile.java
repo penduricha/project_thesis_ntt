@@ -224,8 +224,8 @@ public class AdminControllerMgmtMobile {
         }
         Map<String, Object> tokenNew = adminTokenService.createTokenAdmin(identity);
         if (tokenNew == null || tokenNew.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(errorBody("Can't create new tokens."));
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(errorBody("Can't create new tokens; refresh state is uncertain."));
         }
 
         // 8. Gia hạn phiên mobile theo token mới

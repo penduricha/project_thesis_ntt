@@ -90,6 +90,47 @@ class DefaultUserSecurityTest {
     }
 
     @Test
+    void authenticationStoreFailureReturns503AndDoesNotInvokeProtectedHandler() throws Exception {
+        AdminJwtTokenProvider provider = mock(AdminJwtTokenProvider.class);
+        AdminTokenService tokens = mock(AdminTokenService.class);
+        AdminRepository admins = mock(AdminRepository.class);
+        var webIdentity = new AuthSessionStore.Identity(7L, AuthSessionStore.Client.WEB, "00000000-0000-0000-0000-000000000007");
+        when(provider.parseIdentity("valid", "ACCESS")).thenReturn(webIdentity);
+        when(tokens.findAdminAccessTokenByJwtToken("valid")).thenThrow(new IllegalStateException("offline"));
+        MockHttpServletRequest web = new MockHttpServletRequest(); web.setServletPath("/web/admin/questions");
+        web.addHeader("Authorization", "Bearer valid");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+        new JwtAuthenticationFilter(provider, tokens, admins).doFilter(web, response, chain);
+        assertEquals(503, response.getStatus());
+        assertNull(chain.getRequest());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+
+        when(provider.parseIdentity("valid", "ACCESS")).thenReturn(new AuthSessionStore.Identity(7L, AuthSessionStore.Client.MOBILE, "00000000-0000-0000-0000-000000000007"));
+        MockHttpServletRequest chat = new MockHttpServletRequest(); chat.addHeader("Authorization", "Bearer valid");
+        MockHttpServletResponse chatResponse = new MockHttpServletResponse();
+        MockFilterChain chatChain = new MockFilterChain();
+        new ChatJwtFilter(provider, tokens).doFilter(chat, chatResponse, chatChain);
+        assertEquals(503, chatResponse.getStatus());
+        assertNull(chatChain.getRequest());
+    }
+
+    @Test
+    void roleDatabaseFailureIsNotReportedAsExpiredCredentials() throws Exception {
+        AdminJwtTokenProvider provider = mock(AdminJwtTokenProvider.class);
+        AdminTokenService tokens = mock(AdminTokenService.class);
+        AdminRepository admins = mock(AdminRepository.class);
+        when(provider.parseIdentity("valid", "ACCESS")).thenReturn(new AuthSessionStore.Identity(7L, AuthSessionStore.Client.WEB, "00000000-0000-0000-0000-000000000007"));
+        when(tokens.findAdminAccessTokenByJwtToken("valid")).thenReturn(true);
+        when(admins.findAdminByAdminId(7L)).thenThrow(new IllegalStateException("database offline"));
+        MockHttpServletRequest request = new MockHttpServletRequest(); request.setServletPath("/web/admin/questions");
+        request.addHeader("Authorization", "Bearer valid");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        new JwtAuthenticationFilter(provider, tokens, admins).doFilter(request, response, new MockFilterChain());
+        assertEquals(503, response.getStatus());
+    }
+
+    @Test
     void chatBearerFilterStillAuthenticatesButBasicCredentialsDoNot() throws Exception {
         AdminJwtTokenProvider provider = mock(AdminJwtTokenProvider.class);
         AdminTokenService tokens = mock(AdminTokenService.class);

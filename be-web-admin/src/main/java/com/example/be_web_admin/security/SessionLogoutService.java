@@ -22,10 +22,16 @@ public class SessionLogoutService {
         AuthSessionStore.Identity a = jwt.parseIdentity(access, "ACCESS");
         AuthSessionStore.Identity r = jwt.parseIdentity(refresh, "REFRESH");
         if (a != null && r != null && !a.equals(r)) return false;
-        AuthSessionStore.Identity identity = a != null && tokens.findAdminAccessTokenByJwtToken(access) ? a
-                : r != null && tokens.findAdminRefreshTokenByJwtToken(refresh) ? r : null;
-        if (identity == null || identity.client() != client || !sessions.revoke(identity)) return false;
-        sockets.closeSession(identity);
+        AuthSessionStore.Identity requested = a != null ? a : r;
+        if (requested == null || requested.client() != client) return false;
+        // A signed token can confirm an earlier successful logout only when that exact
+        // session has a server-side tombstone. Absence alone is never proof of success.
+        if (sessions.wasRevoked(requested)) return true;
+        boolean valid = a != null && tokens.findAdminAccessTokenByJwtToken(access)
+                || r != null && tokens.findAdminRefreshTokenByJwtToken(refresh);
+        if (!valid) return false;
+        if (!sessions.revoke(requested)) return sessions.wasRevoked(requested);
+        sockets.closeSession(requested);
         // Session removal is authoritative; token records expire naturally if cleanup fails.
         try { if (access != null) tokens.removeAdminAccessTokenByJwtToken(access); } catch (RuntimeException ignored) { }
         try { if (refresh != null) tokens.removeAdminRefreshTokenByJwtToken(refresh); } catch (RuntimeException ignored) { }
