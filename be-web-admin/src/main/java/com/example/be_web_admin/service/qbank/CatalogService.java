@@ -2,14 +2,28 @@ package com.example.be_web_admin.service.qbank;
 
 import com.example.be_web_admin.dto.qbank.IssueTypeView;
 import com.example.be_web_admin.dto.qbank.SubjectView;
+import com.example.be_web_admin.dto.qbank.SubjectCreateRequest;
+import com.example.be_web_admin.dto.qbank.SubjectUpdateRequest;
+import com.example.be_web_admin.dto.qbank.SubjectArchiveRequest;
+import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.model.jpa.qbank.Subject;
+import com.example.be_web_admin.model.jpa.qbank.Topic;
 import com.example.be_web_admin.dto.qbank.TopicView;
 import com.example.be_web_admin.repository.jpa.ai.IssueTypeRepository;
 import com.example.be_web_admin.repository.jpa.qbank.SubjectRepository;
 import com.example.be_web_admin.repository.jpa.qbank.TopicRepository;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.regex.Pattern;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 /** Danh mục cho các bộ lọc của giao diện: môn, chủ đề, loại lỗi. */
 @Service
@@ -18,13 +32,19 @@ public class CatalogService {
     private final SubjectRepository subjects;
     private final TopicRepository topics;
     private final IssueTypeRepository issueTypes;
+    private final UiStateStore uiState;
+    private final EntityManager entityManager;
 
     public CatalogService(SubjectRepository subjects,
                           TopicRepository topics,
-                          IssueTypeRepository issueTypes) {
+                          IssueTypeRepository issueTypes,
+                          UiStateStore uiState,
+                          EntityManager entityManager) {
         this.subjects = subjects;
         this.topics = topics;
         this.issueTypes = issueTypes;
+        this.uiState = uiState;
+        this.entityManager = entityManager;
     }
 
     @Transactional(readOnly = true)
@@ -32,9 +52,130 @@ public class CatalogService {
         return (includeInactive ? subjects.findAllByOrderBySubjectNameAsc()
                 : subjects.findByIsActiveTrueOrderBySubjectNameAsc())
                 .stream()
-                .map(s -> new SubjectView(s.getSubjectId(), s.getSubjectCode(), s.getSubjectName(),
-                        s.getDescription(), Boolean.TRUE.equals(s.getIsActive())))
+                .map(CatalogService::toView)
                 .toList();
+    }
+
+    // Restrict identifiers without restricting Vietnamese or other Unicode names.
+    private static final Pattern CODE = Pattern.compile("[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*");
+    private static final Pattern NAME = Pattern.compile("[\\p{L}\\p{M}\\p{N}][\\p{L}\\p{M}\\p{N} .,\u0027’()&+/#:;–—-]*");
+
+    @Transactional(readOnly = true)
+    public SubjectView subject(Long id) {
+        return toView(subjects.findById(id).orElseThrow(() -> notFound(id)));
+    }
+
+    @Transactional
+    public SubjectView createSubject(SubjectCreateRequest request, Long adminId) {
+        String code = code(request.subjectCode());
+        String name = name(request.subjectName(), 200, "SUBJECT_NAME_INVALID");
+        String description = description(request.description());
+        String firstTopic = name(request.firstTopic(), 150, "TOPIC_NAME_INVALID");
+        if (subjects.existsBySubjectCodeIgnoreCase(code)) throw duplicateCode();
+        Subject subject = new Subject();
+        subject.setSubjectCode(code);
+        subject.setSubjectName(name);
+        subject.setDescription(description);
+        subject.setIsActive(request.active());
+        subject.setCreatedBy(adminId);
+        subject = subjects.saveAndFlush(subject);
+        Topic topic = new Topic();
+        topic.setSubjectId(subject.getSubjectId());
+        topic.setTopicName(firstTopic);
+        topic.setSortOrder(0);
+        topics.saveAndFlush(topic);
+        entityManager.refresh(subject);
+        evictAfterCommit(subject.getSubjectId());
+        return toView(subject);
+    }
+
+    @Transactional
+    public SubjectView updateSubject(Long id, SubjectUpdateRequest request) {
+        Subject subject = lockSubject(id);
+        assertCurrent(subject, request.expectedUpdatedAt());
+        String code = code(request.subjectCode());
+        String name = name(request.subjectName(), 200, "SUBJECT_NAME_INVALID");
+        String description = description(request.description());
+        if (subjects.existsBySubjectCodeIgnoreCaseAndSubjectIdNot(code, id)) throw duplicateCode();
+        subject.setSubjectCode(code);
+        subject.setSubjectName(name);
+        subject.setDescription(description);
+        subject.setIsActive(request.active());
+        Subject saved = subjects.saveAndFlush(subject);
+        entityManager.refresh(saved);
+        evictAfterCommit(id);
+        return toView(saved);
+    }
+
+    @Transactional
+    public SubjectView archiveSubject(Long id, SubjectArchiveRequest request) {
+        Subject subject = lockSubject(id);
+        assertCurrent(subject, request.expectedUpdatedAt());
+        subject.setIsActive(false);
+        Subject saved = subjects.saveAndFlush(subject);
+        entityManager.refresh(saved);
+        evictAfterCommit(id);
+        return toView(saved);
+    }
+
+    private void evictAfterCommit(Long subjectId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override public void afterCommit() { uiState.evictDashboard(subjectId); }
+            });
+        }
+    }
+
+    private Subject lockSubject(Long id) {
+        return subjects.findForQuestionCreate(id).orElseThrow(() -> notFound(id));
+    }
+
+    private static void assertCurrent(Subject subject, Instant expected) {
+        if (expected == null || !Objects.equals(micros(expected), micros(subject.getUpdatedAt()))) {
+            throw QbankException.conflict("SUBJECT_VERSION_CONFLICT", "Môn học đã thay đổi. Hãy tải lại trước khi sửa.");
+        }
+    }
+
+    private static QbankException notFound(Long id) {
+        return QbankException.notFound("SUBJECT_NOT_FOUND", "Không tìm thấy môn học " + id);
+    }
+
+    private static QbankException duplicateCode() {
+        return QbankException.conflict("SUBJECT_CODE_DUPLICATED", "Mã môn học đã tồn tại.");
+    }
+
+    private static String code(String raw) {
+        String value = raw == null ? "" : raw.strip();
+        if (value.length() > 30 || !CODE.matcher(value).matches()) {
+            throw QbankException.badRequest("SUBJECT_CODE_INVALID", "Mã môn chỉ gồm chữ, số và dấu - hoặc _ giữa các nhóm (tối đa 30 ký tự).");
+        }
+        return value.toUpperCase(Locale.ROOT);
+    }
+
+    private static String name(String raw, int max, String errorCode) {
+        String value = raw == null ? "" : raw.strip().replaceAll(" +", " ");
+        if (value.length() > max || !NAME.matcher(value).matches()) {
+            throw QbankException.badRequest(errorCode, "Tên không hợp lệ hoặc vượt quá " + max + " ký tự.");
+        }
+        return value;
+    }
+
+    private static String description(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String value = raw.strip();
+        if (value.length() > 500 || value.codePoints().anyMatch(c -> Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t')) {
+            throw QbankException.badRequest("SUBJECT_DESCRIPTION_INVALID", "Mô tả không hợp lệ hoặc vượt quá 500 ký tự.");
+        }
+        return value;
+    }
+
+    private static Instant micros(Instant value) {
+        return value == null ? null : value.truncatedTo(ChronoUnit.MICROS);
+    }
+
+    private static SubjectView toView(Subject subject) {
+        return new SubjectView(subject.getSubjectId(), subject.getSubjectCode(), subject.getSubjectName(),
+                subject.getDescription(), Boolean.TRUE.equals(subject.getIsActive()), micros(subject.getUpdatedAt()));
     }
 
     @Transactional(readOnly = true)

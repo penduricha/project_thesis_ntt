@@ -3,6 +3,22 @@
  * 固有名詞（NTTU、Moodle、Spring Boot、JWT、Qwen2.5）、エラーコード、キー名はそのまま。
  */
 export default {
+  "subject.codeHint": "英数字と、区切りとして - または _ を使用できます（最大30文字）。",
+  "subject.codeInvalid": "英数字を使い、- または _ は区切りにのみ使用してください。",
+  "subject.nameHint": "文字、数字、一般的な句読点を使用できます（最大200文字）。  . , ' ’ ( ) & + / # : ; – — -",
+  "subject.nameInvalid": "無効な名前です。文字、数字、一般的な句読点を使用してください。",
+  "subject.descriptionInvalid": "説明に無効な制御文字があるか、500文字を超えています。",
+  "subject.topicRequired": "最初の章を入力してください。",
+  "subject.topicInvalid": "章名が無効か、150文字を超えています。",
+  "subject.saveFailed": "科目を保存できませんでした。",
+  "subject.saveUncertain": "保存結果が不明です。閉じて再読み込みし、再試行前に確認してください。",
+  "subject.versionConflict": "科目が変更されています。再読み込みしてください。",
+  "subject.refreshRequired": "科目のバージョンを確認できません。一覧を再読み込みしてください。",
+  "subject.savedRefreshFailed": "科目は保存されましたが一覧を更新できませんでした。続行前に再読み込みしてください。",
+  "subject.archiveTitle": "「{course}」を無効にしますか？",
+  "subject.archiveDescription": "科目、章、問題、履歴は保持されます。編集画面から再有効化できます。",
+  "subject.archiveButton": "無効にする",
+  "subject.archived": "科目を無効にしました。",
   "crud.decisionUncertain": "判定結果が不明です。再読み込みして確認してください。",
   "crud.taskUnknown": "監視がタイムアウトしました。処理が続いている可能性があります。再送前に状態を確認してください。",
   "crud.catalogChanged": "分類が変更されました。保存前に画面を閉じて再読み込みし、開き直してください。",

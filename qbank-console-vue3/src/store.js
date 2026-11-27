@@ -86,6 +86,7 @@ let sessionGeneration = 0, questionGeneration = 0, dashboardGeneration = 0, sugg
 let questionController = null
 let sessionController = new AbortController()
 const activeWrites = new Set()
+const uncertainSubjects = new Set()
 const sessionStamp = () => sessionGeneration
 const sessionCurrent = stamp => stamp === sessionGeneration && auth.isAuthenticated
 const hasCurrentWrites = () => [...activeWrites].some(key => key.startsWith(`${sessionGeneration}:`))
@@ -99,6 +100,7 @@ function invalidateQuestionReads() {
 export function resetQuestionSession() {
   sessionController.abort(); sessionController = new AbortController()
   sessionGeneration++
+  uncertainSubjects.clear()
   invalidateQuestionReads()
   dashboardGeneration++; suggestionGeneration++
   S.q = []; S.sug = []; S.tasks = []; S.dashboard = null; S.activity = []
@@ -188,6 +190,9 @@ export async function loadQuestions(options = {}) {
       S.q = items; S.dataMode = 'mock'; S.status = 'ready'; return true
     }
     const courses = await fetchCatalog(controller.signal)
+    // UI question/course routes use array indexes; preserve known subject positions on refresh.
+    const previousOrder = new Map(COURSES.map((course, index) => [course.subjectId, index]))
+    courses.sort((a, b) => (previousOrder.get(a.subjectId) ?? Infinity) - (previousOrder.get(b.subjectId) ?? Infinity))
     const items = []
     let page = 0
     for (;;) {
@@ -218,7 +223,7 @@ export async function loadQuestions(options = {}) {
     if (catalogChanged) S.f = blankF(S.f.hideAns)
     COURSES.splice(0, COURSES.length, ...courses)
     S.ci = Math.min(S.ci, Math.max(0, courses.length - 1))
-    S.q = mapped; S.dataMode = 'real'; S.status = 'ready'
+    S.q = mapped; S.dataMode = 'real'; S.status = 'ready'; uncertainSubjects.clear()
     await Promise.all([loadDashboard({ signal: controller.signal }), loadSuggestions({ signal: controller.signal })])
     return current()
   } catch (e) {
@@ -440,7 +445,7 @@ export async function removeQuestions(ids) {
 /* ---------- Hộp thoại ---------- */
 export const nowStr = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) }
 export const openDialog = (kind, props = {}) => {
-  if (auth.isAuthenticated && !auth.isDemo && ['course', 'topics', 'import'].includes(kind)) return toast(tr('crud.catalogUnsupported'), 'wa')
+  if (auth.isAuthenticated && !auth.isDemo && ['topics', 'import'].includes(kind)) return toast(tr('crud.catalogUnsupported'), 'wa')
   S.dlg.n++; S.dlg.kind = kind; S.dlg.props = props
 }
 export const closeDialog = () => { S.dlg.kind = null; S.dlg.props = {} }
@@ -545,25 +550,92 @@ async function deleteQuestion(id) {
 }
 
 /* ---------- Môn học ---------- */
-export function addCourse({ id, name, dept, topic, active }) {
-  COURSES.push({ id, name, dept, topics: [topic || 'Chương 1: Tổng quan'], subjectId: null, topicIds: [null], active }); S.cq = ''
-  logKey('activity.courseAdded', { course: `${id} – ${name}` }, 'ok'); toast(tr('operation.courseSaved'), 'ok')
+// Subject writes are never silently redirected to the local mock in a real session.
+async function persistSubject(operation, subjectId, data, expectedUpdatedAt) {
+  if (!useRealApi() || S.dataMode !== 'real' || S.status !== 'ready') return { ok: false, message: tr('operation.loadFailed') }
+  if (operation !== 'create' && !expectedUpdatedAt) return { ok: false, message: tr('subject.refreshRequired') }
+  const stamp = sessionStamp(), key = `${stamp}:subject:${subjectId ?? 'create'}`
+  if (uncertainSubjects.has(key)) return { ok: false, uncertain: true, message: tr('subject.saveUncertain') }
+  if (activeWrites.has(key)) return { ok: false, message: tr('crud.inProgress') }
+  activeWrites.add(key); invalidateQuestionReads()
+  try {
+    let result
+    if (operation === 'create') {
+      result = await qbankApi.createSubject({ subjectCode: data.id, subjectName: data.name,
+        description: data.dept || null, active: data.active, firstTopic: data.topic })
+    } else if (operation === 'update') {
+      result = await qbankApi.updateSubject(subjectId, { subjectCode: data.id, subjectName: data.name,
+        description: data.dept || null, active: data.active, expectedUpdatedAt })
+    } else {
+      result = await qbankApi.archiveSubject(subjectId, expectedUpdatedAt)
+    }
+    if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+    if (!result || result.subjectId == null || !result.updatedAt) throw new Error('Invalid subject response')
+    invalidateQuestionReads()
+    const index = COURSES.findIndex(c => c.subjectId === result.subjectId)
+    const mapped = subjectToCourse(result)
+    if (index >= 0) {
+      mapped.topics = COURSES[index].topics; mapped.topicIds = COURSES[index].topicIds
+      Object.assign(COURSES[index], mapped)
+    } else COURSES.push(mapped) // Topic IDs are loaded from the server, never fabricated.
+    S.cq = ''
+    activeWrites.delete(key)
+    const refreshed = await loadQuestions()
+    if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+    toast(tr(refreshed ? (operation === 'archive' ? 'subject.archived' : 'operation.courseSaved') : 'subject.savedRefreshFailed'), refreshed ? 'ok' : 'wa')
+    return { ok: true }
+  } catch (e) {
+    if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+    const status = e?.response?.status, code = e?.response?.data?.code
+    const uncertain = !e?.response || status >= 500
+    if (uncertain) uncertainSubjects.add(key)
+    return { ok: false, uncertain, message: uncertain ? tr('subject.saveUncertain')
+      : code === 'SUBJECT_VERSION_CONFLICT' ? tr('subject.versionConflict')
+        : apiErrorMessage(e, tr('subject.saveFailed')) }
+  } finally { activeWrites.delete(key) }
 }
-export function updateCourse(i, { id, name, dept, active }) {
-  const old = { ...COURSES[i] }; Object.assign(COURSES[i], { id, name, dept, active })
+
+export function addCourse({ id, name, dept, topic, active }) {
+  if (useRealApi()) return persistSubject('create', null, { id, name, dept, topic, active })
+  if (auth.isAuthenticated && !auth.isDemo) return { ok: false, message: tr('operation.loadFailed') }
+  COURSES.push({ id, name, dept, topics: [topic], subjectId: null, topicIds: [null], active }); S.cq = ''
+  logKey('activity.courseAdded', { course: `${id} – ${name}` }, 'ok'); toast(tr('operation.courseSaved'), 'ok')
+  return { ok: true }
+}
+export function updateCourse(i, { id, name, dept, active }, snapshot = null) {
+  const course = COURSES[i]
+  if (useRealApi()) {
+    if (!course || !snapshot || course.subjectId !== snapshot.subjectId) return { ok: false, message: tr('subject.refreshRequired') }
+    return persistSubject('update', snapshot.subjectId, { id, name, dept, active }, snapshot.updatedAt)
+  }
+  if (auth.isAuthenticated && !auth.isDemo) return { ok: false, message: tr('operation.loadFailed') }
+  const old = { ...course }; Object.assign(course, { id, name, dept, active })
   logKey('activity.courseUpdated', { old: `${old.id} – ${old.name}`, course: `${id} – ${name}` }, 'info'); toast(tr('operation.courseUpdated'), 'ok')
+  return { ok: true }
 }
 export function deleteCourse(i) {
-  const ids = S.q.filter(q => q.c === i).map(q => q.id), nm = `${COURSES[i].id} – ${COURSES[i].name}`
-  S.q = S.q.filter(q => q.c !== i); S.q.forEach(q => { if (q.c > i) q.c-- })
-  S.sug = S.sug.filter(s => !ids.includes(s.qid)); ids.forEach(id => S.sel.delete(id))
-  COURSES.splice(i, 1); S.ci = 0
-  logKey('activity.courseDeleted', { course: nm, n: ids.length }, 'wa'); toast(tr('operation.courseDeleted', { n: ids.length }), 'wa')
+  if (useRealApi() || (auth.isAuthenticated && !auth.isDemo)) return { ok: false, message: tr('operation.loadFailed') }
+  const course = COURSES[i]
+  if (!course) return { ok: false }
+  course.active = false
+  toast(tr('subject.archived'), 'ok')
+  return { ok: true }
 }
 export function askDeleteCourse(i, after) {
-  if (auth.isAuthenticated && !auth.isDemo) return toast(tr('crud.catalogUnsupported'), 'wa')
   const c = COURSES[i]; if (!c) return
-  openDialog('confirm', { title: tr('operation.deleteCourseTitle', { course: `${c.id} – ${c.name}` }), text: tr('operation.deleteCourseDescription'), cancel: tr('selection.keep'), ok: tr('course.deleteCourse'), danger: true, action: () => { deleteCourse(i); after?.() } })
+  if (useRealApi()) {
+    if (S.dataMode !== 'real') return toast(tr('operation.loadFailed'), 'er')
+    const snapshot = { subjectId: c.subjectId, updatedAt: c.updatedAt }
+    return openDialog('confirm', { title: tr('subject.archiveTitle', { course: `${c.id} – ${c.name}` }),
+      text: tr('subject.archiveDescription'), cancel: tr('selection.keep'), ok: tr('subject.archiveButton'), danger: true,
+      action: async () => {
+        const result = await persistSubject('archive', snapshot.subjectId, null, snapshot.updatedAt)
+        if (result.ok) after?.()
+        else if (!result.abandoned) toast(result.message, 'er')
+      } })
+  }
+  if (auth.isAuthenticated && !auth.isDemo) return toast(tr('operation.loadFailed'), 'er')
+  openDialog('confirm', { title: tr('subject.archiveTitle', { course: `${c.id} – ${c.name}` }), text: tr('subject.archiveDescription'), cancel: tr('selection.keep'), ok: tr('subject.archiveButton'), danger: true, action: () => { if (deleteCourse(i).ok) after?.() } })
 }
 
 /* ---------- Xem xét đề xuất AI (có hoàn tác) ---------- */

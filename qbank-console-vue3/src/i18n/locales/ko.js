@@ -3,6 +3,22 @@
  * 고유명사(NTTU, Moodle, Spring Boot, JWT, Qwen2.5), 오류 코드, 키 이름은 그대로 둡니다.
  */
 export default {
+  "subject.codeHint": "영문자와 숫자, 그룹 사이의 - 또는 _를 사용하세요(최대 30자).",
+  "subject.codeInvalid": "영문자와 숫자를 사용하고 - 또는 _는 그룹 사이에만 사용하세요.",
+  "subject.nameHint": "유니코드 문자, 숫자와 일반 구두점을 사용하세요(최대 200자).  . , ' ’ ( ) & + / # : ; – — -",
+  "subject.nameInvalid": "이름이 올바르지 않습니다. 문자, 숫자와 일반 구두점을 사용하세요.",
+  "subject.descriptionInvalid": "설명에 허용되지 않는 제어 문자가 있거나 500자를 초과합니다.",
+  "subject.topicRequired": "첫 번째 주제를 입력하세요.",
+  "subject.topicInvalid": "주제 이름이 올바르지 않거나 150자를 초과합니다.",
+  "subject.saveFailed": "과목을 저장하지 못했습니다.",
+  "subject.saveUncertain": "저장 결과를 알 수 없습니다. 창을 닫고 다시 불러와 재시도 전에 확인하세요.",
+  "subject.versionConflict": "과목이 변경되었습니다. 편집 전에 다시 불러오세요.",
+  "subject.refreshRequired": "과목 버전을 확인할 수 없습니다. 목록을 다시 불러오세요.",
+  "subject.savedRefreshFailed": "과목은 저장되었으나 목록을 갱신하지 못했습니다. 계속하기 전에 다시 불러오세요.",
+  "subject.archiveTitle": "“{course}”을(를) 비활성화할까요?",
+  "subject.archiveDescription": "과목, 주제, 문항 및 기록은 유지됩니다. 과목을 편집하여 다시 활성화할 수 있습니다.",
+  "subject.archiveButton": "비활성화",
+  "subject.archived": "과목이 비활성화되었습니다.",
   "crud.decisionUncertain": "결정 결과를 알 수 없습니다. 다시 불러와 확인하세요.",
   "crud.taskUnknown": "상태 확인 시간이 초과되었습니다. 작업이 계속 실행 중일 수 있으므로 재전송 전에 확인하세요.",
   "crud.catalogChanged": "목록이 변경되었습니다. 저장 전에 창을 닫고 다시 불러와 편집기를 여세요.",

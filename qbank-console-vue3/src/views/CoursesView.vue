@@ -24,7 +24,7 @@ const focusQ = () => document.getElementById('cq')?.focus()
 <template>
   <div v-if="!COURSES.length" class="empty-box">
     <p class="mut">{{ $t('course.empty') }}</p>
-    <button class="btn pri" @click="openDialog('course', { index: -1 })">{{ $t('course.addFirst') }}</button>
+    <button v-if="S.role === 'admin'" class="btn pri" @click="openDialog('course', { index: -1 })">{{ $t('course.addFirst') }}</button>
   </div>
   <template v-else>
     <div class="csb">
@@ -54,9 +54,9 @@ const focusQ = () => document.getElementById('cq')?.focus()
             <span v-else class="b n">{{ $t('bank.empty') }}</span>
           </span>
         </button>
-        <div class="tcard__foot">
+        <div v-if="S.role === 'admin'" class="tcard__foot">
           <button type="button" class="btn sm" @click="openDialog('course', { index: i })">{{ $t('course.editShort') }}</button>
-          <button type="button" class="btn sm dan" @click="askDeleteCourse(i)">{{ $t('course.deleteShort') }}</button>
+          <button v-if="c.active !== false" type="button" class="btn sm dan" @click="askDeleteCourse(i)">{{ $t('subject.archiveButton') }}</button>
         </div>
       </div>
     </div>

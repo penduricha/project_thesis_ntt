@@ -33,6 +33,22 @@ export const qbankApi = {
     const { data } = await client().get(url('/catalog/subjects'), { ...options, params: { includeInactive } })
     return data
   },
+  async getSubject(subjectId, options = {}) {
+    const { data } = await client().get(url(`/catalog/subjects/${subjectId}`), options)
+    return data
+  },
+  async createSubject(body) {
+    const { data } = await client().post(url('/catalog/subjects'), body)
+    return data
+  },
+  async updateSubject(subjectId, body) {
+    const { data } = await client().put(url(`/catalog/subjects/${subjectId}`), body)
+    return data
+  },
+  async archiveSubject(subjectId, expectedUpdatedAt) {
+    const { data } = await client().delete(url(`/catalog/subjects/${subjectId}`), { data: { expectedUpdatedAt } })
+    return data
+  },
   async topics(subjectId, options = {}) {
     const { data } = await client().get(url(`/catalog/subjects/${subjectId}/topics`), options)
     return data

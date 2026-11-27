@@ -11,6 +11,22 @@
  *     Qwen2.5), mã lỗi (404), phím (Ctrl, Esc), ký hiệu (·, ‹, ›).
  */
 export default {
+  "subject.codeHint": "Mã gồm chữ cái ASCII, số; dấu - hoặc _ chỉ dùng giữa các nhóm (tối đa 30 ký tự).",
+  "subject.codeInvalid": "Mã chỉ được chứa chữ, số và dấu - hoặc _ giữa các nhóm.",
+  "subject.nameHint": "Tên gồm chữ có dấu, số và dấu câu thông dụng . , ' ’ ( ) & + / # : ; – — - (tối đa 200 ký tự).",
+  "subject.nameInvalid": "Tên không hợp lệ: dùng chữ, số và dấu câu thông dụng.",
+  "subject.descriptionInvalid": "Mô tả chứa ký tự điều khiển không hợp lệ hoặc vượt quá 500 ký tự.",
+  "subject.topicRequired": "Vui lòng nhập chương đầu tiên.",
+  "subject.topicInvalid": "Tên chương không hợp lệ hoặc vượt quá 150 ký tự.",
+  "subject.saveFailed": "Không lưu được môn học.",
+  "subject.saveUncertain": "Không xác định được kết quả lưu. Hãy đóng hộp thoại, tải lại và kiểm tra trước khi thử lại.",
+  "subject.versionConflict": "Môn học đã thay đổi. Hãy tải lại trước khi sửa.",
+  "subject.refreshRequired": "Không thể xác định phiên bản môn học. Hãy tải lại danh sách.",
+  "subject.savedRefreshFailed": "Đã lưu môn học, nhưng không tải lại được danh sách. Hãy tải lại trước khi tiếp tục.",
+  "subject.archiveTitle": "Ngừng hoạt động môn “{course}”?",
+  "subject.archiveDescription": "Môn, chương, câu hỏi và lịch sử vẫn được giữ lại. Có thể bật lại bằng chức năng sửa môn.",
+  "subject.archiveButton": "Ngừng hoạt động",
+  "subject.archived": "Đã ngừng hoạt động môn học.",
   "crud.decisionUncertain": "Không xác định được kết quả duyệt. Tải lại và kiểm tra trước khi thử lại.",
   "crud.taskUnknown": "Đã hết thời gian theo dõi; task có thể vẫn đang chạy. Hãy kiểm tra trạng thái trước khi gửi lại.",
   "crud.catalogChanged": "Danh mục đã thay đổi. Hãy đóng hộp thoại, tải lại và mở lại câu hỏi trước khi lưu.",

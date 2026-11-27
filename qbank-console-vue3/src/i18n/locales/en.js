@@ -3,6 +3,22 @@
  * Tên riêng, mã lỗi, phím giữ nguyên. Câu ngắn gọn, tránh dịch máy móc.
  */
 export default {
+  "subject.codeHint": "Use ASCII letters, digits, and - or _ between groups (max 30 characters).",
+  "subject.codeInvalid": "Use letters and digits, with - or _ between groups only.",
+  "subject.nameHint": "Use Unicode letters, digits and common punctuation . , ' ’ ( ) & + / # : ; – — - (max 200 characters).",
+  "subject.nameInvalid": "Invalid name: use letters, digits and common punctuation.",
+  "subject.descriptionInvalid": "The description contains invalid control characters or exceeds 500 characters.",
+  "subject.topicRequired": "Enter the first topic.",
+  "subject.topicInvalid": "The topic name is invalid or exceeds 150 characters.",
+  "subject.saveFailed": "Could not save the subject.",
+  "subject.saveUncertain": "The save result is unknown. Close, reload and check before retrying.",
+  "subject.versionConflict": "The subject has changed. Reload before editing.",
+  "subject.refreshRequired": "Cannot determine the subject version. Reload the list.",
+  "subject.savedRefreshFailed": "The subject was saved, but the list could not be refreshed. Reload before continuing.",
+  "subject.archiveTitle": "Deactivate “{course}”?",
+  "subject.archiveDescription": "The subject, topics, questions and history are retained. You can reactivate it by editing the subject.",
+  "subject.archiveButton": "Deactivate",
+  "subject.archived": "Subject deactivated.",
   "crud.decisionUncertain": "The decision result is unknown. Reload and check before retrying.",
   "crud.taskUnknown": "Polling timed out; the task may still be running. Check its status before submitting again.",
   "crud.catalogChanged": "The catalog changed. Close, reload and reopen the editor before saving.",

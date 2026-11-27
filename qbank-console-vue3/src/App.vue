@@ -233,10 +233,10 @@ async function retryConnection() {
           <div><h1 class="page__title" id="ttl">{{ title }}</h1><p class="page__sub" id="sub">{{ subtitle }}</p></div>
           <div id="pact">
             <button v-if="page === 'dash'" class="btn pri" @click="editQuestion(0)">{{ $t('bank.addQuestion') }}</button>
-            <button v-else-if="page === 'courses'" class="btn pri" @click="openDialog('course', { index: -1 })">{{ $t('course.addCourse') }}</button>
-            <template v-else-if="page === 'course'">
+            <button v-else-if="page === 'courses' && S.role === 'admin'" class="btn pri" @click="openDialog('course', { index: -1 })">{{ $t('course.addCourse') }}</button>
+            <template v-else-if="page === 'course' && S.role === 'admin'">
               <button class="btn sm" @click="openDialog('course', { index: S.ci })">{{ $t('course.editCourse') }}</button>
-              <button class="btn sm dan" @click="askDeleteCourse(S.ci, () => go('courses'))">{{ $t('course.deleteCourse') }}</button>
+              <button v-if="crs?.active !== false" class="btn sm dan" @click="askDeleteCourse(S.ci, () => go('courses'))">{{ $t('subject.archiveButton') }}</button>
             </template>
             <button v-else-if="page === 'moodle'" class="btn pri" @click="openDialog('import')">{{ $t('bank.importMoodle') }}</button>
           </div>

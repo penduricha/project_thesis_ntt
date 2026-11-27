@@ -1,12 +1,14 @@
 package com.example.be_web_admin.exception.qbank;
 
 import com.example.be_web_admin.controller.web.AiJobController;
+import com.example.be_web_admin.controller.web.CatalogController;
 import com.example.be_web_admin.controller.web.DashboardController;
 import com.example.be_web_admin.controller.web.QuestionBankController;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -32,12 +34,18 @@ import java.util.Map;
 @RestControllerAdvice(assignableTypes = {
         QuestionBankController.class,
         DashboardController.class,
-        AiJobController.class})
+        AiJobController.class,
+        CatalogController.class})
 public class QbankExceptionHandler {
 
     @ExceptionHandler(QbankException.class)
     public ResponseEntity<Map<String, Object>> handleQbank(QbankException e) {
         return build(e.getStatus(), e.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleForbidden(AccessDeniedException e) {
+        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", "Bạn không có quyền thực hiện thao tác này.");
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)

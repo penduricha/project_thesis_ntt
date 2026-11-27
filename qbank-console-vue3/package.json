@@ -11,7 +11,8 @@
     "test:login": "node tools/check-login-submit.mjs",
     "test:course-import": "node tools/check-course-import.mjs && node tools/check-course-import-ui.mjs",
     "fix:syntax": "node tools/check-build-syntax.mjs --fix src/",
-    "test:crud-lifecycle": "node tools/check-crud-lifecycle.mjs"
+    "test:crud-lifecycle": "node tools/check-crud-lifecycle.mjs",
+    "test:subject-crud": "node tools/check-subject-crud.mjs"
   },
   "dependencies": {
     "axios": "^1.7.9",

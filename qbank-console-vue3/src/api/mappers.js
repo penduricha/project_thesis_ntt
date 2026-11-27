@@ -41,6 +41,7 @@ export function subjectToCourse(s) {
     subjectId: s.subjectId,
     topicIds: [],
     active: s.active !== false,
+    updatedAt: s.updatedAt ?? null,
   }
 }
 

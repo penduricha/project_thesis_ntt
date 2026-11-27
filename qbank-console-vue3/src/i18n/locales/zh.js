@@ -3,6 +3,22 @@
  * 保留：专有名词（NTTU、Moodle、Spring Boot、JWT、Qwen2.5）、错误代码、按键名。
  */
 export default {
+  "subject.codeHint": "使用字母、数字以及组间的 - 或 _（最多 30 个字符）。",
+  "subject.codeInvalid": "只能使用字母和数字，- 或 _ 只能位于组之间。",
+  "subject.nameHint": "使用 Unicode 字母、数字和常用标点（最多 200 个字符）。  . , ' ’ ( ) & + / # : ; – — -",
+  "subject.nameInvalid": "名称无效：请使用字母、数字和常用标点。",
+  "subject.descriptionInvalid": "描述包含无效控制字符或超过 500 个字符。",
+  "subject.topicRequired": "请输入第一个章节。",
+  "subject.topicInvalid": "章节名称无效或超过 150 个字符。",
+  "subject.saveFailed": "无法保存课程。",
+  "subject.saveUncertain": "保存结果未知。请关闭并重新加载，检查后再重试。",
+  "subject.versionConflict": "课程已更改，请重新加载后再编辑。",
+  "subject.refreshRequired": "无法确定课程版本，请重新加载列表。",
+  "subject.savedRefreshFailed": "课程已保存，但无法刷新列表。请重新加载后继续。",
+  "subject.archiveTitle": "停用“{course}”？",
+  "subject.archiveDescription": "课程、章节、题目及历史记录均会保留。可通过编辑课程重新启用。",
+  "subject.archiveButton": "停用",
+  "subject.archived": "课程已停用。",
   "crud.decisionUncertain": "无法确认审核结果。请重新加载并检查后再重试。",
   "crud.taskUnknown": "轮询超时，任务可能仍在运行。请先检查状态再重新提交。",
   "crud.catalogChanged": "目录已更改。保存前请关闭、重新加载并再次打开编辑器。",
