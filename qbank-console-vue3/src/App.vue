@@ -119,7 +119,7 @@ const onKey = e => {
   if (e.key === '/' && onBank.value && !typing) { e.preventDefault(); document.getElementById('q-srch')?.focus() }
   if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && !S.dlg.kind) {
     if (e.key === '?') { e.preventDefault(); openDialog('keys') }
-    else if (e.key === 'n' && onBank.value) { e.preventDefault(); editQuestion(0, page.value === 'course' ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0 } : {}) }
+    else if (e.key === 'n' && onBank.value) { e.preventDefault(); editQuestion(0, page.value === 'course' ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0, courseScoped: true } : {}) }
   }
 }
 /* ---------- Theo dõi kết nối mạng ----------

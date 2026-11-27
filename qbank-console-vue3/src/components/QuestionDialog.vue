@@ -48,6 +48,7 @@ const dupOpt = computed(() => { const v = f.o.map(x => x.trim().toLowerCase()).f
 
    Backend tương ứng: QuestionService chỉ gọi assertTitleAvailable() trong create(). */
 const isNew = computed(() => !props.id)
+const fixedCourse = computed(() => isNew.value && props.ctx.courseScoped === true)
 const nstem = t => norm(t).replace(/\s+/g, ' ').trim()
 const ntitle = t => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase()
 
@@ -137,11 +138,12 @@ async function save() {
       </template>
       <p id="f-dup" class="warn-inline">{{ dupOpt ? $t('bank.dupOptionWarn') : '' }}</p>
     </div>
-    <label>{{ $t('course.titleCourse') }} <span style="color:var(--danger-strong)">*</span>
+    <div v-if="!fixedCourse" class="course-field">
+      <label for="cf-c">{{ $t('course.titleCourse') }} <span style="color:var(--danger-strong)">*</span></label>
       <CourseCombobox uid="cf" :all="false" :placeholder="$t('course.searchPlaceholder')" :invalid="!!err.c" :model-value="String(f.c)" @update:model-value="pickCourse" />
-      <small v-if="err.c" class="fe" role="alert">{{ err.c }}</small>
-      <small style="margin-top:.25rem">{{ $t('bank.courseCountHint', { n: COURSES.length }) }}</small>
-    </label>
+      <small>{{ $t('bank.courseCountHint', { n: COURSES.length }) }}</small>
+    </div>
+    <small v-if="err.c" class="fe" role="alert">{{ err.c }}</small>
     <div class="topic-field">
       <label for="question-topic-input">{{ $t('course.chapters') }}</label>
       <TopicCombobox uid="question-topic" :course="COURSES[f.c]" :model-value="f.tp" :invalid="!!err.chips"
@@ -171,6 +173,6 @@ async function save() {
 </template>
 
 <style scoped>
-.topic-field { display: grid; gap: .35rem; }
+.topic-field, .course-field { display: grid; gap: .35rem; }
 .import-mode { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 </style>

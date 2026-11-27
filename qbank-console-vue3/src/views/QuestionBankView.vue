@@ -41,7 +41,7 @@ const loc = q => {
 }
 const selAll = on => L.value.forEach(q => (on ? S.sel.add(q.id) : S.sel.delete(q.id)))
 const setPage = () => { S.f.page = 1 }
-const addQ = () => editQuestion(0, isCourse.value ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0, courseImport: true } : {})
+const addQ = () => editQuestion(0, isCourse.value ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0, courseScoped: true, courseImport: true } : {})
 
 /* Đo độ rộng placeholder để ô tìm kiếm không bị cắt chữ (port fitSearch) */
 const srch = ref(null)

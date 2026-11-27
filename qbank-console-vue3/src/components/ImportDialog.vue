@@ -41,9 +41,10 @@ async function save() {
 
 <template>
   <BaseModal :title="$t('bank.importMoodle')" :dirty="dirty" @close="emit('close')">
-    <label>{{ $t('admin.assignedSubjects') }} <span style="color:var(--danger-strong)">*</span>
+    <div class="course-field">
+      <label for="imp-c">{{ $t('admin.assignedSubjects') }} <span style="color:var(--danger-strong)">*</span></label>
       <CourseCombobox uid="imp" :all="false" :placeholder="$t('course.searchPlaceholder')" :model-value="String(S.imp.c)" @update:model-value="pickCourse" />
-    </label>
+    </div>
     <div class="topic-field">
       <label for="import-topic-input">{{ $t('course.chapters') }}</label>
       <TopicCombobox uid="import-topic" :course="crs" :model-value="S.imp.tp" :invalid="!!chipErr"
@@ -76,5 +77,5 @@ async function save() {
 </template>
 
 <style scoped>
-.topic-field { display: grid; gap: .35rem; }
+.topic-field, .course-field { display: grid; gap: .35rem; }
 </style>
