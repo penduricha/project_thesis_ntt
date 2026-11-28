@@ -2,6 +2,7 @@ package com.example.be_web_admin.service.redis.impl;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -27,6 +28,11 @@ public class TwoFaEventServiceImpl {
     private static final long STREAM_TIMEOUT_MS = Duration.ofMinutes(30).toMillis();
     private static final int MAX_STREAMS_PER_ADMIN = 5;
     private static final int HEARTBEAT_SECONDS = 25;
+
+    // Compatibility default for older clients. Enable only after all consumers
+    // have been upgraded to reload status rather than reading the event payload.
+    @Value("${app.totp.sse-invalidation-only:false}")
+    private boolean invalidationOnly;
 
     // Validator is scoped to the original access token/session. Never log it or its closure.
     private record Stream(SseEmitter emitter, BooleanSupplier authorized) {}
@@ -82,8 +88,12 @@ public class TwoFaEventServiceImpl {
         for (Stream stream : list) {
             if (!isAuthorized(stream)) { close(adminId, stream); continue; }
             try {
+                // Invalidation-only mode limits the information in an in-flight
+                // post-revocation event; legacy mode preserves old client behavior.
+                // Neither mode prevents event timing leaking or guarantees delivery.
+                Object payload = invalidationOnly ? Map.of() : Map.of("status", status);
                 stream.emitter().send(SseEmitter.event().name(EVENT_NAME)
-                        .data(Map.of("status", status), MediaType.APPLICATION_JSON));
+                        .data(payload, MediaType.APPLICATION_JSON));
             } catch (Exception e) { close(adminId, stream); }
         }
     }

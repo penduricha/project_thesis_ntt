@@ -44,8 +44,12 @@ Không sửa `deploy/`, không deploy và không áp thay đổi lên CSDL thậ
    tài khoản trước mỗi sự kiện/heartbeat, đóng stream khi xác thực lỗi hoặc store không sẵn sàng.
    Validator giữ bearer token trong bộ nhớ suốt stream (không log), cần rà heap dump, token expiry
    và test Spring/Redis thật. Thu hồi ngay sau lần kiểm tra vẫn có thể race với một send; registry
-   vẫn local từng instance và event có thể mất/sai thứ tự. Chưa xác minh revoke/multi-instance
-   hoặc bảo đảm không có sự kiện in-flight sau logout. Cần test và thiết kế fan-out trước công khai.
+   vẫn local từng instance và event có thể mất/sai thứ tự. Tùy chọn thử nghiệm
+   `app.totp.sse-invalidation-only=true` gửi payload `{}` thay vì status; Vue đã tải lại
+   trạng thái qua API. Mặc định vẫn gửi status để không phá client cũ, nên vẫn có thể lộ
+   status khi revoke race với send. Không bật tùy chọn trước khi kiểm kê/nâng cấp mọi client.
+   Ngay cả invalidation-only vẫn có thể lộ thời điểm và một event in-flight đến sau logout;
+   chưa xác minh revoke/multi-instance. Cần test và thiết kế fan-out trước công khai.
    Web lưu bearer access/refresh trong localStorage (`TokenLogin.js`): XSS có thể lấy token;
    CSP nghiêm ngặt và rà XSS giúp giảm nguy cơ nhưng không thay thế thiết kế BFF/HttpOnly hay
    sender binding. Refresh hiện vẫn có rủi ro mất phiên khi mất response.

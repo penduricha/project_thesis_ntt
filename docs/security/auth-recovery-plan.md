@@ -117,12 +117,12 @@ Không tạo logout tombstone cho phiên bị thay: tombstone hiện chỉ đạ
 
 ## 2FA pending và receipt
 
-### Prototype server confirm-v2 — tắt mặc định, chưa tích hợp
+### Prototype confirm-v2 server + Flutter — tắt mặc định, chưa kiểm chứng
 
 - Có migration đề xuất `be-web-admin/sql/2026-11-23-totp-confirm-receipts.sql` và
   endpoint `/mobile/admin/2fa/enrollment/confirm-v2` sau cờ
   `app.totp.idempotent-confirm-enabled=true`. **Không bật trong production**: migration
-  chưa áp, Java/JUnit chưa chạy, chưa kiểm chứng MariaDB/Redis và mobile chưa gọi API này.
+  chưa áp, Java/JUnit và Flutter test chưa chạy, chưa kiểm chứng MariaDB/Redis hay thiết bị.
   Fence migration vẫn bắt buộc cho activate web; receipt migration không sửa việc thiếu fence.
 - Prototype ghi receipt cùng transaction dự kiến với bật credential và cờ admin; khóa hàng
   admin, kiểm session MOBILE, credential hiện hành và hạn receipt. Retry cùng admin/session,
@@ -130,12 +130,20 @@ Không tạo logout tombstone cho phiên bị thay: tombstone hiện chỉ đạ
   RequestId là 32 byte ngẫu nhiên CSPRNG mã hóa lowercase hex; server chỉ kiểm định dạng,
   không thể kiểm định entropy. Payload MAC dùng khóa TOTP giải mã và domain riêng, không
   lưu OTP hay hash OTP không khóa; không ghi requestId dạng rõ. Đây không phải sender binding.
-- Mobile **chưa lưu requestId và OTP của lần gửi trong secure storage**, chưa gửi confirm-v2
-  hay tự retry. Phải thiết kế xóa dữ liệu và giới hạn thời gian lưu OTP, bảo đảm ghi bền
-  trước gửi và test mất response/restart; dữ liệu pending cũ vẫn theo luồng cũ. Các client
-  khác vẫn gọi endpoint confirm cũ, có thể bật 2FA mà không tạo receipt; không trộn luồng
-  cũ/mới trong rollout cho đến khi có chính sách tương thích. Receipt chỉ hữu ích trong cùng
-  session còn sống và TTL 24 giờ; logout/mất phiên/thiết bị cần phương án khôi phục riêng.
+- Flutter có đường thử nghiệm tắt mặc định bằng `TOTP_CONFIRM_V2` (dart-define). Nó ghi
+  secure storage requestId CSPRNG 32 byte, sessionId và thời điểm tạo trước khi gửi; OTP
+  không được lưu, được tính lại từ khóa staged và thời điểm gốc để gửi lại đúng payload.
+  Metadata chỉ xóa sau khi khóa confirmed đã ghi và đọc lại. Nếu mất response, mở lại màn
+  Authenticator để thử lại cùng credential/session; quá 23 giờ theo đồng hồ máy, đổi session,
+  401/404/409/422/429 hay storage lỗi đều giữ bản chờ, không tự suy ra thành công. Kiểm tra
+  JWT ở Flutter chỉ để tránh mismatch, không xác thực chữ ký và không phải sender binding.
+- Nếu build không bật cờ, metadata v2 cũ không được fallback sang confirm/receipt cũ. Pending
+  cũ không có metadata vẫn dùng receipt cũ; client khác vẫn có thể confirm cũ mà không tạo
+  receipt. Cần kế hoạch nâng cấp/rollback và không trộn luồng khi rollout. Session hết hạn,
+  đổi máy, đồng hồ đổi, mất thiết bị, TTL metadata tại rest và trường hợp OTP hết hạn trước
+  khi request đầu tới server chưa có UX khôi phục hoàn chỉnh. Lưu thời điểm cùng secret cho
+  phép tái tạo OTP cũ: secure storage không bảo vệ thiết bị bị chiếm và cần xem lại backup.
+  Server receipt chỉ dùng trong cùng session còn sống và TTL 24 giờ.
 - Kiểm tra session ở Redis không nguyên tử với DB commit: logout/takeover có thể xảy ra sau
   lần kiểm tra. Audit/SSE chạy sau commit và không có outbox; event có thể mất hoặc đến sai
   thứ tự. Khi DB commit không rõ kết quả phải thử lại đúng payload, không suy luận rollback.

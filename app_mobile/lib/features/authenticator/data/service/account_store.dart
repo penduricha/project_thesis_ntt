@@ -24,6 +24,14 @@ class PendingAccount {
   final AuthAccount account;
 }
 
+/// Metadata for replaying one exact confirmation; no OTP is stored.
+class ConfirmAttempt {
+  const ConfirmAttempt({required this.requestId, required this.sessionId, required this.createdAtMs});
+  final String requestId;
+  final String sessionId;
+  final int createdAtMs;
+}
+
 class AccountStore {
   AccountStore({required this.adminId, FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
@@ -62,6 +70,7 @@ class AccountStore {
   }
 
   String _pendingKey(int credentialId) => 'authenticator_pending_${adminId}_$credentialId';
+  String _attemptKey(int credentialId) => 'authenticator_confirm_v2_${adminId}_$credentialId';
   // Serialize staging operations in this isolate; cross-isolate/process storage is not transactional.
   static Future<void> _stageTail = Future<void>.value();
   static Future<T> _serializeStage<T>(Future<T> Function() work) {
@@ -110,6 +119,56 @@ class AccountStore {
     return result;
   }
 
+  ConfirmAttempt _decodeAttempt(String raw) {
+    final value = jsonDecode(raw);
+    if (value is! Map<String, dynamic> || value['version'] != 1 ||
+        value['requestId'] is! String || !RegExp(r'^[0-9a-f]{64}$').hasMatch(value['requestId'] as String) ||
+        value['sessionId'] is! String ||
+        !RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$').hasMatch(value['sessionId'] as String) ||
+        value['createdAtMs'] is! int || (value['createdAtMs'] as int) <= 0) {
+      throw StateError('Invalid confirmation metadata');
+    }
+    return ConfirmAttempt(requestId: value['requestId'] as String,
+        sessionId: value['sessionId'] as String, createdAtMs: value['createdAtMs'] as int);
+  }
+
+  Future<bool> matchesPending(int credentialId, AuthAccount expected) => _serializeStage(() async {
+    if (credentialId <= 0 || expected.account != adminId || expected.credentialId != credentialId) return false;
+    final raw = await _storage.read(key: _pendingKey(credentialId));
+    if (raw == null) return false;
+    return _sameCredential(AuthAccount.fromJson(jsonDecode(raw) as Map<String, dynamic>), expected);
+  });
+
+  Future<ConfirmAttempt?> loadConfirmAttempt(int credentialId) => _serializeStage(() async {
+    if (credentialId <= 0) throw StateError('Invalid credential');
+    final raw = await _storage.read(key: _attemptKey(credentialId));
+    return raw == null ? null : _decodeAttempt(raw);
+  });
+
+  /// Create and read back immutable retry metadata only after staging the exact key.
+  /// Existing attempts are never overwritten, even after logout, timeout or failure.
+  Future<ConfirmAttempt> prepareConfirmAttempt(int credentialId, AuthAccount account,
+      ConfirmAttempt proposed) => _serializeStage(() async {
+    final staged = await _storage.read(key: _pendingKey(credentialId));
+    if (staged == null || account.account != adminId || account.credentialId != credentialId ||
+        !_sameCredential(AuthAccount.fromJson(jsonDecode(staged) as Map<String, dynamic>), account)) {
+      throw StateError('Pending key changed');
+    }
+    final key = _attemptKey(credentialId);
+    final raw = await _storage.read(key: key);
+    if (raw != null) {
+      final existing = _decodeAttempt(raw);
+      if (existing.sessionId != proposed.sessionId) throw StateError('Confirmation belongs to another session');
+      return existing;
+    }
+    final encoded = jsonEncode({'version': 1, 'requestId': proposed.requestId,
+      'sessionId': proposed.sessionId, 'createdAtMs': proposed.createdAtMs});
+    final checked = _decodeAttempt(encoded);
+    await _storage.write(key: key, value: encoded);
+    if (await _storage.read(key: key) != encoded) throw StateError('Confirmation metadata could not be verified');
+    return checked;
+  });
+
   // Compare all security-relevant parameters, not the display name. Legacy keys
   // without an ID never authorize replacing or clearing another generation.
   static bool _sameCredential(AuthAccount a, AuthAccount b) =>
@@ -138,8 +197,10 @@ class AccountStore {
         if (verified.isEmpty || verified.any((saved) => !_sameCredential(saved, pending))) {
           throw StateError('Confirmed key could not be verified');
         }
-        // A failed delete leaves a recoverable duplicate; never delete before read-back.
+        // Remove the staged key first, after read-back. Deleting metadata first
+        // would let a crash leave a staged v2 attempt looking like a legacy one.
         await _storage.delete(key: _pendingKey(credentialId));
+        await _storage.delete(key: _attemptKey(credentialId));
         return verified;
       });
 

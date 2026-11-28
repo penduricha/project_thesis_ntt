@@ -35,7 +35,9 @@ public class TwoFaEventControllerWeb {
 
     // GET /api/web/admin/2fa/events     Header: Authorization: Bearer <accessToken>
     // Trình duyệt dùng fetch (không dùng EventSource vì EventSource không gắn được header Authorization).
-    // Luồng text/event-stream: "ready" khi nối xong, "2fa-status" {status: PENDING|ENABLED|NOT_ENABLED} khi đổi.
+    // Luồng text/event-stream: "ready" khi nối xong, "2fa-status" khi thay đổi.
+    // Payload legacy chứa status; tùy chọn invalidation-only gửi {} sau khi nâng cấp client.
+    // Client phải GET /2fa/status với phiên hợp lệ, không dựa vào dữ liệu SSE cũ.
     // 401 token sai (thân rỗng, vì produces là event-stream nên không trả JSON).
     @GetMapping(value = "/2fa/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<SseEmitter> events(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -243,8 +244,10 @@ class _PendingParams {
 // ---------------------------------------------------------------------------
 
 class EnrollmentService {
-  EnrollmentService({required EnrollmentAuth auth, Dio? dio})
+  EnrollmentService({required EnrollmentAuth auth, Dio? dio,
+    bool useIdempotentConfirm = const bool.fromEnvironment('TOTP_CONFIRM_V2', defaultValue: false)})
       : _auth = auth,
+        _useIdempotentConfirm = useIdempotentConfirm,
         _dio = dio ??
             Dio(
               BaseOptions(
@@ -276,11 +279,18 @@ class EnrollmentService {
               if (current == null || current.isEmpty || (await _auth.profile())?.adminId != expectedAdmin) {
                 return handler.next(err);
               }
+              final expectedSession = req.extra['expectedSessionId'];
+              if (expectedSession != null && (expectedSession is! String ||
+                  _sessionFromToken(current, expectedAdmin) != expectedSession)) {
+                return handler.next(err);
+              }
               final String? fresh = 'Bearer $current' != sent
                   ? current
                   : await _auth.refreshAccessToken();
               if (fresh != null && fresh.isNotEmpty &&
-                  (await _auth.profile())?.adminId == expectedAdmin) {
+                  (await _auth.profile())?.adminId == expectedAdmin &&
+                  (expectedSession == null || (expectedSession is String &&
+                      _sessionFromToken(fresh, expectedAdmin) == expectedSession))) {
                 req.extra['authRetried'] = true;
                 req.headers['Authorization'] = 'Bearer $fresh';
                 try {
@@ -311,6 +321,33 @@ class EnrollmentService {
 
   final EnrollmentAuth _auth;
   final Dio _dio;
+  final bool _useIdempotentConfirm;
+
+  // JWT decoding here is only a local mismatch guard, never authentication. The
+  // server must still verify the signature, token type, current session and account.
+  static String? _sessionFromToken(String token, String adminId) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final claims = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
+      if (claims is! Map || claims['sub']?.toString() != adminId ||
+          claims['client'] != 'MOBILE' || claims['token_type'] != 'ACCESS') return null;
+      final session = claims['session_id'];
+      if (session is! String || !RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$').hasMatch(session)) return null;
+      return session;
+    } catch (_) { return null; }
+  }
+
+  static String _randomRequestId() {
+    final random = Random.secure();
+    return List.generate(32, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  static bool _attemptWithinWindow(ConfirmAttempt attempt) {
+    final age = DateTime.now().millisecondsSinceEpoch - attempt.createdAtMs;
+    // Conservative local limit, shorter than the server's 24-hour receipt TTL.
+    return age >= 0 && age < const Duration(hours: 23).inMilliseconds;
+  }
 
   // Đầy đủ: /api/mobile/admin/2fa/... (phần /api/mobile nằm trong baseUrl).
   static const String _pendingPath = '/admin/2fa/enrollment/pending';
@@ -363,8 +400,9 @@ class EnrollmentService {
       secret: secret, periodSeconds: pending.periodSeconds, digits: pending.digits,
       algorithm: pending.algorithm, enrolled: true, credentialId: pending.credentialId,
     );
+    final store = AccountStore(adminId: profile.adminId);
     try {
-      await AccountStore(adminId: profile.adminId).stage(pending.credentialId, candidate);
+      await store.stage(pending.credentialId, candidate);
     } catch (_) {
       // Never confirm if the key could not be securely saved and read back.
       throw const EnrollmentException('Could not safely save the pending key on this device.');
@@ -379,8 +417,33 @@ class EnrollmentService {
         (await _auth.profile())?.adminId != profile.adminId) {
       throw const EnrollmentException(_msgSession, messageKey: 'session');
     }
-    // Confirm is tied to the saved generation. An ambiguous result keeps the staged key.
-    await _confirm(confirmToken, code, pending.credentialId, profile.adminId);
+    if (_useIdempotentConfirm) {
+      final session = _sessionFromToken(confirmToken, profile.adminId);
+      if (session == null || pending.digits != 6) {
+        throw const EnrollmentException(_msgSession, messageKey: 'session');
+      }
+      final ConfirmAttempt attempt;
+      try {
+        attempt = await store.prepareConfirmAttempt(pending.credentialId, candidate,
+          ConfirmAttempt(requestId: _randomRequestId(), sessionId: session,
+            createdAtMs: DateTime.now().millisecondsSinceEpoch));
+      } catch (_) {
+        throw const EnrollmentException('Could not safely save the confirmation attempt.');
+      }
+      // Storage may have taken long enough for logout, refresh, or an account switch.
+      final latest = await _accessToken();
+      if (latest == null || _sessionFromToken(latest, profile.adminId) != attempt.sessionId ||
+          (await _auth.profile())?.adminId != profile.adminId || !_attemptWithinWindow(attempt)) {
+        throw const EnrollmentException(_msgSession, messageKey: 'session');
+      }
+      await _confirmV2(latest, candidate, attempt);
+    } else {
+      // Never silently fall back to the old confirm for an unresolved v2 attempt.
+      if (await store.loadConfirmAttempt(pending.credentialId) != null) {
+        throw const EnrollmentException('An earlier confirmation must be reconciled first.');
+      }
+      await _confirm(confirmToken, code, pending.credentialId, profile.adminId);
+    }
 
     return EnrolledKey(
       adminId: profile.adminId,
@@ -452,12 +515,53 @@ class EnrollmentService {
     }
   }
 
-  /// An authenticated receipt only identifies the currently confirmed credential.
-  /// A 404/temporary failure never authorizes deleting a staged secret.
+  Future<void> _confirmV2(String token, AuthAccount account, ConfirmAttempt attempt) async {
+    final credentialId = account.credentialId;
+    if (credentialId == null || credentialId <= 0 || account.digits != 6 ||
+        account.periodSeconds <= 0 || !_attemptWithinWindow(attempt) ||
+        _sessionFromToken(token, account.account) != attempt.sessionId) {
+      throw const EnrollmentException(_msgSession, messageKey: 'session');
+    }
+    // Refuse to send if the staged key was lost before the request. This read is
+    // not atomic with a network request or with other isolates/OS storage changes.
+    if (!await AccountStore(adminId: account.account).matchesPending(credentialId, account)) {
+      throw const EnrollmentException('The staged authenticator key is unavailable.');
+    }
+    // Reproduce the same code using the staged key and original counter; neither
+    // the OTP nor an unkeyed hash of it is stored in the local retry metadata.
+    final code = TotpGenerator.generate(account.secret, period: account.periodSeconds,
+        digits: account.digits, algorithm: account.algorithm,
+        at: DateTime.fromMillisecondsSinceEpoch(attempt.createdAtMs, isUtc: true));
+    final latest = await _accessToken();
+    if (latest == null || _sessionFromToken(latest, account.account) != attempt.sessionId ||
+        (await _auth.profile())?.adminId != account.account) {
+      throw const EnrollmentException(_msgSession, messageKey: 'session');
+    }
+    try {
+      final response = await _dio.post<Map<String, dynamic>>('/admin/2fa/enrollment/confirm-v2',
+        data: {'code': code, 'credentialId': credentialId, 'requestId': attempt.requestId},
+        options: _bearer(latest, account.account, expectedSessionId: attempt.sessionId));
+      final data = response.data?['data'];
+      if (response.statusCode != 200 || response.data?['success'] != true || data is! Map ||
+          data['totpEnabled'] != true || data['credentialId'] != credentialId) {
+        throw const EnrollmentException(_msgServer, messageKey: 'server');
+      }
+    } on DioException catch (e) { throw _map(e); }
+  }
+
+  /// Reconcile a staged key without interpreting a failed or ambiguous request as success.
+  /// A v2 attempt is retried only in the original session; never fall back to v1.
   Future<bool> isConfirmedCredential(int credentialId, AuthAccount account) async {
     try {
+      if (account.credentialId != credentialId) return false;
+      final attempt = await AccountStore(adminId: account.account).loadConfirmAttempt(credentialId);
+      if (attempt != null && !_useIdempotentConfirm) return false;
       final token = await _accessToken();
       if (token == null || token.isEmpty || (await _auth.profile())?.adminId != account.account) return false;
+      if (attempt != null) {
+        await _confirmV2(token, account, attempt);
+        return true;
+      }
       final code = TotpGenerator.generate(account.secret, period: account.periodSeconds,
           digits: account.digits, algorithm: account.algorithm);
       final response = await _dio.post<Map<String, dynamic>>(
@@ -563,8 +667,11 @@ class EnrollmentService {
     return const EnrollmentException(_msgServer, messageKey: 'server');
   }
 
-  Options _bearer(String token, String expectedAdminId) =>
-      Options(headers: {'Authorization': 'Bearer $token'}, extra: {'expectedAdminId': expectedAdminId});
+  Options _bearer(String token, String expectedAdminId, {String? expectedSessionId}) =>
+      Options(headers: {'Authorization': 'Bearer $token'}, extra: {
+        'expectedAdminId': expectedAdminId,
+        if (expectedSessionId != null) 'expectedSessionId': expectedSessionId,
+      });
 
   EnrollmentException _map(DioException e) {
     final status = e.response?.statusCode;
