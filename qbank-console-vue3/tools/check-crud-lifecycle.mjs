@@ -72,6 +72,20 @@ try {
   qbankApi.subjects = async () => [{ subjectId: 7, subjectCode: 'DB', subjectName: 'Database' }]
   qbankApi.listQuestions = async () => ({ content: [listItem(1), listItem(2)], totalPages: 1 })
   await loadQuestions()
+  // Another lecturer's task is hidden as 404; accessible tasks still load.
+  S.q = [{ ...S.q[0], st: 'flag' }, { ...S.q[1], st: 'flag' }]
+  qbankApi.latestSuggestions = async id => {
+    if (id === 1) throw { response: { status: 404, data: { code: 'TASK_NOT_FOUND' } } }
+    return [{ suggestionId: 7, decision: 'pending', targetField: 'stem', originalText: 'Question', proposedText: 'Fixed' }]
+  }
+  await loadSuggestions()
+  assert.equal(S.suggestionsStatus, 'ready')
+  assert.equal(S.sug.length, 1, 'inaccessible task must not hide own suggestions')
+  qbankApi.latestSuggestions = async () => { throw { response: { status: 404, data: { code: 'QUESTION_NOT_FOUND' } } } }
+  await loadSuggestions()
+  assert.equal(S.suggestionsStatus, 'error', 'other errors must not be silently hidden')
+  qbankApi.latestSuggestions = async () => []
+  await loadQuestions()
   const input = { c: 0, tp: 0, text: 'Edited', o: ['A', 'B', 'C', 'D'], a: 0, l: 1, title: '', fb: '' }
   qbankApi.updateQuestion = async () => { throw { response: { status: 409, data: { code: 'VERSION_CONFLICT' } } } }
   const conflict = await saveQuestion(input, 1, 1)

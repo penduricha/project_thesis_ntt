@@ -51,21 +51,16 @@ public class TwoFaEventControllerWeb {
     }
 
     private Long resolveAdminId(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return null;
-        }
-        String jwtToken = authHeader.substring(7);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        String token = authHeader.substring(7);
+        Long adminId = adminJwtTokenProvider.parseAccessTokenAdminId(token);
+        if (adminId == null) return null;
         try {
-            if (!adminJwtTokenProvider.validateAccessToken(jwtToken)) {
-                return null;
-            }
-            if (!adminTokenService.findAdminAccessTokenByJwtToken(jwtToken)) {
-                return null;
-            }
-            return adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
-        } catch (Exception e) {
-            log.warn("Can't resolve adminId from token: {}", e.getMessage());
-            return null;
+            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? adminId : null;
+        } catch (RuntimeException e) {
+            // A store/account outage must not be mistaken for a revoked token.
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "Authentication temporarily unavailable", e);
         }
     }
 }
