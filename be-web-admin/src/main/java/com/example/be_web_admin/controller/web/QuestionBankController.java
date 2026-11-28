@@ -132,8 +132,8 @@ public class QuestionBankController {
 
     /** Đề xuất của lần kiểm định gần nhất — dữ liệu cho bảng duyệt. */
     @GetMapping("/{questionId}/ai-suggestions")
-    public List<AiSuggestionView> suggestions(@PathVariable("questionId") Long questionId) {
-        return questionService.latestSuggestions(questionId);
+    public List<AiSuggestionView> suggestions(@PathVariable("questionId") Long questionId, Authentication authentication) {
+        return questionService.latestSuggestions(questionId, WebPrincipal.adminId(authentication));
     }
 
     /** Gửi kiểm định AI: 202 Accepted + taskId để Vue poll GET /web/admin/ai/jobs/{taskId}. */

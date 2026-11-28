@@ -157,7 +157,15 @@ export async function loadSuggestions(options = {}) {
   try {
     const flagged = S.q.filter(q => q.st === 'flag')
     const loaded = await Promise.all(flagged.map(async q => {
-      const list = await qbankApi.latestSuggestions(q.id, options)
+      let list
+      try {
+        list = await qbankApi.latestSuggestions(q.id, options)
+      } catch (error) {
+        // The server hides another lecturer's task as 404. Keep loading this
+        // user's accessible tasks, but do not hide network or other errors.
+        if (error?.response?.status === 404 && error?.response?.data?.code === 'TASK_NOT_FOUND') return null
+        throw error
+      }
       const pending = (list || []).filter(s => !s.decision || s.decision === 'pending')
       return pending.length ? suggestionsToUi(pending, q, pending[0]?.taskId) : null
     }))

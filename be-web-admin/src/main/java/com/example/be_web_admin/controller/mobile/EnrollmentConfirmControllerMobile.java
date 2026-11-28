@@ -100,13 +100,15 @@ public class EnrollmentConfirmControllerMobile {
 
     private Long resolveAdminId(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
-        String jwt = authHeader.substring(7);
+        String token = authHeader.substring(7);
+        Long adminId = adminJwtTokenProvider.parseAccessTokenAdminId(token);
+        if (adminId == null) return null;
         try {
-            if (!adminJwtTokenProvider.validateAccessToken(jwt)) return null;
-            if (!adminTokenService.findAdminAccessTokenByJwtToken(jwt)) return null;
-            return adminJwtTokenProvider.getAdminIdFromToken(jwt);
-        } catch (Exception e) {
-            return null;
+            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? adminId : null;
+        } catch (RuntimeException e) {
+            // A store/account outage must not be mistaken for a revoked token.
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "Authentication temporarily unavailable", e);
         }
     }
 

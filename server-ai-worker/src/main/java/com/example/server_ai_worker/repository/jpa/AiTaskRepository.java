@@ -86,5 +86,13 @@ public interface AiTaskRepository extends JpaRepository<AiTask, String> {
             LIMIT 100""")
     List<String> findStuckRunningIds(@Param("sec") long sec);
 
+    // Keyset cursor rotates through all pending rows, not just the oldest 100 forever.
+    @Query(nativeQuery = true, value = """
+            SELECT task_id FROM ntt_ai_tasks
+            WHERE status = 'pending' AND created_at < DATE_SUB(UTC_TIMESTAMP(6), INTERVAL 30 SECOND)
+              AND task_id > :cursor
+            ORDER BY task_id LIMIT 100""")
+    List<String> findPendingForRecovery(@Param("cursor") String cursor);
+
     List<AiTask> findTop30ByOrderByCreatedAtDesc();
 }
