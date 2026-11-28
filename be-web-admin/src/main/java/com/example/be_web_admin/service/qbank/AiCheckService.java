@@ -7,7 +7,7 @@ import com.example.be_web_admin.enums.ai.TaskStatusD;
 import com.example.be_web_admin.enums.ai.TaskTypeD;
 import com.example.be_web_admin.enums.Role;
 import com.example.be_web_admin.enums.qbank.QuestionStatusD;
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.ai.AiSuggestion;
 import com.example.be_web_admin.model.jpa.ai.AiTask;
@@ -91,15 +91,15 @@ public class AiCheckService {
     // ghi dòng nào vào MariaDB, nên giữ transaction chỉ tổ giữ kết nối Hikari vô ích.
     public AiJobView submit(Long questionId, Long adminId) {
         Question question = questions.findById(questionId)
-                .orElseThrow(() -> QbankException.notFound("QUESTION_NOT_FOUND",
+                .orElseThrow(() -> QBankException.notFound("QUESTION_NOT_FOUND",
                         "Không tìm thấy câu hỏi " + questionId));
         if (question.getStatus() == QuestionStatusD.ARCHIVED) {
-            throw QbankException.conflict("QUESTION_ARCHIVED", "Câu hỏi đã lưu trữ, không kiểm định.");
+            throw QBankException.conflict("QUESTION_ARCHIVED", "Câu hỏi đã lưu trữ, không kiểm định.");
         }
 
         // D3: task question_check bắt buộc có cặp (question_id, question_revision_id) hợp lệ.
         QuestionRevision revision = revisions.findTopByQuestionIdOrderByRevNoDesc(questionId)
-                .orElseThrow(() -> QbankException.conflict("QUESTION_WITHOUT_REVISION",
+                .orElseThrow(() -> QBankException.conflict("QUESTION_WITHOUT_REVISION",
                         "Câu hỏi chưa có revision nào — không thể kiểm định."));
 
         Optional<AiTask> active = tasks.findFirstByQuestionIdAndTaskTypeAndStatusIn(
@@ -112,7 +112,7 @@ public class AiCheckService {
         }
 
         if (!uiState.tryLockCheck(questionId)) {
-            throw QbankException.tooManyRequests("CHECK_IN_PROGRESS",
+            throw QBankException.tooManyRequests("CHECK_IN_PROGRESS",
                     "Đang gửi yêu cầu kiểm định cho câu này, vui lòng đợi vài giây.");
         }
 
@@ -157,7 +157,7 @@ public class AiCheckService {
     @Transactional(readOnly = true)
     public AiJobView job(String taskId, Long adminId) {
         if (taskId == null || taskId.isBlank()) {
-            throw QbankException.badRequest("TASK_ID_REQUIRED", "Thiếu taskId.");
+            throw QBankException.badRequest("TASK_ID_REQUIRED", "Thiếu taskId.");
         }
         Optional<UiAiJobView> cached = uiState.readJobView(taskId);
         // Kiểm chủ sở hữu TRƯỚC khi trả cache. Bản ghi Redis cũ chưa có adminId (null) thì phải
@@ -169,7 +169,7 @@ public class AiCheckService {
         }
 
         AiTask task = tasks.findById(taskId)
-                .orElseThrow(() -> QbankException.notFound("TASK_NOT_FOUND",
+                .orElseThrow(() -> QBankException.notFound("TASK_NOT_FOUND",
                         "Không tìm thấy task AI " + taskId));
         UiAiJobView fresh = fromTask(task);
         assertOwner(fresh, adminId, taskId);
@@ -192,7 +192,7 @@ public class AiCheckService {
         if (isOwnerOrAdmin(view.getAdminId(), adminId)) {
             return;
         }
-        throw QbankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI " + taskId);
+        throw QBankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI " + taskId);
     }
 
     private boolean isOwnerOrAdmin(Long ownerAdminId, Long requesterAdminId) {
@@ -221,11 +221,11 @@ public class AiCheckService {
     @Transactional(readOnly = true)
     public List<AiSuggestionView> suggestions(String taskId, Long adminId) {
         AiTask task = tasks.findById(taskId)
-                .orElseThrow(() -> QbankException.notFound("TASK_NOT_FOUND",
+                .orElseThrow(() -> QBankException.notFound("TASK_NOT_FOUND",
                         "Không tìm thấy task AI " + taskId));
         // Cùng quy tắc với job(): ai có taskId cũng đọc được nếu không kiểm.
         if (!isOwnerOrAdmin(task.getCreatedBy(), adminId)) {
-            throw QbankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI " + taskId);
+            throw QBankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI " + taskId);
         }
         if (task.getTaskType() != TaskTypeD.QUESTION_CHECK) {
             return List.of();

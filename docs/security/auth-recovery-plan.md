@@ -1,7 +1,98 @@
-# Kế hoạch khôi phục phiên và 2FA — chưa triển khai
+# Kế hoạch khôi phục phiên và 2FA — triển khai một phần, chưa được phát hành
 
-**Trạng thái:** bản thiết kế/chặn rollout, không phải mô tả tính năng đã hoạt động.
-Các thay đổi cần được kiểm thử tích hợp trước khi phát hành. Không áp schema lên DB thật trong lúc phát triển.
+**Trạng thái:** đã có thay đổi thử nghiệm cho staged key và một số race 2FA; toàn bộ nhóm
+chưa hoàn tất, vẫn chặn rollout. Chưa chạy compile/JUnit, Flutter hoặc kiểm thử tích hợp.
+Không áp schema lên DB thật trong lúc phát triển.
+
+## Tiến độ hiện tại
+
+- Mobile ghi khóa chờ riêng theo admin và credentialId rồi đọc kiểm tra trước confirm;
+  confirm mới gửi ID và kiểm nội dung response. Khi mở lại màn hình, có thể đối chiếu
+  credential hiện tại bằng phiên đăng nhập hợp lệ và mã TOTP sinh từ khóa chờ, có giới hạn
+  thử, trước khi khôi phục khóa khi chưa có khóa khác. Đây là đối chiếu trạng thái + bằng
+  chứng TOTP, **không phải receipt idempotent ghi cùng transaction**, không khôi phục được
+  nếu không còn phiên đăng nhập hoặc không mở được màn Authenticator. Khóa chờ không bị
+  xóa khi kết quả mơ hồ; nhập sai một khóa đã lưu chờ có thể phải bắt đầu enrollment mới.
+- Java khóa hàng admin trong transaction activate/cancel/confirm/disable, kiểm lại credential
+  và thời hạn khi confirm, xóa đúng generation khi abort/disable; lượt thử confirm theo ID.
+  Hủy pending DB giờ yêu cầu credentialId, so sánh khi xóa; Vue gửi ID đã hiển thị và tải lại
+  trạng thái sau hủy. Client cũ không gửi ID nhận HTTP 428 và phải nâng cấp. Dọn Redis sau
+  activate và hủy phiên sinh khóa mới dùng generation + Lua, chi tiết bên dưới; login chưa
+  đồng bộ với thay đổi 2FA, SSE còn có thể gửi sự kiện cũ. Không coi #3 đã xong.
+- Đã thêm credentialId vào khóa mobile mới và request disable; khóa legacy thiếu ID vẫn
+  chưa có cách đối chiếu chắc chắn. Confirm không gửi credentialId nay bị từ chối HTTP 428:
+  client cũ phải nâng cấp, không thể hứa tương thích hoàn toàn. ID không chứng minh client đã
+  lưu khóa; cần chiến lược version/rollout, receipt idempotent và kiểm thử nâng cấp.
+- Mã khôi phục: đã thêm migration đề xuất (chưa áp) và primitive server nội bộ tạo bộ mã
+  ngẫu nhiên chỉ lưu hash, kích hoạt sau ACK, giới hạn thử và tiêu thụ một lần bằng DB.
+  Chưa có endpoint, chưa nối vào thiết lập/login, chưa có UI cấp/hiển thị/ACK/khôi phục,
+  audit đầy đủ, hay test DB/Redis; vì vậy người dùng **chưa sử dụng được mã khôi phục**.
+  Không áp migration lên CSDL thật hoặc bật tính năng khi chưa hoàn thành các bước đó.
+- Các API 2FA mobile và web nay kiểm tra loại client trong ACCESS/session trước khi gọi
+  service, đồng thời vẫn kiểm tra token đang hoạt động và trạng thái tài khoản. Client sai
+  loại nhận 401. Đây là phân tách client, **không phải sender binding**; mã Java/JUnit chưa chạy.
+- Đã thêm Lua thử nghiệm so sánh session cũ và consume challenge khi đổi slot mobile,
+  chưa nối API hay tạo challenge. 50 race trên Redis standalone đạt; takeover hoàn chỉnh
+  và refresh nguyên tử/idempotent có sender binding **chưa triển khai**. Không dùng các
+  thay đổi một phần như bằng chứng có thể deploy công khai.
+
+
+## Redis sinh/hủy khóa: lát cắt thử nghiệm
+
+- Khóa v2 riêng cho mỗi admin, không ghi đè phiên READY hoặc CLAIMED. Start trả UUID;
+  Vue gửi UUID đó khi activate/cancel. Activate atomically claim đúng UUID và period,
+  chỉ chủ claim được dọn sau DB commit; cancel cũ không xóa phiên mới hoặc claim đang chạy.
+  Under admin DB lock không thay credential pending còn hạn. Client cũ thiếu UUID nhận 428;
+  phiên Redis đời cũ không được kích hoạt bằng API mới, tự hết TTL. Cần nâng cấp đồng bộ
+  mọi client web, không rolling upgrade trộn server cũ/mới trước khi có thiết kế tương thích.
+- Claim không TTL khi kết quả mơ hồ; đã bổ sung phương án đối soát bằng fence DB và nút
+  Vue nhưng chưa chạy Java hoặc test tích hợp. Không tự xóa claim bằng tay; đối soát an toàn
+  chỉ là thiết kế và mã thử nghiệm cho đến khi qua cổng kiểm thử bên dưới.
+- Lua mới đã chạy Redis standalone 6.2.14 với 100 race start/claim và cancel/claim, cộng
+  kiểm tra stale, owner và period. Đây không phải test Spring/JPA hay cross-store fault
+  injection. Redis mất dữ liệu/eviction/failover, split-brain, DB commit mơ hồ, cleanup lỗi,
+  khôi phục claim và rolling deployment chưa được chứng minh an toàn; vẫn chặn rollout.
+  Đặc biệt Redis và DB không có transaction chung, không tuyên bố exactly-once.
+
+### Đối soát claim bằng fence DB (thử nghiệm, chưa kiểm chứng)
+
+- Migration đề xuất `be-web-admin/sql/2026-11-23-totp-enrollment-fences.sql` chưa được áp.
+  Thiếu bảng này, activate kiểm tra DB trước khi claim và không thể hoạt động; cần migration
+  được duyệt, môi trường DB riêng để test, cùng kế hoạch tương thích/rollback trước rollout.
+- Activate khóa admin, kiểm tra fence và ghi marker COMMITTED cùng transaction với credential.
+  Endpoint web `/2fa/enrollment/reconcile` có rate limit, yêu cầu access session WEB và đúng
+  generation. Nó khóa cùng admin, giữ marker COMMITTED hoặc ghi CANCELLED nếu chưa commit,
+  rồi mới dọn Redis bằng so khớp generation và claim. Worker bị trì hoãn phải kiểm tra fence
+  dưới khóa trước khi ghi. Có audit best-effort, không chứa khóa/claim/OTP; audit chưa được
+  kiểm chứng trong DB thật. Không dùng cùng luồng trong outer transaction.
+- Vue lưu **chỉ UUID generation**, tách từng admin/generation trong localStorage trước khi
+  activate; không lưu khóa TOTP. Sau lỗi/mất response có nút đối soát và xác nhận rõ rằng
+  thao tác có thể hủy activation chưa commit. Nếu đã commit mà khóa hiển thị đã mất, phải
+  kiểm tra trạng thái và có thể cần hủy pending để cài lại. Nếu browser storage bị từ chối,
+  Vue không gửi activation. Các client khác không tự có marker hoặc UI này.
+- Nếu DB commit mơ hồ, không dọn claim và giữ marker để thử lại; nếu Redis không dọn được,
+  DB fence vẫn phải giữ. Không tự xóa fence, kể cả khi credential đã bị hủy/tắt 2FA: replay
+  cũ, Redis snapshot hoặc worker trì hoãn vẫn có thể tồn tại. Chưa có chính sách retention,
+  backup/restore, chống bảng tăng trưởng hoặc khôi phục sau mất/khôi phục DB cũ.
+- **Chưa chạy compile/JUnit hoặc MariaDB+Redis integration/fault injection.** Cần xác nhận
+  JPA/JDBC thực sự cùng transaction, lock và isolation, DB commit timeout, Redis failover,
+  eviction/restore, lỗi từng bước, logout/khóa tài khoản, JPA persistence context và phiên
+  client cũ. Cancel READY hiện vẫn chỉ xóa Redis, chưa có fence DB riêng; rolling upgrade,
+  server cũ, split-brain và khôi phục DB snapshot có thể phá giả định. Chưa tuyên bố an toàn
+  với các trường hợp đó, chưa bật rollout. Vue có unit check marker và build, không thay thế
+  test end-to-end.
+
+### Thử nghiệm lõi takeover (chưa tích hợp)
+
+`mobile-takeover-swap.lua` chỉ là primitive nội bộ, không có endpoint hay Java caller.
+Nó yêu cầu challenge còn TTL, khớp proof hash và hai session ID, rồi so sánh slot cũ trước
+khi hủy session cũ, consume challenge và công bố slot mới sau cùng. Lua không thể tự chứng
+minh đã xác thực mật khẩu/TOTP, đã được người dùng xác nhận, hay client sở hữu khóa; phải
+thực hiện các bước này trong luồng ứng dụng trước khi gọi. Không xem proof hash như sender
+binding. Chưa xử lý cấp/nhận token mới nguyên tử, retry idempotent khi mất response,
+logout/khóa tài khoản, thay đổi 2FA, Redis failover/eviction và audit; do đó tuyệt đối
+không gọi primitive từ endpoint hoặc bật takeover cho người dùng ở trạng thái hiện tại.
+Không tạo logout tombstone cho phiên bị thay: tombstone hiện chỉ đại diện logout thật.
 
 ## Quyết định nghiệp vụ
 

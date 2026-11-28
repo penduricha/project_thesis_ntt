@@ -25,7 +25,7 @@ Module worker AI độc lập được xây dựng sạch sẽ từ `server-ai-d
 
 ## 2. Chạy thử độc lập với `ntt_demo_llm`
 
-1. Sao chép `.env.example` thành `.env` ngay trong `server-ai-worker/` và điền thông số MariaDB + Redis + `JWT_SECRET` (hoặc `AI_INTERNAL_TOKEN`):
+1. Sao chép `.env.example` thành `.env` ngay trong `server-ai-worker/` và điền thông số MariaDB + Redis + `AI_INTERNAL_TOKEN`:
    ```bash
    cp .env.example .env
    ```
@@ -41,11 +41,11 @@ Module worker AI độc lập được xây dựng sạch sẽ từ `server-ai-d
    ```
 4. Mở trang test giao diện:
    - `http://localhost:8082/api/node-colab.html` hoặc `http://localhost:8082/api/demo-eval.html`
-   - Nhập `JWT` (ACCESS token từ `be-web-admin`) hoặc `AI_INTERNAL_TOKEN`, bấm **Kết nối**, sau đó dán cặp `URL` + `TOKEN` từ Colab notebook → **Lưu** và thử `nl_search`, `burst`, hoặc `question_check`.
+   - Hai trang này chỉ dành cho môi trường thử nghiệm cô lập với token thử nghiệm riêng. Không nhập token nội bộ production vào trình duyệt và không công khai cổng worker. Worker không chấp nhận JWT người dùng.
 
 ## 3. Chuyển sang DB chính ER v4 sau này
 
 Khi ghép với `be-web-admin` (Server 1):
 1. Đặt `JPA_DDL_AUTO=validate` và `AI_DEMO_SEED_ISSUE_TYPES=false` trong `.env` (vì SQL migration đã tạo bảng và seed sẵn `ntt_issue_types`).
 2. Đặt `AI_DEMO_CREATED_BY` bằng một `admin_id` thật trong `ntt_admins` (nếu còn dùng endpoint test).
-3. Cấu hình chung `JWT_SECRET` (>= 32 ký tự) với `be-web-admin` và/hoặc `AI_INTERNAL_TOKEN` để mọi endpoint `/web/ai/**` luôn được bảo vệ (`SecurityConfig` + `AiAuthFilter` đã mặc định fail-closed).
+3. Cấu hình `AI_INTERNAL_TOKEN` ngẫu nhiên, riêng và giống nhau cho backend và worker qua biến môi trường an toàn. Không đưa token vào client. API worker chỉ dùng nội bộ; backend phải xác thực, phân quyền và kiểm tra quyền sở hữu trước khi gọi. Các trang demo không thay thế một giao diện quản trị có phân quyền.

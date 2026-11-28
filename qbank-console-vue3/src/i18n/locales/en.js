@@ -702,6 +702,7 @@ export default {
 
   // LLM status and actions
   "llmState.invalidUrl": "Invalid URL. Example: https://example.trycloudflare.com",
+  "llmState.unavailableRealMode": "LLM management is not connected to a real service and is unavailable. Do not enter production tokens or configuration here.",
   "llmState.httpsRequired": "URL must start with https://",
   "llmState.domainWarning": "Not a trycloudflare.com address; Server 2 may reject it.",
   "llmState.checking": "Checking…",
@@ -830,6 +831,16 @@ export default {
   "enrollment.startError": "Could not create the secret key. Try again.",
   "enrollment.activateError": "Could not activate. Try again.",
   "enrollment.alreadyEnabled": "Two-factor authentication is already enabled.",
+  "enrollment.inProgress": "An enrollment already exists or two-factor authentication is enabled. Check the status or wait for the session to expire.",
+  "enrollment.updateRequired": "The app or server does not support safe 2FA enrollment sessions. Update and reload; do not continue with the old key.",
+  "enrollment.recoveryStorageError": "The browser could not save the recovery marker. Activation was not sent.",
+  "enrollment.reconcileTitle": "Reconcile 2FA setup",
+  "enrollment.reconcileConfirm": "This may cancel an unfinished activation. If it was saved, the current status will be reloaded. Continue?",
+  "enrollment.reconcileAction": "Reconcile",
+  "enrollment.reconcileHint": "An activation on this browser has an uncertain outcome.",
+  "enrollment.reconcileFailed": "Could not reconcile. Keep the current state and retry later.",
+  "enrollment.reconcileCommitted": "Activation was saved. Check the status; if the unsaved key was lost, cancel the pending setup and start again.",
+  "enrollment.reconcileCancelled": "The uncommitted activation was fenced. Check the status before starting again.",
   "enrollment.secretExpired": "The secret key has expired (5 minutes). Select Retry to create a new key.",
   "enrollment.statusError": "Could not read the two-factor authentication status.",
 

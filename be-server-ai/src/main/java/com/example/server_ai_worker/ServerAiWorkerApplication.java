@@ -30,8 +30,8 @@ public class ServerAiWorkerApplication {
     public static void main(String[] args) {
         String envDir = Files.isRegularFile(Path.of(".env"))
                 ? "./"
-                : Files.isRegularFile(Path.of("server-ai-worker/.env"))
-                        ? "server-ai-worker"
+                : Files.isRegularFile(Path.of("be-server-ai/.env"))
+                        ? "be-server-ai"
                         : "./";
         Dotenv dotenv = Dotenv.configure()
                 .directory(envDir)
@@ -40,7 +40,7 @@ public class ServerAiWorkerApplication {
         dotenv.entries(Dotenv.Filter.DECLARED_IN_ENV_FILE).forEach(entry -> {
             String key = entry.getKey();
             String val = entry.getValue();
-            if (System.getProperty(key) == null && (System.getenv(key) == null || !val.isEmpty())) {
+            if (System.getProperty(key) == null && System.getenv(key) == null) {
                 System.setProperty(key, val);
             }
         });

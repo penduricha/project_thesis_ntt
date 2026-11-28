@@ -67,8 +67,8 @@ import java.util.List;
  * </pre>
  */
 @Slf4j
-@Component
-public class QbankDataInitializer {
+@Component("qbankDataInitializer")
+public class QBankDataInitializer {
 
     /**
      * Số câu hỏi cho MỖI MÔN (không phải mỗi chương).
@@ -99,7 +99,7 @@ public class QbankDataInitializer {
      */
     private Long creatorAdminId;
 
-    public QbankDataInitializer(AdminRepository adminRepository,
+    public QBankDataInitializer(AdminRepository adminRepository,
                                 SubjectRepository subjects,
                                 TopicRepository topics,
                                 QuestionRepository questions,

@@ -1,8 +1,8 @@
 package com.example.be_web_admin.qbank;
 
 import com.example.be_web_admin.controller.web.QuestionBankController;
-import com.example.be_web_admin.exception.qbank.QbankException;
-import com.example.be_web_admin.exception.qbank.QbankExceptionHandler;
+import com.example.be_web_admin.exception.qbank.QBankException;
+import com.example.be_web_admin.exception.qbank.QBankExceptionHandler;
 import com.example.be_web_admin.service.qbank.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -21,12 +21,12 @@ class PrioritySafetyControllerTest {
         UiStateStore state = mock(UiStateStore.class);
         QuestionBankController controller = new QuestionBankController(mock(QuestionService.class),
                 mock(QuestionImportService.class), mock(AiCheckService.class), state);
-        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new QbankExceptionHandler()).build();
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new QBankExceptionHandler()).build();
         var principal = UsernamePasswordAuthenticationToken.authenticated(13L, "", List.of());
-        doThrow(QbankException.serviceUnavailable("DRAFT_UNAVAILABLE", "unavailable"))
+        doThrow(QBankException.serviceUnavailable("DRAFT_UNAVAILABLE", "unavailable"))
                 .when(state).saveDraft(eq(13L), anyString(), any());
         when(state.readDraft(eq(13L), anyString()))
-                .thenThrow(QbankException.serviceUnavailable("DRAFT_UNAVAILABLE", "unavailable"));
+                .thenThrow(QBankException.serviceUnavailable("DRAFT_UNAVAILABLE", "unavailable"));
         mvc.perform(put("/web/admin/questions/draft").principal(principal)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"stem\":\"question\"}"))
                 .andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.code").value("DRAFT_UNAVAILABLE"));
@@ -39,7 +39,7 @@ class PrioritySafetyControllerTest {
         QuestionService questions = mock(QuestionService.class);
         QuestionBankController controller = new QuestionBankController(questions,
                 mock(QuestionImportService.class), mock(AiCheckService.class), mock(UiStateStore.class));
-        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new QbankExceptionHandler()).build();
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new QBankExceptionHandler()).build();
         when(questions.latestSuggestions(10L, 13L)).thenReturn(List.of());
         mvc.perform(get("/web/admin/questions/10/ai-suggestions")
                         .principal(UsernamePasswordAuthenticationToken.authenticated(13L, "", List.of())))

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+    show kIsWeb, kReleaseMode, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Đọc toàn bộ cấu hình mạng từ file .env.
@@ -68,8 +68,29 @@ class NetworkConfiguration {
   static Duration get receiveTimeout => _seconds('RECEIVE_TIMEOUT_SECONDS', 15);
 
   // ---------- Base URL ----------
-  static String requestSpringBoot() =>
-      '$springProtocol://$springHost:$springPort$apiPrefix';
+  static String requestSpringBoot() {
+    final url = '$springProtocol://$springHost:$springPort$apiPrefix';
+    if (kReleaseMode) {
+      // The bundled .env is public configuration, not a place for credentials.
+      // Never silently fall back to an emulator address or plaintext in release.
+      if (_str('SPRING_PROTOCOL', '').isEmpty || _str('SPRING_HOST', '').isEmpty ||
+          !isSafeReleaseSpringUrl(url)) {
+        throw StateError('Release requires an explicit HTTPS Spring host');
+      }
+    }
+    return url;
+  }
+
+  /// Structural validation only; the platform TLS stack must still validate certificates.
+  static bool isSafeReleaseSpringUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.scheme != 'https' || !uri.hasAuthority ||
+        uri.host.isEmpty || uri.userInfo.isNotEmpty || uri.hasQuery || uri.hasFragment ||
+        uri.port < 1 || uri.port > 65535) return false;
+    final host = uri.host.toLowerCase();
+    return host != 'localhost' && !host.endsWith('.localhost') &&
+        host != '127.0.0.1' && host != '::1' && host != '10.0.2.2';
+  }
 
   static String requestNodeJS() =>
       '$nodeJsProtocol://$nodeJsHost:$nodeJsPort$nodeJsApiPrefix';

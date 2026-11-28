@@ -1,6 +1,8 @@
 package com.example.be_web_admin.controller.web;
 
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
+import com.example.be_web_admin.security.AuthSessionStore;
+import com.example.be_web_admin.security.EnrollmentGenerationStore;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import com.example.be_web_admin.service.redis.impl.EnrollSessionServiceImpl;
 import com.example.be_web_admin.service.redis.impl.EnrollSessionServiceImpl.StartedEnrollment;
@@ -37,7 +39,7 @@ public class EnrollSessionControllerWeb {
 
     // POST /api/web/admin/2fa/enrollment     Header: Authorization: Bearer <accessToken>
     // Body (không bắt buộc): { "periodSeconds": 30 }   (15 | 30 | 45 | 60, mặc định 30)
-    // 201: { success, message, data: { secretKey, periodSeconds, expiresInSeconds } }
+    // 201: { success, message, data: { secretKey, periodSeconds, expiresInSeconds, generation } }
     // 400 period sai | 401 token sai | 409 admin đã bật 2FA
     @PostMapping("/2fa/enrollment")
     public ResponseEntity<?> startEnrollment(
@@ -61,6 +63,7 @@ public class EnrollSessionControllerWeb {
 
             Map<String, Object> data = new HashMap<>();
             data.put("secretKey", started.secretKey());
+            data.put("generation", started.generation());
             data.put("periodSeconds", started.periodSeconds());
             data.put("expiresInSeconds", started.expiresInSeconds());
 
@@ -69,6 +72,8 @@ public class EnrollSessionControllerWeb {
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
                     .body(successBody("Secret key generated.", data));
 
+        } catch (EnrollmentGenerationStore.BusyException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorBody("Enrollment is being processed."));
         } catch (TotpAlreadyEnabledException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(errorBody("2FA is already enabled."));
@@ -79,12 +84,13 @@ public class EnrollSessionControllerWeb {
         }
     }
 
-    // DELETE /api/web/admin/2fa/enrollment   Header: Authorization: Bearer <accessToken>
-    // Luôn 200 nếu token hợp lệ (xóa lần hai cũng không lỗi). Chỉ xóa khóa chờ ở Redis;
+    // DELETE /api/web/admin/2fa/enrollment?generation=...   Header: Authorization: Bearer <accessToken>
+    // Chỉ xóa đúng generation còn READY; CLAIMED trả 409. Chỉ xóa khóa chờ ở Redis;
     // phần đã ghi MariaDB (chờ xác nhận) xóa bằng DELETE /2fa/enrollment/pending ở EnrollmentController.
     @DeleteMapping("/2fa/enrollment")
     public ResponseEntity<?> cancelEnrollment(
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "generation", required = false) String generation) {
 
         Long adminId = resolveAdminId(authHeader);
         if (adminId == null) {
@@ -92,10 +98,15 @@ public class EnrollSessionControllerWeb {
                     .body(errorBody("Token is missing, invalid or expired."));
         }
 
-        boolean deleted = enrollSessionService.cancelEnrollment(adminId);
-        return ResponseEntity.ok(successBody(
-                deleted ? "Enrollment cancelled." : "No pending enrollment.",
-                Map.of("deleted", deleted)));
+        if (!EnrollmentGenerationStore.validGeneration(generation)) {
+            return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED).body(errorBody("Valid generation required; update the client."));
+        }
+        try {
+            boolean deleted = enrollSessionService.cancelEnrollment(adminId, generation);
+            return ResponseEntity.ok(successBody(deleted ? "Enrollment cancelled." : "No matching enrollment.", Map.of("deleted", deleted)));
+        } catch (EnrollmentGenerationStore.BusyException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorBody("Enrollment is being processed."));
+        }
     }
 
     // ===================== HÀM HỖ TRỢ =====================
@@ -105,17 +116,13 @@ public class EnrollSessionControllerWeb {
             return null;
         }
         String jwtToken = authHeader.substring(7);
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(jwtToken, "ACCESS");
+        if (identity == null || identity.client() != AuthSessionStore.Client.WEB) return null;
         try {
-            if (!adminJwtTokenProvider.validateAccessToken(jwtToken)) {
-                return null;
-            }
-            if (!adminTokenService.findAdminAccessTokenByJwtToken(jwtToken)) {
-                return null;
-            }
-            return adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
-        } catch (Exception e) {
-            log.warn("Can't resolve adminId from token: {}", e.getMessage());
-            return null;
+            return adminTokenService.findAdminAccessTokenByJwtToken(jwtToken) ? identity.adminId() : null;
+        } catch (RuntimeException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "Authentication temporarily unavailable", e);
         }
     }
 

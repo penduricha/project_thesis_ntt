@@ -12,11 +12,13 @@ import com.example.be_web_admin.service.jpa.impl.AuthAuditService;
 import com.example.be_web_admin.service.redis.impl.EnrollmentServiceImpl.AdminNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 /** Giai đoạn 3 của cài 2FA: app mobile nhập đúng khóa, gửi mã 6 số đầu tiên để xác nhận. */
 @Slf4j
@@ -25,8 +27,13 @@ public class EnrollmentConfirmServiceImpl {
 
     private static final int CLOCK_SKEW_WINDOW = 1; // +-1 chu kỳ
     private static final String ATTEMPTS_KEY_PREFIX = "enroll_confirm_attempts:";
+    // Increment and TTL must be one Redis operation. Repair keys left without TTL by older code.
+    private static final DefaultRedisScript<Long> REGISTER_ATTEMPT = new DefaultRedisScript<>(
+            "local n=redis.call('INCR',KEYS[1]); " +
+            "if redis.call('TTL',KEYS[1]) == -1 then redis.call('EXPIRE',KEYS[1],ARGV[1]) end; return n",
+            Long.class);
 
-    public record PendingParams(String algorithm, int digits, int periodSeconds, long expiresInSeconds) {
+    public record PendingParams(Long credentialId, String algorithm, int digits, int periodSeconds, long expiresInSeconds) {
     }
 
     public static class NoPendingEnrollmentException extends RuntimeException {
@@ -70,7 +77,7 @@ public class EnrollmentConfirmServiceImpl {
     /** App cần biết chu kỳ/số chữ số trước khi sinh mã (khóa Base32 không chứa các thông số này). Không trả khóa. */
     public PendingParams getPendingParams(Long adminId) {
         TotpCredential c = findPending(adminId);
-        return new PendingParams(c.getAlgorithm(), c.getDigits(), c.getPeriodSeconds(), secondsLeft(c));
+        return new PendingParams(c.getCredentialId(), c.getAlgorithm(), c.getDigits(), c.getPeriodSeconds(), secondsLeft(c));
     }
 
     /**
@@ -78,11 +85,18 @@ public class EnrollmentConfirmServiceImpl {
      * @throws TooManyAttemptsException nhập sai quá số lần: phần cài dở đã bị xóa, admin phải cài lại.
      */
     public boolean confirm(Long adminId, String code, String ip, String userAgent) {
+        return confirm(adminId, null, code, ip, userAgent);
+    }
+
+    public boolean confirm(Long adminId, Long expectedCredentialId, String code, String ip, String userAgent) {
         TotpCredential c = findPending(adminId);
+        if (expectedCredentialId != null && !expectedCredentialId.equals(c.getCredentialId())) {
+            throw new NoPendingEnrollmentException();
+        }
 
         // Đếm TRƯỚC khi kiểm tra mã: nhiều request song song vẫn không vượt được giới hạn.
-        if (registerAttempt(adminId) > totpProperties.getConfirmMaxAttempts()) {
-            abortEnrollment(adminId);
+        if (registerAttempt(adminId, c.getCredentialId()) > totpProperties.getConfirmMaxAttempts()) {
+            abortEnrollment(adminId, c.getCredentialId());
             auditService.log(adminId, AuthEvent.TOTP_ENROLL_CONFIRM_FAILED, false, ip, userAgent,
                     "too many attempts, pending enrollment removed");
             throw new TooManyAttemptsException();
@@ -107,14 +121,19 @@ public class EnrollmentConfirmServiceImpl {
         }
 
         Boolean changed = transactionTemplate.execute(status -> {
-            TotpCredential fresh = totpCredentialRepository.findById(c.getCredentialId())
-                    .orElseThrow(NoPendingEnrollmentException::new);
-            Admin admin = adminRepository.findAdminByAdminId(adminId);
+            Admin admin = adminRepository.findForTotpUpdate(adminId);
             if (admin == null) {
                 throw new AdminNotFoundException(adminId);
             }
-            if (Boolean.TRUE.equals(fresh.getConfirmed())) {
-                return false; // gọi lần hai: đã xác nhận rồi, không ghi đè confirmedAt
+            // The pending generation may have been canceled/replaced while the code was checked.
+            TotpCredential fresh = totpCredentialRepository
+                    .findFirstByAdmin_AdminIdAndConfirmedFalseOrderByCreatedAtDesc(adminId)
+                    .filter(pending -> pending.getCredentialId().equals(c.getCredentialId()))
+                    .orElseThrow(NoPendingEnrollmentException::new);
+            if (secondsLeft(fresh) <= 0) throw new ConfirmExpiredException();
+            if (!Boolean.FALSE.equals(admin.getTotpEnabled()) || totpCredentialRepository
+                    .findFirstByAdmin_AdminIdAndConfirmedTrueOrderByConfirmedAtDesc(adminId).isPresent()) {
+                throw new NoPendingEnrollmentException();
             }
             Instant now = Instant.now();
             fresh.setConfirmed(true);
@@ -136,7 +155,24 @@ public class EnrollmentConfirmServiceImpl {
         return true;
     }
 
-    /** Xóa bộ đếm nhập sai (gọi khi xác nhận thành công, cài lại hoặc hủy). Lỗi Redis chỉ ghi cảnh báo. */
+    /** Reconcile only after proving possession of the secret for this exact active credential. */
+    public boolean verifyConfirmedGeneration(Long adminId, Long credentialId, String code) {
+        if (credentialId == null || credentialId <= 0 || code == null || !code.matches("[0-9]{6}")) return false;
+        return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+            Admin admin = adminRepository.findForTotpUpdate(adminId);
+            if (admin == null || !Boolean.TRUE.equals(admin.getTotpEnabled())) return false;
+            TotpCredential c = totpCredentialRepository.findFirstByAdmin_AdminIdAndConfirmedTrueOrderByConfirmedAtDesc(adminId)
+                    .filter(found -> credentialId.equals(found.getCredentialId())).orElse(null);
+            if (c == null) return false;
+            if (registerAttemptKey("enroll_receipt_attempts:" + adminId + ":" + credentialId)
+                    > totpProperties.getConfirmMaxAttempts()) throw new TooManyAttemptsException();
+            String secret = cryptoService.decrypt(c.getKdfSalt(), c.getIv(), c.getSecretCipher(), c.getKeyVersion(), adminId);
+            return TotpVerifier.verify(secret, code, c.getPeriodSeconds(), c.getDigits(),
+                    c.getAlgorithm(), CLOCK_SKEW_WINDOW, Instant.now().getEpochSecond());
+        }));
+    }
+
+    /** Xóa bộ đếm cũ theo admin. Lượt thử mới theo generation tự hết hạn. */
     public void resetAttempts(Long adminId) {
         try {
             redis.delete(ATTEMPTS_KEY_PREFIX + adminId);
@@ -152,7 +188,7 @@ public class EnrollmentConfirmServiceImpl {
                 .findFirstByAdmin_AdminIdAndConfirmedFalseOrderByCreatedAtDesc(adminId)
                 .orElseThrow(NoPendingEnrollmentException::new);
         if (secondsLeft(c) <= 0) {
-            abortEnrollment(adminId); // quá hạn: bỏ credential chờ, admin phải cài lại
+            abortEnrollment(adminId, c.getCredentialId()); // only the expired generation
             throw new ConfirmExpiredException();
         }
         return c;
@@ -163,24 +199,32 @@ public class EnrollmentConfirmServiceImpl {
     }
 
     /** INCR nguyên tử. Không đếm được thì từ chối luôn (fail closed) thay vì cho thử không giới hạn. */
-    private long registerAttempt(Long adminId) {
-        String key = ATTEMPTS_KEY_PREFIX + adminId;
-        Long n = redis.opsForValue().increment(key);
+    private long registerAttempt(Long adminId, Long credentialId) {
+        if (credentialId == null) throw new IllegalStateException("Pending credential has no id");
+        return registerAttemptKey(ATTEMPTS_KEY_PREFIX + adminId + ":" + credentialId);
+    }
+
+    private long registerAttemptKey(String key) {
+        long seconds = getConfirmWindow().getSeconds();
+        if (seconds <= 0) throw new IllegalStateException("Invalid confirm window");
+        Long n = redis.execute(REGISTER_ATTEMPT, List.of(key), String.valueOf(seconds));
         if (n == null) {
             throw new IllegalStateException("Can't count confirm attempts");
-        }
-        if (n == 1L) {
-            redis.expire(key, getConfirmWindow());
         }
         return n;
     }
 
-    /** Xóa phần cài dở: credential chưa xác nhận + bộ đếm. */
-    private void abortEnrollment(Long adminId) {
-        transactionTemplate.executeWithoutResult(status ->
-                totpCredentialRepository.deletePendingByAdminId(adminId));
-        resetAttempts(adminId);
-        // Quá hạn hoặc nhập sai quá số lần: web về "Chưa kích hoạt"
-        eventService.publish(adminId, TwoFaEventServiceImpl.NOT_ENABLED);
+    /** Delete only the expired/locked generation, never a replacement created concurrently. */
+    private void abortEnrollment(Long adminId, Long credentialId) {
+        if (credentialId == null) throw new IllegalStateException("Pending credential has no id");
+        Boolean removed = transactionTemplate.execute(status -> {
+            Admin admin = adminRepository.findForTotpUpdate(adminId);
+            if (admin == null) throw new AdminNotFoundException(adminId);
+            return totpCredentialRepository.deletePendingGeneration(adminId, credentialId) > 0;
+        });
+        // Per-generation counters expire on their own. Do not clear a newer generation's counter.
+        if (Boolean.TRUE.equals(removed)) {
+            eventService.publish(adminId, TwoFaEventServiceImpl.NOT_ENABLED);
+        }
     }
 }

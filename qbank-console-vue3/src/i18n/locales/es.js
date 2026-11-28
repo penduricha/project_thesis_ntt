@@ -670,6 +670,7 @@ export default {
 
   // LLM status and actions
   "llmState.invalidUrl": "La URL no es válida. Ejemplo: https://example.trycloudflare.com",
+  "llmState.unavailableRealMode": "La gestión de LLM no está conectada a un servicio real y no está disponible. No introduzcas aquí tokens ni configuraciones de producción.",
   "llmState.httpsRequired": "La URL debe empezar por https://",
   "llmState.domainWarning": "No es una dirección trycloudflare.com; el servidor 2 podría rechazarla.",
   "llmState.checking": "Comprobando…",
@@ -798,6 +799,16 @@ export default {
   "enrollment.startError": "No se ha podido crear la clave secreta. Vuelve a intentarlo.",
   "enrollment.activateError": "No se ha podido activar. Vuelve a intentarlo.",
   "enrollment.alreadyEnabled": "La autenticación de dos factores ya está activada.",
+  "enrollment.inProgress": "Ya existe una configuración o la autenticación de dos factores está activada. Comprueba el estado o espera a que caduque la sesión.",
+  "enrollment.updateRequired": "La aplicación o el servidor no admite sesiones seguras de configuración de dos factores. Actualiza y recarga; no continúes con la clave anterior.",
+  "enrollment.recoveryStorageError": "El navegador no pudo guardar el identificador de recuperación. No se envió la activación.",
+  "enrollment.reconcileTitle": "Revisar configuración 2FA",
+  "enrollment.reconcileConfirm": "Esto puede cancelar una activación incompleta. Si se guardó, se actualizará el estado actual. ¿Continuar?",
+  "enrollment.reconcileAction": "Revisar",
+  "enrollment.reconcileHint": "Una activación de este navegador tiene un resultado incierto.",
+  "enrollment.reconcileFailed": "No se pudo revisar. Conserva el estado e inténtalo más tarde.",
+  "enrollment.reconcileCommitted": "La activación se guardó. Revisa el estado; si perdiste la clave sin guardar, cancela la configuración pendiente y vuelve a empezar.",
+  "enrollment.reconcileCancelled": "Se bloqueó la activación no confirmada. Revisa el estado antes de empezar de nuevo.",
   "enrollment.secretExpired": "La clave secreta ha caducado (5 minutos). Pulsa «Reintentar» para crear una nueva.",
   "enrollment.statusError": "No se ha podido consultar el estado de la autenticación de dos factores.",
 

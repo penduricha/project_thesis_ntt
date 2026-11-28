@@ -3,7 +3,7 @@ package com.example.be_web_admin.qbank;
 import com.example.be_web_admin.controller.web.QuestionBankController;
 import com.example.be_web_admin.dto.qbank.CreateQuestionRequest;
 import com.example.be_web_admin.dto.qbank.QuestionDetail;
-import com.example.be_web_admin.exception.qbank.QbankExceptionHandler;
+import com.example.be_web_admin.exception.qbank.QBankExceptionHandler;
 import com.example.be_web_admin.service.qbank.AiCheckService;
 import com.example.be_web_admin.service.qbank.QuestionImportService;
 import com.example.be_web_admin.service.qbank.QuestionService;
@@ -34,7 +34,7 @@ class QuestionImportControllerTest {
     void setup() {
         QuestionBankController controller = new QuestionBankController(questions,
                 new QuestionImportService(questions), mock(AiCheckService.class), mock(UiStateStore.class));
-        mvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new QbankExceptionHandler()).build();
+        mvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new QBankExceptionHandler()).build();
     }
 
     @Test

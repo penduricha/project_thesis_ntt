@@ -1,6 +1,7 @@
 package com.example.be_web_admin.controller.web;
 
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import com.example.be_web_admin.service.redis.impl.TwoFaEventServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -53,10 +54,10 @@ public class TwoFaEventControllerWeb {
     private Long resolveAdminId(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
         String token = authHeader.substring(7);
-        Long adminId = adminJwtTokenProvider.parseAccessTokenAdminId(token);
-        if (adminId == null) return null;
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(token, "ACCESS");
+        if (identity == null || identity.client() != AuthSessionStore.Client.WEB) return null;
         try {
-            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? adminId : null;
+            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? identity.adminId() : null;
         } catch (RuntimeException e) {
             // A store/account outage must not be mistaken for a revoked token.
             throw new org.springframework.web.server.ResponseStatusException(

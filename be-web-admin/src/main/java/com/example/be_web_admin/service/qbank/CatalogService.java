@@ -5,7 +5,7 @@ import com.example.be_web_admin.dto.qbank.SubjectView;
 import com.example.be_web_admin.dto.qbank.SubjectCreateRequest;
 import com.example.be_web_admin.dto.qbank.SubjectUpdateRequest;
 import com.example.be_web_admin.dto.qbank.SubjectArchiveRequest;
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import com.example.be_web_admin.model.jpa.qbank.Subject;
 import com.example.be_web_admin.model.jpa.qbank.Topic;
 import com.example.be_web_admin.dto.qbank.TopicView;
@@ -131,22 +131,22 @@ public class CatalogService {
 
     private static void assertCurrent(Subject subject, Instant expected) {
         if (expected == null || !Objects.equals(micros(expected), micros(subject.getUpdatedAt()))) {
-            throw QbankException.conflict("SUBJECT_VERSION_CONFLICT", "Môn học đã thay đổi. Hãy tải lại trước khi sửa.");
+            throw QBankException.conflict("SUBJECT_VERSION_CONFLICT", "Môn học đã thay đổi. Hãy tải lại trước khi sửa.");
         }
     }
 
-    private static QbankException notFound(Long id) {
-        return QbankException.notFound("SUBJECT_NOT_FOUND", "Không tìm thấy môn học " + id);
+    private static QBankException notFound(Long id) {
+        return QBankException.notFound("SUBJECT_NOT_FOUND", "Không tìm thấy môn học " + id);
     }
 
-    private static QbankException duplicateCode() {
-        return QbankException.conflict("SUBJECT_CODE_DUPLICATED", "Mã môn học đã tồn tại.");
+    private static QBankException duplicateCode() {
+        return QBankException.conflict("SUBJECT_CODE_DUPLICATED", "Mã môn học đã tồn tại.");
     }
 
     private static String code(String raw) {
         String value = raw == null ? "" : raw;
         if (!CODE.matcher(value).matches()) {
-            throw QbankException.badRequest("SUBJECT_CODE_INVALID", "Mã học phần phải gồm 3 chữ cái in hoa và 4–6 chữ số, ví dụ INT3202.");
+            throw QBankException.badRequest("SUBJECT_CODE_INVALID", "Mã học phần phải gồm 3 chữ cái in hoa và 4–6 chữ số, ví dụ INT3202.");
         }
         return value;
     }
@@ -154,7 +154,7 @@ public class CatalogService {
     private static String name(String raw, int max, String errorCode) {
         String value = raw == null ? "" : raw.strip().replaceAll(" +", " ");
         if (value.length() > max || !NAME.matcher(value).matches()) {
-            throw QbankException.badRequest(errorCode, "Tên không hợp lệ hoặc vượt quá " + max + " ký tự.");
+            throw QBankException.badRequest(errorCode, "Tên không hợp lệ hoặc vượt quá " + max + " ký tự.");
         }
         return value;
     }
@@ -163,7 +163,7 @@ public class CatalogService {
         if (raw == null || raw.isBlank()) return null;
         String value = raw.strip();
         if (value.length() > 500 || value.codePoints().anyMatch(c -> Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t')) {
-            throw QbankException.badRequest("SUBJECT_DESCRIPTION_INVALID", "Mô tả không hợp lệ hoặc vượt quá 500 ký tự.");
+            throw QBankException.badRequest("SUBJECT_DESCRIPTION_INVALID", "Mô tả không hợp lệ hoặc vượt quá 500 ký tự.");
         }
         return value;
     }

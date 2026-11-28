@@ -8,6 +8,8 @@ import '../../../../core/localization/mobile_server_messages.dart';
 import '../../../../core/network/server_connection.dart';
 import '../../../config/network/network_configuration.dart';
 import '../../presentation/screens/totp_generator.dart';
+import '../model/auth_account.dart';
+import 'account_store.dart';
 
 // ============================================================================
 //  KÍCH HOẠT 2FA TỪ MOBILE  (giai đoạn 3 của luồng Spring Boot)
@@ -29,7 +31,7 @@ import '../../presentation/screens/totp_generator.dart';
 //  TẮT 2FA (nút xóa TOTP trong app):
 //    POST /api/mobile/admin/2fa/disable   { "code": "123456" }
 //    Mã 6 số sinh từ khóa đang lưu trong app. Server đúng mới xóa credential + totp_enabled = false.
-//    Chỉ khi server báo thành công (200) hoặc "chưa bật" (404) app mới được xóa khóa cục bộ.
+//    404 không xác định được đúng credential; phải giữ khóa và báo lỗi.
 // ============================================================================
 
 // Địa chỉ Spring Boot lấy từ file .env qua [NetworkConfiguration.requestSpringBoot()]
@@ -187,6 +189,7 @@ class EnrolledKey {
   const EnrolledKey({
     required this.adminId,
     required this.adminName,
+    required this.credentialId,
     required this.periodSeconds,
     required this.digits,
     required this.algorithm,
@@ -194,6 +197,7 @@ class EnrolledKey {
 
   final String adminId;
   final String adminName;
+  final int credentialId;
   final int periodSeconds;
   final int digits;
   final TotpAlgorithm algorithm;
@@ -215,22 +219,20 @@ class EnrollmentException implements Exception {
   String toString() => message;
 }
 
-/// Kết quả tắt 2FA trên server. Cả hai đều cho phép app xóa khóa cục bộ.
+/// Kết quả tắt 2FA được server xác nhận rõ ràng.
 enum DisableOutcome {
-  /// Server vừa tắt 2FA (200).
   disabled,
-
-  /// Server vốn đã tắt (404): khóa trong app không còn tác dụng.
-  alreadyOff,
 }
 
 class _PendingParams {
   const _PendingParams({
+    required this.credentialId,
     required this.algorithm,
     required this.digits,
     required this.periodSeconds,
   });
 
+  final int credentialId;
   final TotpAlgorithm algorithm;
   final int digits;
   final int periodSeconds;
@@ -344,12 +346,28 @@ class EnrollmentService {
       throw const EnrollmentException('Invalid key format.', messageKey: 'invalidKey');
     }
 
-    // Token có thể vừa được làm mới ở bước pending: lấy lại token mới nhất cho bước confirm.
-    await _confirm((await _accessToken()) ?? token, code);
+    final candidate = AuthAccount(
+      id: 'admin_${profile.adminId}', issuer: profile.name, account: profile.adminId,
+      secret: secret, periodSeconds: pending.periodSeconds, digits: pending.digits,
+      algorithm: pending.algorithm, enrolled: true, credentialId: pending.credentialId,
+    );
+    try {
+      await AccountStore(adminId: profile.adminId).stage(pending.credentialId, candidate);
+    } catch (_) {
+      // Never confirm if the key could not be securely saved and read back.
+      throw const EnrollmentException('Could not safely save the pending key on this device.');
+    }
+    final currentProfile = await _auth.profile();
+    if (currentProfile?.adminId != profile.adminId) {
+      throw const EnrollmentException(_msgSession, messageKey: 'session');
+    }
+    // Confirm is tied to the saved generation. An ambiguous result keeps the staged key.
+    await _confirm((await _accessToken()) ?? token, code, pending.credentialId);
 
     return EnrolledKey(
       adminId: profile.adminId,
       adminName: profile.name,
+      credentialId: pending.credentialId,
       periodSeconds: pending.periodSeconds,
       digits: pending.digits,
       algorithm: pending.algorithm,
@@ -372,6 +390,10 @@ class EnrollmentService {
       //  - digits = 0         -> mã là chuỗi rỗng, người dùng không nhập được gì.
       //  - digits > 9         -> `math.pow(10, digits)` vượt độ chính xác số nguyên của Dart.
       // Assert trong TotpGenerator.generate() KHÔNG cứu được: assert bị bỏ ở bản release.
+      final credentialId = data['credentialId'];
+      if (credentialId is! int || credentialId <= 0) {
+        throw const EnrollmentException('Server does not support safe enrollment.', messageKey: 'server');
+      }
       final digits = (data['digits'] as num).toInt();
       final periodSeconds = (data['periodSeconds'] as num).toInt();
       if (periodSeconds <= 0) {
@@ -382,6 +404,7 @@ class EnrollmentService {
       }
 
       return _PendingParams(
+        credentialId: credentialId,
         algorithm: TotpAlgorithm.parse(data['algorithm'] as String?),
         digits: digits,
         periodSeconds: periodSeconds,
@@ -394,15 +417,40 @@ class EnrollmentService {
   }
 
   // ---- Bước 3 ----
-  Future<void> _confirm(String token, String code) async {
+  Future<void> _confirm(String token, String code, int credentialId) async {
     try {
-      await _dio.post<Map<String, dynamic>>(
+      final response = await _dio.post<Map<String, dynamic>>(
         _confirmPath,
-        data: {'code': code},
+        data: {'code': code, 'credentialId': credentialId},
         options: _bearer(token),
       );
+      final data = response.data?['data'];
+      if (response.statusCode != 200 || response.data?['success'] != true ||
+          data is! Map || data['totpEnabled'] != true || data['credentialId'] != credentialId) {
+        throw const EnrollmentException(_msgServer, messageKey: 'server');
+      }
     } on DioException catch (e) {
       throw _map(e);
+    }
+  }
+
+  /// An authenticated receipt only identifies the currently confirmed credential.
+  /// A 404/temporary failure never authorizes deleting a staged secret.
+  Future<bool> isConfirmedCredential(int credentialId, AuthAccount account) async {
+    try {
+      final token = await _accessToken();
+      if (token == null || token.isEmpty) return false;
+      final code = TotpGenerator.generate(account.secret, period: account.periodSeconds,
+          digits: account.digits, algorithm: account.algorithm);
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/admin/2fa/enrollment/receipt/$credentialId', data: {'code': code}, options: _bearer(token));
+      final data = response.data?['data'];
+      return response.statusCode == 200 && response.data?['success'] == true &&
+          data is Map && data['totpEnabled'] == true && data['credentialId'] == credentialId;
+    } on DioException {
+      return false;
+    } on EnrollmentException {
+      return false;
     }
   }
 
@@ -416,6 +464,7 @@ class EnrollmentService {
     required int periodSeconds,
     required int digits,
     required TotpAlgorithm algorithm,
+    int? credentialId,
   }) async {
     final token = await _accessToken();
     if (token == null || token.isEmpty) {
@@ -435,14 +484,23 @@ class EnrollmentService {
     }
 
     try {
-      await _dio.post<Map<String, dynamic>>(
+      final response = await _dio.post<Map<String, dynamic>>(
         _disablePath,
-        data: {'code': code},
+        data: {'code': code, if (credentialId != null) 'credentialId': credentialId},
         options: _bearer(token),
       );
+      final body = response.data;
+      final data = body?['data'];
+      if (response.statusCode != 200 || body?['success'] != true ||
+          data is! Map || data['totpEnabled'] != false ||
+          (credentialId != null && data['credentialId'] != credentialId)) {
+        // An unrelated or malformed success must not authorize local key deletion.
+        throw const EnrollmentException(_msgServer, messageKey: 'server');
+      }
       return DisableOutcome.disabled;
     } on DioException catch (e) {
-      if (e.response?.statusCode == 404) return DisableOutcome.alreadyOff;
+      // A generic 404 may be a missing route, account or an older server.
+      // Without a credential generation it cannot prove this local key is safe to delete.
       throw _mapDisable(e);
     }
   }

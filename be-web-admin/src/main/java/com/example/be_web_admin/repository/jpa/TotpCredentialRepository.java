@@ -19,6 +19,17 @@ public interface TotpCredentialRepository extends JpaRepository<TotpCredential, 
     @Query("delete from TotpCredential c where c.admin.adminId = :adminId and c.confirmed = false")
     int deletePendingByAdminId(@Param("adminId") Long adminId);
 
+    // Delete only the pending generation that was actually inspected by the caller.
+    @Transactional
+    @Modifying(flushAutomatically = true)
+    @Query("delete from TotpCredential c where c.admin.adminId = :adminId and c.credentialId = :credentialId and c.confirmed = false")
+    int deletePendingGeneration(@Param("adminId") Long adminId, @Param("credentialId") Long credentialId);
+
+    @Transactional
+    @Modifying(flushAutomatically = true)
+    @Query("delete from TotpCredential c where c.admin.adminId = :adminId and c.credentialId = :credentialId and c.confirmed = true")
+    int deleteConfirmedGeneration(@Param("adminId") Long adminId, @Param("credentialId") Long credentialId);
+
     // Lấy credential chưa xác nhận mới nhất của admin (dùng cho API pending và confirm của mobile).
     Optional<TotpCredential> findFirstByAdmin_AdminIdAndConfirmedFalseOrderByCreatedAtDesc(Long adminId);
 

@@ -14,7 +14,7 @@ const client = () => authorizedClient
 const ADMIN = '/admin'
 const url = (path) => `${ADMIN}${path}`
 
-// QbankExceptionHandler của backend trả { success:false, code, message } kèm HTTP status.
+// QBankExceptionHandler của backend trả { success:false, code, message } kèm HTTP status.
 // Helper này trích message/code để UI hiển thị, thay vì chỉ hiện "Request failed".
 export function apiErrorMessage(error, fallback = t('apiError.network')) {
   const body = error?.response?.data

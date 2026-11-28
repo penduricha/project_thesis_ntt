@@ -3,7 +3,7 @@ package com.example.be_web_admin.service.qbank;
 import com.example.be_web_admin.dto.qbank.SuggestionDecisionRequest;
 import com.example.be_web_admin.enums.Role;
 import com.example.be_web_admin.enums.ai.SuggestionDecisionD;
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.ai.AiSuggestion;
 import com.example.be_web_admin.model.jpa.ai.AiTask;
@@ -32,9 +32,9 @@ class SuggestionReviewServiceTest {
 
     @Test
     void rejectsMissingOrAmbiguousQuote() {
-        assertThrows(QbankException.class, () -> SuggestionReviewService.replaceQuotedText("a a", "a", null, null, "b"));
-        assertThrows(QbankException.class, () -> SuggestionReviewService.replaceQuotedText("abc", null, null, null, "b"));
-        assertThrows(QbankException.class, () -> SuggestionReviewService.replaceQuotedText("abc", "xyz", 0, 3, "b"));
+        assertThrows(QBankException.class, () -> SuggestionReviewService.replaceQuotedText("a a", "a", null, null, "b"));
+        assertThrows(QBankException.class, () -> SuggestionReviewService.replaceQuotedText("abc", null, null, null, "b"));
+        assertThrows(QBankException.class, () -> SuggestionReviewService.replaceQuotedText("abc", "xyz", 0, 3, "b"));
         assertEquals("a b", SuggestionReviewService.replaceQuotedText("a a", "a", 2, 3, "b"));
     }
 
@@ -50,7 +50,7 @@ class SuggestionReviewServiceTest {
         when(tasks.findById("task")).thenReturn(Optional.of(task));
         when(admins.findAdminByAdminId(2L)).thenReturn(admin);
         SuggestionReviewService service = service(suggestions, tasks, questions, mock(QuestionRevisionRepository.class), admins);
-        QbankException ex = assertThrows(QbankException.class, () -> service.decide(3L, new SuggestionDecisionRequest("rejected", null, null, null), 2L));
+        QBankException ex = assertThrows(QBankException.class, () -> service.decide(3L, new SuggestionDecisionRequest("rejected", null, null, null), 2L));
         assertEquals("SUGGESTION_NOT_FOUND", ex.getCode());
         verifyNoInteractions(questions);
         verify(suggestions, never()).saveAndFlush(any());

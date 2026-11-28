@@ -1,6 +1,6 @@
 package com.example.be_web_admin.service.qbank;
 
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import com.example.be_web_admin.model.jpa.qbank.Question;
 import com.example.be_web_admin.model.jpa.qbank.QuestionRevision;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -72,7 +72,7 @@ public class AiWorkerClient {
      */
     public WorkerTask submitQuestionCheck(Question question, QuestionRevision revision, Long adminId) {
         if (restClient == null) {
-            throw QbankException.serviceUnavailable("AI_WORKER_NOT_CONFIGURED",
+            throw QBankException.serviceUnavailable("AI_WORKER_NOT_CONFIGURED",
                     "Chưa cấu hình app.ai-worker.base-url (Server 2).");
         }
 
@@ -93,7 +93,7 @@ public class AiWorkerClient {
                     .body(String.class);
             JsonNode node = raw == null ? null : objectMapper.readTree(raw);
             if (node == null || node.path("taskId").asText("").isBlank()) {
-                throw QbankException.serviceUnavailable("AI_WORKER_BAD_RESPONSE",
+                throw QBankException.serviceUnavailable("AI_WORKER_BAD_RESPONSE",
                         "Server 2 không trả taskId hợp lệ.");
             }
             return new WorkerTask(
@@ -102,18 +102,18 @@ public class AiWorkerClient {
                     node.path("status").asText("pending"));
         } catch (ResourceAccessException e) {
             log.warn("AI worker không truy cập được: {}", e.toString());
-            throw QbankException.serviceUnavailable("AI_WORKER_UNAVAILABLE",
+            throw QBankException.serviceUnavailable("AI_WORKER_UNAVAILABLE",
                     "Không nhận được phản hồi từ AI worker; task có thể đã được tạo. Kiểm tra trạng thái trước khi thử lại.");
         } catch (RestClientResponseException e) {
             log.warn("AI worker từ chối yêu cầu: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw QbankException.serviceUnavailable("AI_WORKER_REJECTED",
+            throw QBankException.serviceUnavailable("AI_WORKER_REJECTED",
                     "Server 2 từ chối yêu cầu (" + e.getStatusCode().value() + "): "
                             + shorten(e.getResponseBodyAsString()));
-        } catch (QbankException e) {
+        } catch (QBankException e) {
             throw e;
         } catch (Exception e) {
             log.warn("Lỗi khi gọi AI worker: {}", e.toString());
-            throw QbankException.serviceUnavailable("AI_WORKER_ERROR", "Lỗi khi gọi Server 2: " + e.getMessage());
+            throw QBankException.serviceUnavailable("AI_WORKER_ERROR", "Lỗi khi gọi Server 2: " + e.getMessage());
         }
     }
 

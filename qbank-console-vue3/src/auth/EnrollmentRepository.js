@@ -6,6 +6,7 @@ const HTTP_CREATED = 201;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_CONFLICT = 409;
 const HTTP_GONE = 410;
+const HTTP_PRECONDITION_REQUIRED = 428;
 
 // Giá trị trạng thái 2FA mà InformationPage dùng (khớp TWO_FA_STATUS trong trang).
 export const TWO_FA_STATUS = Object.freeze({
@@ -19,8 +20,9 @@ const MESSAGES = Object.freeze({
     SESSION_EXPIRED: 'apiError.sessionExpired',
     NETWORK_ERROR: 'apiError.network',
     ACTIVATE_ERROR: 'enrollment.activateError',
-    ALREADY_ENABLED: 'enrollment.alreadyEnabled',
+    ALREADY_ENABLED: 'enrollment.inProgress',
     KEY_EXPIRED: 'enrollment.secretExpired',
+    UPDATE_REQUIRED: 'enrollment.updateRequired',
     STATUS_ERROR: 'enrollment.statusError',
 });
 
@@ -59,19 +61,24 @@ export class EnrollmentRepository {
 
         if (response.status === HTTP_CREATED
             && body?.success === true
-            && typeof data?.secretKey === 'string') {
+            && typeof data?.secretKey === 'string' && typeof data?.generation === 'string') {
             return {
                 success: true,
                 status: response.status,
                 message: body.message,
                 data: {
                     secretKey: data.secretKey,
+                    generation: data.generation,
                     periodSeconds: data.periodSeconds,
                     expiresInSeconds: data.expiresInSeconds,
                 },
             };
         }
 
+        if (response.status === HTTP_PRECONDITION_REQUIRED ||
+            (response.status === HTTP_CREATED && body?.success === true && typeof data?.generation !== 'string')) {
+            return buildFailure(response.status, t(MESSAGES.UPDATE_REQUIRED));
+        }
         if (response.status === HTTP_UNAUTHORIZED) {
             return buildFailure(response.status, t(MESSAGES.SESSION_EXPIRED));
         }
@@ -85,9 +92,9 @@ export class EnrollmentRepository {
      * Đóng modal / chuyển trang trong app: xóa khóa đang chờ ở Redis.
      * @returns {Promise<boolean>} true nếu server xác nhận (kể cả khi khóa đã hết hạn từ trước)
      */
-    async cancelEnrollment(tokenLogin) {
+    async cancelEnrollment(tokenLogin, generation) {
         const response = await this.enrollmentService
-            .deleteDataToCancelEnrollmentRequest(tokenLogin);
+            .deleteDataToCancelEnrollmentRequest(tokenLogin, generation);
 
         return response?.status === HTTP_OK;
     }
@@ -96,8 +103,8 @@ export class EnrollmentRepository {
      * Tắt tab / đóng trình duyệt: gửi yêu cầu xóa theo kiểu "bắn rồi bỏ" (không chờ kết quả).
      * Gọi trong sự kiện pagehide.
      */
-    cancelEnrollmentOnPageHide(tokenLogin) {
-        this.enrollmentService.deleteDataToCancelEnrollmentOnPageHide(tokenLogin);
+    cancelEnrollmentOnPageHide(tokenLogin, generation) {
+        this.enrollmentService.deleteDataToCancelEnrollmentOnPageHide(tokenLogin, generation);
     }
 
     /**
@@ -107,9 +114,9 @@ export class EnrollmentRepository {
      *   data: {expiresInSeconds: number, periodSeconds: number}|null}>}
      *   expired = true khi khóa chờ ở Redis đã hết 5 phút (HTTP 410): modal nên xin khóa mới.
      */
-    async activateEnrollment(tokenLogin, periodSeconds) {
+    async activateEnrollment(tokenLogin, periodSeconds, generation) {
         const response = await this.enrollmentService
-            .postDataToActivateEnrollmentRequest(tokenLogin, periodSeconds);
+            .postDataToActivateEnrollmentRequest(tokenLogin, periodSeconds, generation);
 
         if (response === null) {
             return buildFailure(null, t(MESSAGES.NETWORK_ERROR));
@@ -118,7 +125,8 @@ export class EnrollmentRepository {
         const body = response.data;
         const data = body?.data;
 
-        if (response.status === HTTP_CREATED && body?.success === true) {
+        if (response.status === HTTP_CREATED && body?.success === true &&
+            Number.isSafeInteger(data?.credentialId) && data.credentialId > 0) {
             return {
                 success: true,
                 status: response.status,
@@ -126,10 +134,14 @@ export class EnrollmentRepository {
                 data: {
                     expiresInSeconds: data?.expiresInSeconds,
                     periodSeconds: data?.periodSeconds,
+                    credentialId: data?.credentialId,
                 },
             };
         }
 
+        if (response.status === HTTP_PRECONDITION_REQUIRED) {
+            return buildFailure(response.status, t(MESSAGES.UPDATE_REQUIRED));
+        }
         if (response.status === HTTP_UNAUTHORIZED) {
             return buildFailure(response.status, t(MESSAGES.SESSION_EXPIRED));
         }
@@ -140,6 +152,16 @@ export class EnrollmentRepository {
             return {...buildFailure(response.status, t(MESSAGES.KEY_EXPIRED)), expired: true};
         }
         return buildFailure(response.status, body?.message ?? t(MESSAGES.ACTIVATE_ERROR));
+    }
+
+    async reconcileEnrollment(tokenLogin, generation) {
+        const response = await this.enrollmentService.postReconcileEnrollmentRequest(tokenLogin, generation);
+        const data = response?.data?.data;
+        if (response?.status !== HTTP_OK || response?.data?.success !== true ||
+            !['CANCELLED', 'COMMITTED'].includes(data?.outcome) || typeof data?.claimReleased !== 'boolean') {
+            return {success: false};
+        }
+        return {success: true, outcome: data.outcome, claimReleased: data.claimReleased};
     }
 
     /**
@@ -175,6 +197,8 @@ export class EnrollmentRepository {
                 message: body.message,
                 status,
                 pendingExpiresInSeconds: Number(data.expiresInSeconds) || 0,
+                credentialId: data.pending === true && Number.isSafeInteger(data.credentialId) && data.credentialId > 0
+                    ? data.credentialId : null,
             };
         }
         if (response.status === HTTP_UNAUTHORIZED) {
@@ -187,9 +211,11 @@ export class EnrollmentRepository {
      * "Hủy và cài lại" hoặc hết 10 phút chờ: xóa phần chờ xác nhận ở MariaDB.
      * @returns {Promise<boolean>} true nếu server xác nhận đã xóa
      */
-    async cancelPendingEnrollment(tokenLogin) {
-        const response = await this.enrollmentService.deleteDataToCancelPendingRequest(tokenLogin);
-        return response?.status === HTTP_OK;
+    async cancelPendingEnrollment(tokenLogin, credentialId) {
+        if (!Number.isSafeInteger(credentialId) || credentialId <= 0) return false;
+        const response = await this.enrollmentService.deleteDataToCancelPendingRequest(tokenLogin, credentialId);
+        return response?.status === HTTP_OK && response?.data?.success === true &&
+            response?.data?.data?.cancelled === true && response?.data?.data?.credentialId === credentialId;
     }
 
     /**
@@ -245,7 +271,7 @@ export class EnrollmentRepository {
                     }
                 } catch (error) {
                     if (controller.signal.aborted) break; // Component bị gỡ
-                    console.warn('2FA status stream interrupted:', error);
+                    console.warn('2FA status stream interrupted.');
                 }
                 onConnectionChange?.(false);
                 if (controller.signal.aborted) break;

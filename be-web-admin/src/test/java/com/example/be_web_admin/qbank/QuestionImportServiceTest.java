@@ -4,7 +4,7 @@ import com.example.be_web_admin.dto.qbank.CreateQuestionRequest;
 import com.example.be_web_admin.dto.qbank.ImportQuestionsRequest;
 import com.example.be_web_admin.dto.qbank.ImportQuestionsResult;
 import com.example.be_web_admin.dto.qbank.QuestionDetail;
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import com.example.be_web_admin.service.qbank.QuestionImportService;
 import com.example.be_web_admin.service.qbank.QuestionService;
 import jakarta.validation.Validation;
@@ -56,7 +56,7 @@ class QuestionImportServiceTest {
         assertFalse(validator.validate(request(Collections.nCopies(201, row("")))).isEmpty());
         assertFalse(validator.validate(new ImportQuestionsRequest(7L, 42L, 2,
                 Collections.singletonList(null))).isEmpty());
-        QbankException e = assertThrows(QbankException.class, () -> service.importQuestions(
+        QBankException e = assertThrows(QBankException.class, () -> service.importQuestions(
                 request(List.of(row(" Duplicate  name "), row("duplicate name"))), 13L));
         assertEquals("IMPORT_DUPLICATE_TITLE", e.getCode());
         verifyNoInteractions(questions);
@@ -66,7 +66,7 @@ class QuestionImportServiceTest {
     void stopsOnConflictAndReportsConfirmedRowsOnly() {
         QuestionDetail detail = mock(QuestionDetail.class);
         when(questions.create(any(), eq(13L))).thenReturn(detail)
-                .thenThrow(QbankException.conflict("TITLE_DUPLICATED", "duplicate"));
+                .thenThrow(QBankException.conflict("TITLE_DUPLICATED", "duplicate"));
         ImportQuestionsResult result = service.importQuestions(request(List.of(row("One"), row("Two"), row("Three"))), 13L);
         assertEquals(1, result.saved());
         assertEquals(2, result.failedAt());

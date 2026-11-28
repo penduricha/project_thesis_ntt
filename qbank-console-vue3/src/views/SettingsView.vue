@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, onBeforeUnmount } from 'vue'
 import { TFA_VIEW, TFA_ICON } from '../data/account.js'
-import { S, asUser, previewRole, log, toast, tfaOpen, tfaAsk, tfaDone, loadTfaStatus } from '../store.js'
+import { S, asUser, previewRole, log, toast, tfaOpen, tfaAsk, tfaDone, tfaAskReconcile, loadTfaStatus } from '../store.js'
 import { auth } from '../auth/authStore.js'
 import Ico from '../components/Ico.vue'
 import { getPreference, setPreference, resolveTheme, watchSystemTheme, syncFromDom, THEME_OPTIONS } from '../theme.js'
@@ -68,6 +68,10 @@ function setOpt(k, on, msg) { S[k] = on; log(msg, 'info'); toast(tr('settings.op
             <button v-if="st === 'NOT_ENABLED'" type="button" class="btn pri" @click="tfaOpen">{{ $t('tfa.enable') }}</button>
             <button v-else-if="st === 'PENDING'" type="button" class="btn" @click="tfaAsk">{{ $t('dialog.cancelAndReset') }}</button>
           </div>
+          <p v-if="!demo && S.tfaRecoveryGeneration" class="mut" style="margin:0;font-size:var(--fs-sm)">
+            {{ $t('enrollment.reconcileHint') }}
+            <button type="button" class="btn sm" :disabled="S.tfaBusy" @click="tfaAskReconcile">{{ $t('enrollment.reconcileAction') }}</button>
+          </p>
           <p v-if="st === 'PENDING' && demo" class="mut" style="margin:0;font-size:var(--fs-sm)">{{ $t('brand.demo') }} <button type="button" class="btn sm" @click="tfaDone">{{ $t('tfa.simulate') }}</button></p>
           <p v-else-if="st === 'PENDING'" class="mut" style="margin:0;font-size:var(--fs-sm)">{{ $t('tfa.waiting') }}</p>
         </div>

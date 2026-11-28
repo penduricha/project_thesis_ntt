@@ -15,7 +15,7 @@ import com.example.be_web_admin.enums.qbank.OptionLabelD;
 import com.example.be_web_admin.enums.qbank.QuestionSourceD;
 import com.example.be_web_admin.enums.qbank.QuestionStatusD;
 import com.example.be_web_admin.enums.qbank.ValidationStatusD;
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.ai.AiSuggestion;
 import com.example.be_web_admin.model.jpa.ai.AiTask;
@@ -174,7 +174,7 @@ public class QuestionService {
         Admin requester = adminId == null ? null : admins.findAdminByAdminId(adminId);
         if (requester == null || !requester.isLoginAllowed()
                 || (!Objects.equals(latest.get().getCreatedBy(), adminId) && requester.getRole() != Role.ADMIN)) {
-            throw QbankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI.");
+            throw QBankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI.");
         }
         Map<String, String> labels = issueTypes.findAll().stream()
                 .collect(Collectors.toMap(it -> it.getIssueType(), it -> it.getLabelVi(), (a, b) -> a,
@@ -208,10 +208,10 @@ public class QuestionService {
     @Transactional
     public QuestionDetail create(CreateQuestionRequest request, Long adminId) {
         Subject subject = subjects.findForQuestionCreate(request.subjectId())
-                .orElseThrow(() -> QbankException.notFound("SUBJECT_NOT_FOUND",
+                .orElseThrow(() -> QBankException.notFound("SUBJECT_NOT_FOUND",
                         "Không tìm thấy môn học " + request.subjectId()));
         if (!Boolean.TRUE.equals(subject.getIsActive())) {
-            throw QbankException.badRequest("SUBJECT_INACTIVE", "Môn học đang bị vô hiệu hoá.");
+            throw QBankException.badRequest("SUBJECT_INACTIVE", "Môn học đang bị vô hiệu hoá.");
         }
         Topic topic = resolveTopic(subject.getSubjectId(), request.topicId());
 
@@ -268,7 +268,7 @@ public class QuestionService {
         // D3: revision 1 là điều kiện để task AI có thể tham chiếu (question_id, revision_id).
         appendRevision(saved, 1, ChangeSourceD.CREATE, adminId, null, subject, topic);
 
-        uiState.deleteDraft(adminId, "new");
+        uiState.deleteDraftAfterCommit(adminId, "new");
         uiState.pushActivity(adminId, com.example.be_web_admin.dto.qbank.ActivityItem.of(
                 "QUESTION_CREATED", "Tạo câu hỏi #" + saved.getQuestionId() + " (" + subject.getSubjectCode() + ")",
                 "QUESTION", saved.getQuestionId()));
@@ -285,10 +285,10 @@ public class QuestionService {
     public QuestionDetail update(Long questionId, UpdateQuestionRequest request, Long adminId) {
         Question question = requireQuestion(questionId);
         if (question.getStatus() == QuestionStatusD.ARCHIVED) {
-            throw QbankException.conflict("QUESTION_ARCHIVED", "Câu hỏi đã bị lưu trữ, không sửa được.");
+            throw QBankException.conflict("QUESTION_ARCHIVED", "Câu hỏi đã bị lưu trữ, không sửa được.");
         }
         if (!Objects.equals(question.getVersion(), request.expectedVersion())) {
-            throw QbankException.conflict("VERSION_CONFLICT",
+            throw QBankException.conflict("VERSION_CONFLICT",
                     "Câu hỏi đã bị người khác sửa (bạn giữ phiên bản " + request.expectedVersion()
                             + ", hiện tại là " + question.getVersion() + "). Tải lại rồi thử lại.");
         }
@@ -297,10 +297,10 @@ public class QuestionService {
         // Trước bản vá, update() dùng orElse(null) nên vô hiệu hoá môn rồi vẫn sửa được câu hỏi,
         // và môn bị xoá thì lặng lẽ trả subjectName = null trong phản hồi.
         Subject subject = subjects.findById(question.getSubjectId())
-                .orElseThrow(() -> QbankException.notFound("SUBJECT_NOT_FOUND",
+                .orElseThrow(() -> QBankException.notFound("SUBJECT_NOT_FOUND",
                         "Không tìm thấy môn học " + question.getSubjectId()));
         if (!Boolean.TRUE.equals(subject.getIsActive())) {
-            throw QbankException.badRequest("SUBJECT_INACTIVE", "Môn học đang bị vô hiệu hoá.");
+            throw QBankException.badRequest("SUBJECT_INACTIVE", "Môn học đang bị vô hiệu hoá.");
         }
         Topic topic = resolveTopic(question.getSubjectId(), request.topicId());
         OptionLabelD correctLabel = parseCorrectLabel(request.correctLabel());
@@ -353,7 +353,7 @@ public class QuestionService {
                     "QUESTION", questionId));
         }
         uiState.evictDashboard(question.getSubjectId());
-        uiState.deleteDraft(adminId, String.valueOf(questionId));
+        uiState.deleteDraftAfterCommit(adminId, String.valueOf(questionId));
 
         long pending = suggestions.countByDecisionForQuestion(questionId, SuggestionDecisionD.PENDING);
         return toDetail(question, subject, topic, revNo, pending);
@@ -364,7 +364,7 @@ public class QuestionService {
     public QuestionDetail archive(Long questionId, Long adminId) {
         Question question = requireQuestion(questionId);
         if (question.getStatus() == QuestionStatusD.ARCHIVED) {
-            throw QbankException.conflict("ALREADY_ARCHIVED", "Câu hỏi đã ở trạng thái lưu trữ.");
+            throw QBankException.conflict("ALREADY_ARCHIVED", "Câu hỏi đã ở trạng thái lưu trữ.");
         }
         question.setStatus(QuestionStatusD.ARCHIVED);
         question.setUpdatedBy(adminId);
@@ -402,7 +402,7 @@ public class QuestionService {
         if (question.getStatus() != QuestionStatusD.ARCHIVED) {
             // Câu đang active: không phải lỗi nặng, nhưng trả conflict để giao diện biết nút này
             // không áp dụng — tránh im lặng "thành công" trong khi chẳng có gì đổi.
-            throw QbankException.conflict("NOT_ARCHIVED",
+            throw QBankException.conflict("NOT_ARCHIVED",
                     "Câu hỏi đang hoạt động, không cần khôi phục.");
         }
         question.setStatus(QuestionStatusD.ACTIVE);
@@ -450,10 +450,10 @@ public class QuestionService {
 
     private Question requireQuestion(Long questionId) {
         if (questionId == null) {
-            throw QbankException.badRequest("QUESTION_ID_REQUIRED", "Thiếu questionId.");
+            throw QBankException.badRequest("QUESTION_ID_REQUIRED", "Thiếu questionId.");
         }
         return questions.findById(questionId)
-                .orElseThrow(() -> QbankException.notFound("QUESTION_NOT_FOUND",
+                .orElseThrow(() -> QBankException.notFound("QUESTION_NOT_FOUND",
                         "Không tìm thấy câu hỏi " + questionId));
     }
 
@@ -462,7 +462,7 @@ public class QuestionService {
             return null;
         }
         return topics.findBySubjectIdAndTopicId(subjectId, topicId)
-                .orElseThrow(() -> QbankException.badRequest("TOPIC_NOT_IN_SUBJECT",
+                .orElseThrow(() -> QBankException.badRequest("TOPIC_NOT_IN_SUBJECT",
                         "Chủ đề " + topicId + " không thuộc môn " + subjectId));
     }
 
@@ -541,7 +541,7 @@ public class QuestionService {
         try {
             return QuestionStatusD.fromDbValue(raw.trim().toLowerCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw QbankException.badRequest("INVALID_STATUS", "status phải là active hoặc archived.");
+            throw QBankException.badRequest("INVALID_STATUS", "status phải là active hoặc archived.");
         }
     }
 
@@ -552,19 +552,19 @@ public class QuestionService {
         try {
             return ValidationStatusD.fromDbValue(raw.trim().toLowerCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw QbankException.badRequest("INVALID_VALIDATION_STATUS",
+            throw QBankException.badRequest("INVALID_VALIDATION_STATUS",
                     "validationStatus phải là not_checked/clean/has_issues/failed/stale.");
         }
     }
 
     static OptionLabelD parseCorrectLabel(String raw) {
         if (raw == null || raw.isBlank()) {
-            throw QbankException.badRequest("CORRECT_LABEL_REQUIRED", "Thiếu correctLabel (A/B/C/D).");
+            throw QBankException.badRequest("CORRECT_LABEL_REQUIRED", "Thiếu correctLabel (A/B/C/D).");
         }
         try {
             return OptionLabelD.fromDbValue(raw.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw QbankException.badRequest("INVALID_CORRECT_LABEL", "correctLabel phải là A, B, C hoặc D.");
+            throw QBankException.badRequest("INVALID_CORRECT_LABEL", "correctLabel phải là A, B, C hoặc D.");
         }
     }
 
@@ -575,20 +575,20 @@ public class QuestionService {
         try {
             return ContentFormatD.fromDbValue(raw.trim().toLowerCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw QbankException.badRequest("INVALID_CONTENT_FORMAT", "contentFormat phải là plain hoặc html.");
+            throw QBankException.badRequest("INVALID_CONTENT_FORMAT", "contentFormat phải là plain hoặc html.");
         }
     }
 
     private static void validateDifficulty(Integer difficulty) {
         if (difficulty != null && (difficulty < 1 || difficulty > 5)) {
-            throw QbankException.badRequest("INVALID_DIFFICULTY", "difficulty phải từ 1 đến 5.");
+            throw QBankException.badRequest("INVALID_DIFFICULTY", "difficulty phải từ 1 đến 5.");
         }
     }
 
     private static String requireText(String value, String field) {
         String trimmed = value == null ? "" : value.trim();
         if (trimmed.isEmpty()) {
-            throw QbankException.badRequest("EMPTY_FIELD", field + " không được để trống.");
+            throw QBankException.badRequest("EMPTY_FIELD", field + " không được để trống.");
         }
         return trimmed;
     }
@@ -604,7 +604,7 @@ public class QuestionService {
      * <p><b>Chỉ gọi từ {@link #create}</b>, tuyệt đối không gọi khi cập nhật: xem chú thích trong
      * {@code update(...)} — chặn ở đó sẽ khoá vĩnh viễn các câu đã trùng tiêu đề từ trước.</p>
      *
-     * @throws QbankException 409 TITLE_DUPLICATED kèm mã câu bị trùng để UI báo rõ
+     * @throws QBankException 409 TITLE_DUPLICATED kèm mã câu bị trùng để UI báo rõ
      */
     private void assertTitleAvailable(Long subjectId, String title, Long excludeQuestionId) {
         if (title == null || title.isBlank()) {
@@ -619,7 +619,7 @@ public class QuestionService {
             return;
         }
         Question other = clashes.get(0);
-        throw QbankException.conflict("TITLE_DUPLICATED",
+        throw QBankException.conflict("TITLE_DUPLICATED",
                 "Tiêu đề \"" + title + "\" đã được dùng cho câu hỏi #" + other.getQuestionId()
                         + " trong cùng môn học. Hãy đặt tiêu đề khác.");
     }

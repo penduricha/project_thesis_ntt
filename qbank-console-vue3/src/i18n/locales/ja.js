@@ -702,6 +702,7 @@ export default {
 
   // LLM status and actions
   "llmState.invalidUrl": "URL の形式が正しくありません。例：https://example.trycloudflare.com",
+  "llmState.unavailableRealMode": "LLM 管理は実サービスに接続されていないため利用できません。本番用トークンや設定を入力しないでください。",
   "llmState.httpsRequired": "URL は https:// で始めてください",
   "llmState.domainWarning": "trycloudflare.com のアドレスではないため、サーバー 2 が拒否する可能性があります。",
   "llmState.checking": "確認中…",
@@ -830,6 +831,16 @@ export default {
   "enrollment.startError": "秘密鍵を作成できませんでした。もう一度お試しください。",
   "enrollment.activateError": "有効化できませんでした。もう一度お試しください。",
   "enrollment.alreadyEnabled": "二要素認証は既に有効です。",
+  "enrollment.inProgress": "設定中のセッションがあるか、二要素認証が有効です。状態を確認するか、セッションの期限切れをお待ちください。",
+  "enrollment.updateRequired": "アプリまたはサーバーが安全な二要素認証設定セッションに対応していません。更新して再読み込みし、古い鍵は使用しないでください。",
+  "enrollment.recoveryStorageError": "ブラウザーに復旧識別子を保存できなかったため、有効化要求を送信しませんでした。",
+  "enrollment.reconcileTitle": "二要素認証の設定を照合",
+  "enrollment.reconcileConfirm": "未完了の有効化がキャンセルされる場合があります。保存済みの場合は現在の状態を再取得します。続行しますか？",
+  "enrollment.reconcileAction": "照合",
+  "enrollment.reconcileHint": "このブラウザーで有効化の結果が確定していません。",
+  "enrollment.reconcileFailed": "照合できませんでした。現在の状態を保持し、後でもう一度お試しください。",
+  "enrollment.reconcileCommitted": "有効化は保存されています。状態を確認し、未保存の鍵を失った場合は保留中の設定をキャンセルしてやり直してください。",
+  "enrollment.reconcileCancelled": "未コミットの有効化をブロックしました。再開する前に状態を確認してください。",
   "enrollment.secretExpired": "秘密鍵の期限が切れました（5 分）。再試行を押して新しい鍵を作成してください。",
   "enrollment.statusError": "二要素認証の状態を取得できませんでした。",
 

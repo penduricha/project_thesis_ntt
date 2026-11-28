@@ -3,7 +3,7 @@ package com.example.be_web_admin.service.qbank;
 import com.example.be_web_admin.dto.qbank.ImportQuestionsRequest;
 import com.example.be_web_admin.dto.qbank.ImportQuestionsResult;
 import com.example.be_web_admin.dto.qbank.QuestionDetail;
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -38,12 +38,12 @@ public class QuestionImportService {
                 if (value != null) length += value.length();
             }
             if (length > MAX_CHARACTERS) {
-                throw QbankException.badRequest("IMPORT_TOO_LARGE", "Dữ liệu nhập vượt giới hạn cho phép.");
+                throw QBankException.badRequest("IMPORT_TOO_LARGE", "Dữ liệu nhập vượt giới hạn cho phép.");
             }
             if (row.title() != null && !row.title().isBlank()) {
                 String normalized = row.title().trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
                 if (!titles.add(normalized)) {
-                    throw QbankException.badRequest("IMPORT_DUPLICATE_TITLE", "Tiêu đề câu hỏi bị trùng trong file.");
+                    throw QBankException.badRequest("IMPORT_DUPLICATE_TITLE", "Tiêu đề câu hỏi bị trùng trong file.");
                 }
             }
         }
@@ -52,7 +52,7 @@ public class QuestionImportService {
             try {
                 // QuestionService là Spring proxy: mỗi create tự commit/rollback trước khi trả về.
                 saved.add(questions.create(row.toCreate(request.subjectId(), request.topicId(), request.difficulty()), adminId));
-            } catch (QbankException e) {
+            } catch (QBankException e) {
                 return new ImportQuestionsResult(saved.size(), saved.size() + 1, false,
                         e.getStatus().value(), e.getCode(), saved);
             } catch (RuntimeException e) {

@@ -111,12 +111,12 @@ export async function loadMe() {
       else if (backendRole === 'LECTURER') auth.role = 'gv'
     }
   } catch (e) {
-    console.warn('[auth] Không tải được thông tin cơ bản:', e?.message)
+    console.warn('[auth] Không tải được thông tin cơ bản.')
   }
   try {
     auth.detail = await adminRepository.getAdminInformationDetailByAdminId()
   } catch (e) {
-    console.warn('[auth] Không tải được thông tin chi tiết:', e?.message)
+    console.warn('[auth] Không tải được thông tin chi tiết.')
   }
 }
 
@@ -154,7 +154,7 @@ export async function bootstrapAuth() {
     try {
       isLoggedIn = Boolean(await adminRepository.loginService.getStatusAutoLogin())
     } catch (e) {
-      console.warn('[auth] Auto login failed:', e?.message)
+      console.warn('[auth] Auto login failed.')
     }
   }
   if (isLoggedIn) {

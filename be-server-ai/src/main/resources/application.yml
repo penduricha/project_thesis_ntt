@@ -25,9 +25,9 @@ spring:
   config:
     import:
       - "optional:file:.env[.properties]"
-      - "optional:file:server-ai-worker/.env[.properties]"
+      - "optional:file:be-server-ai/.env[.properties]"
   application:
-    name: server-ai-worker
+    name: be-server-ai
 
   # Phải lớn hơn ai.llm.read-timeout (120s) để một lần gọi Colab đang chạy kịp kết thúc hoặc requeue sạch.
   lifecycle:

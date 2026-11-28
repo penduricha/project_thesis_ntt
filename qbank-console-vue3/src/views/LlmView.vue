@@ -2,6 +2,7 @@
 import { reactive, ref, computed } from 'vue'
 import { S, log, toast } from '../store.js'
 import { t } from '../i18n/index.js'
+import { DEMO_MODE } from '../config.js'
 
 /* ---- chuẩn hóa / kiểm tra URL ---- */
 const norm = u => (u || '').trim().replace(/\/(api\/chat|health)\/?$/i, '').replace(/\/+$/, '')
@@ -97,6 +98,8 @@ const phPaste = computed(() => t('llmState.pasteExample'))
 </script>
 
 <template>
+  <div v-if="!DEMO_MODE" class="card" role="status">{{ $t('llmState.unavailableRealMode') }}</div>
+  <template v-else>
   <div class="lmhead">
     <section class="card" aria-labelledby="lm-t1">
       <div class="card__head"><h3 id="lm-t1">{{ $t('llm.server2') }}</h3><span class="b" :class="st[0]" role="status"><i v-if="S.api.busy" class="spin"></i>{{ st[1] }}</span></div>
@@ -150,4 +153,5 @@ const phPaste = computed(() => t('llmState.pasteExample'))
     <span id="lm-sum" class="mut" role="status">{{ sum.text }}</span>
     <div class="bar"><button id="lm-env" class="btn" :disabled="sum.envOff" @click="env">{{ $t('llm.copyEnv') }}</button><button id="lm-all" class="btn pri" :disabled="sum.allOff" @click="saveAll">{{ $t('common.saveAll') }}</button></div>
   </div>
+  </template>
 </template>

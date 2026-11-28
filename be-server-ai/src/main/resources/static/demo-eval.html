@@ -170,8 +170,8 @@
         </div>
       </div>
       <div class="field" style="display:grid;gap:4px;margin-top:8px">
-        <label class="field-label" for="api-jwt" style="font-size:13px;color:var(--ink-2)">JWT hoặc Internal Token (Bearer)</label>
-        <input class="input" id="api-jwt" type="password" value="fbbd5eac46965321c057958266cecc731345c1e6bac2928a" placeholder="Nhập ACCESS JWT hoặc AI_INTERNAL_TOKEN" spellcheck="false" autocomplete="off">
+        <label class="field-label" for="api-jwt" style="font-size:13px;color:var(--ink-2)">Token nội bộ (chỉ môi trường thử nghiệm cô lập)</label>
+        <input class="input" id="api-jwt" type="password" placeholder="Không dùng token production trên trình duyệt" spellcheck="false" autocomplete="off">
       </div>
       <p class="muted" style="margin:8px 0 0;font-size:12px">Trang này được phục vụ tĩnh từ chính Server AI Worker (<code>/api/demo-eval.html</code>), API cùng origin nên chỉ cần dán token hợp lệ khi kết nối.</p>
     </div>
@@ -401,7 +401,7 @@
     var data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
     if (!res.ok) {
-      var msg = res.status === 401 ? 'Thiếu hoặc sai JWT / Internal Token (401).'
+      var msg = res.status === 401 ? 'Worker từ chối credential nội bộ (401).'
         : res.status === 403 ? 'Không đủ quyền (403).'
         : ((data && (data.error || data.message)) ? (data.error || data.message) : ('HTTP ' + res.status));
       throw new Error(msg);

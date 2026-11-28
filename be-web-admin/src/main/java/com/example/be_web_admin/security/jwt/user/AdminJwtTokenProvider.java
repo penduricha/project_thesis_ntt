@@ -197,9 +197,9 @@ public class AdminJwtTokenProvider {
             }
             return Long.parseLong(claims.getSubject());
         } catch (ExpiredJwtException e) {
-            log.debug("JWT token expired: {}", e.getMessage());
+            log.debug("JWT token expired.");
         } catch (JwtException | IllegalArgumentException e) {
-            log.warn("JWT token invalid: {}", e.getMessage());
+            log.debug("JWT token invalid.");
         }
         return null;
     }

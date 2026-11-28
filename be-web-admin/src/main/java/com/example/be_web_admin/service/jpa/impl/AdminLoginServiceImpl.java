@@ -94,6 +94,13 @@ public class AdminLoginServiceImpl {
         Optional<TotpCredential> credOpt = totpCredentialRepository
                 .findFirstByAdmin_AdminIdAndConfirmedTrueOrderByConfirmedAtDesc(adminId);
         if (credOpt.isEmpty()) {
+            // An enabled or unknown flag without a confirmed credential is inconsistent. Never
+            // silently downgrade to password-only login; an operator must investigate the data.
+            // A confirmed credential always takes precedence over the flag in the opposite case.
+            if (!Boolean.FALSE.equals(admin.getTotpEnabled())) {
+                log.error("Refusing login for admin {}: 2FA flag is enabled or unknown but no confirmed credential exists", adminId);
+                return LoginOutcome.of(LoginStatus.BAD_CREDENTIALS);
+            }
             return issueTokens(admin, client, device, platform, ip);
         }
 

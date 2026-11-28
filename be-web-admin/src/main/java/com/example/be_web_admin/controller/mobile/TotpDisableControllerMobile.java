@@ -1,6 +1,7 @@
 package com.example.be_web_admin.controller.mobile;
 
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import com.example.be_web_admin.service.redis.impl.EnrollmentServiceImpl.AdminNotFoundException;
 import com.example.be_web_admin.service.redis.impl.TotpDisableServiceImpl;
@@ -56,11 +57,25 @@ public class TotpDisableControllerMobile {
         if (code == null || !code.matches("\\d{6}")) {
             return ResponseEntity.badRequest().body(body(false, "Code must be 6 digits.", null));
         }
+        Object rawCredential = request == null ? null : request.get("credentialId");
+        Long credentialId = null;
+        if (rawCredential != null) {
+            try {
+                String value = rawCredential.toString();
+                if (!value.matches("[1-9][0-9]{0,18}")) throw new NumberFormatException();
+                credentialId = Long.valueOf(value);
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(body(false, "Invalid credentialId.", null));
+            }
+        }
         try {
-            disableService.disable(adminId, code, http.getRemoteAddr(), http.getHeader(HttpHeaders.USER_AGENT));
+            disableService.disable(adminId, credentialId, code, http.getRemoteAddr(), http.getHeader(HttpHeaders.USER_AGENT));
+            Map<String, Object> data = new HashMap<>();
+            data.put("totpEnabled", false);
+            if (credentialId != null) data.put("credentialId", credentialId);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                    .body(body(true, "2FA turned off.", Map.of("totpEnabled", false)));
+                    .body(body(true, "2FA turned off.", data));
         } catch (TotpNotEnabledException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(false, "2FA is not enabled.", null));
         } catch (InvalidTotpCodeException e) {
@@ -87,10 +102,10 @@ public class TotpDisableControllerMobile {
     private Long resolveAdminId(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
         String token = authHeader.substring(7);
-        Long adminId = adminJwtTokenProvider.parseAccessTokenAdminId(token);
-        if (adminId == null) return null;
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(token, "ACCESS");
+        if (identity == null || identity.client() != AuthSessionStore.Client.MOBILE) return null;
         try {
-            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? adminId : null;
+            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? identity.adminId() : null;
         } catch (RuntimeException e) {
             // A store/account outage must not be mistaken for a revoked token.
             throw new org.springframework.web.server.ResponseStatusException(

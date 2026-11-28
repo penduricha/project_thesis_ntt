@@ -18,14 +18,13 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.server_ai_worker.config.AiProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Bảo mật fail-closed cho Server AI Worker:
  * - Các trang công cụ tĩnh (/node-colab.html, /demo-eval.html) mở tải HTML;
- * - Mọi API (/web/ai/** và các đường dẫn khác) bắt buộc Bearer ACCESS JWT hoặc X-Internal-Token;
+ * - Mọi API yêu cầu credential nội bộ; không chấp nhận JWT người dùng.
  * - CORS tập trung theo danh sách ai.security.cors-allowed-origins (không dùng "*").
  */
 @Configuration
@@ -34,8 +33,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   AiProperties props,
-                                                   ObjectMapper json) throws Exception {
+                                                   AiProperties props) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -57,7 +55,7 @@ public class SecurityConfig {
                     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                     response.getWriter().write("{\"message\":\"Unauthorized\"}");
                 }))
-                .addFilterBefore(new AiAuthFilter(props, json), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new AiAuthFilter(props), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

@@ -3,13 +3,15 @@ package com.example.be_web_admin.service.qbank;
 import com.example.be_web_admin.dto.qbank.ActivityItem;
 import com.example.be_web_admin.dto.qbank.DashboardSummary;
 import com.example.be_web_admin.dto.qbank.QuestionDraft;
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import com.example.be_web_admin.model.redis.UiAiJobView;
 import com.example.be_web_admin.repository.redis.UiAiJobViewRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -156,7 +158,7 @@ public class UiStateStore {
                     objectMapper.writeValueAsString(draft), DRAFT_TTL);
         } catch (Exception e) {
             log.warn("Redis: không lưu được nháp ({}): {}", questionKey, e.toString());
-            throw QbankException.serviceUnavailable("DRAFT_UNAVAILABLE", "Không thể lưu bản nháp. Vui lòng thử lại.");
+            throw QBankException.serviceUnavailable("DRAFT_UNAVAILABLE", "Không thể lưu bản nháp. Vui lòng thử lại.");
         }
     }
 
@@ -169,16 +171,38 @@ public class UiStateStore {
             return Optional.of(objectMapper.readValue(json, QuestionDraft.class));
         } catch (Exception e) {
             log.warn("Redis: không đọc được nháp ({}): {}", questionKey, e.toString());
-            throw QbankException.serviceUnavailable("DRAFT_UNAVAILABLE", "Không thể đọc bản nháp. Vui lòng thử lại.");
+            throw QBankException.serviceUnavailable("DRAFT_UNAVAILABLE", "Không thể đọc bản nháp. Vui lòng thử lại.");
         }
     }
 
+    /** Explicit user deletion: an unavailable or indeterminate Redis response must not look like success. */
     public void deleteDraft(Long adminId, String questionKey) {
         try {
-            redis.delete(draftKey(adminId, questionKey));
+            if (redis.delete(draftKey(adminId, questionKey)) == null) {
+                throw new IllegalStateException("Redis returned no delete result");
+            }
         } catch (Exception e) {
             log.warn("Redis: không xoá được nháp ({}): {}", questionKey, e.toString());
+            throw QBankException.serviceUnavailable("DRAFT_UNAVAILABLE", "Không thể xoá bản nháp. Vui lòng thử lại.");
         }
+    }
+
+    /** Best-effort cleanup only after the database transaction commits; rollback must preserve drafts. */
+    public void deleteDraftAfterCommit(Long adminId, String questionKey) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()
+                || !TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("Draft cleanup requires an active transaction");
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    deleteDraft(adminId, questionKey);
+                } catch (QBankException e) {
+                    log.warn("Draft cleanup after database commit failed for admin {}", adminId);
+                }
+            }
+        });
     }
 
     // ------------------------------------------------------------------ Khoá chống bấm liên tục

@@ -20,6 +20,7 @@ class AuthAccount {
     this.digits = TotpGenerator.defaultDigits,
     this.algorithm = TotpAlgorithm.sha1,
     this.enrolled = false,
+    this.credentialId,
   });
 
   final String id;
@@ -32,6 +33,8 @@ class AuthAccount {
 
   /// true = tạo từ luồng kích hoạt 2FA của server, được lưu vào secure storage.
   final bool enrolled;
+  /// Null for keys saved by older versions; never infer a generation for them.
+  final int? credentialId;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -41,6 +44,7 @@ class AuthAccount {
     'periodSeconds': periodSeconds,
     'digits': digits,
     'algorithm': algorithm.name,
+    if (credentialId != null) 'credentialId': credentialId,
   };
 
   factory AuthAccount.fromJson(Map<String, dynamic> json) {
@@ -53,6 +57,7 @@ class AuthAccount {
       digits: (json['digits'] as num).toInt(),
       algorithm: TotpAlgorithm.parse(json['algorithm'] as String?),
       enrolled: true, // chỉ tài khoản kích hoạt từ server mới được lưu
+      credentialId: (json['credentialId'] as num?)?.toInt(),
     );
   }
 }

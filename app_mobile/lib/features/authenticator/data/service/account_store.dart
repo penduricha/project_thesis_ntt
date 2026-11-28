@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -13,9 +14,15 @@ import '../model/auth_account.dart';
 //  Nghiệp vụ: chỉ adminId đang đăng nhập mới thấy TOTP của chính mình.
 //   - Key lưu:  authenticator_accounts_<adminId>   (admin khác không đọc được key này)
 //   - load() / save() còn lọc thêm theo adminId, phòng dữ liệu bị lẫn.
-//   - Key cũ dùng chung `authenticator_accounts` (bản demo) bị xóa ở lần load đầu tiên;
-//     chỉ mục của CHÍNH admin này (nếu có) được chuyển sang key riêng.
+//   - Key cũ được giữ nguyên khi migrate: có thể chứa khóa của admin khác.
+//     Chỉ mục của CHÍNH admin được sao chép sang key riêng sau khi kiểm tra ghi.
 // ============================================================================
+
+class PendingAccount {
+  const PendingAccount(this.credentialId, this.account);
+  final int credentialId;
+  final AuthAccount account;
+}
 
 class AccountStore {
   AccountStore({required this.adminId, FlutterSecureStorage? storage})
@@ -44,39 +51,87 @@ class AccountStore {
     return _storage.write(key: _key, value: json);
   }
 
-  /// Xóa TOTP của admin này khỏi máy (dùng nếu muốn xóa khi đăng xuất).
-  Future<void> clear() => _storage.delete(key: _key);
-
-  Future<List<AuthAccount>> _read(String key) async {
-    try {
-      final raw = await _storage.read(key: key);
-      if (raw == null || raw.isEmpty) return [];
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => AuthAccount.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return []; // dữ liệu hỏng: coi như chưa có, không làm app crash
-    }
+  String _pendingKey(int credentialId) => 'authenticator_pending_${adminId}_$credentialId';
+  // Serialize staging operations in this isolate; cross-isolate/process storage is not transactional.
+  static Future<void> _stageTail = Future<void>.value();
+  static Future<T> _serializeStage<T>(Future<T> Function() work) {
+    final result = Completer<T>();
+    _stageTail = _stageTail.then((_) async {
+      try { result.complete(await work()); }
+      catch (error, stack) { result.completeError(error, stack); }
+    });
+    return result.future;
   }
 
-  /// Một lần: giữ lại mục của chính admin này, xóa toàn bộ phần còn lại của key cũ
-  /// (mục demo, mục của admin khác).
-  Future<void> _migrateLegacy() async {
-    try {
-      final raw = await _storage.read(key: _legacyKey);
-      if (raw == null) return;
+  /// Persist separately from confirmed keys before any request that could enable 2FA.
+  /// Never overwrite an ambiguous previous attempt for the same credential.
+  Future<void> stage(int credentialId, AuthAccount account) => _serializeStage(() async {
+    if (credentialId <= 0 || account.account != adminId || account.credentialId != credentialId) {
+      throw StateError('Invalid pending account');
+    }
+    final key = _pendingKey(credentialId);
+    final encoded = jsonEncode(account.toJson());
+    final previous = await _storage.read(key: key);
+    if (previous != null && previous != encoded) {
+      throw StateError('An unresolved enrollment is already stored');
+    }
+    if (previous == null) await _storage.write(key: key, value: encoded);
+    if (await _storage.read(key: key) != encoded) throw StateError('Pending key could not be verified');
+  });
 
-      final mine = (await _read(_legacyKey))
-          .where((a) => a.account == adminId)
-          .toList();
-      final alreadyHasOwn = (await _storage.read(key: _key)) != null;
-      if (mine.isNotEmpty && !alreadyHasOwn) {
-        await save(mine);
+  Future<List<PendingAccount>> loadPending() async {
+    final prefix = 'authenticator_pending_${adminId}_';
+    final all = await _storage.readAll();
+    final result = <PendingAccount>[];
+    for (final entry in all.entries) {
+      if (!entry.key.startsWith(prefix)) continue;
+      final id = int.tryParse(entry.key.substring(prefix.length));
+      if (id == null || id <= 0) throw StateError('Invalid pending credential id');
+      final account = AuthAccount.fromJson(jsonDecode(entry.value) as Map<String, dynamic>);
+      if (account.account != adminId || account.credentialId != id) {
+        throw StateError('Pending account mismatch');
       }
-      await _storage.delete(key: _legacyKey);
-    } catch (_) {
-      // không migrate được: bỏ qua, mục cũ vẫn không hiển thị vì đã lọc theo adminId
+      result.add(PendingAccount(id, account));
+    }
+    return result;
+  }
+
+  /// Clear only after the confirmed key has been saved and read back successfully.
+  Future<void> clearPending(int credentialId) =>
+      _serializeStage(() => _storage.delete(key: _pendingKey(credentialId)));
+
+  /// Clear this user while retaining an empty marker so legacy data is not re-imported.
+  /// The shared legacy source is retained separately for other users.
+  Future<void> clear() => save(const <AuthAccount>[]);
+
+  Future<List<AuthAccount>> _read(String key) async {
+    final raw = await _storage.read(key: key);
+    if (raw == null) return [];
+    // A corrupt/empty value is not evidence that the user has no key. Let the
+    // caller block changes and report a storage error instead of overwriting it.
+    final list = jsonDecode(raw) as List<dynamic>;
+    return list
+        .map((e) => AuthAccount.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Copy only this admin's entries and retain the shared legacy source. It may
+  /// contain other users' keys, and deleting it would make their 2FA unavailable.
+  Future<void> _migrateLegacy() async {
+    if (await _storage.read(key: _key) != null) return;
+    final raw = await _storage.read(key: _legacyKey);
+    if (raw == null) return;
+    final list = jsonDecode(raw) as List<dynamic>;
+    final mine = list
+        .map((e) => AuthAccount.fromJson(e as Map<String, dynamic>))
+        .where((a) => a.account == adminId)
+        .toList();
+    if (mine.isEmpty) return;
+    await save(mine);
+    final copied = await _read(_key);
+    if (jsonEncode(copied.map((a) => a.toJson()).toList()) !=
+        jsonEncode(mine.map((a) => a.toJson()).toList())) {
+      throw StateError('Authenticator migration could not be verified');
     }
   }
 }

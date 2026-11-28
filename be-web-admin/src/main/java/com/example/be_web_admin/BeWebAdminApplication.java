@@ -43,7 +43,7 @@ public class BeWebAdminApplication {
 		dotenv.entries(Dotenv.Filter.DECLARED_IN_ENV_FILE).forEach(entry -> {
 			String key = entry.getKey();
 			String val = entry.getValue();
-			if (System.getProperty(key) == null && (System.getenv(key) == null || !val.isEmpty())) {
+			if (System.getProperty(key) == null && System.getenv(key) == null) {
 				System.setProperty(key, val);
 			}
 		});

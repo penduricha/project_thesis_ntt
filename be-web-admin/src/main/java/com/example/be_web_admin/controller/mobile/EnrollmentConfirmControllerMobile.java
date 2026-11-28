@@ -1,6 +1,7 @@
 package com.example.be_web_admin.controller.mobile;
 
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.service.redis.impl.AdminTokenServiceImpl;
 import com.example.be_web_admin.service.redis.impl.EnrollmentConfirmServiceImpl;
 import com.example.be_web_admin.service.redis.impl.EnrollmentConfirmServiceImpl.ConfirmExpiredException;
@@ -48,11 +49,13 @@ public class EnrollmentConfirmControllerMobile {
         try {
             PendingParams p = confirmService.getPendingParams(adminId);
             Map<String, Object> data = new HashMap<>();
+            data.put("credentialId", p.credentialId());
             data.put("algorithm", p.algorithm());
             data.put("digits", p.digits());
             data.put("periodSeconds", p.periodSeconds());
             data.put("expiresInSeconds", p.expiresInSeconds());
-            return ResponseEntity.ok(body(true, "Pending enrollment found.", data));
+            return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                    .body(body(true, "Pending enrollment found.", data));
         } catch (NoPendingEnrollmentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(false, "No pending enrollment. Activate 2FA on the web first.", null));
         } catch (ConfirmExpiredException e) {
@@ -78,13 +81,31 @@ public class EnrollmentConfirmControllerMobile {
         if (code == null || !code.matches("\\d{6}")) {
             return ResponseEntity.badRequest().body(body(false, "Code must be 6 digits.", null));
         }
+        Object rawCredential = request == null ? null : request.get("credentialId");
+        if (rawCredential == null) {
+            // Old mobile clients cannot stage a key tied to a specific generation.
+            return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED)
+                    .body(body(false, "Update the app to confirm this enrollment safely.", null));
+        }
+        Long credentialId;
         try {
-            boolean ok = confirmService.confirm(adminId, code, http.getRemoteAddr(), http.getHeader(HttpHeaders.USER_AGENT));
+            String value = rawCredential.toString();
+            if (!value.matches("[1-9][0-9]{0,18}")) throw new NumberFormatException();
+            credentialId = Long.valueOf(value);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(body(false, "Invalid credentialId.", null));
+        }
+        try {
+            boolean ok = confirmService.confirm(adminId, credentialId, code, http.getRemoteAddr(), http.getHeader(HttpHeaders.USER_AGENT));
             if (!ok) {
                 return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                         .body(body(false, "Wrong code. Check the key you entered.", null));
             }
-            return ResponseEntity.ok(body(true, "2FA activated.", Map.of("totpEnabled", true)));
+            Map<String, Object> data = new HashMap<>();
+            data.put("totpEnabled", true);
+            if (credentialId != null) data.put("credentialId", credentialId);
+            return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                    .body(body(true, "2FA activated.", data));
         } catch (NoPendingEnrollmentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(false, "No pending enrollment.", null));
         } catch (ConfirmExpiredException e) {
@@ -98,13 +119,36 @@ public class EnrollmentConfirmControllerMobile {
         }
     }
 
+    /** Reconcile a lost confirm response against the exact credential for this account. */
+    @PostMapping("/receipt/{credentialId}")
+    public ResponseEntity<?> receipt(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                     @PathVariable Long credentialId,
+                                     @RequestBody(required = false) Map<String, Object> request) {
+        Long adminId = resolveAdminId(authHeader);
+        if (adminId == null) return unauthorized();
+        Object rawCode = request == null ? null : request.get("code");
+        String code = rawCode == null ? "" : rawCode.toString();
+        if (!code.matches("[0-9]{6}")) return ResponseEntity.badRequest().body(body(false, "Code must be 6 digits.", null));
+        try {
+            if (!confirmService.verifyConfirmedGeneration(adminId, credentialId, code)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).cacheControl(org.springframework.http.CacheControl.noStore())
+                        .body(body(false, "Credential cannot be reconciled.", null));
+            }
+            return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                    .body(body(true, "Credential confirmed.", Map.of("totpEnabled", true, "credentialId", credentialId)));
+        } catch (TooManyAttemptsException e) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).cacheControl(org.springframework.http.CacheControl.noStore())
+                    .body(body(false, "Too many attempts. Try again later.", null));
+        }
+    }
+
     private Long resolveAdminId(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
         String token = authHeader.substring(7);
-        Long adminId = adminJwtTokenProvider.parseAccessTokenAdminId(token);
-        if (adminId == null) return null;
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(token, "ACCESS");
+        if (identity == null || identity.client() != AuthSessionStore.Client.MOBILE) return null;
         try {
-            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? adminId : null;
+            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? identity.adminId() : null;
         } catch (RuntimeException e) {
             // A store/account outage must not be mistaken for a revoked token.
             throw new org.springframework.web.server.ResponseStatusException(

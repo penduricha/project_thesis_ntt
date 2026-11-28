@@ -702,6 +702,7 @@ export default {
 
   // LLM status and actions
   "llmState.invalidUrl": "URL 格式无效。例如：https://example.trycloudflare.com",
+  "llmState.unavailableRealMode": "LLM 管理尚未连接真实服务，目前不可用。请勿在此输入生产环境令牌或配置。",
   "llmState.httpsRequired": "URL 必须以 https:// 开头",
   "llmState.domainWarning": "地址不属于 trycloudflare.com，服务器 2 可能会拒绝。",
   "llmState.checking": "正在检查…",
@@ -830,6 +831,16 @@ export default {
   "enrollment.startError": "无法创建密钥，请重试。",
   "enrollment.activateError": "无法激活，请重试。",
   "enrollment.alreadyEnabled": "双重验证已启用。",
+  "enrollment.inProgress": "已有设置会话或双重验证已启用。请检查状态或等待会话过期。",
+  "enrollment.updateRequired": "应用或服务器不支持安全的双重验证设置会话。请更新并重新加载，不要继续使用旧密钥。",
+  "enrollment.recoveryStorageError": "浏览器无法保存恢复标识，未发送激活请求。",
+  "enrollment.reconcileTitle": "核对双重验证设置",
+  "enrollment.reconcileConfirm": "这可能取消未完成的激活。如果已保存，将重新加载当前状态。是否继续？",
+  "enrollment.reconcileAction": "核对",
+  "enrollment.reconcileHint": "此浏览器有一次激活结果尚不确定。",
+  "enrollment.reconcileFailed": "无法核对。请保留当前状态并稍后重试。",
+  "enrollment.reconcileCommitted": "激活已保存。请检查状态；如果未保存的密钥丢失，请取消待处理设置并重新开始。",
+  "enrollment.reconcileCancelled": "未提交的激活已被阻止。重新开始前请检查状态。",
   "enrollment.secretExpired": "密钥已过期（5 分钟）。请点击重试以创建新密钥。",
   "enrollment.statusError": "无法读取双重验证状态。",
 

@@ -1,6 +1,7 @@
 package com.example.server_ai_worker.service.ai;
 
 import java.util.List;
+import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -12,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import com.example.server_ai_worker.config.AiProperties;
@@ -35,6 +37,8 @@ public class AiDispatcher implements SmartLifecycle {
     private final AiTaskRepository tasks;
     private final NodePool nodePool;
     private final AiProperties props;
+    private final StringRedisTemplate redis;
+    private String pendingCursor = "";
 
     private volatile boolean running;
     private ExecutorService workerPool;
@@ -46,12 +50,14 @@ public class AiDispatcher implements SmartLifecycle {
                         AiTaskProcessor processor,
                         AiTaskRepository tasks,
                         NodePool nodePool,
-                        AiProperties props) {
+                        AiProperties props,
+                        StringRedisTemplate redis) {
         this.queue = queue;
         this.processor = processor;
         this.tasks = tasks;
         this.nodePool = nodePool;
         this.props = props;
+        this.redis = redis;
     }
 
     @Override
@@ -158,6 +164,33 @@ public class AiDispatcher implements SmartLifecycle {
         } catch (Exception e) {
             log.warn("Quét tác vụ kẹt lỗi: {}", e.getMessage());
         }
+        try {
+            recoverPending();
+        } catch (Exception e) {
+            log.warn("Đối soát tác vụ đang chờ lỗi: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * The DB is authoritative. A task can be lost after DB commit or between Redis pop and DB
+     * claim. Re-enqueue old pending tasks, rate-limited across instances. Duplicate queue entries
+     * cannot be claimed concurrently while a task stays running: process() uses an atomic
+     * pending->running claim. Entries may accumulate during a long backlog; the TTL bounds the
+     * recovery enqueue rate and recovers a crash after acquiring the marker but before push().
+     */
+    void recoverPending() {
+        List<String> ids = tasks.findPendingForRecovery(pendingCursor);
+        if (ids.isEmpty()) {
+            pendingCursor = "";
+            return;
+        }
+        long seconds = Math.max(120L, props.getOrchestrator().getSweeperInterval().toSeconds() * 2);
+        for (String id : ids) {
+            Boolean claimed = redis.opsForValue().setIfAbsent("ai:pending-recovery:" + id, "1", Duration.ofSeconds(seconds));
+            if (claimed == null) throw new IllegalStateException("Redis returned no recovery marker result");
+            if (claimed) queue.push(id);
+        }
+        pendingCursor = ids.get(ids.size() - 1);
     }
 
     @Override

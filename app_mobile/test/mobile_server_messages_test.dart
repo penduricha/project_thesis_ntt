@@ -84,6 +84,39 @@ void main() {
     dio.close();
   });
 
+  test('2FA disable accepts only a matching explicit success response', () async {
+    for (final sample in [
+      {'success': true, 'data': {'totpEnabled': false}},
+      {'success': true, 'data': <String, Object?>{}},
+      {'success': false, 'data': {'totpEnabled': false}},
+    ]) {
+      final adapter = _ResponseAdapter(200, sample);
+      final dio = Dio(BaseOptions(baseUrl: 'https://example.invalid'))..httpClientAdapter = adapter;
+      final result = EnrollmentService(auth: _Auth(), dio: dio).disable(
+        secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', periodSeconds: 30, digits: 6, algorithm: TotpAlgorithm.sha1,
+      );
+      if ((sample['data'] as Map)['totpEnabled'] == false && sample['success'] == true) {
+        expect(await result, DisableOutcome.disabled);
+      } else {
+        await expectLater(result, throwsA(isA<EnrollmentException>()));
+      }
+      expect(adapter.requests, 1);
+      dio.close();
+    }
+  });
+
+  test('2FA disable keeps the local key on an ambiguous 404', () async {
+    final adapter = _ResponseAdapter(404, {'message': 'Not found'});
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.invalid'))..httpClientAdapter = adapter;
+    final service = EnrollmentService(auth: _Auth(), dio: dio);
+    await expectLater(
+      service.disable(secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', periodSeconds: 30, digits: 6, algorithm: TotpAlgorithm.sha1),
+      throwsA(isA<EnrollmentException>()),
+    );
+    expect(adapter.requests, 1);
+    dio.close();
+  });
+
   test('2FA disable preserves replay and lock outcomes and makes one request', () async {
     await AppPreferences.instance.setLocale(const Locale('en'));
     for (final sample in <Map<String, Object>>[

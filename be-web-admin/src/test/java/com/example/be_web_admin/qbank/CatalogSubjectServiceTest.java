@@ -3,7 +3,7 @@ package com.example.be_web_admin.qbank;
 import com.example.be_web_admin.controller.web.CatalogController;
 import com.example.be_web_admin.controller.web.WebRoles;
 import com.example.be_web_admin.dto.qbank.*;
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import com.example.be_web_admin.model.jpa.qbank.Subject;
 import com.example.be_web_admin.model.jpa.qbank.Topic;
 import com.example.be_web_admin.repository.jpa.ai.IssueTypeRepository;
@@ -49,12 +49,12 @@ class CatalogSubjectServiceTest {
 
     @Test
     void invalidCharactersAndDuplicateAreRejectedBeforeWriting() {
-        QbankException badCode = assertThrows(QbankException.class, () -> service.createSubject(new SubjectCreateRequest("A@1", "Mạng máy tính", "", true, "Chương 1"), 7L));
+        QBankException badCode = assertThrows(QBankException.class, () -> service.createSubject(new SubjectCreateRequest("A@1", "Mạng máy tính", "", true, "Chương 1"), 7L));
         assertEquals("SUBJECT_CODE_INVALID", badCode.getCode());
-        QbankException badName = assertThrows(QbankException.class, () -> service.createSubject(new SubjectCreateRequest("ABC1234", "Môn <script>", "", true, "Chương 1"), 7L));
+        QBankException badName = assertThrows(QBankException.class, () -> service.createSubject(new SubjectCreateRequest("ABC1234", "Môn <script>", "", true, "Chương 1"), 7L));
         assertEquals("SUBJECT_NAME_INVALID", badName.getCode());
         when(subjects.existsBySubjectCodeIgnoreCase("ABC1234")).thenReturn(true);
-        QbankException duplicate = assertThrows(QbankException.class, () -> service.createSubject(new SubjectCreateRequest("ABC1234", "Môn học", "", true, "Chương 1"), 7L));
+        QBankException duplicate = assertThrows(QBankException.class, () -> service.createSubject(new SubjectCreateRequest("ABC1234", "Môn học", "", true, "Chương 1"), 7L));
         assertEquals("SUBJECT_CODE_DUPLICATED", duplicate.getCode());
         verify(subjects, never()).saveAndFlush(any());
         verifyNoInteractions(topics);
@@ -64,13 +64,13 @@ class CatalogSubjectServiceTest {
     @Test
     void rejectsInvalidCodePatternsForCreateAndUpdate() {
         for (String invalid : new String[]{"haG8342", "325as", "fds", "ABC123", "ABC1234567", "ABC-1234", "ABC_1234", " ABC1234", "ABC1234 ", "ABC1234\n", "ÁBC1234", "ABC１２３４"}) {
-            QbankException error = assertThrows(QbankException.class,
+            QBankException error = assertThrows(QBankException.class,
                     () -> service.createSubject(new SubjectCreateRequest(invalid, "Môn học", null, true, "Chương 1"), 7L), invalid);
             assertEquals("SUBJECT_CODE_INVALID", error.getCode());
         }
         Subject subject = new Subject(); subject.setSubjectId(12L); subject.setUpdatedAt(TIME);
         when(subjects.findForQuestionCreate(12L)).thenReturn(Optional.of(subject));
-        QbankException error = assertThrows(QbankException.class, () -> service.updateSubject(12L,
+        QBankException error = assertThrows(QBankException.class, () -> service.updateSubject(12L,
                 new SubjectUpdateRequest("haG8342", "Môn học", null, true, TIME)));
         assertEquals("SUBJECT_CODE_INVALID", error.getCode());
         verify(subjects, never()).saveAndFlush(any());
@@ -91,7 +91,7 @@ class CatalogSubjectServiceTest {
         Subject subject = new Subject(); subject.setSubjectId(12L); subject.setUpdatedAt(TIME);
         when(subjects.findForQuestionCreate(12L)).thenReturn(Optional.of(subject));
         SubjectUpdateRequest request = new SubjectUpdateRequest("X", "Tên mới", null, true, TIME.minusSeconds(1));
-        QbankException error = assertThrows(QbankException.class, () -> service.updateSubject(12L, request));
+        QBankException error = assertThrows(QBankException.class, () -> service.updateSubject(12L, request));
         assertEquals("SUBJECT_VERSION_CONFLICT", error.getCode());
         verify(subjects, never()).saveAndFlush(any());
     }

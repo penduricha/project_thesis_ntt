@@ -11,8 +11,10 @@ Không đọc/ghi bảng ER v4 (`ntt_ai_tasks`, `ntt_ai_suggestions`, …); toà
 
 ## Cách mở trang demo
 
+Chỉ dùng trên môi trường thử nghiệm cô lập với credential thử nghiệm riêng; không nhập token nội bộ production vào trình duyệt hoặc công khai cổng worker. JWT người dùng không được chấp nhận.
+
 ```bash
-cd server-ai-worker && ./gradlew bootRun   # hoặc build & run bình thường
+cd be-server-ai && ./gradlew bootRun   # hoặc build & run bình thường
 # → http://localhost:8082/api/demo-eval.html
 ```
 

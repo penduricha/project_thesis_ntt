@@ -702,6 +702,7 @@ export default {
 
   // LLM status and actions
   "llmState.invalidUrl": "URL 형식이 올바르지 않습니다. 예: https://example.trycloudflare.com",
+  "llmState.unavailableRealMode": "LLM 관리는 실제 서비스에 연결되지 않아 사용할 수 없습니다. 운영 토큰이나 설정을 여기에 입력하지 마세요.",
   "llmState.httpsRequired": "URL은 https://로 시작해야 합니다",
   "llmState.domainWarning": "trycloudflare.com 주소가 아니므로 서버 2에서 거부할 수 있습니다.",
   "llmState.checking": "확인 중…",
@@ -830,6 +831,16 @@ export default {
   "enrollment.startError": "비밀 키를 만들 수 없습니다. 다시 시도하세요.",
   "enrollment.activateError": "활성화할 수 없습니다. 다시 시도하세요.",
   "enrollment.alreadyEnabled": "2단계 인증이 이미 활성화되어 있습니다.",
+  "enrollment.inProgress": "설정 세션이 있거나 2단계 인증이 활성화되어 있습니다. 상태를 확인하거나 세션 만료를 기다리세요.",
+  "enrollment.updateRequired": "앱 또는 서버가 안전한 2단계 인증 설정 세션을 지원하지 않습니다. 업데이트 후 새로고침하고 이전 키를 사용하지 마세요.",
+  "enrollment.recoveryStorageError": "브라우저에 복구 식별자를 저장하지 못해 활성화 요청을 보내지 않았습니다.",
+  "enrollment.reconcileTitle": "2단계 인증 설정 확인",
+  "enrollment.reconcileConfirm": "완료되지 않은 활성화를 취소할 수 있습니다. 저장된 경우 현재 상태를 다시 불러옵니다. 계속하시겠습니까?",
+  "enrollment.reconcileAction": "확인",
+  "enrollment.reconcileHint": "이 브라우저에서 활성화 결과가 확인되지 않았습니다.",
+  "enrollment.reconcileFailed": "확인할 수 없습니다. 현재 상태를 유지하고 나중에 다시 시도하세요.",
+  "enrollment.reconcileCommitted": "활성화가 저장되었습니다. 상태를 확인하고 저장하지 않은 키를 잃었다면 대기 중인 설정을 취소하고 다시 시작하세요.",
+  "enrollment.reconcileCancelled": "저장되지 않은 활성화를 차단했습니다. 다시 시작하기 전에 상태를 확인하세요.",
   "enrollment.secretExpired": "비밀 키가 만료되었습니다 (5분). 다시 시도를 눌러 새 키를 만드세요.",
   "enrollment.statusError": "2단계 인증 상태를 확인할 수 없습니다.",
 

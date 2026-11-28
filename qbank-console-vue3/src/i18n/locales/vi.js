@@ -727,6 +727,7 @@ export default {
 
   // LLM status and actions
   "llmState.invalidUrl": "URL chưa đúng dạng. Ví dụ: https://example.trycloudflare.com",
+  "llmState.unavailableRealMode": "Quản lý LLM chưa kết nối dịch vụ thật và hiện không khả dụng. Không nhập token hoặc cấu hình production tại đây.",
   "llmState.httpsRequired": "URL phải bắt đầu bằng https://",
   "llmState.domainWarning": "Không phải địa chỉ trycloudflare.com, Server 2 có thể từ chối.",
   "llmState.checking": "Đang kiểm tra…",
@@ -855,6 +856,16 @@ export default {
   "enrollment.startError": "Không thể tạo khóa bí mật. Vui lòng thử lại.",
   "enrollment.activateError": "Không thể kích hoạt. Vui lòng thử lại.",
   "enrollment.alreadyEnabled": "Xác thực hai yếu tố đã được bật.",
+  "enrollment.inProgress": "Một phiên cài đặt 2FA đang tồn tại hoặc 2FA đã bật. Kiểm tra trạng thái hoặc chờ phiên hết hạn.",
+  "enrollment.updateRequired": "Ứng dụng hoặc máy chủ chưa hỗ trợ phiên cài đặt 2FA an toàn. Hãy cập nhật và tải lại; không tiếp tục với khóa cũ.",
+  "enrollment.recoveryStorageError": "Không lưu được mã đối soát trên trình duyệt. Không gửi yêu cầu kích hoạt.",
+  "enrollment.reconcileTitle": "Đối soát cài đặt 2FA",
+  "enrollment.reconcileConfirm": "Thao tác này có thể hủy lần kích hoạt chưa hoàn tất. Nếu đã ghi thành công, trạng thái hiện tại sẽ được tải lại. Tiếp tục?",
+  "enrollment.reconcileAction": "Đối soát",
+  "enrollment.reconcileHint": "Có lần kích hoạt chưa xác định kết quả trên trình duyệt này.",
+  "enrollment.reconcileFailed": "Không thể đối soát. Giữ nguyên trạng thái và thử lại sau.",
+  "enrollment.reconcileCommitted": "Lần kích hoạt đã được ghi. Kiểm tra trạng thái; nếu mất khóa chưa lưu, hãy hủy phần chờ và cài lại.",
+  "enrollment.reconcileCancelled": "Đã chặn lần kích hoạt chưa ghi. Kiểm tra trạng thái trước khi bắt đầu lại.",
   "enrollment.secretExpired": "Khóa bí mật đã hết hạn (5 phút). Vui lòng bấm Thử lại để tạo khóa mới.",
   "enrollment.statusError": "Không thể đọc trạng thái xác thực hai yếu tố.",
 

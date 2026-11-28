@@ -72,7 +72,7 @@ export default class AdminRepository {
             if (body && typeof body === "object" && body.success === false) {
                 return this.#toLoginResult(adminAccount, body);
             }
-            console.error(REQUEST_STATUS.EXCEPTION, error.message);
+            console.warn('Authentication request failed.');
             return new LoginResult(REQUEST_STATUS.EXCEPTION);
         }
     }
@@ -89,7 +89,7 @@ export default class AdminRepository {
             this.#clearLoginSession(tokenLogin);
             return REQUEST_STATUS.OK;
         } catch (error) {
-            console.error(REQUEST_STATUS.EXCEPTION, error.message);
+            console.warn('Authentication request failed.');
             return REQUEST_STATUS.EXCEPTION;
         }
     }

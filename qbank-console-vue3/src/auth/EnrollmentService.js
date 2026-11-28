@@ -7,6 +7,7 @@ import {retryOn401, silentRefresher} from "./SilentTokenRefresher.js";
 const ENDPOINTS = Object.freeze({
     ENROLLMENT: '/admin/2fa/enrollment',                    // POST sinh khóa | DELETE xóa khóa ở Redis
     ACTIVATE: '/admin/2fa/enrollment/activate',             // POST ghi MariaDB, chờ mobile xác nhận
+    RECONCILE: '/admin/2fa/enrollment/reconcile',
     PENDING: '/admin/2fa/enrollment/pending',               // DELETE hủy phần chờ xác nhận
     STATUS: '/admin/2fa/status',                            // GET trạng thái 2FA
     EVENTS: '/admin/2fa/events',                            // GET luồng SSE: server báo đổi trạng thái 2FA
@@ -45,7 +46,7 @@ export class EnrollmentService {
         } catch (error) {
             // Không window.location.reload() ở đây: axios ném lỗi cho cả 401 / 409 (lỗi nghiệp vụ bình thường),
             // reload sẽ làm mất thông báo lỗi và nháy trang. Repository đã đổi mã lỗi thành câu báo cho người dùng.
-            console.error('Start enrollment error:', error);
+            console.warn('Start enrollment error: request failed.');
             return error.response ?? null;
         }
     }
@@ -56,13 +57,13 @@ export class EnrollmentService {
      *
      * @returns {Promise<import('axios').AxiosResponse|null>} response.data.data.deleted = true | false
      */
-    async deleteDataToCancelEnrollmentRequest(tokenLogin) {
+    async deleteDataToCancelEnrollmentRequest(tokenLogin, generation) {
         assertInstanceOf(tokenLogin, TokenLogin, 'TokenLogin');
 
         try {
-            return await this.#getAuthorizedClient(tokenLogin).delete(ENDPOINTS.ENROLLMENT);
+            return await this.#getAuthorizedClient(tokenLogin).delete(ENDPOINTS.ENROLLMENT, {params: {generation}});
         } catch (error) {
-            console.error('Cancel enrollment error:', error);
+            console.warn('Cancel enrollment error: request failed.');
             return error.response ?? null;
         }
     }
@@ -76,14 +77,24 @@ export class EnrollmentService {
      *   HTTP 201: data = { success, message, data: { credentialId, periodSeconds, expiresInSeconds } }
      *   400 / 401 / 409 (đã bật 2FA) / 410 (khóa chờ hết hạn 5 phút) -> error.response; mất mạng -> null
      */
-    async postDataToActivateEnrollmentRequest(tokenLogin, periodSeconds) {
+    async postDataToActivateEnrollmentRequest(tokenLogin, periodSeconds, generation) {
         assertInstanceOf(tokenLogin, TokenLogin, 'TokenLogin');
 
         try {
             return await this.#getAuthorizedClient(tokenLogin)
-                .post(ENDPOINTS.ACTIVATE, {periodSeconds});
+                .post(ENDPOINTS.ACTIVATE, {periodSeconds, generation});
         } catch (error) {
-            console.error('Activate enrollment error:', error);
+            console.warn('Activate enrollment error: request failed.');
+            return error.response ?? null;
+        }
+    }
+
+    async postReconcileEnrollmentRequest(tokenLogin, generation) {
+        assertInstanceOf(tokenLogin, TokenLogin, 'TokenLogin');
+        try {
+            return await this.#getAuthorizedClient(tokenLogin).post(ENDPOINTS.RECONCILE, {generation});
+        } catch (error) {
+            // Do not log the request/credentials. Keep the local marker for retry.
             return error.response ?? null;
         }
     }
@@ -99,7 +110,7 @@ export class EnrollmentService {
         try {
             return await this.#getAuthorizedClient(tokenLogin).get(ENDPOINTS.STATUS);
         } catch (error) {
-            console.error('Get 2FA status error:', error);
+            console.warn('Get 2FA status error: request failed.');
             return error.response ?? null;
         }
     }
@@ -108,13 +119,13 @@ export class EnrollmentService {
      * "Hủy và cài lại" hoặc hết 10 phút chờ: xóa phần đã ghi MariaDB nhưng chưa được mobile xác nhận.
      * Không đụng 2FA đã bật. Luôn 200 nếu token hợp lệ.
      */
-    async deleteDataToCancelPendingRequest(tokenLogin) {
+    async deleteDataToCancelPendingRequest(tokenLogin, credentialId) {
         assertInstanceOf(tokenLogin, TokenLogin, 'TokenLogin');
 
         try {
-            return await this.#getAuthorizedClient(tokenLogin).delete(ENDPOINTS.PENDING);
+            return await this.#getAuthorizedClient(tokenLogin).delete(ENDPOINTS.PENDING, {params: {credentialId}});
         } catch (error) {
-            console.error('Cancel pending enrollment error:', error);
+            console.warn('Cancel pending enrollment error: request failed.');
             return error.response ?? null;
         }
     }
@@ -125,7 +136,7 @@ export class EnrollmentService {
      * để yêu cầu vẫn được gửi đi. Không chờ kết quả, không báo lỗi: nếu lỡ không tới
      * được server thì Redis vẫn tự xóa khóa sau 5 phút (TTL).
      */
-    deleteDataToCancelEnrollmentOnPageHide(tokenLogin) {
+    deleteDataToCancelEnrollmentOnPageHide(tokenLogin, generation) {
         assertInstanceOf(tokenLogin, TokenLogin, 'TokenLogin');
 
         const accessToken = tokenLogin.getAccessTokenFromStorage();
@@ -134,7 +145,7 @@ export class EnrollmentService {
         }
 
         const baseUrl = this.springConfigHeader.getAPIClientNoHeaders().defaults.baseURL ?? '';
-        fetch(`${baseUrl}${ENDPOINTS.ENROLLMENT}`, {
+        fetch(`${baseUrl}${ENDPOINTS.ENROLLMENT}?generation=${encodeURIComponent(generation)}`, {
             method: 'DELETE',
             headers: {Authorization: `Bearer ${accessToken}`},
             keepalive: true,

@@ -44,6 +44,6 @@ export class AdminAccount {
     }
 
     toString() {
-        return `Admin account:[adminId: ${this.#adminId}, password: ${this.#password}]`;
+        return "AdminAccount[redacted]";
     }
 }

@@ -1,6 +1,6 @@
 package com.example.be_web_admin.controller.web;
 
-import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.exception.qbank.QBankException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 
@@ -17,6 +17,6 @@ public final class WebPrincipal {
         if (authentication != null && authentication.getPrincipal() instanceof Long id) {
             return id;
         }
-        throw new QbankException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Thiếu hoặc sai access token.");
+        throw new QBankException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Thiếu hoặc sai access token.");
     }
 }

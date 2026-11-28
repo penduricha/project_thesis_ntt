@@ -1,7 +1,7 @@
 -- =====================================================================================
 -- QBank seed data — 5 môn, mỗi môn 3 chương và 100 câu hỏi trắc nghiệm (tổng 500 câu).
 --
--- SINH TỰ ĐỘNG từ QbankDataInitializer.java, cùng công thức content_hash.
+-- SINH TỰ ĐỘNG từ QBankDataInitializer.java, cùng công thức content_hash.
 -- Dùng khi muốn nạp dữ liệu mà KHÔNG chạy Spring Boot (hoặc chạy lại cho sạch).
 --
 -- CÁCH DÙNG

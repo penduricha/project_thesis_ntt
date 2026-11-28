@@ -63,15 +63,22 @@ try {
     S.lm[0].note = 'llmState.nodeHealthy'
     S.lm[0].latency = '0.6'
     const llmHtml = await renderToString(createSSRApp(LlmView).use(i18n))
-    assert.ok(llmHtml.includes(t('llmState.nodeHealthy', { seconds: '0.6' })), `${language}: translated node response`)
-    assert.ok(llmHtml.includes(t('llmState.freeSlots', { free: 2, total: 5 })), `${language}: translated slot count`)
+    assert.ok(llmHtml.includes(t('llmState.unavailableRealMode')), `${language}: real mode must not simulate a connection`)
+    assert.ok(!llmHtml.includes('id="lm-jwt"'), `${language}: real mode must not ask for an internal token`)
     assert.ok(!llmHtml.includes('llmState.'), `${language}: untranslated LLM key`)
     S.lm[0].note = ''
     let response = null
+    const calls = []
     const enrollment = new EnrollmentRepository({
       postDataToStartEnrollmentRequest: async () => response,
-      postDataToActivateEnrollmentRequest: async () => response,
+      postDataToActivateEnrollmentRequest: async (...args) => { calls.push(args); return response },
+      postReconcileEnrollmentRequest: async (...args) => { calls.push(args); return response },
+      deleteDataToCancelEnrollmentRequest: async (...args) => { calls.push(args); return response },
       getDataTwoFaStatusRequest: async () => response,
+      deleteDataToCancelPendingRequest: async (_token, id) => {
+        assert.equal(id, 42)
+        return response
+      },
     })
     assert.equal((await enrollment.startEnrollment(null)).message, t('apiError.network'))
     response = { status: 401, data: {} }
@@ -82,6 +89,32 @@ try {
     assert.equal(expired.expired, true)
     response = { status: 400, data: { message: 'Original API message' } }
     assert.equal((await enrollment.startEnrollment(null)).message, 'Original API message')
+    response = {status: 201, data: {success: true, data: {secretKey: 'test', periodSeconds: 30}}}
+    const incompatible = await enrollment.startEnrollment(null)
+    assert.equal(incompatible.success, false, 'legacy response without generation fails closed')
+    assert.equal(incompatible.message, t('enrollment.updateRequired'))
+    response.data.data.generation = 'generation-test'
+    assert.equal((await enrollment.startEnrollment(null)).data.generation, 'generation-test')
+    assert.equal((await enrollment.activateEnrollment(null, 30, 'generation-test')).success, false, 'missing credential ID is ambiguous')
+    assert.deepEqual(calls.at(-1), [null, 30, 'generation-test'])
+    response.data.data.credentialId = 42
+    assert.equal((await enrollment.activateEnrollment(null, 30, 'generation-test')).success, true)
+    await enrollment.cancelEnrollment(null, 'generation-test')
+    assert.deepEqual(calls.at(-1), [null, 'generation-test'])
+    response = {status: 428, data: {}}
+    assert.equal((await enrollment.activateEnrollment(null, 30, 'generation-test')).message, t('enrollment.updateRequired'))
+    assert.equal((await enrollment.reconcileEnrollment(null, 'generation-test')).success, false)
+    response = {status: 200, data: {success: true, data: {outcome: 'COMMITTED', claimReleased: true}}}
+    assert.deepEqual(await enrollment.reconcileEnrollment(null, 'generation-test'), {success: true, outcome: 'COMMITTED', claimReleased: true})
+    assert.deepEqual(calls.at(-1), [null, 'generation-test'])
+    response = {status: 200, data: {success: true, data: {outcome: 'COMMITTED'}}}
+    assert.equal((await enrollment.reconcileEnrollment(null, 'generation-test')).success, false, 'malformed reconciliation is not accepted')
+    response = {status: 200, data: {success: true, data: {totpEnabled: false, pending: true, credentialId: 42, expiresInSeconds: 60}}}
+    assert.equal((await enrollment.getTwoFaStatus(null)).credentialId, 42)
+    assert.equal(await enrollment.cancelPendingEnrollment(null, null), false)
+    assert.equal(await enrollment.cancelPendingEnrollment(null, 42), false, 'status alone is not cancellation confirmation')
+    response = {status: 200, data: {success: true, data: {cancelled: true, credentialId: 42}}}
+    assert.equal(await enrollment.cancelPendingEnrollment(null, 42), true)
     // Account view keeps API values, privacy masking and the settings destination.
     const oldBasic = auth.basic, oldDetail = auth.detail, oldReady = S.meReady, oldShow = S.idShow
     auth.basic = { adminId: 42, adminName: 'Original API Name', gender: true, dateOfBirthAdmin: '2003-09-08' }

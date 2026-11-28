@@ -177,7 +177,7 @@ class SilentTokenRefresher {
     } catch (error) {
       // Lỗi mạng / server tạm thời: giữ phiên, thử lại sau
       if (error?.code !== 'AUTH_SESSION_CHANGED') {
-        console.warn('Silent refresh failed, will retry:', error)
+        console.warn('Silent refresh failed; will retry.')
         if (this.started) {
           const delay = RETRY_DELAYS_MS[Math.min(this.retryCount++, RETRY_DELAYS_MS.length - 1)]
           clearTimeout(this.retryTimer)

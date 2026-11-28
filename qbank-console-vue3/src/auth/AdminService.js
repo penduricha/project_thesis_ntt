@@ -97,7 +97,7 @@ export class AdminService {
             return await this.#loginWithAccessToken(staleAccessToken);
         } catch (error) {
             if (error.response?.status !== HTTP_UNAUTHORIZED) {
-                console.error('Auto login error:', error);
+                console.warn('Auto login request failed.');
                 // Không cấp quyền vào app, nhưng lỗi kết nối không chứng minh phiên đã hết hạn.
                 return false;
             }
@@ -194,7 +194,7 @@ export class AdminService {
 
             return await this.#loginWithAccessToken(tokenLogin.getAccessToken());
         } catch (error) {
-            console.error('Refresh token failed:', error);
+            console.warn('Token refresh request failed.');
             return false;
         }
     }

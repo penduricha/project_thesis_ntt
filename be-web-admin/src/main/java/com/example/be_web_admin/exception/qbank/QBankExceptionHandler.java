@@ -31,15 +31,15 @@ import java.util.Map;
  * auth/chat đang chạy.</p>
  */
 @Slf4j
-@RestControllerAdvice(assignableTypes = {
+@RestControllerAdvice(name = "qbankExceptionHandler", assignableTypes = {
         QuestionBankController.class,
         DashboardController.class,
         AiJobController.class,
         CatalogController.class})
-public class QbankExceptionHandler {
+public class QBankExceptionHandler {
 
-    @ExceptionHandler(QbankException.class)
-    public ResponseEntity<Map<String, Object>> handleQbank(QbankException e) {
+    @ExceptionHandler(QBankException.class)
+    public ResponseEntity<Map<String, Object>> handleQbank(QBankException e) {
         return build(e.getStatus(), e.getCode(), e.getMessage());
     }
 

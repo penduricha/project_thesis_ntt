@@ -184,7 +184,37 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     }
 
     final store = AccountStore(adminId: profile.adminId);
-    final stored = await store.load(); // only read keys of this admin
+    List<AuthAccount> stored;
+    try {
+      stored = await store.load(); // only read keys of this admin
+      final pending = await store.loadPending();
+      for (final item in pending) {
+        // Never replace another already-saved key based on an uncertain response.
+        if (stored.isNotEmpty && !stored.any((a) =>
+            a.credentialId == item.credentialId && a.secret == item.account.secret)) continue;
+        if (!await _enrollment.isConfirmedCredential(item.credentialId, item.account)) continue;
+        if ((await _auth.profile())?.adminId != profile.adminId) break;
+        if (stored.isEmpty) {
+          await store.save([item.account]);
+          final verified = await store.load();
+          if (!verified.any((a) => a.credentialId == item.credentialId &&
+              a.secret == item.account.secret)) throw StateError('Recovery save failed');
+          stored = verified;
+        }
+        await store.clearPending(item.credentialId);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      // Do not allow activation to overwrite an unreadable or damaged key.
+      setState(() {
+        _adminId = null;
+        _store = null;
+        _accounts.clear();
+        _codes = {};
+      });
+      _showToast(AppStrings.of(context).text('storageFailed'));
+      return;
+    }
     if (!mounted) return;
 
     setState(() {
@@ -254,6 +284,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
       digits: result.digits,
       algorithm: result.algorithm,
       enrolled: true,
+      credentialId: result.credentialId,
     );
 
     setState(() {
@@ -266,6 +297,12 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
 
     try {
       await store.save(_enrolledAccounts);
+      final persisted = await store.load();
+      if (!persisted.any((a) => a.credentialId == result.credentialId &&
+          a.secret == secret && a.account == adminId)) {
+        throw StateError('Confirmed key could not be verified');
+      }
+      await store.clearPending(result.credentialId);
       if (mounted) _showToast(AppStrings.of(context).text('activated'));
     } catch (_) {
       if (mounted) {
@@ -293,13 +330,12 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     if (acc.enrolled) {
       final outcome = await _disableOnServer(acc);
       if (outcome == null || !mounted) return; // error toast already shown
-      if (outcome == DisableOutcome.alreadyOff) {
-        _showToast(AppStrings.of(context).text('alreadyOff'));
-      }
     }
 
     setState(() {
-      _accounts.removeWhere((a) => a.id == acc.id);
+      // A newer local credential may have arrived while the disable request was in flight.
+      _accounts.removeWhere((a) => a.id == acc.id && a.credentialId == acc.credentialId &&
+          a.secret == acc.secret);
       _codes = _generateCodes();
     });
 
@@ -328,6 +364,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
         periodSeconds: acc.periodSeconds,
         digits: acc.digits,
         algorithm: acc.algorithm,
+        credentialId: acc.credentialId,
       );
     } on EnrollmentException catch (e) {
       if (mounted) _showToast(e.userMessage);

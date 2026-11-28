@@ -17,7 +17,7 @@ async function go() {
 // Đóng modal khi còn khóa chờ ở Redis -> dọn khóa để không để rác 5 phút (giống ModalActivate2FA).
 function cancel() { emit('close'); tfaDiscardKey() }
 // Đóng tab / chuyển trang: bắn yêu cầu hủy rồi không chờ (keepalive), y như fe_web_admin.
-function onPageHide() { tfaDiscardKey() }
+function onPageHide() { tfaDiscardKey(true) }
 onMounted(() => window.addEventListener('pagehide', onPageHide))
 onBeforeUnmount(() => window.removeEventListener('pagehide', onPageHide))
 </script>

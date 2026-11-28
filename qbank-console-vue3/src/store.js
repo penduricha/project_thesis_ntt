@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { DEMO_MODE } from './config.js'
 import { COURSES as RAW_COURSES, USERS, MY_ADMIN_ID } from './data/mock.js'
 import { nextTick } from 'vue'
 import { llm } from './services/llmSimulator.js'
@@ -8,16 +9,18 @@ import { qbankApi, apiErrorMessage } from './api/qbankApi.js'
 import { subjectToCourse, detailToQuestion, questionToCreate, questionToUpdate, suggestionsToUi, suggestionReplacement } from './api/mappers.js'
 import { TokenLogin } from './auth/TokenLogin.js'
 import { EnrollmentRepository } from './auth/EnrollmentRepository.js'
+import { rememberEnrollment, readEnrollments, forgetEnrollment } from './auth/enrollmentRecovery.js'
 import { t as tr } from './i18n/index.js'
 
 /* Danh sách môn học dạng reactive để thêm/sửa/xóa là giao diện tự cập nhật */
 const DEMO_COURSES = RAW_COURSES.map(c => ({ ...c, topics: [...c.topics], topicIds: [...c.topicIds] }))
 export const COURSES = reactive(RAW_COURSES)
 
-const LM0 = [['https://calm-otter-star.trycloudflare.com', 'k3F9xQ7mZp2LwR8tVb5NcY1dHs6JgA4e', 18.4], ['https://quiet-river-1042.trycloudflare.com', 'Wm8Zt2QxL5vN9cRb4YpD7sHk1JfA3gTe', 17.1], ['https://amber-fox-run.trycloudflare.com', 'Pq6Ls9XaV3nB8cTr2MdY5wHj7KfG4zEu', 16.8]]
+// Reserved non-routable names and explicitly fake values: browser bundles are public.
+const LM0 = [['https://node1.example.invalid', 'demo-token-not-a-secret', 18.4], ['https://node2.example.invalid', 'demo-token-not-a-secret', 17.1], ['https://node3.example.invalid', 'demo-token-not-a-secret', 16.8]]
 function lmInit() {
   return Array.from({ length: 5 }, (_, i) => {
-    const d = LM0[i], c = { url: d?.[0] || '', tok: d?.[1] || '', tps: d?.[2] || 0, en: !!d, ok: null, busy: false, note: '', nk: '' }
+    const d = DEMO_MODE ? LM0[i] : null, c = { url: d?.[0] || '', tok: d?.[1] || '', tps: d?.[2] || 0, en: !!d, ok: null, busy: false, note: '', nk: '' }
     c.sv = { url: c.url, tok: c.tok, en: c.en }; return c
   })
 }
@@ -26,10 +29,10 @@ export const S = reactive({
   ci: 0, n: 12, cq: '', rf: 'all', tf: 'all', rsel: new Set(),
   notifyTasks: true, confirmDelete: true, nl: '', nlKw: '', imp: { c: 0, tp: 0, l: 1 }, xmlName: 'qbank-export-2026-11-18.xml', xml: '',
   asId: null, userQuery: '', userStatus: '', meReady: false, idShow: false,
-  tfa: { st: 'NOT_ENABLED', until: 0 }, tfaSec: '', tfaPeriod: 30, tfaKeyExpiresAt: 0, tfaBusy: false, now: Date.now(),
+  tfa: { st: 'NOT_ENABLED', until: 0 }, tfaSec: '', tfaGeneration: null, tfaRecoveryGeneration: null, tfaPeriod: 30, tfaKeyExpiresAt: 0, tfaBusy: false, now: Date.now(),
   users: USERS.map((u, i) => ({ ...u, idCard: u.adminId === MY_ADMIN_ID ? '060203000027' : '0792010' + String(10000 + i),
     subjects: ({ 'Giảng viên A': ['INT3306', 'INT3202'], 'Giảng viên B': ['INT3304', 'INT3401'], 'Giảng viên C': ['INT3306'] })[u.name] || [] })),
-  api: { base: 'http://localhost:8082/api', jwt: 'demo-internal-token', on: true, busy: false },
+  api: { base: '', jwt: '', on: DEMO_MODE, busy: false },
   lm: lmInit(), dlg: { kind: null, props: {}, n: 0 }, role: 'admin', name: 'Từ Quang Nhật', colab: true, tn: 1, status: 'idle',
   q: [], sug: [], tasks: [], sel: new Set(), f: blankF(),
   // Chế độ dữ liệu: 'real' = gọi Spring Boot, 'mock' = dữ liệu mẫu (demo hoặc backend chưa sẵn sàng).
@@ -805,13 +808,15 @@ const enrollmentRepo = new EnrollmentRepository()
 const currentTokens = () => new TokenLogin()
 const focusTfa = () => nextTick(() => setTimeout(() => { const h = document.getElementById('tfa-t'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }, 60))
 function stopTfaWatch() { clearInterval(tt); tt = null; if (stopSse) { stopSse(); stopSse = null } }
+function updateTfaRecovery() { S.tfaRecoveryGeneration = readEnrollments(auth.adminId)[0] ?? null }
 
 /** Đọc trạng thái 2FA hiện tại (mở trang Cài đặt, hoặc khi SSE báo đổi). */
 export async function loadTfaStatus() {
   if (!useRealApi()) return
+  updateTfaRecovery()
   const res = await enrollmentRepo.getTwoFaStatus(currentTokens())
   if (!res.success) return
-  S.tfa = { st: res.status, until: res.status === 'PENDING' ? Date.now() + (res.pendingExpiresInSeconds || 0) * 1000 : 0 }
+  S.tfa = { st: res.status, until: res.status === 'PENDING' ? Date.now() + (res.pendingExpiresInSeconds || 0) * 1000 : 0, credentialId: res.credentialId ?? null }
   S.now = Date.now()
   if (res.status === 'PENDING') watchTfaReal()
   else stopTfaWatch()
@@ -841,11 +846,12 @@ export async function tfaOpen() {
   try {
     const res = await enrollmentRepo.startEnrollment(currentTokens(), 30)
     if (!res.success) {
-      if (res.status === 409) { await loadTfaStatus(); toast(tr('enrollment.alreadyEnabled'), 'wa') }
+      if (res.status === 409) { await loadTfaStatus(); toast(res.message, 'wa') }
       else toast(res.message, 'er')
       return
     }
     S.tfaSec = res.data.secretKey
+    S.tfaGeneration = res.data.generation
     S.tfaPeriod = res.data.periodSeconds || 30
     S.tfaKeyExpiresAt = Date.now() + (res.data.expiresInSeconds || 300) * 1000
     openDialog('tfa')
@@ -857,16 +863,29 @@ export async function tfaOpen() {
 /** "Tiếp tục" trong modal: ghi khóa xuống MariaDB ở trạng thái chờ xác nhận. */
 export async function tfaStart() {
   if (useRealApi()) {
+    const generation = S.tfaGeneration
+    const adminId = auth.adminId
+    // Save only the generation, before a request that may commit without a response.
+    if (!rememberEnrollment(adminId, generation)) {
+      toast(tr('enrollment.recoveryStorageError'), 'er')
+      return false
+    }
+    updateTfaRecovery()
     S.tfaBusy = true
     try {
-      const res = await enrollmentRepo.activateEnrollment(currentTokens(), S.tfaPeriod || 30)
+      const res = await enrollmentRepo.activateEnrollment(currentTokens(), S.tfaPeriod || 30, generation)
+      if (String(auth.adminId) !== String(adminId)) return false
       if (!res.success) {
         toast(res.message, 'er')
-        // Khóa chờ ở Redis đã hết hạn (410): xin khóa mới để người dùng nhập lại.
-        if (res.expired) { closeDialog(); await tfaOpen() }
+        // Never implicitly create a new generation from a stale modal.
+        if (res.expired) await loadTfaStatus()
         return false
       }
-      S.tfa = { st: 'PENDING', until: Date.now() + (res.data.expiresInSeconds || 600) * 1000 }
+      forgetEnrollment(adminId, generation)
+      updateTfaRecovery()
+      S.tfaGeneration = null
+      S.tfaSec = ''
+      S.tfa = { st: 'PENDING', until: Date.now() + (res.data.expiresInSeconds || 600) * 1000, credentialId: res.data.credentialId ?? null }
       S.now = Date.now()
       logKey('twoFactor.logKeyWritten', {}, 'info')
       toast(tr('twoFactor.waiting'), 'ok')
@@ -885,17 +904,44 @@ export async function tfaStart() {
   logKey('twoFactor.logStarted', {}, 'info'); toast(tr('twoFactor.keyCreated'), 'ok'); focusTfa()
 }
 
-export function tfaAsk() {
-  openDialog('confirm', { title: tr('twoFactor.cancelTitle'), text: tr('twoFactor.cancelDescription'), cancel: tr('auth.back'), ok: tr('twoFactor.cancelAction'), action: tfaReset })
+export function tfaAskReconcile() {
+  const generation = S.tfaRecoveryGeneration
+  const adminId = auth.adminId
+  if (!generation || !useRealApi()) return
+  openDialog('confirm', { title: tr('enrollment.reconcileTitle'), text: tr('enrollment.reconcileConfirm'),
+    cancel: tr('auth.back'), ok: tr('enrollment.reconcileAction'), action: () => tfaReconcile(adminId, generation) })
 }
 
-export async function tfaReset() {
+export async function tfaReconcile(adminId, generation) {
+  if (!useRealApi() || String(adminId) !== String(auth.adminId)) return
+  S.tfaBusy = true
+  try {
+    const result = await enrollmentRepo.reconcileEnrollment(currentTokens(), generation)
+    if (String(adminId) !== String(auth.adminId)) return
+    if (!result.success) { toast(tr('enrollment.reconcileFailed'), 'er'); return }
+    forgetEnrollment(adminId, generation)
+    updateTfaRecovery()
+    await loadTfaStatus()
+    toast(tr(result.outcome === 'COMMITTED' ? 'enrollment.reconcileCommitted' : 'enrollment.reconcileCancelled'), 'wa')
+  } finally { S.tfaBusy = false }
+}
+
+export function tfaAsk() {
+  // Capture the displayed generation when the confirmation dialog is opened.
+  const credentialId = S.tfa.credentialId
+  openDialog('confirm', { title: tr('twoFactor.cancelTitle'), text: tr('twoFactor.cancelDescription'), cancel: tr('auth.back'), ok: tr('twoFactor.cancelAction'), action: () => tfaReset(credentialId) })
+}
+
+export async function tfaReset(credentialId) {
   stopTfaWatch()
   if (useRealApi()) {
-    const ok = await enrollmentRepo.cancelPendingEnrollment(currentTokens())
-    S.tfa = { st: 'NOT_ENABLED', until: 0 }
-    S.tfaSec = ''
-    logKey('twoFactor.logCancelled', {}, 'wa')
+    const ok = await enrollmentRepo.cancelPendingEnrollment(currentTokens(), credentialId)
+    if (ok) {
+      S.tfaSec = ''
+      logKey('twoFactor.logCancelled', {}, 'wa')
+    }
+    // The request might race a new enrollment or time out: do not invent a status.
+    await loadTfaStatus()
     toast(ok ? tr('twoFactor.cancelled') : tr('twoFactor.cancelUnconfirmed'), ok ? 'ok' : 'wa')
     focusTfa()
     return
@@ -908,8 +954,12 @@ export function tfaDone() { stopTfaWatch(); S.tfa = { st: 'ENABLED', until: 0 };
 
 /* Đóng modal/hủy trang khi còn khóa chờ ở Redis: dọn để không để rác 5 phút.
    (pagehide dùng keepalive giống ModalActivate2FA của fe_web_admin) */
-export async function tfaDiscardKey() {
+export async function tfaDiscardKey(pageHide = false) {
   if (!useRealApi()) return
+  const generation = S.tfaGeneration
+  S.tfaGeneration = null
   S.tfaSec = ''
-  try { await enrollmentRepo.cancelEnrollment(currentTokens()) } catch { /* bỏ qua */ }
+  if (!generation) return
+  if (pageHide) { enrollmentRepo.cancelEnrollmentOnPageHide(currentTokens(), generation); return }
+  try { await enrollmentRepo.cancelEnrollment(currentTokens(), generation) } catch { /* bỏ qua */ }
 }
