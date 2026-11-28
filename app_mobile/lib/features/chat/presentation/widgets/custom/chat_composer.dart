@@ -81,8 +81,9 @@ class ChatComposer extends StatelessWidget {
                       tooltip: AppStrings.of(context).text('send'),
                       onPressed: canSend ? onSend : null,
                       style: IconButton.styleFrom(
-                        backgroundColor: colors.primary,
-                        foregroundColor: colors.onPrimary,
+                        backgroundColor: colors.brightness == Brightness.dark
+                            ? const Color(0xff175f9f) : const Color(0xff004b87),
+                        foregroundColor: Colors.white,
                         disabledBackgroundColor: colors.onSurface.withValues(alpha: 0.08),
                         disabledForegroundColor: colors.onSurface.withValues(alpha: 0.38),
                       ),

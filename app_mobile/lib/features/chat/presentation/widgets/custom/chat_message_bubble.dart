@@ -34,7 +34,9 @@ class ChatMessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final failed = message.status == ChatMessageStatus.failed;
     final sending = message.status == ChatMessageStatus.sending;
-    final Color bubbleColor = isMe ? AppColors.primaryBlue : Theme.of(context).colorScheme.surfaceContainerHighest;
+    final Color bubbleColor = isMe
+        ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xff175f9f) : AppColors.primaryBlue)
+        : Theme.of(context).colorScheme.surface;
     final Color textColor = isMe ? Colors.white : Theme.of(context).colorScheme.onSurface;
     final Color metaColor = isMe ? Colors.white70 : Theme.of(context).colorScheme.onSurfaceVariant;
 
@@ -43,7 +45,11 @@ class ChatMessageBubble extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: bubbleColor,
-        borderRadius: BorderRadius.circular(8),
+        border: isMe ? null : Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(16), topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(isMe ? 16 : 4), bottomRight: Radius.circular(isMe ? 4 : 16),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

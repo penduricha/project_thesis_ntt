@@ -40,9 +40,12 @@ Không sửa `deploy/`, không deploy và không áp thay đổi lên CSDL thậ
    header từ client, chỉ tin IP proxy được cấu hình và test giả mạo X-Forwarded-For. Rate limit
    theo IP có thể dùng chung địa chỉ proxy nếu cấu hình sai; vẫn cần limit theo tài khoản và
    bảo vệ login tại edge. Không mặc định tin mọi proxy nội bộ.
-6. **SSE và refresh.** Stream 2FA hiện đăng ký theo admin, chưa kiểm lại phiên khi gửi/heartbeat;
-   phiên bị thu hồi vẫn có thể nhận sự kiện cho tới khi stream đóng. Registry cũng chỉ ở một
-   instance. Fix binding/revalidation, test revoke và multi-instance trước khi công khai.
+6. **SSE và refresh.** Stream 2FA nay thử nghiệm kiểm lại access token, session và trạng thái
+   tài khoản trước mỗi sự kiện/heartbeat, đóng stream khi xác thực lỗi hoặc store không sẵn sàng.
+   Validator giữ bearer token trong bộ nhớ suốt stream (không log), cần rà heap dump, token expiry
+   và test Spring/Redis thật. Thu hồi ngay sau lần kiểm tra vẫn có thể race với một send; registry
+   vẫn local từng instance và event có thể mất/sai thứ tự. Chưa xác minh revoke/multi-instance
+   hoặc bảo đảm không có sự kiện in-flight sau logout. Cần test và thiết kế fan-out trước công khai.
    Web lưu bearer access/refresh trong localStorage (`TokenLogin.js`): XSS có thể lấy token;
    CSP nghiêm ngặt và rà XSS giúp giảm nguy cơ nhưng không thay thế thiết kế BFF/HttpOnly hay
    sender binding. Refresh hiện vẫn có rủi ro mất phiên khi mất response.

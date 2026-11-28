@@ -24,7 +24,9 @@ Không áp schema lên DB thật trong lúc phát triển.
   Hủy pending DB giờ yêu cầu credentialId, so sánh khi xóa; Vue gửi ID đã hiển thị và tải lại
   trạng thái sau hủy. Client cũ không gửi ID nhận HTTP 428 và phải nâng cấp. Dọn Redis sau
   activate và hủy phiên sinh khóa mới dùng generation + Lua, chi tiết bên dưới; login chưa
-  đồng bộ với thay đổi 2FA, SSE còn có thể gửi sự kiện cũ. Không coi #3 đã xong.
+  đồng bộ với thay đổi 2FA, SSE còn có thể gửi sự kiện cũ. SSE đã thêm kiểm tra token,
+  session và tài khoản trước từng event/heartbeat, nhưng chưa test runtime; logout có thể race
+  ngay sau kiểm tra, event vẫn local từng instance và không có outbox. Không coi #3 đã xong.
 - Đã thêm credentialId vào khóa mobile mới và request disable; khóa legacy thiếu ID vẫn
   chưa có cách đối chiếu chắc chắn. Confirm không gửi credentialId nay bị từ chối HTTP 428:
   client cũ phải nâng cấp, không thể hứa tương thích hoàn toàn. ID không chứng minh client đã

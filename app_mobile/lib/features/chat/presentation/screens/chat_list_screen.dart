@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/qbank_section_header.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/utils/chat_time.dart';
 import '../../../main_shell/presentation/widgets/app_menu_bar.dart';
@@ -100,38 +101,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-            icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.onSurface),
-            tooltip: 'Menu',
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              AppStrings.of(context).text('messages'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: _openNewChat,
-            icon: const Icon(Icons.edit, color: _blueColor, size: 26),
-            tooltip: AppStrings.of(context).text('newMessage'),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildTopBar() => QBankSectionHeader(
+    title: AppStrings.of(context).text('messages'),
+    onMenu: () => _scaffoldKey.currentState?.openDrawer(),
+    actionIcon: Icons.edit_outlined,
+    actionLabel: AppStrings.of(context).text('newMessage'),
+    onAction: _openNewChat,
+  );
 
   Widget _buildSearchBar() {
     return Padding(
@@ -225,12 +201,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(icon, size: 44, color: AppColors.borderStrong),
+                        Icon(icon, size: 44, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(height: 12),
                         Text(
                           text,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 15, color: AppColors.textMuted, height: 1.4),
+                          style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.4),
                         ),
                         if (action != null) action,
                       ],
@@ -256,13 +232,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildAvatar(ChatConversation c) {
-    if (!c.isGroup) return ChatAvatar(name: c.displayName);
+    if (!c.isGroup) return ChatAvatar(name: c.displayName, isUnread: c.unreadCount > 0);
     final unread = c.unreadCount > 0;
     return ExcludeSemantics(
       child: CircleAvatar(
         radius: 24,
-        backgroundColor: unread ? _blueColor : _blueColor.withValues(alpha: 0.10),
-        child: Icon(Icons.group, size: 24, color: unread ? Colors.white : _blueColor),
+        backgroundColor: unread ? _blueColor : Theme.of(context).colorScheme.primaryContainer,
+        child: Icon(Icons.group, size: 24, color: unread ? Colors.white : Theme.of(context).colorScheme.onPrimaryContainer),
       ),
     );
   }
@@ -315,7 +291,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     const SizedBox(width: 8),
                     Text(
                       ChatTime.listLabel(c.lastActivity),
-                      style: TextStyle(fontSize: 12, color: isUnread ? _blueColor : Colors.grey),
+                      style: TextStyle(fontSize: 12, color: isUnread ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),

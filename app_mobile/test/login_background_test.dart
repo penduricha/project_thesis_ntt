@@ -8,13 +8,13 @@ void main() {
   setUp(() => dotenv.testLoad(fileInput: ''));
 
   for (final brightness in [Brightness.light, Brightness.dark]) {
-    testWidgets('login uses one full-screen background in $brightness mode', (tester) async {
+    testWidgets('login uses the web background and branded form in $brightness mode', (tester) async {
       final theme = AppTheme.create(brightness);
       await tester.pumpWidget(MaterialApp(theme: theme, home: const LoginScreen()));
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       final appBar = tester.widget<AppBar>(find.byType(AppBar));
-      expect(scaffold.backgroundColor, theme.colorScheme.surfaceContainerLow);
+      expect(scaffold.backgroundColor, theme.scaffoldBackgroundColor);
       expect(appBar.backgroundColor, Colors.transparent);
       expect(appBar.systemOverlayStyle?.statusBarColor, Colors.transparent);
       expect(
@@ -22,6 +22,7 @@ void main() {
         brightness == Brightness.light ? Brightness.dark : Brightness.light,
       );
       expect(find.byType(Card), findsNothing);
+      expect(find.text('QBank'), findsOneWidget);
       expect(find.text('Authenticator'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(2));
     });

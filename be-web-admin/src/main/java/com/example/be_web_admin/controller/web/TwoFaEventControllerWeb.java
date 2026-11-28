@@ -41,23 +41,29 @@ public class TwoFaEventControllerWeb {
     public ResponseEntity<SseEmitter> events(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        Long adminId = resolveAdminId(authHeader);
-        if (adminId == null) {
+        AuthSessionStore.Identity identity = resolveIdentity(authHeader);
+        if (identity == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        // Retain this access token only inside the stream validator, never in logs or events.
+        // Each heartbeat/event checks expiry, token presence, session and account status.
+        String token = authHeader.substring(7);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .header("X-Accel-Buffering", "no") // nginx: đừng gom đệm, đẩy sự kiện đi ngay
-                .body(eventService.subscribe(adminId));
+                .header("X-Accel-Buffering", "no")
+                .body(eventService.subscribe(identity.adminId(), () -> {
+                    AuthSessionStore.Identity current = adminJwtTokenProvider.parseIdentity(token, "ACCESS");
+                    return identity.equals(current) && adminTokenService.findAdminAccessTokenByJwtToken(token);
+                }));
     }
 
-    private Long resolveAdminId(String authHeader) {
+    private AuthSessionStore.Identity resolveIdentity(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
         String token = authHeader.substring(7);
         AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(token, "ACCESS");
         if (identity == null || identity.client() != AuthSessionStore.Client.WEB) return null;
         try {
-            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? identity.adminId() : null;
+            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? identity : null;
         } catch (RuntimeException e) {
             // A store/account outage must not be mistaken for a revoked token.
             throw new org.springframework.web.server.ResponseStatusException(

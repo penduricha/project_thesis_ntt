@@ -1,3 +1,5 @@
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -8,6 +10,7 @@ import '../../data/service/account_store.dart';
 import '../../data/service/enrollment_service.dart';
 import '../widgets/activate_key_dialog.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/qbank_section_header.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../widgets/app_confirm_delete_dialog.dart';
 import '../widgets/ring_painter.dart';
@@ -412,30 +415,38 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
                 itemCount: accounts.length,
                 itemBuilder: (context, index) {
                   final acc = accounts[index];
-                  return _AccountTile(
+                  return Container(
                     key: ValueKey(acc.id),
-                    account: acc,
-                    code: _codes[acc.id] ?? '------',
-                    clock: _clockFor(acc.periodSeconds),
-                    period: acc.periodSeconds,
-                    codeColor: Theme.of(context).colorScheme.primary,
-                    isOpen: _openedId == acc.id,
-                    onOpenChanged: (open) => setState(() {
-                      if (open) {
-                        _openedId = acc.id;
-                      } else if (_openedId == acc.id) {
-                        _openedId = null;
-                      }
-                    }),
-                    onTap: () {
-                      // A row is open -> first tap only closes it
-                      if (_openedId != null) {
-                        setState(() => _openedId = null);
-                        return;
-                      }
-                      _copyCode(_codes[acc.id] ?? '');
-                    },
-                    onDelete: () => _onDeleteAccount(acc),
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _AccountTile(
+                      account: acc,
+                      code: _codes[acc.id] ?? '------',
+                      clock: _clockFor(acc.periodSeconds),
+                      period: acc.periodSeconds,
+                      codeColor: Theme.of(context).colorScheme.primary,
+                      isOpen: _openedId == acc.id,
+                      onOpenChanged: (open) => setState(() {
+                        if (open) {
+                          _openedId = acc.id;
+                        } else if (_openedId == acc.id) {
+                          _openedId = null;
+                        }
+                      }),
+                      onTap: () {
+                        if (_openedId != null) {
+                          setState(() => _openedId = null);
+                          return;
+                        }
+                        _copyCode(_codes[acc.id] ?? '');
+                      },
+                      onDelete: () => _onDeleteAccount(acc),
+                    ),
                   );
                 },
               ),
@@ -447,38 +458,13 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   }
 
   // Top row: menu | title | "+" button
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-            icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.onSurface),
-            tooltip: 'Menu',
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Authenticator',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: _onAddAccount,
-            icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary, size: 30),
-            tooltip: AppStrings.of(context).text('addAccount'),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildTopBar() => QBankSectionHeader(
+    title: 'Authenticator',
+    onMenu: () => _scaffoldKey.currentState?.openDrawer(),
+    actionIcon: Icons.add_rounded,
+    actionLabel: AppStrings.of(context).text('addAccount'),
+    onAction: _onAddAccount,
+  );
 
   // Rounded search bar, light gray background
   Widget _buildSearchBar() {
@@ -516,18 +502,27 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
   }
 
   Widget _buildEmptyState() {
-    // No TOTP yet for this admin (different from "not found" when filtering)
     final noAccountsYet = _ownAccounts.isEmpty;
+    final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Text(
-          noAccountsYet
-              ? AppStrings.of(context).text('noCodes')
-              : AppStrings.of(context).text('notFound'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 15, color: Colors.grey),
-        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 72, height: 72,
+            decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(22)),
+            child: Icon(noAccountsYet ? Icons.shield_outlined : Icons.search_off_rounded,
+                size: 34, color: colors.onPrimaryContainer),
+          ),
+          const SizedBox(height: 16),
+          Text(noAccountsYet ? AppStrings.of(context).text('noCodes') : AppStrings.of(context).text('notFound'),
+            textAlign: TextAlign.center, style: TextStyle(fontSize: 15, height: 1.5, color: colors.onSurfaceVariant)),
+          if (noAccountsYet) ...[
+            const SizedBox(height: 12),
+            TextButton.icon(onPressed: _onAddAccount, icon: const Icon(Icons.add_rounded),
+              label: Text(AppStrings.of(context).text('addAccount'))),
+          ],
+        ]),
       ),
     );
   }
@@ -566,11 +561,6 @@ class _AccountTile extends StatelessWidget {
   static const double _sidePadding = 16;
   static const double _avatarRadius = 24;
   static const double _avatarGap = 16;
-
-  // Divider starts exactly under the text column (16 + 48 + 16 = 80),
-  // so it visually separates rows without cutting through the avatar.
-  static const double _dividerIndent =
-      _sidePadding + _avatarRadius * 2 + _avatarGap;
 
   // "940555" -> "940 555"
   String get _formattedCode {
@@ -661,15 +651,6 @@ class _AccountTile extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-        // Inset divider: stays in place while the row slides.
-        const Padding(
-          padding: EdgeInsets.only(left: _dividerIndent),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: AppColors.divider,
           ),
         ),
       ],

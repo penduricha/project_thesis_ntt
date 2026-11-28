@@ -1,3 +1,5 @@
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -206,6 +208,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       autofocus: true,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 6,
+                          fontFeatures: [FontFeature.tabularFigures()]),
                       maxLength: 6,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
@@ -300,8 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
         : SystemUiOverlayStyle.dark;
 
     return Scaffold(
-      // The former login card color fills the screen on both light and dark themes.
-      backgroundColor: colorScheme.surfaceContainerLow,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         systemOverlayStyle: statusBarStyle.copyWith(statusBarColor: Colors.transparent),
@@ -322,8 +325,16 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 460),
-                child: Padding(
+                child: Container(
                   padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                    boxShadow: colorScheme.brightness == Brightness.light
+                        ? [BoxShadow(color: const Color(0xff13529d).withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 4))]
+                        : null,
+                  ),
                   child: Form(
                     key: _formKey,
                     // Chỉ phần phụ thuộc trạng thái loading mới được dựng lại
@@ -335,20 +346,29 @@ class _LoginScreenState extends State<LoginScreen> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(
-                              width: double.infinity,
-                              child: Text(
-                                'Authenticator',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
+                            Center(
+                              child: Column(children: [
+                                Container(
+                                  width: 54, height: 54,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.brightness == Brightness.dark
+                                        ? const Color(0xff175f9f) : const Color(0xff004b87),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: const Text('QB', style: TextStyle(
+                                    color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                                 ),
-                              ),
+                                const SizedBox(height: 12),
+                                Text('QBank', style: TextStyle(fontSize: 23,
+                                  color: colorScheme.onSurface, fontWeight: FontWeight.w800)),
+                                const SizedBox(height: 2),
+                                Text('Authenticator', style: TextStyle(fontSize: 14,
+                                  color: colorScheme.onSurfaceVariant)),
+                              ]),
                             ),
 
-                            const SizedBox(height: 40),
+                            const SizedBox(height: 32),
 
                             // ---------- Admin Id ----------
                             _AuthTextField(

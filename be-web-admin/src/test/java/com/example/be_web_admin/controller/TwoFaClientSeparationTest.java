@@ -34,6 +34,23 @@ class TwoFaClientSeparationTest {
     }
 
     @Test
+    void eventStreamValidatorRechecksTheOriginalTokenAndSession() {
+        var jwt = mock(AdminJwtTokenProvider.class);
+        var tokens = mock(AdminTokenServiceImpl.class);
+        var events = mock(TwoFaEventServiceImpl.class);
+        String sid = "a9c62262-bdd5-43a9-8a3b-f89bc0c3a870";
+        var id = new AuthSessionStore.Identity(7L, AuthSessionStore.Client.WEB, sid);
+        when(jwt.parseIdentity("web", "ACCESS")).thenReturn(id);
+        when(tokens.findAdminAccessTokenByJwtToken("web")).thenReturn(true, true, false);
+        var controller = new TwoFaEventControllerWeb(events, jwt, tokens);
+        controller.events("Bearer web");
+        var validator = org.mockito.ArgumentCaptor.forClass(java.util.function.BooleanSupplier.class);
+        verify(events).subscribe(eq(7L), validator.capture());
+        assertEquals(true, validator.getValue().getAsBoolean());
+        assertEquals(false, validator.getValue().getAsBoolean());
+    }
+
+    @Test
     void accessTokenFromAnotherClientCannotReachTwoFaOperations() {
         var jwt = mock(AdminJwtTokenProvider.class);
         var tokens = mock(AdminTokenServiceImpl.class);
