@@ -107,6 +107,37 @@ Không tạo logout tombstone cho phiên bị thay: tombstone hiện chỉ đạ
 
 ## 2FA pending và receipt
 
+### Prototype server confirm-v2 — tắt mặc định, chưa tích hợp
+
+- Có migration đề xuất `be-web-admin/sql/2026-11-23-totp-confirm-receipts.sql` và
+  endpoint `/mobile/admin/2fa/enrollment/confirm-v2` sau cờ
+  `app.totp.idempotent-confirm-enabled=true`. **Không bật trong production**: migration
+  chưa áp, Java/JUnit chưa chạy, chưa kiểm chứng MariaDB/Redis và mobile chưa gọi API này.
+  Fence migration vẫn bắt buộc cho activate web; receipt migration không sửa việc thiếu fence.
+- Prototype ghi receipt cùng transaction dự kiến với bật credential và cờ admin; khóa hàng
+  admin, kiểm session MOBILE, credential hiện hành và hạn receipt. Retry cùng admin/session,
+  credential, requestId và OTP nhận cùng body thành công mà không tiêu thụ thêm lượt OTP.
+  RequestId là 32 byte ngẫu nhiên CSPRNG mã hóa lowercase hex; server chỉ kiểm định dạng,
+  không thể kiểm định entropy. Payload MAC dùng khóa TOTP giải mã và domain riêng, không
+  lưu OTP hay hash OTP không khóa; không ghi requestId dạng rõ. Đây không phải sender binding.
+- Mobile **chưa lưu requestId và OTP của lần gửi trong secure storage**, chưa gửi confirm-v2
+  hay tự retry. Phải thiết kế xóa dữ liệu và giới hạn thời gian lưu OTP, bảo đảm ghi bền
+  trước gửi và test mất response/restart; dữ liệu pending cũ vẫn theo luồng cũ. Các client
+  khác vẫn gọi endpoint confirm cũ, có thể bật 2FA mà không tạo receipt; không trộn luồng
+  cũ/mới trong rollout cho đến khi có chính sách tương thích. Receipt chỉ hữu ích trong cùng
+  session còn sống và TTL 24 giờ; logout/mất phiên/thiết bị cần phương án khôi phục riêng.
+- Kiểm tra session ở Redis không nguyên tử với DB commit: logout/takeover có thể xảy ra sau
+  lần kiểm tra. Audit/SSE chạy sau commit và không có outbox; event có thể mất hoặc đến sai
+  thứ tự. Khi DB commit không rõ kết quả phải thử lại đúng payload, không suy luận rollback.
+  Cascade xóa credential sẽ xóa receipt; cần chính sách retention, backup/restore, đồng hồ và
+  tương thích schema. Code nhận đúng 6 số, chưa hỗ trợ credential có digits khác 6.
+- Test mock mới chỉ mô tả dự kiến; cần compile và chạy, thêm kiểm thử transaction JPA/JDBC
+  cùng connection, rollback khi INSERT/commit lỗi, hai retry đồng thời, confirm cũ cạnh tranh
+  confirm-v2, disable/re-enroll, cross-admin/session, logout/lock và Redis lỗi/failover. Không
+  tuyên bố receipt chính xác hoặc 2FA hoàn tất nếu chưa chạy các kiểm thử thực này.
+
+### Yêu cầu còn lại
+
 - Mobile lưu bản chờ trong secure storage trước confirm, gắn admin, credentialId,
   requestId và tham số TOTP. Ghi không thành công thì không confirm; không thay/xóa
   credential đã xác minh. Không tự đánh dấu khóa chờ là hợp lệ.

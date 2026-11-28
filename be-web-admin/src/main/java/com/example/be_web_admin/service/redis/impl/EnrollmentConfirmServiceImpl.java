@@ -199,7 +199,8 @@ public class EnrollmentConfirmServiceImpl {
     }
 
     /** INCR nguyên tử. Không đếm được thì từ chối luôn (fail closed) thay vì cho thử không giới hạn. */
-    private long registerAttempt(Long adminId, Long credentialId) {
+    // Shared with the opt-in idempotent path: the same credential has one attempt budget.
+    long registerAttempt(Long adminId, Long credentialId) {
         if (credentialId == null) throw new IllegalStateException("Pending credential has no id");
         return registerAttemptKey(ATTEMPTS_KEY_PREFIX + adminId + ":" + credentialId);
     }
