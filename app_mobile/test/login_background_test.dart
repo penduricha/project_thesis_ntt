@@ -27,3 +27,7 @@ void main() {
     });
   }
 }
+
+extension on DotEnv {
+  void testLoad({required String fileInput}) {}
+}
