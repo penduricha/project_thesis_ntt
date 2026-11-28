@@ -3,6 +3,7 @@ package com.example.be_web_admin.service.redis.impl;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.redis.EnrollSession;
 import com.example.be_web_admin.security.EnrollmentGenerationStore;
+import com.example.be_web_admin.security.EnrollmentFenceStore;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.security.private_key.CryptoService;
 import com.example.be_web_admin.service.redis.EnrollSessionService;
@@ -23,13 +24,16 @@ public class EnrollSessionServiceImpl implements EnrollSessionService {
     }
 
     private final EnrollmentGenerationStore generationStore;
+    private final EnrollmentFenceStore fenceStore;
     private final AdminRepository adminRepository;
     private final CryptoService cryptoService;
 
     public EnrollSessionServiceImpl(EnrollmentGenerationStore generationStore,
+                                    EnrollmentFenceStore fenceStore,
                                     AdminRepository adminRepository,
                                     CryptoService cryptoService) {
         this.generationStore = generationStore;
+        this.fenceStore = fenceStore;
         this.adminRepository = adminRepository;
         this.cryptoService = cryptoService;
     }
@@ -59,6 +63,10 @@ public class EnrollSessionServiceImpl implements EnrollSessionService {
             throw new TotpAlreadyEnabledException();
         }
 
+        // Do not create or expose a secret that cannot later be activated because the
+        // required fence migration is missing. Activation still probes again; this
+        // check cannot protect against a migration being removed immediately afterwards.
+        fenceStore.requireAvailable();
         String secretKey = cryptoService.generateSecretKey();
         // AAD gắn với adminId + keyVersion: bản mã chép sang admin khác sẽ không giải mã được.
         CryptoService.Sealed sealed = cryptoService.encrypt(secretKey, adminId);

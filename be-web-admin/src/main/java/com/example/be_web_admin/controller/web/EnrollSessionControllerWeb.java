@@ -77,6 +77,10 @@ public class EnrollSessionControllerWeb {
         } catch (TotpAlreadyEnabledException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(errorBody("2FA is already enabled."));
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.warn("Enrollment database unavailable for admin {}", adminId);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(errorBody("Enrollment temporarily unavailable."));
         } catch (Exception e) {
             log.error("Start enrollment failed for admin {}", adminId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

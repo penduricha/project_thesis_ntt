@@ -19,6 +19,21 @@ import static org.mockito.Mockito.*;
 
 class TwoFaClientSeparationTest {
     @Test
+    void unavailableEnrollmentSchemaReturns503WithoutASecret() {
+        var jwt = mock(AdminJwtTokenProvider.class);
+        var tokens = mock(AdminTokenServiceImpl.class);
+        var service = mock(EnrollSessionServiceImpl.class);
+        var id = new AuthSessionStore.Identity(7L, AuthSessionStore.Client.WEB, "a9c62262-bdd5-43a9-8a3b-f89bc0c3a870");
+        when(jwt.parseIdentity("web", "ACCESS")).thenReturn(id);
+        when(tokens.findAdminAccessTokenByJwtToken("web")).thenReturn(true);
+        when(service.startEnrollment(7L, null)).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("unavailable"));
+        var result = new EnrollSessionControllerWeb(service, jwt, tokens).startEnrollment("Bearer web", null);
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, result.getStatusCode());
+        assertEquals(false, ((Map<?, ?>) result.getBody()).get("success"));
+        assertEquals(null, ((Map<?, ?>) result.getBody()).get("data"));
+    }
+
+    @Test
     void accessTokenFromAnotherClientCannotReachTwoFaOperations() {
         var jwt = mock(AdminJwtTokenProvider.class);
         var tokens = mock(AdminTokenServiceImpl.class);

@@ -162,10 +162,6 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
     }).toList();
   }
 
-  // Only accounts activated from server are saved; demo ones are not
-  Iterable<AuthAccount> get _enrolledAccounts =>
-      _accounts.where((a) => a.enrolled);
-
   // ---- Stored Data ----
 
   Future<void> _loadStoredAccounts() async {
@@ -194,14 +190,9 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
             a.credentialId == item.credentialId && a.secret == item.account.secret)) continue;
         if (!await _enrollment.isConfirmedCredential(item.credentialId, item.account)) continue;
         if ((await _auth.profile())?.adminId != profile.adminId) break;
-        if (stored.isEmpty) {
-          await store.save([item.account]);
-          final verified = await store.load();
-          if (!verified.any((a) => a.credentialId == item.credentialId &&
-              a.secret == item.account.secret)) throw StateError('Recovery save failed');
-          stored = verified;
-        }
-        await store.clearPending(item.credentialId);
+        // Re-read and promote under the store's in-isolate queue. A key saved while
+        // the network check was in flight must never be overwritten.
+        stored = await store.promotePending(item.credentialId, item.account);
       }
     } catch (_) {
       if (!mounted) return;
@@ -216,6 +207,8 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
       return;
     }
     if (!mounted) return;
+    // The logged-in account can change while storage and receipt calls are in flight.
+    if ((await _auth.profile())?.adminId != profile.adminId || !mounted) return;
 
     setState(() {
       _adminId = profile.adminId;
@@ -287,23 +280,18 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
       credentialId: result.credentialId,
     );
 
-    setState(() {
-      _searchController.clear(); // clear filter to immediately see newly added account
-      // Re-setup 2FA for the same adminId -> replace old key, do not leave 2 rows
-      _accounts.removeWhere((a) => a.id == account.id);
-      _accounts.add(account);
-      _codes = _generateCodes();
-    });
-
     try {
-      await store.save(_enrolledAccounts);
-      final persisted = await store.load();
-      if (!persisted.any((a) => a.credentialId == result.credentialId &&
-          a.secret == secret && a.account == adminId)) {
-        throw StateError('Confirmed key could not be verified');
-      }
-      await store.clearPending(result.credentialId);
-      if (mounted) _showToast(AppStrings.of(context).text('activated'));
+      if ((await _auth.profile())?.adminId != adminId) return;
+      final persisted = await store.promotePending(result.credentialId, account);
+      if (!mounted || (await _auth.profile())?.adminId != adminId || !mounted) return;
+      setState(() {
+        _searchController.clear();
+        _accounts
+          ..clear()
+          ..addAll(persisted);
+        _codes = _generateCodes();
+      });
+      _showToast(AppStrings.of(context).text('activated'));
     } catch (_) {
       if (mounted) {
         _showToast(AppStrings.of(context).text('saveKeyFailed'));
@@ -332,16 +320,21 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
       if (outcome == null || !mounted) return; // error toast already shown
     }
 
-    setState(() {
-      // A newer local credential may have arrived while the disable request was in flight.
-      _accounts.removeWhere((a) => a.id == acc.id && a.credentialId == acc.credentialId &&
-          a.secret == acc.secret);
-      _codes = _generateCodes();
-    });
-
     try {
-      await _store?.save(_enrolledAccounts);
-      if (mounted) _showToast(AppStrings.of(context).text('disabled'));
+      final store = _store;
+      if (store == null || store.adminId != acc.account ||
+          (await _auth.profile())?.adminId != acc.account) return;
+      // Re-read the current stored list and delete only the exact confirmed key.
+      // An old in-flight request cannot overwrite a newer local generation.
+      final remaining = await store.removeConfirmed(acc);
+      if (!mounted || (await _auth.profile())?.adminId != acc.account || !mounted) return;
+      setState(() {
+        _accounts
+          ..clear()
+          ..addAll(remaining);
+        _codes = _generateCodes();
+      });
+      _showToast(AppStrings.of(context).text('disabled'));
     } catch (_) {
       if (mounted) _showToast(AppStrings.of(context).text('storageFailed'));
     }
@@ -365,6 +358,7 @@ class _AuthenticatorScreenState extends State<AuthenticatorScreen>
         digits: acc.digits,
         algorithm: acc.algorithm,
         credentialId: acc.credentialId,
+        expectedAdminId: acc.account,
       );
     } on EnrollmentException catch (e) {
       if (mounted) _showToast(e.userMessage);

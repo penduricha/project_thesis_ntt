@@ -16,6 +16,39 @@ class _Auth extends EnrollmentAuth {
   Future<AdminProfile?> profile() async => const AdminProfile(adminId: '1', name: 'Test');
 }
 
+class _TokenLostAuth extends EnrollmentAuth {
+  int calls = 0;
+  @override
+  Future<String?> accessToken() async => ++calls == 1 ? 'test-token' : null;
+  @override
+  Future<AdminProfile?> profile() async => const AdminProfile(adminId: '1', name: 'Test');
+}
+
+class _SwitchingAuth extends EnrollmentAuth {
+  String adminId = '1';
+  int refreshes = 0;
+  @override
+  Future<String?> accessToken() async => 'token-for-$adminId';
+  @override
+  Future<AdminProfile?> profile() async => AdminProfile(adminId: adminId, name: 'Test');
+  @override
+  Future<String?> refreshAccessToken() async { refreshes++; return 'new-token-for-$adminId'; }
+}
+
+class _SwitchOnUnauthorized implements HttpClientAdapter {
+  _SwitchOnUnauthorized(this.auth);
+  final _SwitchingAuth auth;
+  int requests = 0;
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    requests++;
+    auth.adminId = '2';
+    return ResponseBody.fromString('{}', 401, headers: {Headers.contentTypeHeader: ['application/json']});
+  }
+  @override
+  void close({bool force = false}) {}
+}
+
 class _Adapter implements HttpClientAdapter {
   _Adapter({this.failConfirm = false});
   final bool failConfirm;
@@ -50,6 +83,44 @@ void main() {
         throwsA(isA<EnrollmentException>()));
     expect(adapter.paths, ['/admin/2fa/enrollment/pending']);
     expect((await AccountStore(adminId: '1').loadPending()).single.account.secret, previous.secret);
+    dio.close();
+  });
+
+  test('a different already saved key prevents confirmation', () async {
+    FlutterSecureStorage.setMockInitialValues({});
+    const old = AuthAccount(id: 'admin_1', issuer: 'Test', account: '1',
+        secret: 'JBSWY3DPEHPK3PXP', credentialId: 41, algorithm: TotpAlgorithm.sha256);
+    await AccountStore(adminId: '1').save([old]);
+    final adapter = _Adapter();
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.invalid'))..httpClientAdapter = adapter;
+    await expectLater(EnrollmentService(auth: _Auth(), dio: dio).activate('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'),
+        throwsA(isA<EnrollmentException>()));
+    expect(adapter.paths, ['/admin/2fa/enrollment/pending']);
+    expect((await AccountStore(adminId: '1').load()).single.secret, old.secret);
+    dio.close();
+  });
+
+  test('lost session before confirm never falls back to the old token', () async {
+    FlutterSecureStorage.setMockInitialValues({});
+    final adapter = _Adapter();
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.invalid'))..httpClientAdapter = adapter;
+    await expectLater(EnrollmentService(auth: _TokenLostAuth(), dio: dio).activate('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'),
+        throwsA(isA<EnrollmentException>()));
+    expect(adapter.paths, ['/admin/2fa/enrollment/pending']);
+    expect((await AccountStore(adminId: '1').loadPending()).single.credentialId, 42);
+    dio.close();
+  });
+
+  test('401 never retries a disable with another administrator session', () async {
+    final auth = _SwitchingAuth();
+    final adapter = _SwitchOnUnauthorized(auth);
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.invalid'))..httpClientAdapter = adapter;
+    await expectLater(EnrollmentService(auth: auth, dio: dio).disable(
+      secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', periodSeconds: 30,
+      digits: 6, algorithm: TotpAlgorithm.sha256, credentialId: 42, expectedAdminId: '1'),
+      throwsA(isA<EnrollmentException>()));
+    expect(adapter.requests, 1);
+    expect(auth.refreshes, 0);
     dio.close();
   });
 

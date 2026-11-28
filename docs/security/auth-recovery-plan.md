@@ -7,7 +7,13 @@ Không áp schema lên DB thật trong lúc phát triển.
 ## Tiến độ hiện tại
 
 - Mobile ghi khóa chờ riêng theo admin và credentialId rồi đọc kiểm tra trước confirm;
-  confirm mới gửi ID và kiểm nội dung response. Khi mở lại màn hình, có thể đối chiếu
+  staging từ chối nếu đã có khóa khác hoặc legacy; promotion/disable đọc lại storage và
+  không ghi đè/xóa khóa khác trong cùng isolate. Lượt 401 retry kiểm admin trước và sau
+  refresh; không fallback sang token cũ nếu refresh trả null. Các thay đổi này chưa chạy
+  Flutter test, không tạo transaction liên isolate, không bind cùng session cryptographic
+  và không giải quyết logout xảy ra sau lần kiểm tra; cần test thiết bị và race thực tế.
+  Dữ liệu khóa khác lọt vào key riêng của admin làm storage fail-closed thay vì bị xóa.
+- Mobile confirm mới gửi ID và kiểm nội dung response. Khi mở lại màn hình, có thể đối chiếu
   credential hiện tại bằng phiên đăng nhập hợp lệ và mã TOTP sinh từ khóa chờ, có giới hạn
   thử, trước khi khôi phục khóa khi chưa có khóa khác. Đây là đối chiếu trạng thái + bằng
   chứng TOTP, **không phải receipt idempotent ghi cùng transaction**, không khôi phục được
@@ -57,8 +63,10 @@ Không áp schema lên DB thật trong lúc phát triển.
 ### Đối soát claim bằng fence DB (thử nghiệm, chưa kiểm chứng)
 
 - Migration đề xuất `be-web-admin/sql/2026-11-23-totp-enrollment-fences.sql` chưa được áp.
-  Thiếu bảng này, activate kiểm tra DB trước khi claim và không thể hoạt động; cần migration
-  được duyệt, môi trường DB riêng để test, cùng kế hoạch tương thích/rollback trước rollout.
+  Thiếu bảng này, start nay probe DB trước khi sinh/hiển thị khóa (trả 503 với lỗi DB),
+  activate vẫn probe lại trước khi claim và không thể hoạt động. Probe không đảm bảo schema
+  đúng hoàn toàn hoặc DB vẫn sẵn sàng sau đó; cần migration được duyệt, môi trường DB riêng
+  để test, cùng kế hoạch tương thích/rollback trước rollout. Thay đổi chưa compile/JUnit.
 - Activate khóa admin, kiểm tra fence và ghi marker COMMITTED cùng transaction với credential.
   Endpoint web `/2fa/enrollment/reconcile` có rate limit, yêu cầu access session WEB và đúng
   generation. Nó khóa cùng admin, giữ marker COMMITTED hoặc ghi CANCELLED nếu chưa commit,

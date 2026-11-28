@@ -103,8 +103,8 @@ class SecureStorageEnrollmentAuth implements EnrollmentAuth {
     final token = await _storage.read(key: tokenKey);
     if (token == null || token.isEmpty) return token;
     if (!_expiresSoon(token)) return token;
-    // Sắp / đã hết hạn: thử làm mới; không được thì vẫn trả token cũ để server quyết định (401).
-    return (await refreshAccessToken()) ?? token;
+    // Không dùng lại token cũ nếu phiên đã bị từ chối hoặc bị xóa trong lúc refresh.
+    return refreshAccessToken();
   }
 
   @override
@@ -267,14 +267,20 @@ class EnrollmentService {
             // dùng luôn token mới, KHÔNG làm mới lần nữa. Server xoay vòng refresh token, làm mới
             // liên tiếp rất dễ bị từ chối.
             try {
+              final expectedAdmin = req.extra['expectedAdminId'];
+              if (expectedAdmin is! String || (await _auth.profile())?.adminId != expectedAdmin) {
+                return handler.next(err);
+              }
               final sent = req.headers['Authorization'];
               final current = await _auth.accessToken();
-              final String? fresh = (current != null &&
-                      current.isNotEmpty &&
-                      'Bearer $current' != sent)
+              if (current == null || current.isEmpty || (await _auth.profile())?.adminId != expectedAdmin) {
+                return handler.next(err);
+              }
+              final String? fresh = 'Bearer $current' != sent
                   ? current
                   : await _auth.refreshAccessToken();
-              if (fresh != null && fresh.isNotEmpty) {
+              if (fresh != null && fresh.isNotEmpty &&
+                  (await _auth.profile())?.adminId == expectedAdmin) {
                 req.extra['authRetried'] = true;
                 req.headers['Authorization'] = 'Bearer $fresh';
                 try {
@@ -288,6 +294,12 @@ class EnrollmentService {
                 requestOptions: req,
                 type: failure.network ? DioExceptionType.connectionError : DioExceptionType.badResponse,
                 response: failure.network ? null : Response<dynamic>(requestOptions: req, statusCode: 503),
+              ));
+            } catch (_) {
+              return handler.next(DioException(
+                requestOptions: req,
+                type: DioExceptionType.badResponse,
+                response: Response<dynamic>(requestOptions: req, statusCode: 503),
               ));
             }
           }
@@ -332,7 +344,7 @@ class EnrollmentService {
       throw const EnrollmentException('Admin info not found. Please sign in again.', messageKey: 'adminMissing');
     }
 
-    final pending = await _fetchPending(token);
+    final pending = await _fetchPending(token, profile.adminId);
 
     final String code;
     try {
@@ -361,8 +373,14 @@ class EnrollmentService {
     if (currentProfile?.adminId != profile.adminId) {
       throw const EnrollmentException(_msgSession, messageKey: 'session');
     }
+    // Never fall back to an old token after logout or a failed refresh.
+    final confirmToken = await _accessToken();
+    if (confirmToken == null || confirmToken.isEmpty ||
+        (await _auth.profile())?.adminId != profile.adminId) {
+      throw const EnrollmentException(_msgSession, messageKey: 'session');
+    }
     // Confirm is tied to the saved generation. An ambiguous result keeps the staged key.
-    await _confirm((await _accessToken()) ?? token, code, pending.credentialId);
+    await _confirm(confirmToken, code, pending.credentialId, profile.adminId);
 
     return EnrolledKey(
       adminId: profile.adminId,
@@ -375,11 +393,11 @@ class EnrollmentService {
   }
 
   // ---- Bước 1 ----
-  Future<_PendingParams> _fetchPending(String token) async {
+  Future<_PendingParams> _fetchPending(String token, String expectedAdminId) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
         _pendingPath,
-        options: _bearer(token),
+        options: _bearer(token, expectedAdminId),
       );
       final data = res.data?['data'] as Map<String, dynamic>?;
       if (data == null) throw const EnrollmentException(_msgServer, messageKey: 'server');
@@ -417,12 +435,12 @@ class EnrollmentService {
   }
 
   // ---- Bước 3 ----
-  Future<void> _confirm(String token, String code, int credentialId) async {
+  Future<void> _confirm(String token, String code, int credentialId, String expectedAdminId) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         _confirmPath,
         data: {'code': code, 'credentialId': credentialId},
-        options: _bearer(token),
+        options: _bearer(token, expectedAdminId),
       );
       final data = response.data?['data'];
       if (response.statusCode != 200 || response.data?['success'] != true ||
@@ -439,11 +457,11 @@ class EnrollmentService {
   Future<bool> isConfirmedCredential(int credentialId, AuthAccount account) async {
     try {
       final token = await _accessToken();
-      if (token == null || token.isEmpty) return false;
+      if (token == null || token.isEmpty || (await _auth.profile())?.adminId != account.account) return false;
       final code = TotpGenerator.generate(account.secret, period: account.periodSeconds,
           digits: account.digits, algorithm: account.algorithm);
       final response = await _dio.post<Map<String, dynamic>>(
-        '/admin/2fa/enrollment/receipt/$credentialId', data: {'code': code}, options: _bearer(token));
+        '/admin/2fa/enrollment/receipt/$credentialId', data: {'code': code}, options: _bearer(token, account.account));
       final data = response.data?['data'];
       return response.statusCode == 200 && response.data?['success'] == true &&
           data is Map && data['totpEnabled'] == true && data['credentialId'] == credentialId;
@@ -465,9 +483,14 @@ class EnrollmentService {
     required int digits,
     required TotpAlgorithm algorithm,
     int? credentialId,
+    String? expectedAdminId,
   }) async {
+    final profile = await _auth.profile();
+    if (profile == null || (expectedAdminId != null && profile.adminId != expectedAdminId)) {
+      throw const EnrollmentException(_msgSession, messageKey: 'session');
+    }
     final token = await _accessToken();
-    if (token == null || token.isEmpty) {
+    if (token == null || token.isEmpty || (await _auth.profile())?.adminId != profile.adminId) {
       throw const EnrollmentException(_msgSession, messageKey: 'session');
     }
 
@@ -487,7 +510,7 @@ class EnrollmentService {
       final response = await _dio.post<Map<String, dynamic>>(
         _disablePath,
         data: {'code': code, if (credentialId != null) 'credentialId': credentialId},
-        options: _bearer(token),
+        options: _bearer(token, profile.adminId),
       );
       final body = response.data;
       final data = body?['data'];
@@ -540,8 +563,8 @@ class EnrollmentService {
     return const EnrollmentException(_msgServer, messageKey: 'server');
   }
 
-  Options _bearer(String token) =>
-      Options(headers: {'Authorization': 'Bearer $token'});
+  Options _bearer(String token, String expectedAdminId) =>
+      Options(headers: {'Authorization': 'Bearer $token'}, extra: {'expectedAdminId': expectedAdminId});
 
   EnrollmentException _map(DioException e) {
     final status = e.response?.statusCode;
