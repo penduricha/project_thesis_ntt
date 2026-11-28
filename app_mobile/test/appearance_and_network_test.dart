@@ -45,7 +45,7 @@ void main() {
   });
 
   test('every locale has the same common settings and validation messages', () {
-    const keys = ['settings', 'appearance', 'light', 'dark', 'system', 'language', 'network', 'login', 'enterId', 'enterPassword', 'secretTitle', 'secretLength'];
+    const keys = ['settings', 'appearance', 'light', 'dark', 'system', 'language', 'network', 'login', 'enterId', 'enterPassword', 'secretTitle', 'secretLength', 'authenticatorTab', 'chatTab'];
     for (final locale in AppStrings.locales) {
       final strings = AppStrings(locale);
       for (final key in keys) {

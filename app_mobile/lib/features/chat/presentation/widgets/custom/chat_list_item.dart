@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// A tappable conversation row with a divider even for the final item.
+/// A tappable conversation row with an inset bottom divider even for the final item.
 class ChatListItem extends StatelessWidget {
   const ChatListItem({super.key, required this.onTap, required this.child});
 
@@ -11,13 +11,20 @@ class ChatListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 80),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
-        ),
-        child: child,
+      child: Column(
+        children: [
+          Container(
+            constraints: const BoxConstraints(minHeight: 80),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: child,
+          ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 76,
+            color: Theme.of(context).dividerColor,
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/localization/app_strings.dart';
+
 import '../../../authenticator/presentation/screens/authenticator_screen.dart';
 import '../../../chat/application/chat_controller.dart';
 import '../../../chat/presentation/screens/chat_list_screen.dart';
@@ -11,26 +13,29 @@ import '../../../chat/presentation/screens/chat_list_screen.dart';
 
 enum AppTab {
   authenticator(
-    label: 'Authenticator',
     icon: Icons.home_filled,
     activeIcon: Icons.home_filled,
   ),
 
   chat(
-    label: 'Chat',
     icon: Icons.chat_bubble_outline,
     activeIcon: Icons.messenger,
   );
 
   const AppTab({
-    required this.label,
     required this.icon,
     required this.activeIcon,
   });
 
-  final String label;
   final IconData icon;
   final IconData activeIcon;
+
+  String label(BuildContext context) {
+    return switch (this) {
+      AppTab.authenticator => AppStrings.of(context).text('authenticatorTab'),
+      AppTab.chat => AppStrings.of(context).text('chatTab'),
+    };
+  }
 }
 
 // ============================================================================
@@ -205,7 +210,7 @@ class AppTabBarState extends State<AppTabBar> {
             BottomNavigationBarItem(
               icon: Icon(tab.icon),
               activeIcon: Icon(tab.activeIcon),
-              label: tab.label,
+              label: tab.label(context),
             ),
         ],
       ),

@@ -56,7 +56,7 @@ void main() {
       expect(tester.widget<IconButton>(find.byType(IconButton)).onPressed, isNull);
     });
 
-    testWidgets('each conversation including the last has a themed bottom border in $brightness', (tester) async {
+    testWidgets('each conversation including the last has an inset bottom divider in $brightness', (tester) async {
       final theme = AppTheme.create(brightness);
       var tapped = 0;
       await tester.pumpWidget(MaterialApp(
@@ -69,10 +69,10 @@ void main() {
       final items = find.byType(ChatListItem);
       expect(items, findsNWidgets(2));
       for (var i = 0; i < 2; i++) {
-        final container = tester.widget<Container>(find.descendant(of: items.at(i), matching: find.byType(Container)).first);
-        final border = (container.decoration! as BoxDecoration).border! as Border;
-        expect(border.bottom.color, theme.dividerColor);
-        expect(border.bottom.width, 1);
+        final divider = tester.widget<Divider>(find.descendant(of: items.at(i), matching: find.byType(Divider)).first);
+        expect(divider.color, theme.dividerColor);
+        expect(divider.indent, 76);
+        expect(divider.height, 1);
       }
       await tester.tap(find.text('Last'));
       expect(tapped, 1);
