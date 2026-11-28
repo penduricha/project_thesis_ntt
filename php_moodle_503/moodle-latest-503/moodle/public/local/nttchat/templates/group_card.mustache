@@ -24,6 +24,8 @@
         "id": 7,
         "name": "Nhóm ôn TOEIC",
         "isowner": true,
+        "iscourseroom": false,
+        "courseid": 0,
         "membercount": 2,
         "members": [
             {"id": 2, "fullname": "An Nguyen", "profileimageurlsmall": "https://example.com/a.png", "isowner": true},
@@ -38,8 +40,10 @@
                 <h3 class="h6 mb-1">
                     <span data-region="group-name">{{name}}</span>
                     {{#isowner}}<span class="badge bg-primary ms-1">{{#str}}owner, local_nttchat{{/str}}</span>{{/isowner}}
+                    {{#iscourseroom}}<span class="badge bg-info text-dark ms-1">{{#str}}courseroom, local_nttchat{{/str}}</span>{{/iscourseroom}}
                 </h3>
                 <div class="text-muted small">{{#str}}membercount, local_nttchat, {{membercount}}{{/str}}</div>
+                {{#iscourseroom}}<div class="text-muted small">{{#str}}courseroomhelp, local_nttchat{{/str}}</div>{{/iscourseroom}}
                 <div class="d-flex flex-wrap gap-1 mt-2">
                     {{#members}}
                         <img src="{{profileimageurlsmall}}" alt="{{fullname}}" title="{{fullname}}" class="nttchat-avatar" width="28" height="28">
@@ -55,9 +59,11 @@
                         {{#str}}manage, local_nttchat{{/str}}
                     </button>
                 {{/isowner}}
+                {{^iscourseroom}}
                 <button type="button" class="btn btn-outline-secondary" data-action="leave" data-groupid="{{id}}">
                     {{#str}}leavegroup, local_nttchat{{/str}}
                 </button>
+                {{/iscourseroom}}
             </div>
         </div>
 
@@ -82,7 +88,7 @@
                                 {{#isowner}}<span class="badge bg-primary">{{#str}}owner, local_nttchat{{/str}}</span>{{/isowner}}
                             </span>
                             {{^isowner}}
-                                {{! Trong vòng lặp members, {{id}} là id THÀNH VIÊN; id nhóm lấy từ thẻ cha [data-region="group"]. }}
+                                {{! Trong vòng lặp members, id là id THÀNH VIÊN; id nhóm lấy từ thẻ cha có data-region group. }}
                                 <button type="button" class="btn btn-sm btn-outline-danger" data-action="remove-member"
                                         data-userid="{{id}}" data-fullname="{{fullname}}">
                                     {{#str}}remove, local_nttchat{{/str}}

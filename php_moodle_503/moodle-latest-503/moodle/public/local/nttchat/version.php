@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_nttchat';
-$plugin->version = 2026112600;
+$plugin->version = 2026112800;
 $plugin->requires = 2025041400; // Moodle 5.0 trở lên (cần API core_message và hook before_footer_html_generation).
 $plugin->maturity = MATURITY_STABLE;
-$plugin->release = '1.0.0';
+$plugin->release = '1.1.0';

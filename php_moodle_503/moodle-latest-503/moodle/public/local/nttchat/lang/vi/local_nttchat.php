@@ -30,7 +30,7 @@ $string['nttchat:creategroup'] = 'Tạo và quản lý nhóm chat của mình';
 
 // Trang.
 $string['pagetitle'] = 'Nhóm chat';
-$string['pageintro'] = 'Tạo nhóm, thêm hoặc bớt thành viên và trò chuyện ngay trong ngăn kéo tin nhắn. Tin nhắn nhóm là tin nhắn Moodle bình thường.';
+$string['pageintro'] = 'Mỗi khoá học có sẵn một phòng chat tự động. Bạn cũng có thể tự tạo nhóm, thêm hoặc bớt thành viên và trò chuyện ngay trong ngăn kéo tin nhắn. Tin nhắn nhóm là tin nhắn Moodle bình thường.';
 $string['creategroup'] = 'Tạo nhóm';
 $string['newgroup'] = 'Nhóm chat mới';
 $string['groupname'] = 'Tên nhóm';
@@ -90,6 +90,15 @@ $string['redisstatus_ok'] = 'Đã kết nối.';
 $string['redisstatus_notconfigured'] = 'Chưa cấu hình. Thêm $CFG->local_nttchat_redis vào config.php (xem README của plugin).';
 $string['redisstatus_noext'] = 'Chưa cài extension "redis" của PHP.';
 $string['redisstatus_failed'] = 'Đã cấu hình nhưng không kết nối được máy chủ. Chat vẫn chạy; thông báo sẽ chậm theo chu kỳ làm mới của lõi.';
+
+// Phòng chat khoá học.
+$string['courseroom'] = 'Khoá học';
+$string['courseroomhelp'] = 'Mọi người đang ghi danh trong khoá học này tự động ở trong phòng.';
+$string['courseroomreadonly'] = 'Phòng chat của khoá học đi theo danh sách ghi danh nên không sửa được ở đây.';
+$string['courseroomleave'] = 'Bạn không rời được phòng chat của khoá học khi còn ghi danh. Dùng "Tắt thông báo" trong ngăn kéo tin nhắn nếu không muốn nhận thông báo.';
+$string['settingscourserooms'] = 'Phòng chat tự động theo khoá học';
+$string['settingscourserooms_desc'] = 'Mỗi khoá học có một phòng chat nhóm, thành viên là những người đang ghi danh còn hiệu lực. Thành viên tự đổi theo ghi danh. Tắt đi thì giữ nguyên các phòng đã có nhưng không cập nhật nữa.';
+$string['tasksynccourserooms'] = 'Đồng bộ phòng chat khoá học với danh sách ghi danh';
 
 // Quyền riêng tư.
 $string['privacy:metadata'] = 'Plugin không lưu dữ liệu cá nhân của riêng nó. Nhóm chat do hệ thống nhắn tin của lõi lưu. Thông báo tin mới tạm thời (người gửi, đoạn xem trước tối đa 120 ký tự) chỉ nằm trong Redis tối đa một ngày.';

@@ -73,6 +73,50 @@ class observer {
         self::notify(array_map('intval', $recipients), (int) $event->objectid, 'group');
     }
 
+    // -----------------------------------------------------------------------------------------------
+    // Phòng chat tự động theo khoá học (xem course_room_service). Mọi lỗi đều bị nuốt: ghi danh, sửa hay xoá
+    // khoá học không bao giờ được thất bại vì chat.
+    // -----------------------------------------------------------------------------------------------
+
+    /**
+     * Ghi danh được tạo / đổi (tạm ngưng, hết hạn...) / xoá: đưa người đó vào hoặc ra khỏi phòng khoá học.
+     *
+     * @param \core\event\base $event user_enrolment_created | user_enrolment_updated | user_enrolment_deleted
+     */
+    public static function enrolment_changed(\core\event\base $event): void {
+        try {
+            course_room_service::sync_user((int) $event->courseid, (int) $event->relateduserid);
+        } catch (\Throwable $e) {
+            debugging('local_nttchat: không cập nhật được phòng khoá học: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
+    /**
+     * Khoá học được sửa: đổi tên phòng theo tên mới.
+     *
+     * @param \core\event\course_updated $event
+     */
+    public static function course_updated(\core\event\course_updated $event): void {
+        try {
+            course_room_service::rename_room((int) $event->courseid);
+        } catch (\Throwable $e) {
+            debugging('local_nttchat: không đổi được tên phòng khoá học: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
+    /**
+     * Khoá học bị xoá: xoá phòng và tin nhắn của phòng (không để hội thoại mồ côi).
+     *
+     * @param \core\event\course_deleted $event
+     */
+    public static function course_deleted(\core\event\course_deleted $event): void {
+        try {
+            course_room_service::delete_room((int) $event->objectid, (int) $event->contextid);
+        } catch (\Throwable $e) {
+            debugging('local_nttchat: không xoá được phòng khoá học: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
     /**
      * Ghi thông báo cho từng người nhận.
      *

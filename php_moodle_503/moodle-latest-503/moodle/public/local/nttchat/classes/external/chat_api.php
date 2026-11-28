@@ -70,6 +70,8 @@ class chat_api extends external_api {
             'name' => new external_value(PARAM_TEXT, 'Tên nhóm'),
             'ownerid' => new external_value(PARAM_INT, 'Id chủ nhóm'),
             'isowner' => new external_value(PARAM_BOOL, 'Người gọi có phải chủ nhóm'),
+            'iscourseroom' => new external_value(PARAM_BOOL, 'Là phòng chat tự động của khoá học'),
+            'courseid' => new external_value(PARAM_INT, 'Id khoá học (0 nếu không phải phòng khoá học)'),
             'membercount' => new external_value(PARAM_INT, 'Số thành viên'),
             'timemodified' => new external_value(PARAM_INT, 'Lần hoạt động cuối'),
             'members' => new external_multiple_structure(new external_single_structure([

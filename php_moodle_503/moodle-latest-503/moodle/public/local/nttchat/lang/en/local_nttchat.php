@@ -30,7 +30,7 @@ $string['nttchat:creategroup'] = 'Create and manage own chat groups';
 
 // Page.
 $string['pagetitle'] = 'Chat groups';
-$string['pageintro'] = 'Create groups, add or remove members and chat in the messaging drawer. Group messages are regular Moodle messages.';
+$string['pageintro'] = 'Every course has its own chat room automatically. You can also create your own groups, add or remove members and chat in the messaging drawer. Group messages are regular Moodle messages.';
 $string['creategroup'] = 'Create group';
 $string['newgroup'] = 'New chat group';
 $string['groupname'] = 'Group name';
@@ -90,6 +90,15 @@ $string['redisstatus_ok'] = 'Connected.';
 $string['redisstatus_notconfigured'] = 'Not configured. Add $CFG->local_nttchat_redis to config.php (see the README of this plugin).';
 $string['redisstatus_noext'] = 'The PHP "redis" extension is not installed.';
 $string['redisstatus_failed'] = 'Configured but the server is not reachable. Chat still works; alerts are delayed to the core refresh.';
+
+// Course chat rooms.
+$string['courseroom'] = 'Course';
+$string['courseroomhelp'] = 'Everyone enrolled in this course is in this room automatically.';
+$string['courseroomreadonly'] = 'A course chat room follows the course enrolment list, so it cannot be edited here.';
+$string['courseroomleave'] = 'You cannot leave a course chat room while you are enrolled. Use "Mute" in the messaging drawer to stop its notifications.';
+$string['settingscourserooms'] = 'Automatic course chat rooms';
+$string['settingscourserooms_desc'] = 'Each course gets one group chat room whose members are the people with an active enrolment. Members follow enrolment changes automatically. Turning this off keeps existing rooms but stops updating them.';
+$string['tasksynccourserooms'] = 'Sync course chat rooms with enrolments';
 
 // Privacy.
 $string['privacy:metadata'] = 'The plugin stores no personal data of its own. Group chats are kept by the core messaging system. Short-lived new-message alerts (sender, a preview of up to 120 characters) are held in Redis for at most one day.';

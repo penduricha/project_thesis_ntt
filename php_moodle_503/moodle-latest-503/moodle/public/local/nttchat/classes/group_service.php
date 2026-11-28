@@ -188,6 +188,10 @@ class group_service {
      */
     public static function require_owner(int $conversationid, int $userid): \stdClass {
         $conversation = self::require_member($conversationid, $userid);
+        if (course_room_service::is_course_room($conversation)) {
+            // Phòng khoá học do hệ thống quản lý theo danh sách ghi danh, không ai (kể cả giáo viên) sửa tay.
+            throw new \moodle_exception('courseroomreadonly', 'local_nttchat');
+        }
         if ((int) $conversation->itemid !== $userid) {
             throw new \moodle_exception('onlyowner', 'local_nttchat');
         }
@@ -302,6 +306,9 @@ class group_service {
     public static function leave(int $conversationid, int $userid): void {
         global $DB;
         $conversation = self::require_member($conversationid, $userid);
+        if (course_room_service::is_course_room($conversation)) {
+            throw new \moodle_exception('courseroomleave', 'local_nttchat');
+        }
         $transaction = $DB->start_delegated_transaction();
         if ((int) $conversation->itemid === $userid) {
             $next = $DB->get_records_select(
@@ -371,14 +378,14 @@ class group_service {
      */
     public static function list_for_user(int $userid): array {
         global $DB;
-        $sql = "SELECT mc.id, mc.name, mc.itemid AS ownerid, mc.timecreated, mc.timemodified,
+        $sql = "SELECT mc.id, mc.name, mc.itemid AS ownerid, mc.contextid, mc.timecreated, mc.timemodified,
                        (SELECT COUNT(1)
                           FROM {message_conversation_members} m2
                          WHERE m2.conversationid = mc.id) AS membercount
                   FROM {message_conversations} mc
                   JOIN {message_conversation_members} me ON me.conversationid = mc.id AND me.userid = :userid
                  WHERE mc.type = :type AND mc.component = :component
-              ORDER BY mc.timemodified DESC, mc.id DESC";
+              ORDER BY CASE WHEN mc.itemid = 0 THEN 0 ELSE 1 END, mc.timemodified DESC, mc.id DESC";
         $rows = $DB->get_records_sql($sql, [
             'userid' => $userid,
             'type' => messageapi::MESSAGE_CONVERSATION_TYPE_GROUP,
@@ -387,14 +394,18 @@ class group_service {
         $groups = [];
         foreach ($rows as $row) {
             $ownerid = (int) $row->ownerid;
+            $iscourseroom = $ownerid === 0;
             $groups[] = [
                 'id' => (int) $row->id,
                 'name' => format_string($row->name, true, ['context' => \context_system::instance()]),
                 'ownerid' => $ownerid,
-                'isowner' => $ownerid === $userid,
+                'isowner' => !$iscourseroom && $ownerid === $userid,
+                'iscourseroom' => $iscourseroom,
+                'courseid' => $iscourseroom ? course_room_service::course_id_of($row) : 0,
                 'membercount' => (int) $row->membercount,
                 'timemodified' => (int) $row->timemodified,
-                'members' => self::members((int) $row->id, $ownerid),
+                // Phòng khoá học có thể hàng trăm người: chỉ đếm, không liệt kê.
+                'members' => $iscourseroom ? [] : self::members((int) $row->id, $ownerid),
             ];
         }
         return $groups;

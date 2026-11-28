@@ -33,4 +33,25 @@ $observers = [
         'eventname' => '\core\event\message_sent',
         'callback' => '\local_nttchat\observer::message_sent',
     ],
+    // Phòng chat theo khoá học: thành viên đi theo ghi danh.
+    [
+        'eventname' => '\core\event\user_enrolment_created',
+        'callback' => '\local_nttchat\observer::enrolment_changed',
+    ],
+    [
+        'eventname' => '\core\event\user_enrolment_updated',
+        'callback' => '\local_nttchat\observer::enrolment_changed',
+    ],
+    [
+        'eventname' => '\core\event\user_enrolment_deleted',
+        'callback' => '\local_nttchat\observer::enrolment_changed',
+    ],
+    [
+        'eventname' => '\core\event\course_updated',
+        'callback' => '\local_nttchat\observer::course_updated',
+    ],
+    [
+        'eventname' => '\core\event\course_deleted',
+        'callback' => '\local_nttchat\observer::course_deleted',
+    ],
 ];

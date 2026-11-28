@@ -245,7 +245,50 @@ Biên dịch kiểm chứng bằng dart-sass thật: 220 dòng CSS, **0 lỗi**.
 
 #### Chưa làm
 
-- Phòng chat **tự động theo khoá học** (thành viên lấy từ danh sách ghi danh): làm ở bản vá kế tiếp.
+- Phòng chat **tự động theo khoá học** (thành viên lấy từ danh sách ghi danh): đã làm, xem mục ngay bên dưới.
+
+### Moodle: phòng chat tự động theo khoá học (`local_nttchat` 1.1.0)
+
+*Áp SAU bản vá "plugin chat đơn + chat nhóm" ở mục trên (cùng sửa lên file của plugin đó).*
+
+#### Thêm mới
+
+- **Mỗi khoá học có MỘT phòng chat nhóm; thành viên đi theo danh sách ghi danh.** Phòng là hội thoại nhóm của lõi
+  (`core_message`) nên nằm chung ngăn kéo chat, có thông báo tức thời qua Redis như nhóm tự tạo. Nhận biết:
+  `component = local_nttchat` và `itemid = 0` (nhóm tự tạo luôn có `itemid` = id chủ nhóm > 0); `contextid` là
+  ngữ cảnh khoá học. **Không có bảng mới.**
+  - Cần ít nhất **2 người** ghi danh mới có phòng. Thành viên = ghi danh còn hiệu lực (không tạm ngưng, chưa hết
+    hạn) và tài khoản đang hoạt động (không bị khoá, không xoá, không phải khách).
+  - Cập nhật bằng **sự kiện** (ghi danh tạo/đổi/xoá, sửa khoá học, xoá khoá học) và bằng **tác vụ định kỳ**
+    `sync_course_rooms` (mỗi giờ, phút 23) để bắt trường hợp không có sự kiện (ghi danh hết hạn theo thời gian,
+    tài khoản bị khoá/mở khoá). Lúc nâng cấp plugin lên 1.1.0 cũng dựng phòng cho các khoá đã có.
+  - Phòng **chỉ đọc với người dùng**: không ai (kể cả giáo viên) đổi tên, thêm, bớt, giải tán hay rời được
+    (`courseroomreadonly` / `courseroomleave`); muốn bớt thông báo thì dùng "Tắt thông báo" của lõi. Trang
+    Nhóm chat hiện nhãn "Khoá học", xếp đầu danh sách, chỉ hiện số thành viên (không liệt kê hàng trăm ảnh).
+  - Quản trị tắt được ở *Site administration → Plugins → Local plugins → NTT chat groups → Automatic course chat
+    rooms* (tắt thì phòng đã có giữ nguyên, chỉ ngừng đồng bộ).
+  - Xoá khoá học thì xoá luôn phòng và tin nhắn của phòng.
+
+#### Sửa lỗi
+
+- **Xoá khoá học làm phòng và tin nhắn bị bỏ lại (phát hiện nhờ chạy thử trên Moodle thật).** Sự kiện
+  `course_deleted` đến **sau** khi ngữ cảnh khoá học đã bị xoá, mà `core_message\api::delete_all_conversation_data()`
+  tra lại ngữ cảnh đó nên ném `Can't find data record in database table context`. Khi ngữ cảnh còn thì vẫn dùng
+  hàm lõi; khi đã mất thì xoá tay đúng các bước của hàm lõi (hội thoại, thành viên, thao tác, tin nhắn, mục yêu
+  thích) trong một giao dịch. Tác vụ định kỳ còn dọn **phòng mồ côi** (khoá học không còn) phòng khi bộ quan sát lỗi.
+- **Trang Nhóm chat, bảng "Manage": dòng chữ `là id THÀNH VIÊN; id nhóm lấy từ thẻ cha…` lọt ra cạnh tên thành
+  viên.** Chú thích Mustache `{{! … {{id}} … }}` bị cắt ở `}}` đầu tiên, phần còn lại thành chữ hiển thị. Đã bỏ
+  `{{id}}` khỏi chú thích; thêm phép thử trình duyệt chặn tái phát.
+
+#### Đã kiểm thử
+
+- Moodle 5.3 + MariaDB + Redis thật: **56 kiểm tra PHP** cho phòng khoá học (tạo khi đủ 2 người, ghi danh lặp
+  không sinh phòng thứ hai, thêm/tạm ngưng/khôi phục/huỷ ghi danh, hết hạn có và không có sự kiện, tài khoản
+  bị khoá, đồng bộ lặp lại không đổi gì, đổi tên khoá, chỉ-đọc, danh sách, thông báo Redis, bật/tắt tính năng,
+  tác vụ định kỳ, xoá khoá học, phòng mồ côi, nhóm tự tạo không bị đụng tới), chạy 3 lần liền đều đạt; **43**
+  kiểm tra cũ của chat đơn/nhóm vẫn đạt; **24 kiểm tra trình duyệt** (Chromium, hai người dùng) đạt.
+- Lưu ý khi tự viết phép thử "ghi danh hết hạn": Moodle làm tròn "bây giờ" theo 100 giây khi lọc ghi danh còn
+  hiệu lực, nên hết hạn dưới ~1 phút có thể chưa bị tính là hết hạn; cron mỗi giờ nên không ảnh hưởng.
 
 ### Khảo sát giao diện Moodle để custom UI
 

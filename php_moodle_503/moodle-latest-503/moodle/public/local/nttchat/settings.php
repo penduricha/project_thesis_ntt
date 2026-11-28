@@ -47,6 +47,12 @@ if ($hassiteconfig) {
         ));
 
         $settings->add(new admin_setting_configcheckbox(
+            'local_nttchat/courserooms',
+            get_string('settingscourserooms', 'local_nttchat'),
+            get_string('settingscourserooms_desc', 'local_nttchat'),
+            1
+        ));
+        $settings->add(new admin_setting_configcheckbox(
             'local_nttchat/realtime',
             get_string('settingsrealtime', 'local_nttchat'),
             get_string('settingsrealtime_desc', 'local_nttchat'),
