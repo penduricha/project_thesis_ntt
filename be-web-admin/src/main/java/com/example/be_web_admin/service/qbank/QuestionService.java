@@ -6,6 +6,7 @@ import com.example.be_web_admin.dto.qbank.PageResponse;
 import com.example.be_web_admin.dto.qbank.QuestionDetail;
 import com.example.be_web_admin.dto.qbank.QuestionListItem;
 import com.example.be_web_admin.dto.qbank.UpdateQuestionRequest;
+import com.example.be_web_admin.enums.Role;
 import com.example.be_web_admin.enums.ai.SuggestionDecisionD;
 import com.example.be_web_admin.enums.ai.TaskTypeD;
 import com.example.be_web_admin.enums.qbank.ChangeSourceD;
@@ -15,12 +16,14 @@ import com.example.be_web_admin.enums.qbank.QuestionSourceD;
 import com.example.be_web_admin.enums.qbank.QuestionStatusD;
 import com.example.be_web_admin.enums.qbank.ValidationStatusD;
 import com.example.be_web_admin.exception.qbank.QbankException;
+import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.ai.AiSuggestion;
 import com.example.be_web_admin.model.jpa.ai.AiTask;
 import com.example.be_web_admin.model.jpa.qbank.Question;
 import com.example.be_web_admin.model.jpa.qbank.QuestionRevision;
 import com.example.be_web_admin.model.jpa.qbank.Subject;
 import com.example.be_web_admin.model.jpa.qbank.Topic;
+import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.repository.jpa.ai.AiSuggestionRepository;
 import com.example.be_web_admin.repository.jpa.ai.AiTaskRepository;
 import com.example.be_web_admin.repository.jpa.ai.IssueTypeRepository;
@@ -66,6 +69,7 @@ public class QuestionService {
     private static final int MAX_PAGE_SIZE = 100;
     private static final int STEM_PREVIEW_LENGTH = 160;
 
+    private final AdminRepository admins;
     private final QuestionRepository questions;
     private final QuestionRevisionRepository revisions;
     private final SubjectRepository subjects;
@@ -76,7 +80,8 @@ public class QuestionService {
     private final QuestionSnapshotFactory snapshots;
     private final UiStateStore uiState;
 
-    public QuestionService(QuestionRepository questions,
+    public QuestionService(AdminRepository admins,
+                           QuestionRepository questions,
                            QuestionRevisionRepository revisions,
                            SubjectRepository subjects,
                            TopicRepository topics,
@@ -85,6 +90,7 @@ public class QuestionService {
                            IssueTypeRepository issueTypes,
                            QuestionSnapshotFactory snapshots,
                            UiStateStore uiState) {
+        this.admins = admins;
         this.questions = questions;
         this.revisions = revisions;
         this.subjects = subjects;
@@ -158,12 +164,17 @@ public class QuestionService {
 
     /** Đề xuất của task MỚI NHẤT cho câu hỏi — dữ liệu cho modal duyệt đề xuất AI. */
     @Transactional(readOnly = true)
-    public List<AiSuggestionView> latestSuggestions(Long questionId) {
+    public List<AiSuggestionView> latestSuggestions(Long questionId, Long adminId) {
         requireQuestion(questionId);
         Optional<AiTask> latest = aiTasks.findTopByQuestionIdAndTaskTypeOrderByCreatedAtDesc(
                 questionId, TaskTypeD.QUESTION_CHECK);
         if (latest.isEmpty()) {
             return List.of();
+        }
+        Admin requester = adminId == null ? null : admins.findAdminByAdminId(adminId);
+        if (requester == null || !requester.isLoginAllowed()
+                || (!Objects.equals(latest.get().getCreatedBy(), adminId) && requester.getRole() != Role.ADMIN)) {
+            throw QbankException.notFound("TASK_NOT_FOUND", "Không tìm thấy task AI.");
         }
         Map<String, String> labels = issueTypes.findAll().stream()
                 .collect(Collectors.toMap(it -> it.getIssueType(), it -> it.getLabelVi(), (a, b) -> a,
@@ -196,7 +207,7 @@ public class QuestionService {
 
     @Transactional
     public QuestionDetail create(CreateQuestionRequest request, Long adminId) {
-        Subject subject = subjects.findById(request.subjectId())
+        Subject subject = subjects.findForQuestionCreate(request.subjectId())
                 .orElseThrow(() -> QbankException.notFound("SUBJECT_NOT_FOUND",
                         "Không tìm thấy môn học " + request.subjectId()));
         if (!Boolean.TRUE.equals(subject.getIsActive())) {
@@ -431,14 +442,7 @@ public class QuestionService {
     }
 
     private void markPendingSuggestionsStale(Long questionId) {
-        List<String> taskIds = aiTasks.findByQuestionIdOrderByCreatedAtDesc(questionId).stream()
-                .map(AiTask::getTaskId)
-                .limit(50)
-                .toList();
-        if (taskIds.isEmpty()) {
-            return;
-        }
-        int updated = suggestions.markPendingStale(taskIds, SuggestionDecisionD.PENDING, SuggestionDecisionD.STALE);
+        int updated = suggestions.markQuestionPendingStale(questionId, SuggestionDecisionD.PENDING, SuggestionDecisionD.STALE);
         if (updated > 0) {
             log.info("Đánh dấu {} đề xuất pending của câu #{} thành stale", updated, questionId);
         }

@@ -6,12 +6,19 @@ import java.nio.file.Path;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.data.rest.RepositoryRestMvcAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 
-@SpringBootApplication
+// This application authenticates through its own JWT/Redis filters, not Boot's default
+// in-memory user. Keep security auto-configuration enabled; exclude only that user service.
+@SpringBootApplication(exclude = {
+        RepositoryRestMvcAutoConfiguration.class,
+        UserDetailsServiceAutoConfiguration.class
+})
 @EnableJpaRepositories(basePackages = {
 		"com.example.be_web_admin.repository.jpa",
 		"com.example.be_web_admin.chat.repository"

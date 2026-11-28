@@ -1,5 +1,7 @@
 package com.example.be_web_admin.controller.web;
 
+import com.example.be_web_admin.security.AuthSessionStore;
+import com.example.be_web_admin.security.SessionLogoutService;
 import com.example.be_web_admin.dto.AdminLoginDTO;
 import com.example.be_web_admin.dto.LoginOutcome;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
@@ -28,15 +30,19 @@ public class AdminControllerMgmtWeb {
     private final AdminTokenServiceImpl adminTokenService;
 
     private final AdminLoginServiceImpl adminLoginService;
+    private final AuthSessionStore sessions;
+    private final SessionLogoutService logoutService;
 
     @Autowired
     private AdminJwtTokenProvider adminJwtTokenProvider;
 
 
-    public AdminControllerMgmtWeb(AdminServiceImpl adminService, AdminTokenServiceImpl adminTokenService, AdminLoginServiceImpl adminLoginService) {
+    public AdminControllerMgmtWeb(AdminServiceImpl adminService, AdminTokenServiceImpl adminTokenService, AdminLoginServiceImpl adminLoginService, AuthSessionStore sessions, SessionLogoutService logoutService) {
         this.adminService = adminService;
         this.adminTokenService = adminTokenService;
         this.adminLoginService = adminLoginService;
+        this.sessions = sessions;
+        this.logoutService = logoutService;
     }
 
     @PostMapping("/auth/logout")
@@ -55,17 +61,12 @@ public class AdminControllerMgmtWeb {
         }
 
         try {
-            if (accessToken != null) {
-                adminTokenService.removeAdminAccessTokenByJwtToken(accessToken);
-            }
-            if (refreshToken != null) {
-                adminTokenService.removeAdminRefreshTokenByJwtToken(refreshToken);
+            if (!logoutService.logout(accessToken, refreshToken, AuthSessionStore.Client.WEB)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", 401, "message", "Session is invalid or ended."));
             }
         } catch (Exception e) {
             log.error("Exception logout web: {}", e.getMessage());
-            responseReturn.put("status", 401);
-            responseReturn.put("message", "Can't remove access token or refresh token.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseReturn);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("status", 503, "message", "Cannot revoke session."));
         }
 
         responseReturn.put("status", HttpStatus.OK.value());
@@ -106,8 +107,9 @@ public class AdminControllerMgmtWeb {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseInvalid);
         }
 
-        // 4. Kiểm tra sự tồn tại của Access Token trong Redis DB
-        boolean isTokenExist = adminTokenService.findAdminAccessTokenByJwtToken(jwtToken);
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(jwtToken, "ACCESS");
+        boolean isTokenExist = identity != null && identity.client() == AuthSessionStore.Client.WEB
+                && adminTokenService.findAdminAccessTokenByJwtToken(jwtToken);
         if (!isTokenExist) {
             Map<String, Object> responseNotFound = new HashMap<>();
             responseNotFound.put("success", false);
@@ -154,8 +156,9 @@ public class AdminControllerMgmtWeb {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseInvalid);
         }
 
-        // 4. Kiểm tra sự tồn tại của Access Token trong Redis DB
-        boolean isTokenExist = adminTokenService.findAdminRefreshTokenByJwtToken(jwtToken);
+        AuthSessionStore.Identity identity = adminJwtTokenProvider.parseIdentity(jwtToken, "REFRESH");
+        boolean isTokenExist = identity != null && identity.client() == AuthSessionStore.Client.WEB
+                && adminTokenService.findAdminRefreshTokenByJwtToken(jwtToken);
         if (!isTokenExist) {
             Map<String, Object> responseNotFound = new HashMap<>();
             responseNotFound.put("success", false);
@@ -169,9 +172,8 @@ public class AdminControllerMgmtWeb {
         Long adminId = adminJwtTokenProvider.getAdminIdFromToken(jwtToken);
 
         // 6. Xoay vòng token: xóa refresh token cũ, tạo cặp token mới.
-        //    Lỗi ở bước nào cũng trả 401 kèm thông báo (giống bản mobile). Bản cũ trả 200 với thân rỗng,
-        //    khiến Vue đọc data.accessToken bị TypeError rồi xóa phiên đăng nhập oan.
-        if (!adminTokenService.removeAdminRefreshTokenByJwtToken(jwtToken)) {
+        //    Phân biệt từ chối token với lỗi cấp token sau khi đã tiêu thụ token cũ.
+        if (!sessions.touch(identity) || !adminTokenService.removeAdminRefreshTokenByJwtToken(jwtToken)) {
             Map<String, Object> responseRemoveFailed = new HashMap<>();
             responseRemoveFailed.put("success", false);
             responseRemoveFailed.put("message", "Can't remove old refresh token.");
@@ -179,13 +181,13 @@ public class AdminControllerMgmtWeb {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseRemoveFailed);
         }
 
-        Map<String, Object> tokenNew = adminTokenService.createTokenAdmin(adminId);
+        Map<String, Object> tokenNew = adminTokenService.createTokenAdmin(identity);
         if (tokenNew == null || tokenNew.isEmpty()) {
             Map<String, Object> responseCreateFailed = new HashMap<>();
             responseCreateFailed.put("success", false);
-            responseCreateFailed.put("message", "Can't create new tokens.");
+            responseCreateFailed.put("message", "Can't create new tokens; refresh state is uncertain.");
             responseCreateFailed.put("data", null);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseCreateFailed);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(responseCreateFailed);
         }
 
         // 7. Trả về Response thành công (HTTP 200 OK)
@@ -292,7 +294,7 @@ public class AdminControllerMgmtWeb {
                 body.put("success", false);
                 // Câu chữ không nói "mã" vì khoá có thể do sai MẬT KHẨU (bộ đếm mật khẩu) chứ không
                 // chỉ do sai mã TOTP — nói sai lý do sẽ khiến người dùng đi tìm lỗi ở ô mã.
-                body.put("message", "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau.");
+                body.put("message", "Quá nhiều lần thử. Vui lòng thử lại sau.");
                 body.put("data", Map.of("code", "LOCKED", "retryAfterSeconds", outcome.retryAfterSeconds()));
             }
             default -> { // BAD_CREDENTIALS

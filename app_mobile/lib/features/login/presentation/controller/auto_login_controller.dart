@@ -31,7 +31,9 @@ class AutoLoginController {
       final byAccess = await _service.loginByAccessToken(session.accessToken);
       switch (byAccess) {
         case AutoLoginSuccess():
-          return StartDestination.home;
+          final current = await _authStorage.readSession();
+          return current?.refreshToken == session.refreshToken
+              ? StartDestination.home : StartDestination.login;
         case AutoLoginFailure():
           return StartDestination.login;
         case AutoLoginUnauthorized():
@@ -47,13 +49,14 @@ class AutoLoginController {
           if (newSession != null) {
             // Phản hồi refresh chỉ chứa token -> giữ lại adminName đã lưu.
             final name = session.adminName;
-            await _authStorage.saveSession(
-              name == null ? newSession : newSession.withAdminName(name),
+            final saved = await _authStorage.saveSessionIfCurrent(
+              session.refreshToken, name == null ? newSession : newSession.withAdminName(name),
             );
+            if (!saved) return StartDestination.login;
           }
           return StartDestination.home;
         case AutoLoginUnauthorized():
-          await _authStorage.clearSession();
+          await _authStorage.clearSessionIfCurrent(session.refreshToken);
           return StartDestination.login;
         case AutoLoginFailure():
           return StartDestination.login;

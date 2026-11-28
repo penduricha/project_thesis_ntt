@@ -1,5 +1,6 @@
 package com.example.be_web_admin.chat.ws;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.chat.ChatProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,17 +36,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        Long adminId = (Long) session.getAttributes().get(ChatHandshakeInterceptor.ATTR_ADMIN_ID);
-        if (adminId == null) {
+        AuthSessionStore.Identity identity = (AuthSessionStore.Identity) session.getAttributes().get(ChatHandshakeInterceptor.ATTR_IDENTITY);
+        if (identity == null) {
             closeQuietly(session, CloseStatus.POLICY_VIOLATION);
             return;
         }
+        Long adminId = identity.adminId();
         ChatProperties.Ws ws = properties.getWs();
         // Bọc để nhiều luồng (dispatcher sự kiện, phản hồi ping) gửi cùng lúc an toàn; vượt thời gian hoặc bộ đệm thì
         // Spring tự đóng phiên (mã 1008 SESSION_NOT_RELIABLE) và ném SessionLimitExceededException.
         WebSocketSession decorated = new ConcurrentWebSocketSessionDecorator(
                 session, ws.getSendTimeLimitMs(), ws.getSendBufferBytes());
-        ChatConnection connection = new ChatConnection(adminId, decorated);
+        ChatConnection connection = new ChatConnection(identity, decorated);
         session.getAttributes().put(ChatConnection.ATTR, connection);
 
         if (!registry.register(connection)) {

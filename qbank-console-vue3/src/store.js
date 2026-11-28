@@ -5,12 +5,13 @@ import { llm } from './services/llmSimulator.js'
 import { questionRepository as repo } from './repositories/questionRepository.js'
 import { auth } from './auth/authStore.js'
 import { qbankApi, apiErrorMessage } from './api/qbankApi.js'
-import { subjectToCourse, detailToQuestion, questionToCreate, questionToUpdate, suggestionsToUi } from './api/mappers.js'
+import { subjectToCourse, detailToQuestion, questionToCreate, questionToUpdate, suggestionsToUi, suggestionReplacement } from './api/mappers.js'
 import { TokenLogin } from './auth/TokenLogin.js'
 import { EnrollmentRepository } from './auth/EnrollmentRepository.js'
 import { t as tr } from './i18n/index.js'
 
 /* Danh sách môn học dạng reactive để thêm/sửa/xóa là giao diện tự cập nhật */
+const DEMO_COURSES = RAW_COURSES.map(c => ({ ...c, topics: [...c.topics], topicIds: [...c.topicIds] }))
 export const COURSES = reactive(RAW_COURSES)
 
 const LM0 = [['https://calm-otter-star.trycloudflare.com', 'k3F9xQ7mZp2LwR8tVb5NcY1dHs6JgA4e', 18.4], ['https://quiet-river-1042.trycloudflare.com', 'Wm8Zt2QxL5vN9cRb4YpD7sHk1JfA3gTe', 17.1], ['https://amber-fox-run.trycloudflare.com', 'Pq6Ls9XaV3nB8cTr2MdY5wHj7KfG4zEu', 16.8]]
@@ -32,7 +33,7 @@ export const S = reactive({
   lm: lmInit(), dlg: { kind: null, props: {}, n: 0 }, role: 'admin', name: 'Từ Quang Nhật', colab: true, tn: 1, status: 'idle',
   q: [], sug: [], tasks: [], sel: new Set(), f: blankF(),
   // Chế độ dữ liệu: 'real' = gọi Spring Boot, 'mock' = dữ liệu mẫu (demo hoặc backend chưa sẵn sàng).
-  dataMode: 'mock', dashboard: null, activity: [],
+  dataMode: 'unavailable', dashboard: null, activity: [], suggestionsStatus: 'idle',
   log: [['09:45:12', { key: 'activity.initial', params: {} }, 'ok']],
   toast: { on: false, msg: '', tone: '', label: '', cb: null },
 })
@@ -78,137 +79,172 @@ export function list(isCourse) {
   return arr
 }
 
-/* ---------- Chế độ real/mock ---------- */
-// Real khi đã đăng nhập thật (không phải demo). Lỗi mạng/401 lần đầu -> rớt về mock để UI vẫn xem được,
-// nhưng luôn báo rõ cho người dùng (không giả vờ là dữ liệu thật).
+/* Reads belong to the authenticated app lifetime. Never abort a write: cancellation does not
+   prove that the server rolled it back. Sequence checks prevent older GETs overwriting writes. */
 export const useRealApi = () => auth.isAuthenticated && !auth.isDemo
-function fallbackToMock(reason) {
-  if (S.dataMode !== 'mock') {
-    S.dataMode = 'mock'
-    toast(reason || 'Không kết nối được Spring Boot, đang dùng dữ liệu mẫu.', 'wa')
-    log('Rớt về dữ liệu mẫu: ' + (reason || 'backend không sẵn sàng'), 'wa')
+let sessionGeneration = 0, questionGeneration = 0, dashboardGeneration = 0, suggestionGeneration = 0
+let questionController = null
+let sessionController = new AbortController()
+const activeWrites = new Set()
+const uncertainSubjects = new Set()
+const sessionStamp = () => sessionGeneration
+const sessionCurrent = stamp => stamp === sessionGeneration && auth.isAuthenticated
+const hasCurrentWrites = () => [...activeWrites].some(key => key.startsWith(`${sessionGeneration}:`))
+function invalidateQuestionReads() {
+  questionGeneration++; suggestionGeneration++; dashboardGeneration++
+  if (S.suggestionsStatus === 'loading') S.suggestionsStatus = 'idle'
+  questionController?.abort()
+  questionController = null
+  if (S.status === 'loading') S.status = S.dataMode === 'real' ? 'ready' : 'idle'
+}
+export function resetQuestionSession() {
+  sessionController.abort(); sessionController = new AbortController()
+  sessionGeneration++
+  uncertainSubjects.clear()
+  invalidateQuestionReads()
+  dashboardGeneration++; suggestionGeneration++
+  S.q = []; S.sug = []; S.tasks = []; S.dashboard = null; S.activity = []
+  S.sel.clear(); S.rsel.clear(); S.status = 'idle'; S.suggestionsStatus = 'idle'
+  S.dataMode = 'unavailable'; S.ci = 0; S.f = blankF(S.f.hideAns); S.imp.c = 0; S.imp.tp = 0
+  S.dlg.kind = null; S.dlg.props = {}
+  S.toast.on = false; S.toast.cb = null
+  COURSES.splice(0, COURSES.length)
+}
+
+export function beginQuestionMutation() {
+  const stamp = sessionStamp(), key = `${stamp}:import`
+  activeWrites.add(key)
+  invalidateQuestionReads()
+  return {
+    finish: () => { activeWrites.delete(key); if (sessionCurrent(stamp)) invalidateQuestionReads() },
+    isCurrent: () => sessionCurrent(stamp),
+    invalidateReads: () => { if (sessionCurrent(stamp)) invalidateQuestionReads() },
   }
 }
 
-/* Danh mục môn/chương thật: GET /catalog/subjects + /subjects/{id}/topics.
-   Backend CHƯA có API tạo/sửa/xóa môn/chương nên CoursesView vẫn là mock cục bộ (xem REVIEW). */
-export async function loadCatalog() {
-  if (!useRealApi()) return false
-  try {
-    const subjects = await qbankApi.subjects(true)
-    const courses = subjects.map(subjectToCourse)
-    await Promise.all(courses.map(async (c) => {
-      try {
-        const topics = await qbankApi.topics(c.subjectId)
-        c.topics = topics.map((t) => t.topicName)
-        c.topicIds = topics.map((t) => t.topicId)
-      } catch { c.topics = []; c.topicIds = [] }
-    }))
-    if (courses.length) {
-      COURSES.splice(0, COURSES.length, ...courses)
-      S.dataMode = 'real'
-      return true
-    }
-    return false
-  } catch (e) {
-    console.warn('[qbank] loadCatalog failed:', e?.message)
-    return false
-  }
+async function fetchCatalog(signal) {
+  const subjects = await qbankApi.subjects(true, { signal })
+  const courses = subjects.map(subjectToCourse)
+  await Promise.all(courses.map(async c => {
+    const topics = await qbankApi.topics(c.subjectId, { signal })
+    c.topics = topics.map(t => t.topicName)
+    c.topicIds = topics.map(t => t.topicId)
+  }))
+  return courses
 }
 
-export async function loadDashboard() {
+export async function loadDashboard(options = {}) {
   if (!useRealApi()) return
+  options = { signal: sessionController.signal, ...options }
+  const stamp = sessionStamp(), generation = ++dashboardGeneration
   try {
     const [summary, activity] = await Promise.all([
-      qbankApi.dashboardSummary().catch(() => null),
-      qbankApi.dashboardActivity(10).catch(() => []),
+      qbankApi.dashboardSummary(undefined, options), qbankApi.dashboardActivity(10, options),
     ])
-    if (summary) S.dashboard = summary
-    if (Array.isArray(activity)) S.activity = activity
+    if (!sessionCurrent(stamp) || generation !== dashboardGeneration || options.signal?.aborted) return
+    S.dashboard = summary
+    S.activity = Array.isArray(activity) ? activity : []
   } catch (e) {
-    console.warn('[qbank] loadDashboard failed:', e?.message)
+    if (!options.signal?.aborted) console.warn('[qbank] loadDashboard failed:', e?.message)
   }
 }
 
-/* Tải đề xuất đang chờ duyệt: backend không có endpoint "liệt kê tất cả pending",
-   nên lấy các câu has_issues rồi gọi GET /questions/{id}/ai-suggestions cho từng câu. */
-export async function loadSuggestions() {
+export async function loadSuggestions(options = {}) {
   if (!useRealApi()) return
+  options = { signal: sessionController.signal, ...options }
+  const stamp = sessionStamp(), generation = ++suggestionGeneration
+  S.suggestionsStatus = 'loading'
   try {
-    const flagged = S.q.filter((q) => q.st === 'flag')
-    const loaded = await Promise.all(flagged.map(async (q) => {
+    const flagged = S.q.filter(q => q.st === 'flag')
+    const loaded = await Promise.all(flagged.map(async q => {
+      let list
       try {
-        const list = await qbankApi.latestSuggestions(q.id)
-        const pending = (list || []).filter((s) => !s.decision || s.decision === 'pending')
-        return pending.length ? suggestionsToUi(pending, q, pending[0]?.taskId) : null
-      } catch { return null }
+        list = await qbankApi.latestSuggestions(q.id, options)
+      } catch (error) {
+        // The server hides another lecturer's task as 404. Keep loading this
+        // user's accessible tasks, but do not hide network or other errors.
+        if (error?.response?.status === 404 && error?.response?.data?.code === 'TASK_NOT_FOUND') return null
+        throw error
+      }
+      const pending = (list || []).filter(s => !s.decision || s.decision === 'pending')
+      return pending.length ? suggestionsToUi(pending, q, pending[0]?.taskId) : null
     }))
+    if (!sessionCurrent(stamp) || generation !== suggestionGeneration || options.signal?.aborted) return
     S.sug = loaded.filter(Boolean)
+    S.suggestionsStatus = 'ready'
   } catch (e) {
+    if (!sessionCurrent(stamp) || generation !== suggestionGeneration || options.signal?.aborted) return
+    S.suggestionsStatus = 'error'
     console.warn('[qbank] loadSuggestions failed:', e?.message)
   }
 }
 
-/* Vòng đời API: idle -> loading -> ready | error */
-export async function loadQuestions() {
+export async function loadQuestions(options = {}) {
+  if (!auth.isAuthenticated || hasCurrentWrites()) return false
+  invalidateQuestionReads()
+  const generation = questionGeneration, stamp = sessionStamp()
+  const controller = new AbortController()
+  questionController = controller
+  const cancel = () => controller.abort()
+  if (options.signal?.aborted) controller.abort()
+  else options.signal?.addEventListener('abort', cancel, { once: true })
+  const current = () => sessionCurrent(stamp) && generation === questionGeneration && !controller.signal.aborted
   S.status = 'loading'
-  if (useRealApi()) {
-    try {
-      const catalogOk = await loadCatalog()
-      /* Một lượt gọi thay cho N+1: includeOptions=true khiến mỗi dòng đã có sẵn 4 phương án
-         và đáp án đúng, nên KHÔNG cần gọi GET /questions/{id} cho từng câu nữa.
-         Trước đây 500 câu sinh ra ~505 request (5 trang + 500 chi tiết) => màn hình treo
-         cả chục giây. Nay còn đúng 5 request. */
-      const items = []
-      let page = 0
-      for (;;) {
-        const res = await qbankApi.listQuestions({ status: 'active', page, size: 100, includeOptions: true })
-        items.push(...(res.content || []))
-        if (page + 1 >= (res.totalPages || 1)) break
-        page++
-      }
-      const mapped = items.map((it) => {
-        // Dựng QuestionDetail tối thiểu từ QuestionListItem đã kèm phương án.
-        const detail = {
-          questionId: it.questionId,
-          subjectId: it.subjectId,
-          topicId: it.topicId,
-          title: it.title,
-          stem: it.stem ?? it.stemPreview ?? '',
-          optionA: it.options?.[0] ?? '',
-          optionB: it.options?.[1] ?? '',
-          optionC: it.options?.[2] ?? '',
-          optionD: it.options?.[3] ?? '',
-          correctLabel: it.correctLabel ?? 'A',
-          contentFormat: it.contentFormat ?? 'plain',
-          generalFeedback: it.generalFeedback ?? '',
-          difficulty: it.difficulty,
-          status: it.status,
-          validationStatus: it.validationStatus,
-          source: it.source,
-          updatedAt: it.updatedAt,
-          updatedBy: null,
-          version: it.version,
-          revisionNo: null,
-        }
-        const ci = COURSES.findIndex((c) => c.subjectId === detail.subjectId)
-        const course = COURSES[ci]
-        const tp = course ? Math.max(0, course.topicIds.indexOf(detail.topicId)) : 0
-        return detailToQuestion(detail, ci >= 0 ? ci : 0, tp)
-      })
-      S.q = mapped
-      S.dataMode = 'real'
-      S.status = 'ready'
-      await loadDashboard()
-      await loadSuggestions()
-      return
-    } catch (e) {
-      console.warn('[qbank] loadQuestions (real) failed, fallback mock:', e?.message)
-      fallbackToMock(apiErrorMessage(e, 'Không kết nối được Spring Boot, đang dùng dữ liệu mẫu.'))
+  try {
+    if (auth.isDemo) {
+      const items = await repo.findAll()
+      if (!current()) return false
+      COURSES.splice(0, COURSES.length, ...DEMO_COURSES.map(c => ({ ...c, topics: [...c.topics], topicIds: [...c.topicIds] })))
+      S.q = items; S.dataMode = 'mock'; S.status = 'ready'; return true
     }
+    const courses = await fetchCatalog(controller.signal)
+    // UI question/course routes use array indexes; preserve known subject positions on refresh.
+    const previousOrder = new Map(COURSES.map((course, index) => [course.subjectId, index]))
+    courses.sort((a, b) => (previousOrder.get(a.subjectId) ?? Infinity) - (previousOrder.get(b.subjectId) ?? Infinity))
+    const items = []
+    let page = 0
+    for (;;) {
+      const res = await qbankApi.listQuestions({ status: 'active', page, size: 100, includeOptions: true }, { signal: controller.signal })
+      if (!current()) return false
+      items.push(...(res.content || []))
+      if (page + 1 >= (res.totalPages || 1)) break
+      page++
+    }
+    const mapped = items.map(it => {
+      const detail = {
+        questionId: it.questionId, subjectId: it.subjectId, topicId: it.topicId,
+        title: it.title, stem: it.stem ?? it.stemPreview ?? '',
+        optionA: it.options?.[0] ?? '', optionB: it.options?.[1] ?? '',
+        optionC: it.options?.[2] ?? '', optionD: it.options?.[3] ?? '',
+        correctLabel: it.correctLabel ?? 'A', contentFormat: it.contentFormat ?? 'plain',
+        generalFeedback: it.generalFeedback ?? '', difficulty: it.difficulty, status: it.status,
+        validationStatus: it.validationStatus, source: it.source, updatedAt: it.updatedAt,
+        updatedBy: null, version: it.version, revisionNo: null,
+      }
+      const ci = courses.findIndex(c => c.subjectId === detail.subjectId)
+      if (ci < 0) throw new Error('Question references an unknown subject')
+      const tp = Math.max(0, courses[ci].topicIds.indexOf(detail.topicId))
+      return detailToQuestion(detail, ci, tp)
+    })
+    if (!current()) return false
+    const catalogChanged = JSON.stringify(COURSES.map(c => [c.subjectId, c.topicIds])) !== JSON.stringify(courses.map(c => [c.subjectId, c.topicIds]))
+    if (catalogChanged) S.f = blankF(S.f.hideAns)
+    COURSES.splice(0, COURSES.length, ...courses)
+    S.ci = Math.min(S.ci, Math.max(0, courses.length - 1))
+    S.q = mapped; S.dataMode = 'real'; S.status = 'ready'; uncertainSubjects.clear()
+    await Promise.all([loadDashboard({ signal: controller.signal }), loadSuggestions({ signal: controller.signal })])
+    return current()
+  } catch (e) {
+    if (!current()) return false
+    console.warn('[qbank] loadQuestions failed:', e?.message)
+    // Never turn a real session into a writable mock session on failure.
+    S.status = 'error'
+    toast(apiErrorMessage(e, tr('operation.loadFailed')), 'er')
+    return false
+  } finally {
+    options.signal?.removeEventListener('abort', cancel)
+    if (questionController === controller) questionController = null
   }
-  try { S.q = await repo.findAll(); S.status = 'ready' }
-  catch { S.status = 'error'; toast(tr('operation.loadFailed'), 'er') }
 }
 
 // Locally generated task messages are stored as translation keys so they update
@@ -217,6 +253,7 @@ function setTaskMessage(task, key, params = {}) { task.msg = ''; task.msgKey = k
 
 export function runAI(ids) {
   if (useRealApi() && S.dataMode === 'real') return runAiReal(ids)
+  if (auth.isAuthenticated && !auth.isDemo) return toast(tr('operation.loadFailed'), 'er')
   let n = 0
   ids.forEach(id => {
     const q = S.q.find(x => x.id === id)
@@ -251,8 +288,10 @@ export function runAI(ids) {
 /* Kiểm định AI thật: POST /questions/{id}/ai-check (202) rồi poll GET /ai/jobs/{taskId}
    theo pollAfterMs của backend cho tới khi succeeded/failed/cancelled. */
 async function runAiReal(ids) {
+  const stamp = sessionStamp(), signal = sessionController.signal
   let n = 0
   for (const id of ids) {
+    if (!sessionCurrent(stamp) || signal.aborted) return
     const q = S.q.find((x) => x.id === id)
     if (!q || S.tasks.some((t) => t.qid === id && live.test(t.st))) continue
     n++
@@ -260,21 +299,41 @@ async function runAiReal(ids) {
     S.tasks.unshift(t); if (S.tasks.length > 50) S.tasks.length = 50
     try {
       const job = await qbankApi.aiCheck(id)
+      if (!sessionCurrent(stamp) || signal.aborted) return
       t.id = job.taskId
       t.st = String(job.status || 'pending').toLowerCase()
       if (!live.test(t.st)) t.msgKey = ''
       // Poll tới khi kết thúc (giới hạn 2 phút để không treo tab).
       const deadline = Date.now() + 120000
       while (live.test(t.st) && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, job.pollAfterMs || 1500))
-        const cur = await qbankApi.job(job.taskId)
+        await new Promise(resolve => {
+          const timer = setTimeout(done, job.pollAfterMs || 1500)
+          function done() { clearTimeout(timer); signal.removeEventListener('abort', done); resolve() }
+          signal.addEventListener('abort', done, { once: true })
+          if (signal.aborted) done()
+        })
+        if (!sessionCurrent(stamp) || signal.aborted) return
+        const cur = await qbankApi.job(job.taskId, { signal })
+        if (!sessionCurrent(stamp) || signal.aborted) return
         t.st = String(cur.status || t.st).toLowerCase()
         if (cur.errorCode) setTaskMessage(t, 'job.errorCode', { code: cur.errorCode })
         else { t.msg = ''; t.msgKey = '' }
       }
       t.ms = Date.now() - t.t0
+      if (live.test(t.st)) {
+        t.st = 'unknown'; t.msgKey = ''; t.msg = tr('crud.taskUnknown')
+        toast(t.msg, 'wa'); continue
+      }
       if (t.st === 'succeeded') {
-        const list = await qbankApi.jobSuggestions(job.taskId).catch(() => [])
+        let list
+        try { list = await qbankApi.jobSuggestions(job.taskId, { signal }); if (!sessionCurrent(stamp) || signal.aborted) return }
+        catch (e) {
+          if (!sessionCurrent(stamp) || signal.aborted) return
+          S.suggestionsStatus = 'error'
+          t.msgKey = ''; t.msg = tr('crud.suggestionsUnknown')
+          toast(t.msg, 'wa')
+          continue
+        }
         const pending = (list || []).filter((s) => !s.decision || s.decision === 'pending')
         if (pending.length) {
           S.sug = S.sug.filter((s) => s.qid !== id)
@@ -284,7 +343,7 @@ async function runAiReal(ids) {
           logKey('job.logSuggestions', { id: job.taskId, code: code(q), n: pending.length }, 'wa')
           if (S.notifyTasks) toast(tr('job.toastSuggestions', { id: job.taskId, code: code(q), n: pending.length }), 'wa')
         } else {
-          q.st = 'ok'; setTaskMessage(t, 'job.passed')
+          setTaskMessage(t, 'job.passed')
           logKey('job.logPassed', { id: job.taskId, code: code(q) }, 'ok')
           if (S.notifyTasks) toast(tr('job.toastPassed', { id: job.taskId, code: code(q) }), 'ok')
         }
@@ -293,8 +352,10 @@ async function runAiReal(ids) {
         logKey('job.logFailed', { id: job.taskId, code: code(q) }, 'er')
         toast(tr('job.failedToast', { id: job.taskId }), 'er')
       }
-      await loadDashboard()
+      await loadDashboard({ signal })
+      if (!sessionCurrent(stamp) || signal.aborted) return
     } catch (e) {
+      if (!sessionCurrent(stamp) || signal.aborted) return
       t.st = 'failed'; t.ms = Date.now() - t.t0
       t.msgKey = ''; t.msg = apiErrorMessage(e, tr('job.sendFailed'))
       logKey('job.logSendFailed', { code: code(q), message: t.msg }, 'er')
@@ -306,44 +367,95 @@ async function runAiReal(ids) {
   toast(tr('job.accepted', { n }), 'ok')
 }
 
-export async function removeQuestions(ids) {
-  const bq = S.q.filter(q => ids.includes(q.id)), bs = S.sug.filter(s => ids.includes(s.qid))
-  S.q = S.q.filter(q => !ids.includes(q.id)); S.sug = S.sug.filter(s => !ids.includes(s.qid)); ids.forEach(id => S.sel.delete(id))
-  logKey('activity.bulkDelete', { n: ids.length }, 'wa')
-  if (useRealApi() && S.dataMode === 'real') {
-    try {
-      await Promise.all(ids.map((id) => qbankApi.archiveQuestion(id)))
-      // Nút Hoàn tác chỉ hiện SAU khi lưu trữ thành công ở máy chủ, và hoàn tác thật bằng
-      // POST /questions/{id}/restore. Trước đây chế độ thật không có nút này vì backend chưa có
-      // chức năng khôi phục: bấm "Lưu trữ" nhầm là mất câu hỏi vĩnh viễn.
-      toast(tr('operation.archivedMany', { n: ids.length }), 'wa', tr('bank.undoAction'), async () => {
-        try {
-          await Promise.all(ids.map((id) => qbankApi.restoreQuestion(id)))
-          toast(tr('operation.restoredMany', { n: ids.length }), 'ok')
-          await loadQuestions()
-          await loadDashboard()
-        } catch (e) {
-          // Khôi phục hỏng thì nạp lại danh sách để giao diện không hiện trạng thái sai.
-          toast(apiErrorMessage(e, tr('operation.restoreFailedReload')), 'er')
-          await loadQuestions()
-        }
-      })
-      await loadDashboard()
-    } catch (e) {
-      S.q.push(...bq); S.sug.push(...bs)
-      toast(apiErrorMessage(e, tr('operation.archiveFailedRestored')), 'er')
+// Limit parallel writes and never start additional requests after the session changes.
+async function settleWrites(ids, operation, stamp, concurrency = 4) {
+  const results = new Array(ids.length)
+  let next = 0
+  async function worker() {
+    for (;;) {
+      const index = next++
+      if (index >= ids.length) return
+      if (!sessionCurrent(stamp)) { results[index] = { status: 'rejected', reason: new Error('session ended') }; continue }
+      try { results[index] = { status: 'fulfilled', value: await operation(ids[index]) } }
+      catch (reason) { results[index] = { status: 'rejected', reason } }
     }
-    return
   }
-  try { await repo.removeMany(ids) } catch { S.q.push(...bq); return toast(tr('operation.deleteFailedRestored'), 'er') }
-  toast(tr('operation.deletedMany', { n: ids.length }), 'wa', tr('bank.undoAction'), async () => {
-    await repo.restoreMany(bq); S.q.push(...bq); S.sug.push(...bs); toast(tr('operation.restoredDeleted'), 'ok')
-  })
+  await Promise.all(Array.from({ length: Math.min(concurrency, ids.length) }, worker))
+  return results
+}
+
+export async function removeQuestions(ids) {
+  const uniqueIds = [...new Set(ids)].filter(id => S.q.some(q => q.id === id))
+  if (!uniqueIds.length) return
+  if (!auth.isDemo && (!useRealApi() || S.dataMode !== 'real')) {
+    toast(tr('operation.loadFailed'), 'er'); return
+  }
+  const stamp = sessionStamp(), keys = uniqueIds.map(id => `${stamp}:question:${id}`)
+  if (keys.some(key => activeWrites.has(key))) return
+  keys.forEach(key => activeWrites.add(key))
+  invalidateQuestionReads()
+  try {
+    if (useRealApi()) {
+      // Do not optimistically restore all rows on partial failure: each endpoint commits independently.
+      const results = await settleWrites(uniqueIds, id => qbankApi.archiveQuestion(id), stamp)
+      if (!sessionCurrent(stamp)) return
+      invalidateQuestionReads()
+      const done = uniqueIds.filter((_, i) => results[i].status === 'fulfilled')
+      const failed = results.length - done.length
+      const uncertain = results.some(r => r.status === 'rejected' && (!r.reason?.response || r.reason.response.status >= 500))
+      S.q = S.q.filter(q => !done.includes(q.id)); S.sug = S.sug.filter(s => !done.includes(s.qid))
+      done.forEach(id => S.sel.delete(id))
+      if (failed) {
+        // Reconcile after all operations settle, never automatically retry a write.
+        keys.forEach(key => activeWrites.delete(key))
+        await loadQuestions()
+        if (sessionCurrent(stamp)) toast(tr(uncertain ? 'crud.archiveUncertain' : 'crud.archivePartial', { done: done.length, total: uniqueIds.length }), 'wa')
+      } else {
+        logKey('activity.bulkDelete', { n: done.length }, 'wa')
+        toast(tr('operation.archivedMany', { n: done.length }), 'wa', tr('bank.undoAction'), async () => {
+          const restoreStamp = sessionStamp()
+          if (!sessionCurrent(restoreStamp)) return
+          const restoreKeys = done.map(id => `${restoreStamp}:question:${id}`)
+          if (restoreKeys.some(key => activeWrites.has(key))) return
+          restoreKeys.forEach(key => activeWrites.add(key))
+          invalidateQuestionReads()
+          try {
+            const restored = await settleWrites(done, id => qbankApi.restoreQuestion(id), restoreStamp)
+            if (!sessionCurrent(restoreStamp)) return
+            invalidateQuestionReads()
+            if (restored.every(r => r.status === 'fulfilled')) toast(tr('operation.restoredMany', { n: done.length }), 'ok')
+            else toast(tr('crud.restoreUncertain'), 'wa')
+            restoreKeys.forEach(key => activeWrites.delete(key))
+            await loadQuestions()
+          } finally { restoreKeys.forEach(key => activeWrites.delete(key)) }
+        })
+        await loadDashboard()
+      }
+      return
+    }
+    const bq = S.q.filter(q => uniqueIds.includes(q.id)), bs = S.sug.filter(s => uniqueIds.includes(s.qid))
+    await repo.removeMany(uniqueIds)
+    if (!sessionCurrent(stamp)) return
+    invalidateQuestionReads()
+    S.q = S.q.filter(q => !uniqueIds.includes(q.id)); S.sug = S.sug.filter(s => !uniqueIds.includes(s.qid)); uniqueIds.forEach(id => S.sel.delete(id))
+    toast(tr('operation.deletedMany', { n: uniqueIds.length }), 'wa', tr('bank.undoAction'), async () => {
+      await repo.restoreMany(bq)
+      if (!sessionCurrent(stamp)) return
+      invalidateQuestionReads(); S.q.push(...bq); S.sug.push(...bs); toast(tr('operation.restoredDeleted'), 'ok')
+    })
+  } catch (e) {
+    if (sessionCurrent(stamp)) toast(apiErrorMessage(e, tr('operation.deleteFailedRestored')), 'er')
+  } finally {
+    keys.forEach(key => activeWrites.delete(key))
+  }
 }
 
 /* ---------- Hộp thoại ---------- */
 export const nowStr = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) }
-export const openDialog = (kind, props = {}) => { S.dlg.n++; S.dlg.kind = kind; S.dlg.props = props }
+export const openDialog = (kind, props = {}) => {
+  if (auth.isAuthenticated && !auth.isDemo && ['topics', 'import'].includes(kind)) return toast(tr('crud.catalogUnsupported'), 'wa')
+  S.dlg.n++; S.dlg.kind = kind; S.dlg.props = props
+}
 export const closeDialog = () => { S.dlg.kind = null; S.dlg.props = {} }
 
 /* ---------- Câu hỏi ---------- */
@@ -354,8 +466,10 @@ export function editQuestion(id, ctx = {}) {
 }
 /** Đọc lại 1 câu hỏi từ backend rồi cập nhật tại chỗ (giữ nguyên object để Vue không mất tham chiếu). */
 async function refreshFromServer(q) {
+  const stamp = sessionStamp(), signal = sessionController.signal
   try {
-    const d = await qbankApi.getQuestion(q.id)
+    const d = await qbankApi.getQuestion(q.id, { signal })
+    if (!sessionCurrent(stamp) || signal.aborted) return null
     const ci = COURSES.findIndex((c) => c.subjectId === d.subjectId)
     const course = COURSES[ci]
     const tp = course ? Math.max(0, course.topicIds.indexOf(d.topicId)) : q.tp
@@ -367,61 +481,70 @@ async function refreshFromServer(q) {
   }
 }
 
-export async function saveQuestion(d, eid) {
-  if (useRealApi() && S.dataMode === 'real') {
-    const course = COURSES[d.c]
-    if (!course || course.subjectId === null) return toast(tr('operation.courseNotLinked'), 'er')
-    try {
-      if (eid) {
-        const cur = S.q.find((x) => x.id === eid)
-        const body = questionToUpdate({ ...cur, ...d }, course)
-        const res = await qbankApi.updateQuestion(eid, body)
-        Object.assign(cur, detailToQuestion(res, d.c, d.tp))
-        S.sug = S.sug.filter((s) => s.qid !== eid)
-        logKey('activity.questionUpdated', { code: code({ id: eid }) }, 'info')
-        toast(tr('operation.questionUpdated'), 'ok')
-      } else {
-        const res = await qbankApi.createQuestion(questionToCreate(d, course))
-        const q = detailToQuestion(res, d.c, d.tp)
-        S.q.push(q)
-        logKey('activity.questionAdded', { code: code(q) }, 'ok')
-        toast(tr('operation.questionAdded'), 'ok')
-      }
-      await loadDashboard()
-    } catch (e) {
-      const status = e?.response?.status
-      // 409 có HAI nguyên nhân khác nhau, phải phân biệt bằng mã nghiệp vụ:
-      //   TITLE_DUPLICATED -> tiêu đề trùng câu khác trong môn (lỗi nhập liệu, sửa được)
-      //   VERSION_CONFLICT -> người khác vừa sửa cùng câu (phải tải lại)
-      const errCode = e?.response?.data?.code
-      if (errCode === 'TITLE_DUPLICATED') {
-        toast(apiErrorMessage(e, tr('operation.titleTaken')), 'er')
-      } else if (status === 409) {
-        toast(tr('operation.versionConflict'), 'er')
-      } else {
-        toast(apiErrorMessage(e, tr('operation.questionSaveFailed')), 'er')
-      }
-    }
-    return
+export async function saveQuestion(d, eid, expectedVersion) {
+  if (!auth.isAuthenticated || (!auth.isDemo && S.dataMode !== 'real')) {
+    return { ok: false, message: tr('operation.loadFailed') }
   }
-  if (eid) {
-    const cur = S.q.find(x => x.id === eid)
-    const next = { ...cur, ...d, st: cur.st === 'draft' ? 'draft' : 'stale', ver: (cur.ver || 1) + 1 }
-    await repo.upsert(next); Object.assign(cur, next)
-    S.sug = S.sug.filter(s => s.qid !== eid); logKey('activity.questionUpdated', { code: code({ id: eid }) }, 'info')
-    toast(tr('operation.questionUpdated'), 'ok')
-  } else {
-    // Chế độ mock không có backend kiểm tra, phải chặn tại đây — nếu chỉ dựa vào UI thì mọi lời
-    // gọi saveQuestion không qua form (nhập hàng loạt, hoàn tác, script) đều lách được quy tắc.
-    // Chỉ chặn khi THÊM MỚI, đúng phạm vi yêu cầu; form sửa không bị ảnh hưởng.
-    const title = (d.title || '').trim().replace(/\s+/g, ' ').toLowerCase()
-    if (title) {
-      const clash = S.q.find((x) => x.c === d.c && (x.title || '').trim().replace(/\s+/g, ' ').toLowerCase() === title)
-      if (clash) return toast(tr('validation.titleTaken', { code: code(clash) }), 'er')
+  const stamp = sessionStamp(), key = `${stamp}:${eid ? `question:${eid}` : 'question:create'}`
+  if (activeWrites.has(key)) return { ok: false, message: tr('crud.inProgress') }
+  activeWrites.add(key)
+  invalidateQuestionReads()
+  try {
+    if (useRealApi()) {
+      const course = COURSES[d.c]
+      if (!course || course.subjectId == null) return { ok: false, message: tr('operation.courseNotLinked') }
+      let res
+      if (eid) {
+        const cur = S.q.find(x => x.id === eid)
+        if (!cur) return { ok: false, message: tr('operation.loadFailed') }
+        if (cur.subjectId != null && course.subjectId !== cur.subjectId) return { ok: false, message: tr('crud.subjectImmutable') }
+        const body = questionToUpdate({ ...cur, ...d, ver: expectedVersion ?? cur.ver }, course)
+        res = await qbankApi.updateQuestion(eid, body)
+      } else {
+        res = await qbankApi.createQuestion(questionToCreate(d, course))
+      }
+      if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+      if (!res || res.questionId == null) throw new Error('Invalid save response')
+      invalidateQuestionReads()
+      const mapped = detailToQuestion(res, d.c, d.tp)
+      const current = S.q.find(x => x.id === mapped.id)
+      if (current) Object.assign(current, mapped); else S.q.push(mapped)
+      if (eid) S.sug = S.sug.filter(s => s.qid !== eid)
+      logKey(eid ? 'activity.questionUpdated' : 'activity.questionAdded', { code: code(mapped) }, eid ? 'info' : 'ok')
+      toast(tr(eid ? 'operation.questionUpdated' : 'operation.questionAdded'), 'ok')
+      void loadDashboard()
+      return { ok: true }
     }
-    const q = { id: S.n++, st: 'draft', src: 'manual', ver: 1, ...d }
-    await repo.upsert(q); S.q.push(q); logKey('activity.questionAdded', { code: code(q) }, 'ok')
-    toast(tr('operation.questionAdded'), 'ok')
+    if (eid) {
+      const cur = S.q.find(x => x.id === eid)
+      if (!cur) return { ok: false, message: tr('operation.loadFailed') }
+      const next = { ...cur, ...d, st: cur.st === 'draft' ? 'draft' : 'stale', ver: (cur.ver || 1) + 1 }
+      await repo.upsert(next)
+      if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+      invalidateQuestionReads(); Object.assign(cur, next)
+      S.sug = S.sug.filter(s => s.qid !== eid); logKey('activity.questionUpdated', { code: code({ id: eid }) }, 'info')
+      toast(tr('operation.questionUpdated'), 'ok')
+    } else {
+      const title = (d.title || '').trim().replace(/\s+/g, ' ').toLowerCase()
+      const clash = title && S.q.find(x => x.c === d.c && (x.title || '').trim().replace(/\s+/g, ' ').toLowerCase() === title)
+      if (clash) return { ok: false, message: tr('validation.titleTaken', { code: code(clash) }) }
+      const q = { id: S.n++, st: 'draft', src: 'manual', ver: 1, ...d }
+      await repo.upsert(q)
+      if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+      invalidateQuestionReads(); S.q.push(q); logKey('activity.questionAdded', { code: code(q) }, 'ok')
+      toast(tr('operation.questionAdded'), 'ok')
+    }
+    return { ok: true }
+  } catch (e) {
+    if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+    const status = e?.response?.status, errCode = e?.response?.data?.code
+    const uncertain = useRealApi() && (!e?.response || status >= 500)
+    const message = uncertain ? tr('crud.saveUncertain')
+      : errCode === 'TITLE_DUPLICATED' ? apiErrorMessage(e, tr('operation.titleTaken'))
+        : status === 409 ? tr('operation.versionConflict') : apiErrorMessage(e, tr('operation.questionSaveFailed'))
+    return { ok: false, uncertain, message }
+  } finally {
+    activeWrites.delete(key)
   }
 }
 export function askDeleteQuestion(id) {
@@ -431,35 +554,96 @@ export function askDeleteQuestion(id) {
   openDialog('confirm', { title: tr('operation.deleteTitle', { code: code(q) }), text: tr('operation.deleteDescription'), cancel: tr('selection.keep'), ok: tr('common.delete'), danger: true, action: () => deleteQuestion(id) })
 }
 async function deleteQuestion(id) {
-  const q = S.q.find(x => x.id === id), sug = S.sug.find(s => s.qid === id)
-  S.q = S.q.filter(x => x.id !== id); S.sug = S.sug.filter(s => s.qid !== id); S.sel.delete(id)
-  await repo.removeMany([id]); logKey('activity.questionDeleted', { code: code({ id }) }, 'wa')
-  toast(tr('operation.deletedQuestion', { code: code({ id }) }), 'wa', tr('bank.undoAction'), async () => {
-    if (q) { await repo.restoreMany([q]); S.q.push(q) }
-    if (sug) S.sug.push(sug)
-    toast(tr('operation.restoredQuestion', { code: code({ id }) }), 'ok')
-  })
+  return removeQuestions([id])
 }
 
 /* ---------- Môn học ---------- */
-export function addCourse({ id, name, dept, topic, active }) {
-  COURSES.push({ id, name, dept, topics: [topic || 'Chương 1: Tổng quan'], subjectId: null, topicIds: [null], active }); S.cq = ''
-  logKey('activity.courseAdded', { course: `${id} – ${name}` }, 'ok'); toast(tr('operation.courseSaved'), 'ok')
+// Subject writes are never silently redirected to the local mock in a real session.
+async function persistSubject(operation, subjectId, data, expectedUpdatedAt) {
+  if (!useRealApi() || S.dataMode !== 'real' || S.status !== 'ready') return { ok: false, message: tr('operation.loadFailed') }
+  if (operation !== 'create' && !expectedUpdatedAt) return { ok: false, message: tr('subject.refreshRequired') }
+  const stamp = sessionStamp(), key = `${stamp}:subject:${subjectId ?? 'create'}`
+  if (uncertainSubjects.has(key)) return { ok: false, uncertain: true, message: tr('subject.saveUncertain') }
+  if (activeWrites.has(key)) return { ok: false, message: tr('crud.inProgress') }
+  activeWrites.add(key); invalidateQuestionReads()
+  try {
+    let result
+    if (operation === 'create') {
+      result = await qbankApi.createSubject({ subjectCode: data.id, subjectName: data.name,
+        description: data.dept || null, active: data.active, firstTopic: data.topic })
+    } else if (operation === 'update') {
+      result = await qbankApi.updateSubject(subjectId, { subjectCode: data.id, subjectName: data.name,
+        description: data.dept || null, active: data.active, expectedUpdatedAt })
+    } else {
+      result = await qbankApi.archiveSubject(subjectId, expectedUpdatedAt)
+    }
+    if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+    if (!result || result.subjectId == null || !result.updatedAt) throw new Error('Invalid subject response')
+    invalidateQuestionReads()
+    const index = COURSES.findIndex(c => c.subjectId === result.subjectId)
+    const mapped = subjectToCourse(result)
+    if (index >= 0) {
+      mapped.topics = COURSES[index].topics; mapped.topicIds = COURSES[index].topicIds
+      Object.assign(COURSES[index], mapped)
+    } else COURSES.push(mapped) // Topic IDs are loaded from the server, never fabricated.
+    S.cq = ''
+    activeWrites.delete(key)
+    const refreshed = await loadQuestions()
+    if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+    toast(tr(refreshed ? (operation === 'archive' ? 'subject.archived' : 'operation.courseSaved') : 'subject.savedRefreshFailed'), refreshed ? 'ok' : 'wa')
+    return { ok: true }
+  } catch (e) {
+    if (!sessionCurrent(stamp)) return { ok: false, abandoned: true }
+    const status = e?.response?.status, code = e?.response?.data?.code
+    const uncertain = !e?.response || status >= 500
+    if (uncertain) uncertainSubjects.add(key)
+    return { ok: false, uncertain, message: uncertain ? tr('subject.saveUncertain')
+      : code === 'SUBJECT_VERSION_CONFLICT' ? tr('subject.versionConflict')
+        : apiErrorMessage(e, tr('subject.saveFailed')) }
+  } finally { activeWrites.delete(key) }
 }
-export function updateCourse(i, { id, name, dept, active }) {
-  const old = { ...COURSES[i] }; Object.assign(COURSES[i], { id, name, dept, active })
+
+export function addCourse({ id, name, dept, topic, active }) {
+  if (useRealApi()) return persistSubject('create', null, { id, name, dept, topic, active })
+  if (auth.isAuthenticated && !auth.isDemo) return { ok: false, message: tr('operation.loadFailed') }
+  COURSES.push({ id, name, dept, topics: [topic], subjectId: null, topicIds: [null], active }); S.cq = ''
+  logKey('activity.courseAdded', { course: `${id} – ${name}` }, 'ok'); toast(tr('operation.courseSaved'), 'ok')
+  return { ok: true }
+}
+export function updateCourse(i, { id, name, dept, active }, snapshot = null) {
+  const course = COURSES[i]
+  if (useRealApi()) {
+    if (!course || !snapshot || course.subjectId !== snapshot.subjectId) return { ok: false, message: tr('subject.refreshRequired') }
+    return persistSubject('update', snapshot.subjectId, { id, name, dept, active }, snapshot.updatedAt)
+  }
+  if (auth.isAuthenticated && !auth.isDemo) return { ok: false, message: tr('operation.loadFailed') }
+  const old = { ...course }; Object.assign(course, { id, name, dept, active })
   logKey('activity.courseUpdated', { old: `${old.id} – ${old.name}`, course: `${id} – ${name}` }, 'info'); toast(tr('operation.courseUpdated'), 'ok')
+  return { ok: true }
 }
 export function deleteCourse(i) {
-  const ids = S.q.filter(q => q.c === i).map(q => q.id), nm = `${COURSES[i].id} – ${COURSES[i].name}`
-  S.q = S.q.filter(q => q.c !== i); S.q.forEach(q => { if (q.c > i) q.c-- })
-  S.sug = S.sug.filter(s => !ids.includes(s.qid)); ids.forEach(id => S.sel.delete(id))
-  COURSES.splice(i, 1); S.ci = 0
-  logKey('activity.courseDeleted', { course: nm, n: ids.length }, 'wa'); toast(tr('operation.courseDeleted', { n: ids.length }), 'wa')
+  if (useRealApi() || (auth.isAuthenticated && !auth.isDemo)) return { ok: false, message: tr('operation.loadFailed') }
+  const course = COURSES[i]
+  if (!course) return { ok: false }
+  course.active = false
+  toast(tr('subject.archived'), 'ok')
+  return { ok: true }
 }
 export function askDeleteCourse(i, after) {
   const c = COURSES[i]; if (!c) return
-  openDialog('confirm', { title: tr('operation.deleteCourseTitle', { course: `${c.id} – ${c.name}` }), text: tr('operation.deleteCourseDescription'), cancel: tr('selection.keep'), ok: tr('course.deleteCourse'), danger: true, action: () => { deleteCourse(i); after?.() } })
+  if (useRealApi()) {
+    if (S.dataMode !== 'real') return toast(tr('operation.loadFailed'), 'er')
+    const snapshot = { subjectId: c.subjectId, updatedAt: c.updatedAt }
+    return openDialog('confirm', { title: tr('subject.archiveTitle', { course: `${c.id} – ${c.name}` }),
+      text: tr('subject.archiveDescription'), cancel: tr('selection.keep'), ok: tr('subject.archiveButton'), danger: true,
+      action: async () => {
+        const result = await persistSubject('archive', snapshot.subjectId, null, snapshot.updatedAt)
+        if (result.ok) after?.()
+        else if (!result.abandoned) toast(result.message, 'er')
+      } })
+  }
+  if (auth.isAuthenticated && !auth.isDemo) return toast(tr('operation.loadFailed'), 'er')
+  openDialog('confirm', { title: tr('subject.archiveTitle', { course: `${c.id} – ${c.name}` }), text: tr('subject.archiveDescription'), cancel: tr('selection.keep'), ok: tr('subject.archiveButton'), danger: true, action: () => { if (deleteCourse(i).ok) after?.() } })
 }
 
 /* ---------- Xem xét đề xuất AI (có hoàn tác) ---------- */
@@ -467,46 +651,57 @@ export function askDeleteCourse(i, after) {
    Backend KHÔNG cho áp đề xuất target_field='question' (AI không được đổi cấu trúc/đáp án),
    nên các đề xuất đó được giữ nguyên và người duyệt phải sửa tay trong form câu hỏi. */
 async function decideReal(id, ok) {
-  const s = S.sug.find((x) => x.qid === id), q = S.q.find((x) => x.id === id)
+  const s = S.sug.find(x => x.qid === id), q = S.q.find(x => x.id === id)
   if (!s || !q) return
-  const list = (s.raw || []).filter((x) => !x.decision || x.decision === 'pending')
-  if (!list.length) return toast('Đề xuất này đã được xử lý ở nơi khác.', 'wa')
-
-  const applicable = ok ? list.filter((x) => String(x.targetField) !== 'question') : list
-  const manual = ok ? list.filter((x) => String(x.targetField) === 'question') : []
-  if (!applicable.length) {
-    return toast('Đề xuất ở mức toàn câu phải sửa tay: hãy mở câu hỏi và chỉnh nội dung.', 'wa')
-  }
-
+  const pending = (s.raw || []).filter(x => !x.decision || x.decision === 'pending')
+  const applicable = ok ? pending.filter(x => suggestionReplacement(q, x) != null) : pending
+  if (!applicable.length) return toast(tr('crud.suggestionsFailed'), 'wa')
+  const stamp = sessionStamp(), key = `${stamp}:question:${id}`
+  if (activeWrites.has(key)) return toast(tr('crud.inProgress'), 'wa')
+  activeWrites.add(key); invalidateQuestionReads()
   try {
-    let last = null
-    for (const r of applicable) {
-      last = await qbankApi.decideSuggestion(r.suggestionId, {
+    // Accepting one suggestion creates a revision and invalidates the remaining suggestions.
+    // Never submit the rest against that old revision.
+    const decisions = ok ? applicable.slice(0, 1) : applicable
+    let last
+    for (const item of decisions) {
+      last = await qbankApi.decideSuggestion(item.suggestionId, {
         decision: ok ? 'accepted' : 'rejected',
-        finalText: ok ? r.proposedText || undefined : undefined,
+        finalText: ok ? item.proposedText || undefined : undefined,
         rejectReason: ok ? undefined : 'Người duyệt giữ bản gốc',
         expectedVersion: ok ? q.ver : undefined,
       })
+      if (!sessionCurrent(stamp)) return
     }
+    invalidateQuestionReads()
     if (last) {
-      const ci = COURSES.findIndex((c) => c.subjectId === last.subjectId)
+      const ci = COURSES.findIndex(c => c.subjectId === last.subjectId)
       const tp = COURSES[ci]?.topicIds.indexOf(last.topicId) ?? q.tp
-      Object.assign(q, detailToQuestion(last, ci >= 0 ? ci : q.c, Math.max(0, tp)))
+      const current = S.q.find(x => x.id === id)
+      if (current) Object.assign(current, detailToQuestion(last, ci >= 0 ? ci : q.c, Math.max(0, tp)))
     }
-    S.sug = S.sug.filter((x) => x.qid !== id); S.rsel.delete(id)
-    log(ok ? `Chấp nhận đề xuất AI cho ${code(q)} (đã sinh revision)` : `Từ chối đề xuất AI cho ${code(q)}, giữ nội dung gốc`, ok ? 'ok' : 'info')
-    toast(ok ? `Đã áp ${applicable.length} đề xuất vào ${code(q)} và sinh revision mới` : `Đã giữ nguyên bản gốc ${code(q)}`, ok ? 'ok' : '')
-    if (manual.length) toast(`Còn ${manual.length} đề xuất mức toàn câu cần sửa tay (AI không được đổi cấu trúc)`, 'wa')
-    await loadDashboard()
+    S.sug = S.sug.filter(x => x.qid !== id); S.rsel.delete(id)
+    toast(ok ? tr('crud.suggestionApplied') : tr('operation.questionUpdated'), 'ok')
+    void loadDashboard()
+    return true
   } catch (e) {
-    toast(apiErrorMessage(e, 'Không gửi được quyết định duyệt đề xuất.'), 'er')
-    const fresh = await refreshFromServer(q)
-    if (fresh) S.sug = S.sug.filter((x) => x.qid !== id)
+    if (!sessionCurrent(stamp)) return false
+    invalidateQuestionReads()
+    const uncertain = !e?.response || e.response.status >= 500
+    const message = uncertain ? tr('crud.decisionUncertain') : apiErrorMessage(e, tr('operation.questionSaveFailed'))
+    // Some earlier rejections may already have committed. Refresh rather than assume all failed.
+    activeWrites.delete(key)
+    await loadQuestions()
+    if (sessionCurrent(stamp)) toast(message, 'er')
+    return false
+  } finally {
+    activeWrites.delete(key)
   }
 }
 
 export function decide(id, ok) {
   if (useRealApi() && S.dataMode === 'real') return decideReal(id, ok)
+  if (auth.isAuthenticated && !auth.isDemo) return toast(tr('operation.loadFailed'), 'er')
   const s = S.sug.find(x => x.qid === id), q = S.q.find(x => x.id === id); if (!s || !q) return
   const prev = { text: q.text, st: q.st, updatedAt: q.updatedAt, by: q.by }, bak = { ...s }
   if (ok) { q.text = s.tx; q.updatedAt = nowStr(); q.by = S.name + ' (Duyệt AI)'; log(`Chấp nhận đề xuất AI cho ${code(q)} (có lưu vết)`, 'ok') }
@@ -523,12 +718,14 @@ export async function bulkDecide(ok) {
   if (useRealApi() && S.dataMode === 'real') {
     // Duyệt hàng loạt tuần tự (không Promise.all) để backend xử lý từng câu một,
     // tránh nhiều revision đụng nhau trên cùng khoá lạc quan.
+    const stamp = sessionStamp()
     let doneCount = 0, failCount = 0
     for (const id of ids) {
+      if (!sessionCurrent(stamp)) return
       try {
-        const before = S.sug.find(s => s.qid === id)
-        await decideReal(id, ok)   // eslint-disable-line no-await-in-loop
-        if (!S.sug.some(s => s.qid === id) && before) doneCount++
+        const succeeded = await decideReal(id, ok)
+        if (!sessionCurrent(stamp)) return
+        if (succeeded === true) doneCount++
         else failCount++
       } catch { failCount++ }
     }
@@ -536,6 +733,7 @@ export async function bulkDecide(ok) {
     if (failCount) toast(`${failCount} đề xuất chưa xử lý được (cần sửa tay hoặc đã đổi ở nơi khác)`, 'wa')
     return
   }
+  if (auth.isAuthenticated && !auth.isDemo) return toast(tr('operation.loadFailed'), 'er')
   ids.forEach(id => {
     const s = S.sug.find(x => x.qid === id), q = S.q.find(x => x.id === id)
     if (ok && s && q) { q.text = s.tx; q.updatedAt = nowStr(); q.by = S.name + ' (Duyệt AI)' }

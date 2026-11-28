@@ -1,5 +1,8 @@
 package com.example.be_web_admin.chat.controller;
 
+import com.example.be_web_admin.security.AuthSessionStore;
+import com.example.be_web_admin.chat.exception.ChatException;
+import org.springframework.http.HttpStatus;
 import com.example.be_web_admin.chat.dto.WsTicketDto;
 import com.example.be_web_admin.chat.service.WsTicketService;
 import org.springframework.security.core.Authentication;
@@ -20,6 +23,10 @@ public class ChatWsTicketController {
 
     @PostMapping("/ws-ticket")
     public WsTicketDto issue(Authentication authentication) {
-        return ticketService.issue(CurrentAdmin.id(authentication));
+        CurrentAdmin.id(authentication);
+        if (!(authentication.getDetails() instanceof AuthSessionStore.Identity identity)) {
+            throw new ChatException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Phiên không hợp lệ.");
+        }
+        return ticketService.issue(identity);
     }
 }

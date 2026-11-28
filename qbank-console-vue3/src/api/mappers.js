@@ -41,6 +41,7 @@ export function subjectToCourse(s) {
     subjectId: s.subjectId,
     topicIds: [],
     active: s.active !== false,
+    updatedAt: s.updatedAt ?? null,
   }
 }
 
@@ -54,6 +55,8 @@ export function detailToQuestion(d, courseIndex, topicIndex) {
     c: courseIndex,
     tp: topicIndex,
     l: difficultyToUi(d.difficulty),
+    difficultyRaw: d.difficulty,
+    contentFormat: d.contentFormat || 'plain',
     st: VALIDATION_TO_UI[d.validationStatus] || 'draft',
     title: d.title || '',
     fb: d.generalFeedback || '',
@@ -90,7 +93,7 @@ export function questionToCreate(q, course) {
 export function questionToUpdate(q, course) {
   return {
     expectedVersion: q.ver ?? 1,
-    topicId: course.topicIds?.[q.tp] ?? null,
+    topicId: q.topicChanged === false ? (q.topicId ?? null) : (course.topicIds?.[q.tp] ?? null),
     title: q.title?.trim() || null,
     stem: q.text.trim(),
     optionA: q.o[0].trim(),
@@ -98,22 +101,39 @@ export function questionToUpdate(q, course) {
     optionC: q.o[2].trim(),
     optionD: q.o[3].trim(),
     correctLabel: indexToLabel(q.a),
-    contentFormat: 'plain',
+    contentFormat: q.contentFormat || 'plain',
     generalFeedback: q.fb?.trim() || null,
-    difficulty: difficultyToDb(q.l),
+    difficulty: q.difficultyRaw !== undefined && q.l === difficultyToUi(q.difficultyRaw) ? q.difficultyRaw : difficultyToDb(q.l),
     changeNote: 'Sửa từ QBank Console',
   }
+}
+
+/** Return the full field after a safe quoted-fragment replacement, or null when ambiguous. */
+export function suggestionReplacement(question, suggestion) {
+  const field = String(suggestion?.targetField || '').toLowerCase()
+  const option = { option_a: 0, option_b: 1, option_c: 2, option_d: 3 }[field]
+  const current = field === 'stem' ? question?.text : option !== undefined ? question?.o?.[option] : null
+  const original = suggestion?.originalText, replacement = suggestion?.proposedText
+  if (typeof current !== 'string' || typeof original !== 'string' || !original || typeof replacement !== 'string' || !replacement.trim()) return null
+  const start = suggestion.spanStart, end = suggestion.spanEnd
+  let index = -1
+  if (Number.isInteger(start) && Number.isInteger(end) && start >= 0 && end >= start && end <= current.length && current.slice(start, end) === original) index = start
+  else {
+    const first = current.indexOf(original)
+    if (first >= 0 && current.indexOf(original, first + 1) < 0) index = first
+  }
+  return index < 0 ? null : current.slice(0, index) + replacement + current.slice(index + original.length)
 }
 
 /**
  * AiSuggestionView[] (mỗi dòng = 1 vấn đề) -> 1 mục S.sug của UI (gom theo câu hỏi).
  * UI ReviewView cần: { qid, tx (văn bản đề xuất cho stem), is: [{k,d}], diff, sev, tid, raw: [...] }
- * - tx: lấy proposedText của đề xuất nhắm vào stem/question; không có thì giữ nguyên stem gốc.
+ * - tx: chỉ thay đoạn stem khi xác định được vị trí an toàn, không coi đoạn đề xuất là toàn câu.
  * - raw: giữ nguyên danh sách để duyệt từng đề xuất qua POST /ai/suggestions/{id}/decision.
  */
 export function suggestionsToUi(list, question, taskId) {
-  const stemSug = list.find((s) => ['stem', 'question'].includes(String(s.targetField || '').toLowerCase()))
-  const tx = stemSug?.proposedText || question.text
+  const stemSug = list.find(s => String(s.targetField || '').toLowerCase() === 'stem' && suggestionReplacement(question, s) != null)
+  const tx = stemSug ? suggestionReplacement(question, stemSug) : question.text
   const diff = list.find((s) => s.suggestedDifficulty !== null)?.suggestedDifficulty
   const sev = list.some((s) => s.severity === 'high') ? 'Cao' : list.some((s) => s.severity === 'medium') ? 'Trung bình' : 'Thấp'
   return {

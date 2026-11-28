@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NAV, EXTRA, SUB, ICO } from './data/mock.js'
 import ModalHost from './components/ModalHost.vue'
-import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse, toastHold, toastRelease } from './store.js'
+import { COURSES, S, act, busy, list, toast, notYet, loadQuestions, resetQuestionSession, runAI, removeQuestions, editQuestion, openDialog, askDeleteCourse, toastHold, toastRelease } from './store.js'
 import { auth, logout } from './auth/authStore.js'
 import { REQUEST_STATUS } from './auth/AdminRepository.js'
 import { net, isOffline, watchBrowserNetwork, startHealthCheck, probe } from './netStatus.js'
@@ -119,32 +119,33 @@ const onKey = e => {
   if (e.key === '/' && onBank.value && !typing) { e.preventDefault(); document.getElementById('q-srch')?.focus() }
   if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && !S.dlg.kind) {
     if (e.key === '?') { e.preventDefault(); openDialog('keys') }
-    else if (e.key === 'n' && onBank.value) { e.preventDefault(); editQuestion(0, page.value === 'course' ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0 } : {}) }
+    else if (e.key === 'n' && onBank.value) { e.preventDefault(); editQuestion(0, page.value === 'course' ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0, courseScoped: true } : {}) }
   }
 }
 /* ---------- Theo dõi kết nối mạng ----------
    Hai nguồn tín hiệu bổ sung nhau (xem netStatus.js): trạng thái mạng của trình duyệt và
    kết quả request thật. Server sống lại thì banner tự tắt, không cần người dùng tải lại trang. */
-let stopHealth = null
+let stopHealth = null, resizeObserver = null
 onMounted(() => {
   document.addEventListener('click', onDoc); document.addEventListener('keydown', onKey); mq.addEventListener('change', onMq)
-  if (window.ResizeObserver && sideBar.value) new ResizeObserver(fitSel).observe(sideBar.value)
+  if (window.ResizeObserver && sideBar.value) { resizeObserver = new ResizeObserver(fitSel); resizeObserver.observe(sideBar.value) }
   watchBrowserNetwork()
   stopHealth = startHealthCheck(30000)
 })
 
 // Chỉ tải dữ liệu sau khi biết chắc đã đăng nhập (đừng gọi API qbank khi còn ở trang /login),
 // và tải lại đúng một lần mỗi khi trạng thái đăng nhập chuyển sang true.
-let loadedFor = null
-watch(() => auth.isAuthenticated, (ok) => {
-  if (!ok) { loadedFor = null; return }
-  if (loadedFor === auth.adminId) return
-  loadedFor = auth.adminId
-  loadQuestions()
-}, { immediate: true })
+watch(() => [auth.isAuthenticated, auth.adminId, auth.isDemo], ([ok, adminId], _old, onCleanup) => {
+  resetQuestionSession()
+  if (!ok || adminId == null) return
+  const controller = new AbortController()
+  onCleanup(() => { controller.abort(); resetQuestionSession() })
+  void loadQuestions({ signal: controller.signal })
+}, { immediate: true, flush: 'sync' })
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey); mq.removeEventListener('change', onMq)
   stopHealth?.()
+  resizeObserver?.disconnect()
 })
 
 /* Nút "Thử lại": kiểm tra lại ngay thay vì đợi nhịp 30 giây, rồi nạp lại dữ liệu
@@ -156,8 +157,7 @@ async function retryConnection() {
   try {
     await probe()
     if (!isOffline.value) {
-      loadQuestions()
-      toast(tr('net.backOnline'), 'ok')
+      if (await loadQuestions()) toast(tr('net.backOnline'), 'ok')
     }
   } finally { retrying.value = false }
 }
@@ -233,10 +233,10 @@ async function retryConnection() {
           <div><h1 class="page__title" id="ttl">{{ title }}</h1><p class="page__sub" id="sub">{{ subtitle }}</p></div>
           <div id="pact">
             <button v-if="page === 'dash'" class="btn pri" @click="editQuestion(0)">{{ $t('bank.addQuestion') }}</button>
-            <button v-else-if="page === 'courses'" class="btn pri" @click="openDialog('course', { index: -1 })">{{ $t('course.addCourse') }}</button>
-            <template v-else-if="page === 'course'">
+            <button v-else-if="page === 'courses' && S.role === 'admin'" class="btn pri" @click="openDialog('course', { index: -1 })">{{ $t('course.addCourse') }}</button>
+            <template v-else-if="page === 'course' && S.role === 'admin'">
               <button class="btn sm" @click="openDialog('course', { index: S.ci })">{{ $t('course.editCourse') }}</button>
-              <button class="btn sm dan" @click="askDeleteCourse(S.ci, () => go('courses'))">{{ $t('course.deleteCourse') }}</button>
+              <button v-if="crs?.active !== false" class="btn sm dan" @click="askDeleteCourse(S.ci, () => go('courses'))">{{ $t('subject.archiveButton') }}</button>
             </template>
             <button v-else-if="page === 'moodle'" class="btn pri" @click="openDialog('import')">{{ $t('bank.importMoodle') }}</button>
           </div>

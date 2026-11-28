@@ -1,5 +1,6 @@
 package com.example.be_web_admin.security.jwt;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.security.jwt.user.AdminJwtTokenProvider;
@@ -43,8 +44,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * xác nhận token còn sống, nên nó chỉ chạy trên request có token hợp lệ (không phải mọi
      * request, và không phải request bị từ chối).</p>
      *
-     * <p>Không ném lỗi khi không tìm thấy admin hoặc không đọc được DB: trả về null thì filter
-     * không đặt authentication, request rơi vào 401 như cũ — hỏng CSDL không được biến thành 500.</p>
+     * <p>Không tìm thấy admin thì không xác thực. Lỗi Redis/DB trả 503 để client không
+     * nhầm sự cố tạm thời với phiên bị thu hồi.</p>
      */
     private final AdminRepository adminRepository;
 
@@ -64,21 +65,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String header = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (header != null && header.regionMatches(true, 0, BEARER, 0, BEARER.length())) {
                 String token = header.substring(BEARER.length()).trim();
-                Long adminId = tokenProvider.parseAccessTokenAdminId(token);
-                if (adminId != null) {
+                AuthSessionStore.Identity identity = tokenProvider.parseIdentity(token, "ACCESS");
+                String path = request.getServletPath();
+                boolean allowedClient = identity != null &&
+                        ((path.startsWith("/web/") && identity.client() == AuthSessionStore.Client.WEB) ||
+                         (path.startsWith("/mobile/") && identity.client() == AuthSessionStore.Client.MOBILE));
+                if (allowedClient) {
+                    Long adminId = identity.adminId();
                     try {
                         if (adminTokenService.findAdminAccessTokenByJwtToken(token)) {
                             String role = resolveRole(adminId);
                             if (role != null) {
-                                SecurityContextHolder.getContext().setAuthentication(
-                                        new UsernamePasswordAuthenticationToken(
-                                                adminId,
-                                                null,
-                                                List.of(new SimpleGrantedAuthority("ROLE_" + role))));
+                                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                        adminId, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+                                authentication.setDetails(identity);
+                                SecurityContextHolder.getContext().setAuthentication(authentication);
                             }
                         }
                     } catch (Exception e) {
-                        log.warn("Không kiểm tra được access token trên Redis: {}", e.getMessage());
+                        log.warn("Không kiểm tra được trạng thái xác thực: {}", e.getMessage());
+                        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                        response.setContentType("application/json");
+                        response.setCharacterEncoding("UTF-8");
+                        response.getWriter().write("{\"success\":false,\"code\":\"AUTH_UNAVAILABLE\",\"message\":\"Authentication temporarily unavailable\"}");
+                        return;
                     }
                 }
             }
@@ -89,18 +99,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /** Trả "ADMIN" / "LECTURER", hoặc null nếu không xác định được (=> không cấp quyền nào). */
     private String resolveRole(Long adminId) {
-        try {
-            Admin admin = adminRepository.findAdminByAdminId(adminId);
-            if (admin == null || admin.getRole() == null) {
-                // Token còn trong Redis nhưng admin đã bị xoá: không cấp quyền, request thành 401.
-                log.debug("Access token hợp lệ nhưng không tìm thấy admin {} (có thể đã bị xoá)", adminId);
-                return null;
-            }
-            return admin.getRole().name();
-        } catch (Exception e) {
-            // CSDL lỗi: từ chối thay vì đoán vai trò. Tuyệt đối không mặc định ADMIN.
-            log.warn("Không đọc được vai trò của admin {}: {}", adminId, e.getMessage());
-            return null;
-        }
+        Admin admin = adminRepository.findAdminByAdminId(adminId);
+        if (admin == null || !admin.isLoginAllowed() || admin.getRole() == null) return null;
+        return admin.getRole().name();
     }
 }

@@ -20,7 +20,7 @@ try {
   const { t } = await server.ssrLoadModule('/src/i18n/index.js')
   // SSR loading supplies setup; attach client renders to exercise the real dialog,
   // child ref and footer together in jsdom.
-  for (const name of ['BaseModal', 'CourseCombobox', 'CourseQuestionImport', 'QuestionDialog']) {
+  for (const name of ['BaseModal', 'CourseCombobox', 'TopicCombobox', 'CourseQuestionImport', 'QuestionDialog']) {
     const component = (await server.ssrLoadModule(`/src/components/${name}.vue`)).default
     const { descriptor } = parse(readFileSync(`src/components/${name}.vue`, 'utf8'))
     const script = compileScript(descriptor, { id: `test-${name}` })
@@ -28,14 +28,14 @@ try {
     assert.deepEqual(compiled.errors, [])
     component.render = new Function('Vue', compiled.code)(vue)
   }
-  COURSES.splice(0, COURSES.length, { id: 'DB', name: 'Database', subjectId: 7, topics: ['Basics'], topicIds: [42], active: true })
+  COURSES.splice(0, COURSES.length, { id: 'DB', name: 'Database', subjectId: 7, topics: ['Basics', 'Intermediate', 'Advanced'], topicIds: [42, 43, 44], active: true })
   S.q = []; S.dataMode = 'real'; S.role = 'admin'; auth.isAuthenticated = true; auth.isDemo = false
   const posted = []
   let finishBatch
   qbankApi.importQuestions = payload => {
     posted.push(payload)
     const question = payload.questions[0]
-    return new Promise(resolve => { finishBatch = () => resolve({ saved: 1, failedAt: null, uncertain: false, questions: [{ questionId: 99, subjectId: 7, topicId: 42, stem: question.stem, optionA: question.optionA, optionB: question.optionB, optionC: question.optionC, optionD: question.optionD, correctLabel: question.correctLabel, difficulty: payload.difficulty }] }) })
+    return new Promise(resolve => { finishBatch = () => resolve({ saved: 1, failedAt: null, uncertain: false, questions: [{ questionId: 99, subjectId: 7, topicId: payload.topicId, stem: question.stem, optionA: question.optionA, optionB: question.optionB, optionC: question.optionC, optionD: question.optionD, correctLabel: question.correctLabel, difficulty: payload.difficulty }] }) })
   }
   qbankApi.dashboardSummary = async () => null
   qbankApi.dashboardActivity = async () => []
@@ -56,6 +56,13 @@ try {
   assert.ok(document.querySelector('.modal-header .dlg-x'), 'Header close remains available')
   const chapterLabel = document.querySelector('.course-import label')
   assert.ok(!chapterLabel.textContent.includes('*'), 'Chapter has no asterisk')
+  const chapterInput = document.querySelector('#course-import-topic-input')
+  chapterInput.focus(); await vue.nextTick()
+  const chapterThree = [...document.querySelectorAll('#course-import-topic-list [role=option]')].find(el => el.textContent === 'Advanced')
+  assert.ok(chapterThree)
+  chapterThree.dispatchEvent(new dom.window.MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+  chapterThree.click(); await vue.nextTick()
+  assert.equal(chapterInput.value, 'Advanced')
   const selectFile = async value => {
     const input = document.querySelector('input[type=file]')
     Object.defineProperty(input, 'files', { configurable: true, value: [new File([JSON.stringify(value)], 'questions.json')] })
@@ -69,6 +76,13 @@ try {
   assert.equal(posted.length, 0)
   await selectFile([row])
   assert.equal(submit().disabled, false)
+  COURSES[0].topicIds[2] = 999
+  await vue.nextTick()
+  assert.equal(submit().disabled, true, 'Changed chapter mapping blocks import')
+  assert.ok(document.querySelector('.course-import [role=alert]'), 'Changed catalog is explained')
+  COURSES[0].topicIds[2] = 44
+  await vue.nextTick()
+  assert.equal(submit().disabled, false)
   submit().click()
   await vue.nextTick()
   assert.equal(submit().disabled, true, 'A pending import cannot be submitted twice')
@@ -78,7 +92,7 @@ try {
   await new Promise(resolve => setTimeout(resolve, 20)); await vue.nextTick()
   assert.equal(posted.length, 1)
   assert.equal(posted[0].subjectId, 7)
-  assert.equal(posted[0].topicId, 42)
+  assert.equal(posted[0].topicId, 44, 'Import sends the selected API topic ID')
   assert.equal(posted[0].questions[0].correctLabel, 'B')
   assert.equal(S.q[0].id, 99)
   assert.equal(isOpen.value, false, 'A fully confirmed import closes the dialog')

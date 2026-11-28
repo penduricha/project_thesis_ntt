@@ -138,9 +138,9 @@ try {
     assert.equal(S.dlg.props.text, t('twoFactor.cancelDescription'))
     const course = COURSES[0]
     askDeleteCourse(0)
-    assert.equal(S.dlg.props.title, t('operation.deleteCourseTitle', { course: `${course.id} – ${course.name}` }))
-    assert.equal(S.dlg.props.text, t('operation.deleteCourseDescription'))
-    assert.equal(S.dlg.props.ok, t('course.deleteCourse'))
+    assert.equal(S.dlg.props.title, t('subject.archiveTitle', { course: `${course.id} – ${course.name}` }))
+    assert.equal(S.dlg.props.text, t('subject.archiveDescription'))
+    assert.equal(S.dlg.props.ok, t('subject.archiveButton'))
     S.confirmDelete = true
     askDeleteQuestion(123)
     assert.equal(S.dlg.props.title, t('operation.deleteTitle', { code: 'CH123' }))
@@ -219,7 +219,9 @@ try {
   assert.equal(S.toast.msg, t('operation.courseUpdated'))
   assert.ok(logText(S.log[0][1]).includes('Changed name'))
   deleteCourse(originalLength)
-  assert.equal(S.toast.msg, t('operation.courseDeleted', { n: 0 }))
+  assert.equal(S.toast.msg, t('subject.archived'))
+  assert.equal(COURSES[originalLength].active, false)
+  COURSES.splice(originalLength, 1)
   assert.equal(COURSES.length, originalLength)
   // The same task and activity must render in the newly selected language.
   S.tasks = [{ id: 'switch', qid: 123, st: 'succeeded', msgKey: 'job.passed', msgParams: {} }]

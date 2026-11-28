@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import BaseModal from './BaseModal.vue'
 import CourseCombobox from './CourseCombobox.vue'
+import TopicCombobox from './TopicCombobox.vue'
 import { LV } from '../data/mock.js'
 import { COURSES, S, topicName, importQuestions, log, toast } from '../store.js'
 import { parseMoodleXml } from '../services/moodleXml.js'
@@ -12,7 +13,7 @@ const xml = ref(''), err = ref(''), chipErr = ref(''), res = ref(null), dirty = 
 const crs = computed(() => COURSES[S.imp.c])
 const ph = '<quiz>\n  <question type="multichoice">...</question>\n</quiz>'
 
-function pickCourse(v) { S.imp.c = +v; S.imp.tp = 0; chipErr.value = '' }
+function pickCourse(v) { const next = +v; if (next === S.imp.c) return; S.imp.c = next; S.imp.tp = 0; chipErr.value = '' }
 function onFile(e) {
   const f = e.target.files[0]; if (!f) return
   dirty.value = true
@@ -40,17 +41,15 @@ async function save() {
 
 <template>
   <BaseModal :title="$t('bank.importMoodle')" :dirty="dirty" @close="emit('close')">
-    <label>{{ $t('admin.assignedSubjects') }} <span style="color:var(--danger-strong)">*</span>
+    <div class="course-field">
+      <label for="imp-c">{{ $t('admin.assignedSubjects') }} <span style="color:var(--danger-strong)">*</span></label>
       <CourseCombobox uid="imp" :all="false" :placeholder="$t('course.searchPlaceholder')" :model-value="String(S.imp.c)" @update:model-value="pickCourse" />
-    </label>
-    <div class="cc-f">{{ $t('course.chapters') }}
-      <div id="imp-chips" class="cc-chips" :class="{ invalid: chipErr }">
-        <template v-if="crs?.topics.length">
-          <small style="flex:1 1 100%">{{ $t('course.chapterPickHint', { n: crs.topics.length }) }}</small>
-          <button v-for="(x, i) in crs.topics" :key="i" type="button" class="btn sm" :class="{ pri: i === S.imp.tp }" @click="S.imp.tp = i; chipErr = ''">{{ x }}</button>
-        </template>
-        <small v-else>{{ $t('course.noTopic') }}</small>
-      </div>
+    </div>
+    <div class="topic-field">
+      <label for="import-topic-input">{{ $t('course.chapters') }}</label>
+      <TopicCombobox uid="import-topic" :course="crs" :model-value="S.imp.tp" :invalid="!!chipErr"
+                     @update:model-value="v => { S.imp.tp = v; chipErr = '' }" />
+      <small v-if="!crs?.topics.length">{{ $t('course.noTopic') }}</small>
       <small v-if="chipErr" class="fe" role="alert">{{ chipErr }}</small>
     </div>
     <label>{{ $t('bank.defaultLevel') }}
@@ -76,3 +75,7 @@ async function save() {
     </template>
   </BaseModal>
 </template>
+
+<style scoped>
+.topic-field, .course-field { display: grid; gap: .35rem; }
+</style>

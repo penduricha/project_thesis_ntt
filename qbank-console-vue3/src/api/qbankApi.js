@@ -8,7 +8,8 @@ import { t } from '../i18n/index.js'
 
 const header = new SpringConfigHeader()
 const tokenLogin = new TokenLogin()
-const client = () => header.getAuthorizedAPIClient(tokenLogin)
+const authorizedClient = header.getAuthorizedAPIClient(tokenLogin)
+const client = () => authorizedClient
 // Tiền tố chung: /web/admin/questions, /web/admin/catalog, /web/admin/ai, /web/admin/dashboard.
 const ADMIN = '/admin'
 const url = (path) => `${ADMIN}${path}`
@@ -28,12 +29,28 @@ export function apiErrorMessage(error, fallback = t('apiError.network')) {
 
 export const qbankApi = {
   // ---------- Danh mục ----------
-  async subjects(includeInactive = false) {
-    const { data } = await client().get(url('/catalog/subjects'), { params: { includeInactive } })
+  async subjects(includeInactive = false, options = {}) {
+    const { data } = await client().get(url('/catalog/subjects'), { ...options, params: { includeInactive } })
     return data
   },
-  async topics(subjectId) {
-    const { data } = await client().get(url(`/catalog/subjects/${subjectId}/topics`))
+  async getSubject(subjectId, options = {}) {
+    const { data } = await client().get(url(`/catalog/subjects/${subjectId}`), options)
+    return data
+  },
+  async createSubject(body) {
+    const { data } = await client().post(url('/catalog/subjects'), body)
+    return data
+  },
+  async updateSubject(subjectId, body) {
+    const { data } = await client().put(url(`/catalog/subjects/${subjectId}`), body)
+    return data
+  },
+  async archiveSubject(subjectId, expectedUpdatedAt) {
+    const { data } = await client().delete(url(`/catalog/subjects/${subjectId}`), { data: { expectedUpdatedAt } })
+    return data
+  },
+  async topics(subjectId, options = {}) {
+    const { data } = await client().get(url(`/catalog/subjects/${subjectId}/topics`), options)
     return data
   },
   async issueTypes() {
@@ -43,12 +60,12 @@ export const qbankApi = {
 
   // ---------- Câu hỏi ----------
   // GET /questions?subjectId&topicId&status&validationStatus&q&page&size -> PageResponse
-  async listQuestions(params = {}) {
-    const { data } = await client().get(url('/questions'), { params })
+  async listQuestions(params = {}, options = {}) {
+    const { data } = await client().get(url('/questions'), { ...options, params })
     return data
   },
-  async getQuestion(questionId) {
-    const { data } = await client().get(url(`/questions/${questionId}`))
+  async getQuestion(questionId, options = {}) {
+    const { data } = await client().get(url(`/questions/${questionId}`), options)
     return data
   },
   async createQuestion(body) {
@@ -83,8 +100,8 @@ export const qbankApi = {
     const { data } = await client().get(url(`/questions/${questionId}/revisions`))
     return data
   },
-  async latestSuggestions(questionId) {
-    const { data } = await client().get(url(`/questions/${questionId}/ai-suggestions`))
+  async latestSuggestions(questionId, options = {}) {
+    const { data } = await client().get(url(`/questions/${questionId}/ai-suggestions`), options)
     return data
   },
 
@@ -94,12 +111,12 @@ export const qbankApi = {
     const { data } = await client().post(url(`/questions/${questionId}/ai-check`))
     return data
   },
-  async job(taskId) {
-    const { data } = await client().get(url(`/ai/jobs/${taskId}`))
+  async job(taskId, options = {}) {
+    const { data } = await client().get(url(`/ai/jobs/${taskId}`), options)
     return data
   },
-  async jobSuggestions(taskId) {
-    const { data } = await client().get(url(`/ai/jobs/${taskId}/suggestions`))
+  async jobSuggestions(taskId, options = {}) {
+    const { data } = await client().get(url(`/ai/jobs/${taskId}/suggestions`), options)
     return data
   },
   async decideSuggestion(suggestionId, body) {
@@ -108,12 +125,12 @@ export const qbankApi = {
   },
 
   // ---------- Dashboard ----------
-  async dashboardSummary(subjectId) {
-    const { data } = await client().get(url('/dashboard/summary'), { params: subjectId ? { subjectId } : {} })
+  async dashboardSummary(subjectId, options = {}) {
+    const { data } = await client().get(url('/dashboard/summary'), { ...options, params: subjectId ? { subjectId } : {} })
     return data
   },
-  async dashboardActivity(limit = 10) {
-    const { data } = await client().get(url('/dashboard/activity'), { params: { limit } })
+  async dashboardActivity(limit = 10, options = {}) {
+    const { data } = await client().get(url('/dashboard/activity'), { ...options, params: { limit } })
     return data
   },
 }

@@ -103,7 +103,7 @@ public class AiWorkerClient {
         } catch (ResourceAccessException e) {
             log.warn("AI worker không truy cập được: {}", e.toString());
             throw QbankException.serviceUnavailable("AI_WORKER_UNAVAILABLE",
-                    "Không kết nối được Server 2 (AI worker). Kiểm tra Colab/tunnel và app.ai-worker.base-url.");
+                    "Không nhận được phản hồi từ AI worker; task có thể đã được tạo. Kiểm tra trạng thái trước khi thử lại.");
         } catch (RestClientResponseException e) {
             log.warn("AI worker từ chối yêu cầu: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw QbankException.serviceUnavailable("AI_WORKER_REJECTED",

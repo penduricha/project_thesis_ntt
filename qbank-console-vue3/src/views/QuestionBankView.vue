@@ -2,6 +2,7 @@
 import { computed, watch, watchEffect, nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import CourseCombobox from '../components/CourseCombobox.vue'
+import TopicCombobox from '../components/TopicCombobox.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import { LV, stB } from '../data/mock.js'
 import { t, locale } from '../i18n/index.js'
@@ -19,6 +20,11 @@ const inView = computed(() => L.value.filter(q => S.sel.has(q.id)).length)
 const allSel = computed(() => L.value.length > 0 && inView.value === L.value.length)
 const partial = computed(() => inView.value > 0 && inView.value < L.value.length)
 const courseQ = computed(() => (isCourse.value ? S.q.filter(q => q.c === S.ci) : []))
+const topicCounts = computed(() => {
+  const counts = (crs.value?.topics || []).map(() => 0)
+  for (const q of courseQ.value) if (q.tp >= 0 && q.tp < counts.length) counts[q.tp]++
+  return counts
+})
 
 const chips = computed(() => {
   const f = S.f, a = []
@@ -35,7 +41,7 @@ const loc = q => {
 }
 const selAll = on => L.value.forEach(q => (on ? S.sel.add(q.id) : S.sel.delete(q.id)))
 const setPage = () => { S.f.page = 1 }
-const addQ = () => editQuestion(0, isCourse.value ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0, courseImport: true } : {})
+const addQ = () => editQuestion(0, isCourse.value ? { c: S.ci, tp: S.f.tp !== '' ? +S.f.tp : 0, courseScoped: true, courseImport: true } : {})
 
 /* Đo độ rộng placeholder để ô tìm kiếm không bị cắt chữ (port fitSearch) */
 const srch = ref(null)
@@ -50,7 +56,7 @@ watch(() => locale.code, () => nextTick(fitSearch))
 </script>
 
 <template>
-  <template v-if="isCourse && crs && !courseQ.length">
+  <template v-if="isCourse && crs && S.status === 'ready' && !courseQ.length">
     <div class="subtopic-bar">
       <div class="chips"><span class="mut" style="font-size:var(--fs-sm)">{{ $t('course.subtitle') }} <b>{{ crs.topics.length }}</b> {{ $t('moodle.category') }}</span><span v-for="(t, i) in crs.topics" :key="i" class="b n">{{ t }}</span></div>
       <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">{{ $t('course.manageTopics') }}</button>
@@ -59,10 +65,9 @@ watch(() => locale.code, () => nextTick(fitSearch))
   </template>
   <template v-else>
   <div v-if="isCourse && crs" class="subtopic-bar">
-    <div class="chips" style="flex:1">
-      <button type="button" class="chip" :class="{ on: S.f.tp === '' }" @click="S.f.tp = ''; setPage()">{{ $t('bank.allTopicsCount') + courseQ.length + ($locale.code === 'zh' || $locale.code === 'ja' ? '）' : ')') }}</button>
-      <button v-for="(t, idx) in crs.topics" :key="idx" type="button" class="chip" :class="{ on: S.f.tp === String(idx) }"
-              @click="S.f.tp = String(idx); setPage()">{{ t }} ({{ courseQ.filter(q => q.tp === idx).length }})</button>
+    <div class="topic-filter">
+      <TopicCombobox uid="filter-topic" :course="crs" :model-value="S.f.tp" :counts="topicCounts" :total-count="courseQ.length" all
+                     @update:model-value="v => { S.f.tp = v === '' ? '' : String(v); setPage() }" />
     </div>
     <button type="button" class="btn sm" @click="openDialog('topics', { ci: S.ci })">{{ $t('bank.manageTopicsCount') + crs.topics.length + ($locale.code === 'zh' || $locale.code === 'ja' ? '）' : ')') }}</button>
   </div>
@@ -143,3 +148,7 @@ watch(() => locale.code, () => nextTick(fitSearch))
   </div>
   </template>
 </template>
+
+<style scoped>
+.topic-filter { flex: 1 1 16rem; min-width: 0; }
+</style>

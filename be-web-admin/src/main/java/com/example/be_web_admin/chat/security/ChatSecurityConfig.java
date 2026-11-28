@@ -19,8 +19,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Chuỗi bảo mật RIÊNG cho /mobile/chat/** (không tính context-path /api), ưu tiên cao hơn chuỗi có sẵn trong
- * SecurityConfig. Chuỗi cũ (anyRequest().permitAll()) giữ nguyên cho mọi đường dẫn khác, nên các API 2FA/TOTP
- * hiện có không đổi hành vi. Không dùng phiên HTTP, tắt CSRF cho nhánh này (xác thực bằng Bearer, không bằng cookie).
+ * SecurityConfig. Các đường dẫn khác dùng chuỗi bảo mật chung. Không dùng phiên HTTP, tắt CSRF cho nhánh này (xác thực bằng Bearer, không bằng cookie).
  *
  * Dùng AntPathRequestMatcher tường minh để không phụ thuộc cách Spring MVC phân giải mẫu đường dẫn.
  */
@@ -38,6 +37,8 @@ public class ChatSecurityConfig {
                 // Dùng lại CorsConfigurationSource đã khai báo trong SecurityConfig.
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(AntPathRequestMatcher.antMatcher(HttpMethod.OPTIONS, "/mobile/chat/**")).permitAll()

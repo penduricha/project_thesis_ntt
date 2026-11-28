@@ -107,6 +107,7 @@ public class AiCheckService {
         if (active.isPresent()) {
             UiAiJobView existing = uiState.readJobView(active.get().getTaskId())
                     .orElseGet(() -> fromTask(active.get()));
+            assertOwner(fromTask(active.get()), adminId, active.get().getTaskId());
             return toView(existing, true);
         }
 
@@ -115,36 +116,37 @@ public class AiCheckService {
                     "Đang gửi yêu cầu kiểm định cho câu này, vui lòng đợi vài giây.");
         }
 
-        boolean submitted = false;
-        try {
-            AiWorkerClient.WorkerTask workerTask = worker.submitQuestionCheck(question, revision, adminId);
-            Instant now = Instant.now();
-            UiAiJobView view = new UiAiJobView(
-                    workerTask.taskId(),
-                    questionId,
-                    adminId,
-                    TaskTypeD.QUESTION_CHECK.dbValue(),
-                    normalizeStatus(workerTask.status()),
-                    1,
-                    0,
-                    null,
-                    now,
-                    now,
-                    POLL_INTERVAL_MS);
-            uiState.saveJobView(view);
-            uiState.pushActivity(adminId, ActivityItem.of(
-                    "AI_CHECK_SUBMITTED",
-                    "Gửi kiểm định AI cho câu #" + questionId + " (rev " + revision.getRevNo() + ")",
-                    "QUESTION", questionId));
-            uiState.evictDashboard(question.getSubjectId());
-            submitted = true;
-            return toView(view, true);
-        } finally {
-            if (!submitted) {
-                // Gọi worker thất bại: mở khoá ngay để người dùng bấm lại được.
-                uiState.unlockCheck(questionId);
-            }
+        // Keep the TTL lock even on failure: the worker may have created the task
+        // despite losing the response. Retrying checks the database first.
+        // Recheck after acquiring the distributed lock: another submitter may have created a task.
+        Optional<AiTask> afterLock = tasks.findFirstByQuestionIdAndTaskTypeAndStatusIn(
+                questionId, TaskTypeD.QUESTION_CHECK, ACTIVE_STATUSES);
+        if (afterLock.isPresent()) {
+            UiAiJobView existing = fromTask(afterLock.get());
+            assertOwner(existing, adminId, afterLock.get().getTaskId());
+            return toView(existing, false);
         }
+        AiWorkerClient.WorkerTask workerTask = worker.submitQuestionCheck(question, revision, adminId);
+        Instant now = Instant.now();
+        UiAiJobView view = new UiAiJobView(
+                workerTask.taskId(),
+                questionId,
+                adminId,
+                TaskTypeD.QUESTION_CHECK.dbValue(),
+                normalizeStatus(workerTask.status()),
+                1,
+                0,
+                null,
+                now,
+                now,
+                POLL_INTERVAL_MS);
+        uiState.saveJobView(view);
+        uiState.pushActivity(adminId, ActivityItem.of(
+                "AI_CHECK_SUBMITTED",
+                "Gửi kiểm định AI cho câu #" + questionId + " (rev " + revision.getRevNo() + ")",
+                "QUESTION", questionId));
+        uiState.evictDashboard(question.getSubjectId());
+        return toView(view, true);
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.example.be_web_admin.chat.ws;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.chat.exception.ChatException;
 import com.example.be_web_admin.chat.service.WsTicketService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,15 +28,18 @@ import java.util.Optional;
 public class ChatHandshakeInterceptor implements HandshakeInterceptor {
 
     public static final String ATTR_ADMIN_ID = "chat.adminId";
+    public static final String ATTR_IDENTITY = "chat.identity";
 
     private final WsTicketService ticketService;
     private final ChatSessionRegistry registry;
     private final ChatProperties properties;
+    private final AuthSessionStore sessions;
 
-    public ChatHandshakeInterceptor(WsTicketService ticketService, ChatSessionRegistry registry, ChatProperties properties) {
+    public ChatHandshakeInterceptor(WsTicketService ticketService, ChatSessionRegistry registry, ChatProperties properties, AuthSessionStore sessions) {
         this.ticketService = ticketService;
         this.registry = registry;
         this.properties = properties;
+        this.sessions = sessions;
     }
 
     @Override
@@ -49,27 +53,34 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
         HttpServletRequest http = servletRequest.getServletRequest();
         String ticket = http.getParameter("ticket");
 
-        Optional<Long> adminId;
+        Optional<AuthSessionStore.Identity> identity;
         try {
-            adminId = ticketService.consume(ticket);
+            identity = ticketService.consume(ticket);
         } catch (ChatException e) {
             log.warn("Chat WS: từ chối bắt tay 503 (Redis không đọc được vé): {}", e.getMessage());
             response.setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
             return false;
         }
-        if (adminId.isEmpty()) {
+        if (identity.isEmpty()) {
             log.info("Chat WS: từ chối bắt tay 401 (vé sai, đã dùng hoặc hết hạn), Origin={}",
                     http.getHeader("Origin"));
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
         }
-        if (registry.count(adminId.get()) >= properties.getWs().getMaxConnectionsPerAdmin()) {
-            log.info("Chat WS: từ chối bắt tay 429 (admin {} đã đủ {} kết nối)", adminId.get(),
+        AuthSessionStore.Identity auth = identity.get();
+        AuthSessionStore.State state = sessions.state(auth);
+        if (state != AuthSessionStore.State.ACTIVE) {
+            response.setStatusCode(state == AuthSessionStore.State.UNAVAILABLE ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.UNAUTHORIZED);
+            return false;
+        }
+        if (registry.count(auth.adminId()) >= properties.getWs().getMaxConnectionsPerAdmin()) {
+            log.info("Chat WS: từ chối bắt tay 429 (admin {} đã đủ {} kết nối)", auth.adminId(),
                     properties.getWs().getMaxConnectionsPerAdmin());
             response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
             return false;
         }
-        attributes.put(ATTR_ADMIN_ID, adminId.get());
+        attributes.put(ATTR_ADMIN_ID, auth.adminId());
+        attributes.put(ATTR_IDENTITY, auth);
         return true;
     }
 

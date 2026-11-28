@@ -43,7 +43,7 @@ public class TotpDisableControllerMobile {
     // 200: 2FA đã tắt (đã xóa credential, totp_enabled = false) | 400: không đủ 6 số | 401 token sai
     // 404: admin chưa bật 2FA (app coi như đã tắt, được xóa khóa cục bộ)
     // 422: mã sai / hết hạn / đã dùng (data.code = TOTP_INVALID | TOTP_REPLAYED)
-    // 429: nhập sai quá 5 lần, bị khóa 5 phút (data.retryAfterSeconds, header Retry-After) | 500
+    // 429: vượt giới hạn 5 lần thử trong 5 phút (data.retryAfterSeconds, header Retry-After) | 500
     @PostMapping("/disable")
     public ResponseEntity<?> disable(@RequestHeader(value = "Authorization", required = false) String authHeader,
                                      @RequestBody(required = false) Map<String, Object> request,
@@ -72,8 +72,10 @@ public class TotpDisableControllerMobile {
         } catch (DisableLockedException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfterSeconds()))
-                    .body(body(false, "Too many wrong codes. Try again later.",
+                    .body(body(false, "Too many attempts. Try again later.",
                             Map.of("code", "LOCKED", "retryAfterSeconds", e.getRetryAfterSeconds())));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(body(false, "Authentication temporarily unavailable.", null));
         } catch (AdminNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(false, "Admin not found.", null));
         } catch (Exception e) {
@@ -84,13 +86,15 @@ public class TotpDisableControllerMobile {
 
     private Long resolveAdminId(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
-        String jwt = authHeader.substring(7);
+        String token = authHeader.substring(7);
+        Long adminId = adminJwtTokenProvider.parseAccessTokenAdminId(token);
+        if (adminId == null) return null;
         try {
-            if (!adminJwtTokenProvider.validateAccessToken(jwt)) return null;
-            if (!adminTokenService.findAdminAccessTokenByJwtToken(jwt)) return null;
-            return adminJwtTokenProvider.getAdminIdFromToken(jwt);
-        } catch (Exception e) {
-            return null;
+            return adminTokenService.findAdminAccessTokenByJwtToken(token) ? adminId : null;
+        } catch (RuntimeException e) {
+            // A store/account outage must not be mistaken for a revoked token.
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "Authentication temporarily unavailable", e);
         }
     }
 

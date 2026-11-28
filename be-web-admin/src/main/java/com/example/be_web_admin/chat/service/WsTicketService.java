@@ -1,5 +1,6 @@
 package com.example.be_web_admin.chat.service;
 
+import com.example.be_web_admin.security.AuthSessionStore;
 import com.example.be_web_admin.chat.ChatProperties;
 import com.example.be_web_admin.chat.dto.WsTicketDto;
 import com.example.be_web_admin.chat.exception.ChatException;
@@ -46,15 +47,15 @@ public class WsTicketService {
         this.rateLimiter = rateLimiter;
     }
 
-    public WsTicketDto issue(Long adminId) {
-        rateLimiter.check("ticket", adminId, properties.getRate().getTicketsPerMinute(), 60);
+    public WsTicketDto issue(AuthSessionStore.Identity identity) {
+        rateLimiter.check("ticket", identity.adminId(), properties.getRate().getTicketsPerMinute(), 60);
 
         byte[] bytes = new byte[TICKET_BYTES];
         random.nextBytes(bytes);
         String ticket = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         int ttl = properties.getWs().getTicketTtlSeconds();
         try {
-            redis.opsForValue().set(KEY_PREFIX + ticket, String.valueOf(adminId), Duration.ofSeconds(ttl));
+            redis.opsForValue().set(KEY_PREFIX + ticket, identity.adminId() + "|" + identity.client().name() + "|" + identity.sessionId(), Duration.ofSeconds(ttl));
         } catch (RuntimeException e) {
             log.warn("Chat: Redis lỗi khi lưu vé WebSocket: {}", e.toString());
             throw ChatException.unavailable("REALTIME_UNAVAILABLE", "Kênh thời gian thực tạm thời không dùng được.");
@@ -66,7 +67,7 @@ public class WsTicketService {
      * Lấy vé và xóa trong một bước nguyên tử (script Lua). Trả rỗng nếu vé sai, đã dùng hoặc hết hạn.
      * Redis lỗi thì ném ChatException 503 để bước bắt tay trả đúng mã.
      */
-    public Optional<Long> consume(String ticket) {
+    public Optional<AuthSessionStore.Identity> consume(String ticket) {
         if (ticket == null || ticket.isBlank() || ticket.length() > 128) {
             return Optional.empty();
         }
@@ -75,8 +76,10 @@ public class WsTicketService {
             if (value == null) {
                 return Optional.empty();
             }
-            return Optional.of(Long.parseLong(value));
-        } catch (NumberFormatException e) {
+            String[] parts = value.split("\\|", -1);
+            if (parts.length != 3 || !parts[2].matches("[0-9a-fA-F-]{36}")) return Optional.empty();
+            return Optional.of(new AuthSessionStore.Identity(Long.parseLong(parts[0]), AuthSessionStore.Client.valueOf(parts[1]), parts[2]));
+        } catch (IllegalArgumentException e) {
             return Optional.empty();
         } catch (RuntimeException e) {
             log.warn("Chat: Redis lỗi khi đọc vé WebSocket: {}", e.toString());

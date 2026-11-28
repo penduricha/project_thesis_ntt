@@ -74,7 +74,7 @@ export default class SpringConfigHeader {
 
       const sentToken = String(config.headers?.get?.('Authorization') ?? '')
         .replace(/^Bearer\s+/i, '') || null
-      const refreshed = await silentRefresher.refreshNow(sentToken)
+      const refreshed = await silentRefresher.refreshNow(sentToken, { throwOnUnavailable: true })
       if (!refreshed) {
         return Promise.reject(error)
       }

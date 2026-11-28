@@ -53,6 +53,12 @@ class AdminProfile {
   final String name; // vd: "Từ Quang Nhật"
 }
 
+/// A temporary refresh failure must not be reported as an expired session.
+class AuthenticationUnavailable implements Exception {
+  const AuthenticationUnavailable({this.network = false});
+  final bool network;
+}
+
 /// App cần 2 thứ từ phiên đăng nhập: access token và thông tin admin.
 /// Access token phía Java sống 5 phút, nên nếu có cơ chế refresh thì làm trong
 /// [accessToken]: luôn trả về token còn hạn (hoặc null nếu phải đăng nhập lại).
@@ -61,7 +67,7 @@ abstract class EnrollmentAuth {
   Future<AdminProfile?> profile();
 
   /// Đổi refresh token lấy cặp token mới (lưu lại vào máy) rồi trả access token mới.
-  /// null = không làm mới được (hết phiên, mạng lỗi...). Mặc định không hỗ trợ.
+  /// null = phiên bị từ chối. Sự cố tạm thời ném AuthenticationUnavailable.
   Future<String?> refreshAccessToken() async => null;
 }
 
@@ -127,16 +133,21 @@ class SecureStorageEnrollmentAuth implements EnrollmentAuth {
       final data = res.data?['data'];
       final access = data is Map ? data['accessToken'] : null;
       final refresh = data is Map ? data['refreshToken'] : null;
-      if (res.statusCode != 200 || access is! String || refresh is! String) {
-        return null;
+      if (res.statusCode == 401) return null;
+      if (res.statusCode != 200 || access is! String || refresh is! String || access.isEmpty || refresh.isEmpty) {
+        throw const AuthenticationUnavailable();
       }
       // Giữ nguyên adminId và tên hiển thị đã lưu, chỉ thay cặp token.
-      await authStorage.saveSession(
-        session.withTokens(accessToken: access, refreshToken: refresh),
+      final saved = await authStorage.saveSessionIfCurrent(
+        session.refreshToken, session.withTokens(accessToken: access, refreshToken: refresh),
       );
-      return access;
+      return saved ? access : null;
+    } on AuthenticationUnavailable {
+      rethrow;
+    } on DioException catch (error) {
+      throw AuthenticationUnavailable(network: error.response == null && ServerConnection.isConnectivityFailure(error));
     } catch (_) {
-      return null;
+      throw const AuthenticationUnavailable();
     }
   }
 
@@ -253,21 +264,29 @@ class EnrollmentService {
             // Request này gửi token CŨ nhưng máy đã có token mới hơn (lần làm mới trước đó đã lưu):
             // dùng luôn token mới, KHÔNG làm mới lần nữa. Server xoay vòng refresh token, làm mới
             // liên tiếp rất dễ bị từ chối.
-            final sent = req.headers['Authorization'];
-            final current = await _auth.accessToken();
-            final String? fresh = (current != null &&
-                    current.isNotEmpty &&
-                    'Bearer $current' != sent)
-                ? current
-                : await _auth.refreshAccessToken();
-            if (fresh != null && fresh.isNotEmpty) {
-              req.extra['authRetried'] = true;
-              req.headers['Authorization'] = 'Bearer $fresh';
-              try {
-                return handler.resolve(await _dio.fetch<dynamic>(req));
-              } on DioException catch (e) {
-                return handler.next(e);
+            try {
+              final sent = req.headers['Authorization'];
+              final current = await _auth.accessToken();
+              final String? fresh = (current != null &&
+                      current.isNotEmpty &&
+                      'Bearer $current' != sent)
+                  ? current
+                  : await _auth.refreshAccessToken();
+              if (fresh != null && fresh.isNotEmpty) {
+                req.extra['authRetried'] = true;
+                req.headers['Authorization'] = 'Bearer $fresh';
+                try {
+                  return handler.resolve(await _dio.fetch<dynamic>(req));
+                } on DioException catch (e) {
+                  return handler.next(e);
+                }
               }
+            } on AuthenticationUnavailable catch (failure) {
+              return handler.next(DioException(
+                requestOptions: req,
+                type: failure.network ? DioExceptionType.connectionError : DioExceptionType.badResponse,
+                response: failure.network ? null : Response<dynamic>(requestOptions: req, statusCode: 503),
+              ));
             }
           }
           handler.next(err);
@@ -288,10 +307,19 @@ class EnrollmentService {
   static const String _msgNetwork = 'Cannot reach the server. Check your connection.';
   static const String _msgServer = 'Server error. Please try again.';
 
+  Future<String?> _accessToken() async {
+    try {
+      return await _auth.accessToken();
+    } on AuthenticationUnavailable catch (failure) {
+      throw EnrollmentException(failure.network ? _msgNetwork : _msgServer,
+          messageKey: failure.network ? 'network' : 'server');
+    }
+  }
+
   /// Gửi khóa người dùng nhập lên để kích hoạt. Ném [EnrollmentException] nếu thất bại.
   /// Mỗi lần gọi = đúng MỘT request confirm (không tự thử lại, vì server đếm từng lần sai).
   Future<EnrolledKey> activate(String secret) async {
-    final token = await _auth.accessToken();
+    final token = await _accessToken();
     if (token == null || token.isEmpty) {
       throw const EnrollmentException(_msgSession, messageKey: 'session');
     }
@@ -317,7 +345,7 @@ class EnrollmentService {
     }
 
     // Token có thể vừa được làm mới ở bước pending: lấy lại token mới nhất cho bước confirm.
-    await _confirm((await _auth.accessToken()) ?? token, code);
+    await _confirm((await _accessToken()) ?? token, code);
 
     return EnrolledKey(
       adminId: profile.adminId,
@@ -389,7 +417,7 @@ class EnrollmentService {
     required int digits,
     required TotpAlgorithm algorithm,
   }) async {
-    final token = await _auth.accessToken();
+    final token = await _accessToken();
     if (token == null || token.isEmpty) {
       throw const EnrollmentException(_msgSession, messageKey: 'session');
     }

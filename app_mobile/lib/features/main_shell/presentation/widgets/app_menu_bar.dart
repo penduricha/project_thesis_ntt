@@ -64,7 +64,7 @@ class _AppMenuBarState extends State<AppMenuBar> {
 
       final fetchedName = await _fetchAdminName(session.accessToken);
       if (fetchedName == null) return _fallbackName; // lỗi: lần sau sẽ thử lại
-      await authStorage.saveAdminName(fetchedName);
+      await authStorage.saveAdminNameIfCurrent(session.refreshToken, fetchedName);
       return fetchedName;
     } catch (_) {
       return _fallbackName; // không để menu bị trống

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Phiên đăng nhập lưu trên máy: adminId + tên + cặp token do server cấp.
@@ -72,9 +74,34 @@ class AuthStorage {
   static String? get cachedAdminName => _cachedSession?.adminName;
 
   final FlutterSecureStorage _storage;
+  // Serialize session mutations across all instances in this isolate. In particular,
+  // a late refresh cannot write after logout has cleared the session.
+  static Future<void> _pending = Future<void>.value();
+  static Future<T> _serialized<T>(Future<T> Function() task) {
+    final result = Completer<T>();
+    _pending = _pending.then((_) async {
+      try { result.complete(await task()); }
+      catch (error, stack) { result.completeError(error, stack); }
+    });
+    return result.future;
+  }
 
-  /// Gọi sau khi đăng nhập thành công: lưu adminId, tên cùng 2 token.
-  Future<void> saveSession(AuthSession session) async {
+  Future<void> saveSession(AuthSession session) => _serialized(() => _saveSession(session));
+
+  /// Commit a refresh only if the same refresh token is still current.
+  Future<bool> saveSessionIfCurrent(String expectedRefresh, AuthSession session) => _serialized(() async {
+    if (await _storage.read(key: _refreshTokenKey) != expectedRefresh) return false;
+    await _saveSession(session);
+    return true;
+  });
+
+  Future<bool> clearSessionIfCurrent(String expectedRefresh) => _serialized(() async {
+    if (await _storage.read(key: _refreshTokenKey) != expectedRefresh) return false;
+    await _clearSession();
+    return true;
+  });
+
+  Future<void> _saveSession(AuthSession session) async {
     final adminName = session.adminName;
     await Future.wait([
       _storage.write(key: _adminIdKey, value: session.adminId.toString()),
@@ -88,14 +115,15 @@ class AuthStorage {
   }
 
   /// Chỉ cập nhật tên admin (dùng khi phiên cũ chưa có tên và vừa lấy được từ server).
-  Future<void> saveAdminName(String adminName) async {
+  Future<void> saveAdminNameIfCurrent(String expectedRefresh, String adminName) => _serialized(() async {
+    if (await _storage.read(key: _refreshTokenKey) != expectedRefresh) return;
     await _storage.write(key: _adminNameKey, value: adminName);
     _cachedSession = _cachedSession?.withAdminName(adminName);
-  }
+  });
 
   /// Dùng cho auto login khi mở app. Trả về null nếu thiếu bất kỳ giá trị nào.
   /// Đồng thời nạp phiên vào bộ nhớ để [cachedAdminId] dùng được.
-  Future<AuthSession?> readSession() async {
+  Future<AuthSession?> readSession() => _serialized(() async {
     final adminId = int.tryParse(await _storage.read(key: _adminIdKey) ?? '');
     final accessToken = await _storage.read(key: _accessTokenKey);
     final refreshToken = await _storage.read(key: _refreshTokenKey);
@@ -113,7 +141,7 @@ class AuthStorage {
     );
     _cachedSession = session;
     return session;
-  }
+  });
 
   /// Lấy adminId: ưu tiên bản trong bộ nhớ, không có thì đọc từ máy.
   Future<int?> readAdminId() async {
@@ -122,7 +150,9 @@ class AuthStorage {
   }
 
   /// Gọi khi đăng xuất (hoặc khi refresh token hết hạn): xóa adminId, tên và 2 token.
-  Future<void> clearSession() async {
+  Future<void> clearSession() => _serialized(_clearSession);
+
+  Future<void> _clearSession() async {
     // Xóa bản trong bộ nhớ trước: dù xóa ở máy có lỗi thì cũng không bao giờ
     // còn dùng lại phiên cũ trong lúc app đang chạy.
     _cachedSession = null;

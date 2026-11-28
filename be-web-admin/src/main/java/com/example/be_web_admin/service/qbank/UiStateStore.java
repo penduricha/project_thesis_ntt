@@ -3,6 +3,7 @@ package com.example.be_web_admin.service.qbank;
 import com.example.be_web_admin.dto.qbank.ActivityItem;
 import com.example.be_web_admin.dto.qbank.DashboardSummary;
 import com.example.be_web_admin.dto.qbank.QuestionDraft;
+import com.example.be_web_admin.exception.qbank.QbankException;
 import com.example.be_web_admin.model.redis.UiAiJobView;
 import com.example.be_web_admin.repository.redis.UiAiJobViewRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,8 +30,8 @@ import java.util.Optional;
  * ui:ai_job:{taskId}                    1h      Modal tiến trình AI - polling mỗi 1,5s
  * </pre>
  *
- * <p>Redis lỗi thì fail-open (ghi log, trả rỗng/cho qua) — giống ChatRateLimiter, để giao diện
- * vẫn dùng được khi Redis ngừng.</p>
+ * <p>Cache dashboard/activity có thể bỏ qua lỗi. Nháp là dữ liệu người dùng: lỗi đọc/ghi
+ * phải báo 503, không được giả vờ lưu thành công hoặc coi lỗi là không có nháp.</p>
  */
 @Slf4j
 @Component
@@ -46,7 +47,7 @@ public class UiStateStore {
     private static final Duration DASHBOARD_TTL = Duration.ofSeconds(30);
     private static final Duration ACTIVITY_TTL = Duration.ofDays(7);
     private static final Duration DRAFT_TTL = Duration.ofHours(24);
-    private static final Duration CHECK_LOCK_TTL = Duration.ofSeconds(15);
+    private static final Duration CHECK_LOCK_TTL = Duration.ofMinutes(2);
 
     private static final int ACTIVITY_MAX = 20;
 
@@ -155,6 +156,7 @@ public class UiStateStore {
                     objectMapper.writeValueAsString(draft), DRAFT_TTL);
         } catch (Exception e) {
             log.warn("Redis: không lưu được nháp ({}): {}", questionKey, e.toString());
+            throw QbankException.serviceUnavailable("DRAFT_UNAVAILABLE", "Không thể lưu bản nháp. Vui lòng thử lại.");
         }
     }
 
@@ -167,7 +169,7 @@ public class UiStateStore {
             return Optional.of(objectMapper.readValue(json, QuestionDraft.class));
         } catch (Exception e) {
             log.warn("Redis: không đọc được nháp ({}): {}", questionKey, e.toString());
-            return Optional.empty();
+            throw QbankException.serviceUnavailable("DRAFT_UNAVAILABLE", "Không thể đọc bản nháp. Vui lòng thử lại.");
         }
     }
 
@@ -188,8 +190,8 @@ public class UiStateStore {
                     .setIfAbsent(CHECK_LOCK_PREFIX + questionId, "1", CHECK_LOCK_TTL);
             return Boolean.TRUE.equals(ok);
         } catch (RuntimeException e) {
-            log.warn("Redis: không kiểm tra được khoá kiểm định của câu {} (cho qua): {}", questionId, e.toString());
-            return true;
+            log.warn("Redis: không kiểm tra được khoá kiểm định của câu {} (từ chối): {}", questionId, e.toString());
+            return false;
         }
     }
 

@@ -8,13 +8,14 @@ import com.example.be_web_admin.model.jpa.Admin;
 import com.example.be_web_admin.model.jpa.TotpCredential;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.repository.jpa.TotpCredentialRepository;
+import com.example.be_web_admin.security.AuthSessionStore;
+import com.example.be_web_admin.security.AuthenticationRateLimiter;
 import com.example.be_web_admin.security.password.MgmtPassword;
 import com.example.be_web_admin.security.private_key.CryptoService;
 import com.example.be_web_admin.security.totp.TotpLoginVerifier;
 import com.example.be_web_admin.service.redis.AdminTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -34,24 +35,11 @@ public class AdminLoginServiceImpl {
 
     private static final int MAX_TOTP_FAILS = 5;
     private static final Duration TOTP_FAIL_WINDOW = Duration.ofMinutes(5);
-    private static final String TOTP_FAIL_KEY = "totp:fail:";
 
-    /**
-     * Chống dò mật khẩu: 10 lần sai liên tiếp cho MỘT adminId thì khoá 15 phút.
-     *
-     * <p>Trước bản vá chỉ mã TOTP được đếm; còn mật khẩu thì không — mà {@code adminId} là số tăng
-     * dần và hiện ngay trên form đăng nhập, nên kẻ tấn công biết trước tài khoản cần dò. BCrypt
-     * chỉ làm chậm mỗi lần thử (khoảng 100ms), không chặn được vét cạn chạy song song.</p>
-     *
-     * <p>Đếm được SAU khi mật khẩu đã đúng hay chưa đều phải làm, nhưng cố ý khác TOTP: ở bước
-     * mật khẩu thì đếm cả khi SAI (đó chính là thứ cần chặn), nên kẻ không biết mật khẩu vẫn khoá
-     * được tài khoản người khác trong 15 phút. Đây là đánh đổi đã cân nhắc: thà khoá tạm 15 phút
-     * còn hơn để lộ mật khẩu. Khoá chỉ áp cho MỘT adminId (không theo IP) để NAT/proxy dùng chung
-     * không khoá oan cả trường, và không đếm được thì không khoá (Redis hỏng vẫn đăng nhập được).</p>
-     */
+    // Fixed-window reservations count both successful and failed logins. This avoids allowing
+    // in-flight attempts to escape the cap when another request succeeds and resets a counter.
     private static final int MAX_PASSWORD_FAILS = 10;
     private static final Duration PASSWORD_FAIL_WINDOW = Duration.ofMinutes(15);
-    private static final String PASSWORD_FAIL_KEY = "pwd:fail:";
 
     private final AdminRepository adminRepository;
     private final TotpCredentialRepository totpCredentialRepository;
@@ -59,28 +47,36 @@ public class AdminLoginServiceImpl {
     private final TotpLoginVerifier totpLoginVerifier;
     private final CryptoService cryptoService;
     private final AuthAuditService auditService;
-    private final StringRedisTemplate redis;
+    private final AuthenticationRateLimiter limiter;
+    private final AuthSessionStore sessions;
 
     // Inject interface (không inject AdminTokenServiceImpl): đã tạo JWT và lưu access/refresh token vào Redis
     private final AdminTokenService adminTokenService;
 
     public LoginOutcome login(AdminLoginDTO req, String ip, String userAgent) {
+        return login(req, ip, userAgent, AuthSessionStore.Client.WEB, null, null);
+    }
+
+    public LoginOutcome loginMobile(AdminLoginDTO req, String ip, String userAgent, String device, String platform) {
+        return login(req, ip, userAgent, AuthSessionStore.Client.MOBILE, device, platform);
+    }
+
+    private LoginOutcome login(AdminLoginDTO req, String ip, String userAgent,
+                               AuthSessionStore.Client client, String device, String platform) {
         if (req == null || req.getAdminId() == null || req.getPassword() == null) {
             return LoginOutcome.of(LoginStatus.BAD_CREDENTIALS);
         }
         Long adminId = req.getAdminId();
 
-        // (0) Đã sai mật khẩu quá nhiều lần thì từ chối ngay, KHÔNG chạy BCrypt.
-        //     Đặt trước mọi thứ khác để mỗi lần thử bị khoá không tốn 100ms băm — nếu không, kẻ
-        //     tấn công vẫn ép được server băm liên tục (khuếch đại tải) dù biết chắc sẽ bị chặn.
-        //     Redis hỏng -> bỏ qua chặn (đăng nhập được như trước), không biến sự cố Redis thành
-        //     sự cố đăng nhập toàn hệ thống.
-        String pwdFailKey = PASSWORD_FAIL_KEY + adminId;
-        int pwdFails = readFailCount(pwdFailKey);
-        if (pwdFails >= MAX_PASSWORD_FAILS) {
-            Long ttl = redis.getExpire(pwdFailKey);
-            return LoginOutcome.locked((ttl == null || ttl < 1) ? PASSWORD_FAIL_WINDOW.toSeconds() : ttl);
-        }
+        // Reserve atomically before BCrypt. Counts all attempts, including successful ones;
+        // no concurrent success can erase reservations from other in-flight attempts.
+        // Use the socket peer, not an untrusted X-Forwarded-For header. Behind a proxy this is
+        // a shared limit, so keep it conservative and configure trusted forwarding upstream.
+        String peer = ip == null ? "unknown" : ip;
+        long ipWait = limiter.reserve("ip", peer, 300, Duration.ofMinutes(1));
+        if (ipWait > 0) return LoginOutcome.locked(ipWait);
+        long passwordWait = limiter.reserve("password", adminId, MAX_PASSWORD_FAILS, PASSWORD_FAIL_WINDOW);
+        if (passwordWait > 0) return LoginOutcome.locked(passwordWait);
 
         // (a) Mật khẩu BCrypt. Cột password trong DB ĐÃ là hash BCrypt, so khớp thẳng với mật khẩu người dùng nhập
         //     (không được băm lại hash đó). Admin không tồn tại: matches() vẫn chạy 1 lần BCrypt giả
@@ -88,13 +84,9 @@ public class AdminLoginServiceImpl {
         Admin admin = adminRepository.findAdminByAdminId(adminId);
         String storedHash = (admin == null) ? null : admin.getPassword();
         boolean passwordOk = mgmtPassword.matches(req.getPassword(), storedHash); // luôn chạy, kể cả admin = null
-        if (admin == null || !passwordOk) {
-            recordPasswordFailure(pwdFailKey);
+        if (admin == null || !passwordOk || !admin.isLoginAllowed()) {
             return LoginOutcome.of(LoginStatus.BAD_CREDENTIALS);
         }
-        // Mật khẩu đúng -> xoá bộ đếm của admin này, để lần sai rải rác trong nhiều ngày không
-        // cộng dồn thành khoá oan.
-        clearFailCount(pwdFailKey);
 
         // (b) Chỉ credential ĐÃ xác nhận bên mobile mới tính là bật 2FA (pending không tính).
         //     - Chưa bật 2FA: bỏ qua ô mã 6 số (kể cả khi có gửi lên) -> vào luôn.
@@ -102,7 +94,7 @@ public class AdminLoginServiceImpl {
         Optional<TotpCredential> credOpt = totpCredentialRepository
                 .findFirstByAdmin_AdminIdAndConfirmedTrueOrderByConfirmedAtDesc(adminId);
         if (credOpt.isEmpty()) {
-            return issueTokens(admin);
+            return issueTokens(admin, client, device, platform, ip);
         }
 
         String code = req.getTotpCode() == null ? null : req.getTotpCode().trim();
@@ -110,15 +102,8 @@ public class AdminLoginServiceImpl {
             return LoginOutcome.of(LoginStatus.TOTP_REQUIRED);
         }
 
-        // (c) Khóa tạm khi nhập sai mã nhiều lần. Chỉ tính SAU khi mật khẩu đã đúng,
-        //     nên người không biết mật khẩu không thể cố ý khóa tài khoản của admin.
-        String failKey = TOTP_FAIL_KEY + adminId;
-        String failStr = redis.opsForValue().get(failKey);
-        int fails = (failStr == null) ? 0 : Integer.parseInt(failStr);
-        if (fails >= MAX_TOTP_FAILS) {
-            Long ttl = redis.getExpire(failKey);
-            return LoginOutcome.locked((ttl == null || ttl < 1) ? TOTP_FAIL_WINDOW.toSeconds() : ttl);
-        }
+        long totpWait = limiter.reserve("totp-login", adminId, MAX_TOTP_FAILS, TOTP_FAIL_WINDOW);
+        if (totpWait > 0) return LoginOutcome.locked(totpWait);
 
         // (d) Giải mã secret (cùng cách EnrollmentConfirmServiceImpl) rồi dò mã trong cửa sổ chu kỳ lân cận
         TotpCredential cred = credOpt.get();
@@ -138,80 +123,39 @@ public class AdminLoginServiceImpl {
                 cred.getAlgorithm(), code, Instant.now());
 
         if (outcome.result() == TotpLoginVerifier.Result.OK) {
-            redis.delete(failKey);
             // offset: -1 = mã chu kỳ trước (POST tới trễ), 0 = đúng chu kỳ, +1 = app chạy nhanh. Dùng để thống kê độ trễ cho luận văn.
             auditService.log(adminId, AuthEvent.TOTP_LOGIN_OK, true, ip, userAgent,
                     "offset=" + outcome.matchedOffset());
-            return issueTokens(admin);
+            return issueTokens(admin, client, device, platform, ip);
         }
 
-        Long count = redis.opsForValue().increment(failKey);
-        if (count != null && count == 1L) {
-            redis.expire(failKey, TOTP_FAIL_WINDOW);
-        }
-        // Không ghi mã người dùng nhập vào log
         auditService.log(adminId, AuthEvent.TOTP_LOGIN_FAILED, false, ip, userAgent,
                 outcome.result() == TotpLoginVerifier.Result.REPLAYED ? "replayed code" : "wrong code");
 
-        // Lần sai thứ MAX_TOTP_FAILS: khóa NGAY (không đợi lần thử thứ MAX + 1) để web khóa form và đếm ngược.
-        // Đặt lại TTL đúng 5 phút kể từ lần sai cuối, nên thời gian khóa luôn đủ 5 phút
-        // (nếu giữ TTL tính từ lần sai đầu tiên thì có thể chỉ còn vài giây).
-        if (count != null && count >= MAX_TOTP_FAILS) {
-            redis.expire(failKey, TOTP_FAIL_WINDOW);
-            return LoginOutcome.locked(TOTP_FAIL_WINDOW.toSeconds());
-        }
         // INVALID và REPLAYED trả chung một thông báo để không lộ thêm thông tin
         return LoginOutcome.of(LoginStatus.TOTP_INVALID);
     }
 
-    /** Đọc số lần sai; Redis lỗi trả 0 để không chặn nhầm người dùng hợp lệ. */
-    private int readFailCount(String key) {
+    private LoginOutcome issueTokens(Admin admin, AuthSessionStore.Client client, String device, String platform, String ip) {
+        AuthSessionStore.Identity identity = sessions.open(admin.getAdminId(), client, device, platform, ip).orElse(null);
+        if (identity == null) return LoginOutcome.of(LoginStatus.MOBILE_CONFLICT);
+        Map<String, Object> tokens;
         try {
-            String raw = redis.opsForValue().get(key);
-            return raw == null ? 0 : Integer.parseInt(raw);
-        } catch (Exception e) {
-            log.warn("Không đọc được bộ đếm {} trên Redis: {}", key, e.getMessage());
-            return 0;
+            tokens = adminTokenService.createTokenAdmin(identity);
+        } catch (RuntimeException e) {
+            try { sessions.revoke(identity); } catch (RuntimeException ignored) { }
+            throw e;
         }
-    }
-
-    /**
-     * Tăng bộ đếm và đặt TTL. TTL được đặt lại mỗi lần sai (giống khoá TOTP) để cửa sổ 15 phút
-     * luôn tính từ lần sai cuối — nếu tính từ lần sai đầu, người dùng có thể bị mở khoá sớm hơn
-     * dự kiến ngay sau lần sai thứ 10.
-     */
-    private void recordPasswordFailure(String key) {
-        try {
-            Long count = redis.opsForValue().increment(key);
-            if (count != null) {
-                redis.expire(key, PASSWORD_FAIL_WINDOW);
-            }
-        } catch (Exception e) {
-            log.warn("Không ghi được bộ đếm {} trên Redis: {}", key, e.getMessage());
-        }
-    }
-
-    private void clearFailCount(String key) {
-        try {
-            redis.delete(key);
-        } catch (Exception e) {
-            log.warn("Không xoá được bộ đếm {} trên Redis: {}", key, e.getMessage());
-        }
-    }
-
-    private LoginOutcome issueTokens(Admin admin) {
-        // createTokenAdmin: sinh access + refresh token, lưu Redis; trả map rỗng nếu không tạo được
-        Map<String, Object> tokens = adminTokenService.createTokenAdmin(admin.getAdminId());
         Object accessToken = tokens.get("accessToken");
         Object refreshToken = tokens.get("refreshToken");
         if (accessToken == null || refreshToken == null) {
+            sessions.revoke(identity);
             throw new IllegalStateException("Không tạo được token cho admin " + admin.getAdminId());
         }
         // Ghi mốc đăng nhập cuối (chỉ bước đăng nhập tương tác mới ghi).
         // Best-effort: lỗi ghi không được làm hỏng luồng đăng nhập đã thành công.
         try {
-            admin.setLastLoginAt(Instant.now());
-            adminRepository.save(admin);
+            adminRepository.updateLastLoginAt(admin.getAdminId(), Instant.now());
         } catch (Exception e) {
             log.warn("Can't record lastLoginAt of admin {}: {}", admin.getAdminId(), e.getMessage());
         }

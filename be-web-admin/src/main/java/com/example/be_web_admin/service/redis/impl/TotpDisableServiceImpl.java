@@ -6,6 +6,7 @@ import com.example.be_web_admin.model.jpa.TotpCredential;
 import com.example.be_web_admin.repository.jpa.AdminRepository;
 import com.example.be_web_admin.repository.jpa.TotpCredentialRepository;
 import com.example.be_web_admin.repository.redis.EnrollSessionRepository;
+import com.example.be_web_admin.security.AuthenticationRateLimiter;
 import com.example.be_web_admin.security.private_key.CryptoService;
 import com.example.be_web_admin.security.totp.TotpLoginVerifier;
 import com.example.be_web_admin.service.jpa.impl.AuthAuditService;
@@ -26,9 +27,8 @@ import java.time.Instant;
  *
  * Thứ tự (giống các luồng TOTP khác: transaction MariaDB trước, việc phụ sau khi đã commit):
  *   1. Có credential đã xác nhận không? Không -> TotpNotEnabledException (404).
- *   2. Đang bị khóa vì nhập sai? (Redis totp:disable_fail:{adminId}) -> DisableLockedException (429).
- *   3. Giải mã secret (AES-256-GCM) và dò mã trong T-1, T, T+1 (TotpLoginVerifier, có chống dùng lại mã).
- *      Sai -> tăng bộ đếm, audit TOTP_DISABLE_FAILED; sai lần thứ 5 -> khóa 5 phút.
+ *   2. Giành lượt thử nguyên tử trong Redis; hết lượt thì trả DisableLockedException (429).
+ *   3. Giải mã secret và dò mã trong T-1, T, T+1 (có chống dùng lại); sai thì audit.
  *   4. MỘT transaction MariaDB: xóa credential + Admin.totp_enabled = false.
  *   5. Sau commit: dọn Redis (totp:*, enroll_*), audit TOTP_DISABLED, phát SSE NOT_ENABLED.
  */
@@ -78,6 +78,7 @@ public class TotpDisableServiceImpl {
     private final TotpLoginVerifier totpLoginVerifier;
     private final AuthAuditService auditService;
     private final StringRedisTemplate redis;
+    private final AuthenticationRateLimiter limiter;
     private final TransactionTemplate transactionTemplate;
     private final TwoFaEventServiceImpl eventService;
     private final EnrollSessionRepository enrollSessionRepository;
@@ -89,6 +90,7 @@ public class TotpDisableServiceImpl {
                                   TotpLoginVerifier totpLoginVerifier,
                                   AuthAuditService auditService,
                                   StringRedisTemplate redis,
+                                  AuthenticationRateLimiter limiter,
                                   TransactionTemplate transactionTemplate,
                                   TwoFaEventServiceImpl eventService,
                                   EnrollSessionRepository enrollSessionRepository,
@@ -99,6 +101,7 @@ public class TotpDisableServiceImpl {
         this.totpLoginVerifier = totpLoginVerifier;
         this.auditService = auditService;
         this.redis = redis;
+        this.limiter = limiter;
         this.transactionTemplate = transactionTemplate;
         this.eventService = eventService;
         this.enrollSessionRepository = enrollSessionRepository;
@@ -117,13 +120,9 @@ public class TotpDisableServiceImpl {
                 .findFirstByAdmin_AdminIdAndConfirmedTrueOrderByConfirmedAtDesc(adminId)
                 .orElseThrow(TotpNotEnabledException::new);
 
-        // (2) Khóa tạm khi nhập sai nhiều lần (bộ đếm riêng, không dùng chung totp:fail của đăng nhập web).
-        String failKey = DISABLE_FAIL_KEY + adminId;
-        String failStr = redis.opsForValue().get(failKey);
-        int fails = (failStr == null) ? 0 : Integer.parseInt(failStr);
-        if (fails >= MAX_FAILS) {
-            throw new DisableLockedException(secondsLeft(failKey));
-        }
+        // Reserve before checking; concurrent requests cannot all bypass the attempt cap.
+        long wait = limiter.reserve("totp-disable", adminId, MAX_FAILS, FAIL_WINDOW);
+        if (wait > 0) throw new DisableLockedException(wait);
 
         // (3) Giải mã secret (cùng cách AdminLoginServiceImpl) rồi dò mã trong cửa sổ lân cận.
         String secretBase32;
@@ -143,18 +142,8 @@ public class TotpDisableServiceImpl {
 
         if (outcome.result() != TotpLoginVerifier.Result.OK) {
             boolean replayed = outcome.result() == TotpLoginVerifier.Result.REPLAYED;
-            Long count = redis.opsForValue().increment(failKey);
-            if (count != null && count == 1L) {
-                redis.expire(failKey, FAIL_WINDOW);
-            }
-            // Không ghi mã người dùng nhập vào log
             auditService.log(adminId, AuthEvent.TOTP_DISABLE_FAILED, false, ip, userAgent,
                     replayed ? "replayed code" : "wrong code");
-            // Lần sai thứ MAX_FAILS: khóa đủ 5 phút kể từ lần sai cuối (giống đăng nhập web)
-            if (count != null && count >= MAX_FAILS) {
-                redis.expire(failKey, FAIL_WINDOW);
-                throw new DisableLockedException(FAIL_WINDOW.toSeconds());
-            }
             throw new InvalidTotpCodeException(replayed);
         }
 
@@ -185,11 +174,6 @@ public class TotpDisableServiceImpl {
     }
 
     // ------------------------------------------------------------------ hỗ trợ
-
-    private long secondsLeft(String key) {
-        Long ttl = redis.getExpire(key);
-        return (ttl == null || ttl < 1) ? FAIL_WINDOW.toSeconds() : ttl;
-    }
 
     /**
      * Dọn mọi khóa Redis còn dính tới 2FA của admin này:

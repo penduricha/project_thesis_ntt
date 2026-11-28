@@ -8,9 +8,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:syntax": "node tools/check-build-syntax.mjs src/",
-    "test:login": "node tools/check-login-submit.mjs",
+    "test:login": "node tools/check-login-submit.mjs && node tools/check-auth-errors.mjs && node tools/check-refresh-races.mjs",
     "test:course-import": "node tools/check-course-import.mjs && node tools/check-course-import-ui.mjs",
-    "fix:syntax": "node tools/check-build-syntax.mjs --fix src/"
+    "fix:syntax": "node tools/check-build-syntax.mjs --fix src/",
+    "test:crud-lifecycle": "node tools/check-crud-lifecycle.mjs",
+    "test:subject-crud": "node tools/check-subject-crud.mjs",
+    "test:topic-picker": "node tools/check-topic-picker.mjs"
   },
   "dependencies": {
     "axios": "^1.7.9",
